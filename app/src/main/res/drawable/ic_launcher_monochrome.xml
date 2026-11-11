@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original artwork: a broadsword. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,20L59.5,28L59.5,66L48.5,66L48.5,28Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,66L69,66L69,68.5L66,70.5L42,70.5L39,68.5Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,70.5L56,70.5L56,81L52,81Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,80.5L57.5,84L54,87.5L50.5,84Z" />
+</vector>

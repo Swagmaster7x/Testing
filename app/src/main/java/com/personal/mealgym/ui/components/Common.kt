@@ -5,6 +5,7 @@ package com.personal.mealgym.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,16 +20,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,8 +40,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.personal.mealgym.R
+import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 
 /** Top bar for the four main tabs: title, then History and Settings. */
+/** Every screen sits on [com.personal.mealgym.ui.theme.ThemedBackground], so scaffolds and bars are see-through. */
+@Composable
+fun AppScaffold(
+    modifier: Modifier = Modifier,
+    topBar: @Composable () -> Unit = {},
+    bottomBar: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    Scaffold(
+        modifier = modifier,
+        topBar = topBar,
+        bottomBar = bottomBar,
+        snackbarHost = snackbarHost,
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        content = content,
+    )
+}
+
+@Composable
+private fun barColors() = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+
 @Composable
 fun TabTopBar(
     title: String,
@@ -68,6 +96,7 @@ fun TabTopBar(
                 Icon(Icons.Filled.Settings, contentDescription = "Settings")
             }
         },
+        colors = barColors(),
     )
 }
 
@@ -86,6 +115,7 @@ fun DetailTopBar(
             }
         },
         actions = actions,
+        colors = barColors(),
     )
 }
 
@@ -93,8 +123,7 @@ fun DetailTopBar(
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialThemeCarvedLabel,
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(top = 16.dp, bottom = 8.dp),
     )

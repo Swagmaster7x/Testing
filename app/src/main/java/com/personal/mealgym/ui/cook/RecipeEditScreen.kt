@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,6 +48,7 @@ import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.SectionHeader
@@ -57,7 +57,7 @@ import com.personal.mealgym.ui.label
 @Composable
 fun RecipeEditScreen(nav: AppNavigator, vm: RecipeEditViewModel = viewModel(factory = AppViewModels.Factory)) {
     val onSaved: (Long) -> Unit = { nav.back() }
-    Scaffold(
+    AppScaffold(
         topBar = {
             DetailTopBar(
                 title = if (vm.isNew) "New recipe" else "Edit recipe",
@@ -66,7 +66,7 @@ fun RecipeEditScreen(nav: AppNavigator, vm: RecipeEditViewModel = viewModel(fact
             )
         },
     ) { padding ->
-        if (!vm.loaded) return@Scaffold
+        if (!vm.loaded) return@AppScaffold
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding).imePadding(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),

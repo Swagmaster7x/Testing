@@ -16,7 +16,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.displayLine
@@ -50,8 +50,8 @@ fun CookingModeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory
         onDispose { view.keepScreenOn = false }
     }
 
-    Scaffold(topBar = { DetailTopBar(title = ui?.recipe?.name ?: "Cooking", onBack = nav::back) }) { padding ->
-        if (ui == null) return@Scaffold
+    AppScaffold(topBar = { DetailTopBar(title = ui?.recipe?.name ?: "Cooking", onBack = nav::back) }) { padding ->
+        if (ui == null) return@AppScaffold
         val steps = ui.recipe.steps
         val pageCount = steps.size + 1
         val pager = rememberPagerState(pageCount = { pageCount })

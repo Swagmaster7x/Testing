@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.ConfirmDialog
@@ -61,7 +61,7 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     val loaded = state as? RecipeState.Loaded
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             DetailTopBar(
                 title = "Recipe",

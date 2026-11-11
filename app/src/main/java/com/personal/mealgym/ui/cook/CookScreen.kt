@@ -20,7 +20,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.SectionHeader
@@ -46,7 +46,7 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
     var query by rememberSaveable { mutableStateOf("") }
     var type by rememberSaveable { mutableStateOf<MealType?>(null) }
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             TabTopBar(
                 title = "Cook",
@@ -58,7 +58,7 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
             )
         },
     ) { padding ->
-        val state = ui ?: return@Scaffold
+        val state = ui ?: return@AppScaffold
         val q = query.trim()
         val filtered = state.all
             .filter { type == null || it.mealType == type }

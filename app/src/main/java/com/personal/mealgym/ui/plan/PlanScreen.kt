@@ -33,7 +33,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -58,10 +57,12 @@ import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.ShowMessages
 import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.label
+import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 import java.time.LocalDate
 
 private data class SlotRef(val date: LocalDate, val slot: MealSlot, val recipe: Recipe?)
@@ -75,11 +76,11 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
     var acting by remember { mutableStateOf<SlotRef?>(null) }
     var copying by remember { mutableStateOf<SlotRef?>(null) }
 
-    Scaffold(
+    AppScaffold(
         topBar = { TabTopBar(title = "Plan", onHistory = nav::history, onSettings = nav::settings) },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val state = ui ?: return@Scaffold
+        val state = ui ?: return@AppScaffold
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
@@ -159,7 +160,7 @@ private fun WeekSwitcher(state: PlanUi, onShift: (Long) -> Unit, onThisWeek: () 
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous week")
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(state.weekName, style = MaterialTheme.typography.titleMedium)
+            Text(state.weekName, style = MaterialThemeCarvedLabel)
             Text(Dates.weekLabel(state.weekStart), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (!state.isThisWeek) {

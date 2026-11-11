@@ -25,7 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +44,7 @@ import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.Exercise
 import com.personal.mealgym.data.db.WorkoutDay
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.components.ConfirmDialog
@@ -87,7 +87,7 @@ fun WorkoutEditScreen(nav: AppNavigator, vm: WorkoutEditViewModel = viewModel(fa
     val ui by vm.ui.collectAsStateWithLifecycle()
     var target by remember { mutableStateOf<EditTarget?>(null) }
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             DetailTopBar(
                 title = "Edit workouts",
@@ -96,7 +96,7 @@ fun WorkoutEditScreen(nav: AppNavigator, vm: WorkoutEditViewModel = viewModel(fa
             )
         },
     ) { padding ->
-        val state = ui ?: return@Scaffold
+        val state = ui ?: return@AppScaffold
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),

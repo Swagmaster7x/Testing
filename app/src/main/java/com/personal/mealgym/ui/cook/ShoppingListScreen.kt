@@ -16,7 +16,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -35,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.ShoppingItem
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.EmptyState
@@ -47,7 +47,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
     val offset by vm.weekOffset.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             DetailTopBar(
                 title = "Shopping list",

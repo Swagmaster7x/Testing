@@ -26,7 +26,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -53,6 +52,7 @@ import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.sauna.SaunaState
 import com.personal.mealgym.sauna.SaunaTimer
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.ShowMessages
@@ -126,11 +126,11 @@ fun SaunaScreen(nav: AppNavigator, vm: SaunaViewModel = viewModel(factory = AppV
         }
     }
 
-    Scaffold(
+    AppScaffold(
         topBar = { DetailTopBar(title = "Sauna", onBack = nav::back) },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val state = ui ?: return@Scaffold
+        val state = ui ?: return@AppScaffold
         Column(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

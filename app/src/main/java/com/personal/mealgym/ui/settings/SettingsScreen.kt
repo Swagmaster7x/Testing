@@ -24,7 +24,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -51,6 +50,7 @@ import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.ShowMessages
@@ -133,11 +133,11 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
         importUri = uri
     }
 
-    Scaffold(
+    AppScaffold(
         topBar = { DetailTopBar(title = "Settings", onBack = nav::back) },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val state = ui ?: return@Scaffold
+        val state = ui ?: return@AppScaffold
         val s = state.settings
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),

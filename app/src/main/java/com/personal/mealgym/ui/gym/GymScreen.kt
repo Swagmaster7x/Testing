@@ -39,7 +39,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -69,6 +68,7 @@ import com.personal.mealgym.domain.GymToday
 import com.personal.mealgym.gym.RestTimerController
 import com.personal.mealgym.gym.RestTimerState
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.ShowMessages
 import com.personal.mealgym.ui.components.ConfirmDialog
@@ -76,6 +76,7 @@ import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.components.formatClock
 import com.personal.mealgym.ui.label
 import com.personal.mealgym.ui.sauna.rememberSecondsLeft
+import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 
 @Composable
 fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewModels.Factory)) {
@@ -85,7 +86,7 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
     var checkIn by rememberSaveable { mutableStateOf(false) }
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             TabTopBar(
                 title = "Gym",
@@ -98,7 +99,7 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        val state = ui ?: return@Scaffold
+        val state = ui ?: return@AppScaffold
         val plan = state.plan
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -120,9 +121,8 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
                     item(key = "g-${group.label}") {
                         Text(
                             if (group.isSuperset) "${group.label} · superset" else group.label,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialThemeCarvedLabel,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
@@ -186,7 +186,7 @@ private fun StatusCard(plan: GymPlan, onTrainAnyway: () -> Unit) {
     when {
         status is GymToday.Done && plan.draft == null -> InfoCard {
             val s = plan.doneSession
-            Text("Done today", style = MaterialTheme.typography.labelLarge)
+            Text("Done today", style = MaterialThemeCarvedLabel)
             Text(s?.let { "Day ${it.dayOrder}: ${it.dayName}" } ?: "Workout", style = MaterialTheme.typography.titleMedium)
             s?.let { Text("How it went: ${it.feeling.label}${it.note?.let { n -> " · $n" } ?: ""}") }
             if (next != null) {
@@ -221,7 +221,7 @@ private fun InfoCard(content: @Composable () -> Unit) {
 private fun DayHeader(active: WorkoutDay, days: List<WorkoutDay>, onChoose: (Long) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(active.title(), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+        Text(active.title(), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         Box {
             TextButton(onClick = { open = true }) { Text("Do a different day") }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

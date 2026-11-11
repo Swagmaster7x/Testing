@@ -4,6 +4,8 @@ A personal Android app (one phone, no accounts, fully offline) that plans the we
 
 Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26), targets Android 17 (API 37).
 
+**Look:** a dark-fantasy theme inspired by the mood of Berserk. It uses original artwork only (no characters, symbols or text from the manga): black iron and blood red when the phone is in dark mode, aged parchment and ink in light mode, headings in Cinzel, cut-corner "armour plate" cards, and an original broadsword-and-red-moon app icon. The colours, fonts and shapes live in `ui/theme/Theme.kt`.
+
 ## Put it on your phone
 
 You need `app-debug.apk`, either the one from the Claude session or one you build (below).
@@ -61,4 +63,5 @@ app/src/main/
     gym/                      In-progress workout and rest timer
     sauna/                    Sauna timer foreground service, notifications, sound and buzz
     ui/                       Compose screens, one folder per tab plus settings and history
+  res/font/                   Cinzel (SIL Open Font License, see licenses/Cinzel-OFL.txt)
 ```

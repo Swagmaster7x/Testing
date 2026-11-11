@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,6 +26,7 @@ import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.WorkoutSession
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.components.DetailTopBar
@@ -72,15 +72,15 @@ class HistoryViewModel(c: AppContainer) : MessageViewModel() {
 @Composable
 fun HistoryScreen(nav: AppNavigator, vm: HistoryViewModel = viewModel(factory = AppViewModels.Factory)) {
     val days by vm.ui.collectAsStateWithLifecycle()
-    Scaffold(topBar = { DetailTopBar(title = "History", onBack = nav::back) }) { padding ->
-        val list = days ?: return@Scaffold
+    AppScaffold(topBar = { DetailTopBar(title = "History", onBack = nav::back) }) { padding ->
+        val list = days ?: return@AppScaffold
         if (list.isEmpty()) {
             EmptyState(
                 title = "Nothing here yet",
                 body = "Days show up here once you plan meals, finish a workout or use the sauna.",
                 modifier = Modifier.padding(padding),
             )
-            return@Scaffold
+            return@AppScaffold
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),

@@ -162,6 +162,32 @@ class ScreenshotTest {
     }
 
     @Test
+    @Config(qualifiers = "w400dp-h860dp-night-xhdpi")
+    fun darkRecipeAndShopping() {
+        tab("Cook")
+        waitForText("Cooking this week")
+        compose.onAllNodesWithText("Pollo guisado with rice and beans").onFirst().performClick()
+        waitForText("Ingredients")
+        shot("15-recipe-dark")
+        compose.onAllNodesWithText("Shopping list").onFirst().performClick()
+        waitForText("Protein")
+        shot("16-shopping-dark")
+    }
+
+    @Test
+    @Config(qualifiers = "w400dp-h860dp-night-xhdpi")
+    fun darkPlanAndSauna() {
+        tab("Plan")
+        waitForText("Pollo guisado")
+        shot("17-plan-dark")
+        tab("Today")
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Open"))
+        compose.onAllNodesWithText("Open").onFirst().performClick()
+        waitForText("How long?")
+        shot("18-sauna-dark")
+    }
+
+    @Test
     fun history() {
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("History")).onFirst().performClick()
         waitForText("Breakfast")

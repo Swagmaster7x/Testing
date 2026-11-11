@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -15,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
@@ -39,6 +41,7 @@ import com.personal.mealgym.ui.history.HistoryScreen
 import com.personal.mealgym.ui.plan.PlanScreen
 import com.personal.mealgym.ui.sauna.SaunaScreen
 import com.personal.mealgym.ui.settings.SettingsScreen
+import com.personal.mealgym.ui.theme.ThemedBackground
 import com.personal.mealgym.ui.today.TodayScreen
 import kotlinx.coroutines.flow.StateFlow
 
@@ -112,7 +115,10 @@ fun MealGymNavHost(
         }
     }
 
+    ThemedBackground {
     Scaffold(
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         bottomBar = {
             if (tabs.any { it.route == currentRoute }) {
                 NavigationBar {
@@ -152,5 +158,6 @@ fun MealGymNavHost(
             composable(Routes.HISTORY) { HistoryScreen(navigator) }
             composable(Routes.WORKOUT_EDIT) { WorkoutEditScreen(navigator) }
         }
+    }
     }
 }

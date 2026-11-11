@@ -21,7 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -47,6 +46,7 @@ import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.GymToday
 import com.personal.mealgym.sauna.SaunaState
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.Routes
 import com.personal.mealgym.ui.ShowMessages
@@ -56,6 +56,7 @@ import com.personal.mealgym.ui.gym.title
 import com.personal.mealgym.ui.label
 import com.personal.mealgym.ui.plan.RecipePickerSheet
 import com.personal.mealgym.ui.sauna.rememberSecondsLeft
+import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 
 @Composable
 fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppViewModels.Factory)) {
@@ -64,7 +65,7 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
     vm.ShowMessages(snackbar)
     var picking by rememberSaveable { mutableStateOf<MealSlot?>(null) }
 
-    Scaffold(
+    AppScaffold(
         topBar = {
             TabTopBar(
                 title = "Today",
@@ -80,7 +81,7 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
             Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(Modifier.padding(32.dp))
             }
-            return@Scaffold
+            return@AppScaffold
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -115,12 +116,7 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
 
 @Composable
 private fun CardLabel(text: String, color: Color = MaterialTheme.colorScheme.primary) {
-    Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = color,
-        fontWeight = FontWeight.SemiBold,
-    )
+    Text(text, style = MaterialThemeCarvedLabel, color = color)
 }
 
 @Composable
