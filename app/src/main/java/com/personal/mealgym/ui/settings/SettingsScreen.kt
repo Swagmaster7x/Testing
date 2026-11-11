@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ListItem
@@ -51,10 +50,12 @@ import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.ShowMessages
+import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.components.ConfirmDialog
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.SectionHeader
@@ -208,7 +209,7 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                     onChange = vm::setShowNutrition,
                 )
             }
-            item {
+            if (!Sides.isAshley(vm.profileId)) item {
                 SwitchRow(
                     title = "Half-plate reminder",
                     body = "\"$HALF_PLATE_TIP\" at the top of each recipe.",
@@ -217,6 +218,33 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                 )
             }
 
+            if (Sides.isAshley(vm.profileId)) {
+                item { SectionHeader("Sparkle and sound") }
+                item {
+                    SwitchRow(
+                        title = "Motion",
+                        body = "Sparkles when a set is ticked or a meal is picked, and a shimmer on titles.",
+                        checked = s.motion,
+                        onChange = vm::setMotion,
+                    )
+                }
+                item {
+                    SwitchRow(
+                        title = "Timer chime",
+                        body = "A soft sound when the rest or sauna timer ends. It always buzzes.",
+                        checked = s.chime,
+                        onChange = vm::setChime,
+                    )
+                }
+                item {
+                    SwitchRow(
+                        title = "Creatine reminder",
+                        body = "A daily checkbox on Today for creatine, 3 g, any time of day.",
+                        checked = s.creatineReminder,
+                        onChange = vm::setCreatineReminder,
+                    )
+                }
+            }
             item { SectionHeader("Pantry: always have") }
             item {
                 Text(
@@ -252,7 +280,7 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
-                    Button(onClick = { vm.addStaple(newStaple); newStaple = "" }, enabled = newStaple.isNotBlank()) { Text("Add") }
+                    AppButton(onClick = { vm.addStaple(newStaple); newStaple = "" }, enabled = newStaple.isNotBlank()) { Text("Add") }
                 }
             }
 
@@ -264,7 +292,7 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Button(onClick = { exportLauncher.launch("meal-gym-backup-${LocalDate.now()}.json") }, modifier = Modifier.weight(1f)) {
+                    AppButton(onClick = { exportLauncher.launch("meal-gym-backup-${LocalDate.now()}.json") }, modifier = Modifier.weight(1f)) {
                         Text("Export")
                     }
                     OutlinedButton(

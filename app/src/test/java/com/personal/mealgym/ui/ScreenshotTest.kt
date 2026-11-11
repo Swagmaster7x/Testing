@@ -68,6 +68,65 @@ class ScreenshotTest {
         meals.setSlot(swag, today, MealSlot.DINNER, recipes.getValue("D2").id)
     }
 
+    private fun planAshleysDay() = runBlocking {
+        val ashley = Profiles.ASHLEY
+        val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
+        val today = LocalDate.now()
+        container.meals.setSlot(ashley, today, MealSlot.BREAKFAST, recipes.getValue("SB1").id)
+        container.meals.fillBatch(ashley, today, MealSlot.LUNCH, recipes.getValue("L2"))
+        container.meals.setSlot(ashley, today, MealSlot.DINNER, recipes.getValue("D3").id)
+        container.meals.setSlot(ashley, today, MealSlot.SNACK, recipes.getValue("SN1").id)
+        container.settings.setCreatineReminder(ashley, true)
+        openSide(ashley)
+    }
+
+    private fun ashleyTour(suffix: String) {
+        planAshleysDay()
+        waitForText("Jerk salmon")
+        shot("20-ashley-today$suffix")
+        tab("Plan")
+        waitForText("Rest")
+        shot("21-ashley-plan$suffix")
+        tab("Cook")
+        waitForText("Cooking this week")
+        compose.onAllNodesWithText("Teriyaki chicken and broccoli rice bowl").onFirst().performClick()
+        waitForText("Your portion")
+        shot("22-ashley-recipe$suffix")
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Make it easier to finish"))
+        compose.waitForIdle()
+        shot("22b-ashley-recipe-tips$suffix")
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back")).onFirst().performClick()
+        compose.waitForIdle()
+        tab("Gym")
+        compose.waitUntil(15_000) {
+            listOf("Do a different day", "Train anyway").any { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
+        }
+        if (compose.onAllNodesWithText("Train anyway").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onAllNodesWithText("Train anyway").onFirst().performClick()
+        }
+        waitForText("Do a different day")
+        compose.onAllNodesWithText("1").onFirst().performClick()
+        compose.waitForIdle()
+        shot("23-ashley-gym$suffix")
+    }
+
+    @Test
+    fun ashleysSide() = ashleyTour("")
+
+    @Test
+    @Config(qualifiers = "w400dp-h860dp-night-xhdpi")
+    fun ashleysSideDark() = ashleyTour("-dark")
+
+    @Test
+    fun ashleysSettings() {
+        planAshleysDay()
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()
+        waitForText("This phone opens")
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Creatine reminder"))
+        compose.waitForIdle()
+        shot("24-ashley-settings")
+    }
+
     @Test
     fun chooserThenAshleysSide() {
         runBlocking {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -77,7 +79,19 @@ fun TabTopBar(
     TopAppBar(
         title = {
             Column {
-                Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (isGlam()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ShimmerTitle(title, MaterialTheme.typography.titleLarge)
+                        Icon(
+                            painterResource(R.drawable.ic_butterfly),
+                            contentDescription = null,
+                            tint = GlamColors.Lilac,
+                            modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                        )
+                    }
+                } else {
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 if (subtitle != null) {
                     Text(
                         subtitle,
@@ -121,12 +135,19 @@ fun DetailTopBar(
 
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = MaterialThemeCarvedLabel,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(top = 16.dp, bottom = 8.dp),
-    )
+    if (isGlam()) {
+        Column(modifier.padding(top = 16.dp, bottom = 8.dp)) {
+            Text(text, style = MaterialThemeCarvedLabel, color = MaterialTheme.colorScheme.primary)
+            Rhinestones(Modifier.padding(top = 4.dp))
+        }
+    } else {
+        Text(
+            text,
+            style = MaterialThemeCarvedLabel,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = modifier.padding(top = 16.dp, bottom = 8.dp),
+        )
+    }
 }
 
 @Composable
@@ -136,6 +157,14 @@ fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, actio
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (isGlam()) {
+                Icon(
+                    painterResource(R.drawable.ic_flip_phone),
+                    contentDescription = null,
+                    tint = GlamColors.Lilac,
+                    modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally),
+                )
+            }
             Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Text(
                 body,

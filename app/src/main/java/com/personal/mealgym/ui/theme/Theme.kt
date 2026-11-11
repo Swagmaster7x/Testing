@@ -39,6 +39,17 @@ val Cinzel = FontFamily(
     Font(R.font.cinzel_700, FontWeight.Bold),
 )
 
+/** Rounded, bubbly face for Ashley's Side (SIL Open Font License, see licenses/Fredoka-OFL.txt). */
+val Fredoka = FontFamily(
+    Font(R.font.fredoka_400, FontWeight.Normal),
+    Font(R.font.fredoka_500, FontWeight.Medium),
+    Font(R.font.fredoka_600, FontWeight.SemiBold),
+    Font(R.font.fredoka_700, FontWeight.Bold),
+)
+
+/** Script face for Ashley's side titles and flourishes only (SIL OFL, see licenses/Pacifico-OFL.txt). */
+val Pacifico = FontFamily(Font(R.font.pacifico_400, FontWeight.Normal))
+
 /** Iron and blood: the night theme. */
 private val IronColors = darkColorScheme(
     primary = Color(0xFFD23A30),
@@ -241,13 +252,31 @@ private val AppShapes = Shapes(
     extraLarge = CutCornerShape(16.dp),
 )
 
-/** Ashley's Side keeps the system face for now; her fonts arrive with her theme. */
-private val GlamTypography = Typography()
+private fun TextStyle.rounded(weight: FontWeight) = copy(fontFamily = Fredoka, fontWeight = weight)
+
+/** Fredoka throughout for readability; Pacifico for screen titles. */
+private val GlamTypography = Typography(
+    displayLarge = base.displayLarge.rounded(FontWeight.SemiBold),
+    displayMedium = base.displayMedium.rounded(FontWeight.SemiBold),
+    displaySmall = base.displaySmall.rounded(FontWeight.SemiBold),
+    headlineLarge = base.headlineLarge.rounded(FontWeight.SemiBold),
+    headlineMedium = base.headlineMedium.rounded(FontWeight.SemiBold),
+    headlineSmall = base.headlineSmall.rounded(FontWeight.SemiBold),
+    titleLarge = base.titleLarge.copy(fontFamily = Pacifico, fontWeight = FontWeight.Normal, fontSize = 24.sp, lineHeight = 34.sp),
+    titleMedium = base.titleMedium.rounded(FontWeight.Medium),
+    titleSmall = base.titleSmall.rounded(FontWeight.SemiBold),
+    bodyLarge = base.bodyLarge.rounded(FontWeight.Normal),
+    bodyMedium = base.bodyMedium.rounded(FontWeight.Normal),
+    bodySmall = base.bodySmall.rounded(FontWeight.Normal),
+    labelLarge = base.labelLarge.rounded(FontWeight.SemiBold),
+    labelMedium = base.labelMedium.rounded(FontWeight.Medium),
+    labelSmall = base.labelSmall.rounded(FontWeight.Medium),
+)
 
 /** Small heading for section titles and card labels: carved on Swag's Side, bold on Ashley's. */
 val MaterialThemeCarvedLabel: TextStyle
     @Composable get() = if (LocalSideTheme.current == SideTheme.GLAM) {
-        MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+        MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
     } else {
         MaterialTheme.typography.titleSmall.carved(spacing = 1f)
     }
@@ -260,18 +289,22 @@ private val LocalIsDark = staticCompositionLocalOf { false }
 /** The look currently in use, for the few components that draw differently per side. */
 val LocalSideTheme = staticCompositionLocalOf { SideTheme.IRON }
 
+/** False when the side's "Motion" setting is off: no sparkles or shimmer. */
+val LocalMotion = staticCompositionLocalOf { true }
+
 /** Light and dark follow the system setting. */
 @Composable
 fun MealGymTheme(
     side: SideTheme = SideTheme.IRON,
     darkTheme: Boolean = isSystemInDarkTheme(),
+    motion: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val colors = when (side) {
         SideTheme.IRON -> if (darkTheme) IronColors else ParchmentColors
         SideTheme.GLAM -> if (darkTheme) GlamNightColors else GlamColors
     }
-    CompositionLocalProvider(LocalIsDark provides darkTheme, LocalSideTheme provides side) {
+    CompositionLocalProvider(LocalIsDark provides darkTheme, LocalSideTheme provides side, LocalMotion provides motion) {
         MaterialTheme(
             colorScheme = colors,
             typography = if (side == SideTheme.GLAM) GlamTypography else AppTypography,

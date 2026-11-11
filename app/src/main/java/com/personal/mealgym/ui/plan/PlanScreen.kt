@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,6 +61,7 @@ import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.ShowMessages
+import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.label
 import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
@@ -110,6 +112,7 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
             items(state.days, key = { it.date.toString() }) { day ->
                 DayRow(
                     day = day,
+                    badge = state.badges[day.date],
                     isToday = day.date == state.today,
                     onSlot = { slot, recipe ->
                         val ref = SlotRef(day.date, slot, recipe)
@@ -173,7 +176,7 @@ private fun WeekSwitcher(state: PlanUi, onShift: (Long) -> Unit, onThisWeek: () 
 }
 
 @Composable
-private fun DayRow(day: PlanDay, isToday: Boolean, onSlot: (MealSlot, Recipe?) -> Unit) {
+private fun DayRow(day: PlanDay, badge: String?, isToday: Boolean, onSlot: (MealSlot, Recipe?) -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,6 +192,10 @@ private fun DayRow(day: PlanDay, isToday: Boolean, onSlot: (MealSlot, Recipe?) -
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                }
+                if (badge != null) {
+                    Spacer(Modifier.weight(1f))
+                    Badge(badge)
                 }
             }
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

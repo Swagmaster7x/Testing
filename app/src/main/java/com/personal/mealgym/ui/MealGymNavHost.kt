@@ -90,15 +90,24 @@ class AppNavigator(private val nav: NavHostController) {
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
 
-private val tabs = listOf(
+private val ironTabs = listOf(
     Tab(Routes.TODAY, "Today") { rememberVectorPainter(Icons.Filled.Home) },
     Tab(Routes.PLAN, "Plan") { rememberVectorPainter(Icons.Filled.DateRange) },
     Tab(Routes.COOK, "Cook") { painterResource(R.drawable.ic_restaurant) },
     Tab(Routes.GYM, "Gym") { painterResource(R.drawable.ic_fitness) },
 )
 
+/** Ashley's tab icons: star, calendar with a heart, whisk, dumbbell with a bow (all drawn fresh). */
+private val glamTabs = listOf(
+    Tab(Routes.TODAY, "Today") { painterResource(R.drawable.ic_star) },
+    Tab(Routes.PLAN, "Plan") { painterResource(R.drawable.ic_calendar_heart) },
+    Tab(Routes.COOK, "Cook") { painterResource(R.drawable.ic_whisk) },
+    Tab(Routes.GYM, "Gym") { painterResource(R.drawable.ic_dumbbell_bow) },
+)
+
 @Composable
 fun MealGymNavHost(
+    profileId: Long,
     pendingOpen: StateFlow<String?>,
     onOpenHandled: () -> Unit,
     navController: NavHostController = rememberNavController(),
@@ -107,6 +116,7 @@ fun MealGymNavHost(
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val open by pendingOpen.collectAsState()
+    val tabs = if (Sides.isAshley(profileId)) glamTabs else ironTabs
 
     LaunchedEffect(open) {
         if (open == MainActivity.OPEN_SAUNA) {

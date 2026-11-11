@@ -112,4 +112,35 @@ class WorkoutCycleTest {
         assertEquals(1, WorkoutCycle.nextDayOrder(3, 0))
         assertEquals(1, WorkoutCycle.nextDayOrder(1, 1))
     }
+
+    // Ashley's week view: Monday, Wednesday, Friday, three-day cycle.
+    private val mwf = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)
+    private val week = (0L until 7L).map { mon.plusDays(it) }
+
+    @Test
+    fun weekViewProjectsTheCycleAcrossTrainingDays() {
+        val badges = WorkoutCycle.projectWeek(week, today = mon, trainingDays = mwf, sessions = emptyList(), cycleLength = 3)
+        assertEquals(DayBadge.Planned(1), badges[mon])
+        assertEquals(DayBadge.Rest, badges[tue])
+        assertEquals(DayBadge.Planned(2), badges[wed])
+        assertEquals(DayBadge.Planned(3), badges[fri])
+        assertEquals(DayBadge.Rest, badges[mon.plusDays(5)])
+    }
+
+    @Test
+    fun weekViewShowsDoneDaysAndLeavesMissedDaysBlank() {
+        // Monday done (Day 1); Wednesday missed; today is Thursday.
+        val badges = WorkoutCycle.projectWeek(week, today = thu, trainingDays = mwf, sessions = listOf(SessionRef(mon, 1, 1)), cycleLength = 3)
+        assertEquals(DayBadge.Done(1), badges[mon])
+        assertEquals(DayBadge.Blank, badges[wed])
+        assertEquals(DayBadge.Rest, badges[thu])
+        assertEquals(DayBadge.Planned(2), badges[fri])
+    }
+
+    @Test
+    fun weekViewAfterTrainingTodayStartsFromTheNextDay() {
+        val badges = WorkoutCycle.projectWeek(week, today = wed, trainingDays = mwf, sessions = listOf(SessionRef(mon, 1, 1), SessionRef(wed, 2, 2)), cycleLength = 3)
+        assertEquals(DayBadge.Done(2), badges[wed])
+        assertEquals(DayBadge.Planned(3), badges[fri])
+    }
 }

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
+import com.personal.mealgym.ui.LocalCopy
 import com.personal.mealgym.ui.accepts
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.label
@@ -76,7 +77,7 @@ fun RecipePickerSheet(
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.fillMaxHeight(0.92f).imePadding()) {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Pick your ${slot.label.lowercase()}", style = MaterialTheme.typography.headlineSmall)
+                Text(LocalCopy.current.pickTitle(slot), style = MaterialTheme.typography.headlineSmall)
                 Text(dateLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = query,

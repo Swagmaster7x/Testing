@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?android:attr/colorControlNormal">
+    <!-- Original artwork for Ashley's Side. -->
+    <path android:fillColor="@android:color/white" android:pathData="M11.3,11C9.6,6.6 6.4,3.6 3.5,4.2C1.6,4.6 1.6,7.4 3,9.4C4.6,11.6 7.6,12.3 11.3,12.1Z" />
+    <path android:fillColor="@android:color/white" android:pathData="M11.3,12.7C7.8,12.7 4.6,14.1 4.4,16.6C4.2,19 6.4,20.2 8.4,19C10.2,17.9 11.1,15.4 11.5,13.3Z" />
+    <group android:scaleX="-1" android:pivotX="12">
+        <path android:fillColor="@android:color/white" android:pathData="M11.3,11C9.6,6.6 6.4,3.6 3.5,4.2C1.6,4.6 1.6,7.4 3,9.4C4.6,11.6 7.6,12.3 11.3,12.1Z" />
+    </group>
+    <group android:scaleX="-1" android:pivotX="12">
+        <path android:fillColor="@android:color/white" android:pathData="M11.3,12.7C7.8,12.7 4.6,14.1 4.4,16.6C4.2,19 6.4,20.2 8.4,19C10.2,17.9 11.1,15.4 11.5,13.3Z" />
+    </group>
+    <path android:fillColor="@android:color/white" android:pathData="M11.35,8.6A0.65,0.65 0 0,1 12.65,8.6L12.65,18.4A0.65,0.65 0 0,1 11.35,18.4Z" />
+    <path android:fillColor="@android:color/white" android:pathData="M11.8,8.4C11.3,6.5 10.3,5.3 9.1,4.7L9.3,4.3C10.7,5 11.8,6.3 12.3,8.3Z" />
+    <group android:scaleX="-1" android:pivotX="12">
+        <path android:fillColor="@android:color/white" android:pathData="M11.8,8.4C11.3,6.5 10.3,5.3 9.1,4.7L9.3,4.3C10.7,5 11.8,6.3 12.3,8.3Z" />
+    </group>
+</vector>

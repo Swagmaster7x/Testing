@@ -11,6 +11,7 @@ import com.personal.mealgym.data.db.SetLog
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.gym.RestTimerState
 import com.personal.mealgym.ui.MessageViewModel
+import com.personal.mealgym.ui.SideCopy
 import com.personal.mealgym.ui.lastTimeText
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
@@ -144,7 +145,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
             c.gym.saveSession(profileId, state.date, day, feeling, note, logs)
             c.workoutDraft.clear()
             c.restTimer.cancel()
-            say("Saved to history.")
+            say(SideCopy.forProfile(profileId).workoutSaved)
         }
     }
 

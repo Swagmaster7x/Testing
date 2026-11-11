@@ -76,10 +76,12 @@ class RepositoryTest {
 
     @Test
     fun seedingLoadsRecipesWorkoutsAndStaples() = runBlocking {
-        assertEquals(19, recipes.size)
+        assertEquals(19, recipes.values.count { it.onlyForProfileId == null })
+        assertEquals(9, recipes.values.count { it.onlyForProfileId == Profiles.ASHLEY })
+        assertEquals(listOf("Glutes and hamstrings", "Upper body plus glutes", "Glutes and quads"), db.workoutDao().getDays(Profiles.ASHLEY).map { it.name })
         val days = db.workoutDao().getDays(Profiles.SWAG)
         assertEquals(listOf(1, 2, 3, 4), days.map { it.dayOrder }.sorted())
-        assertEquals(31, db.workoutDao().allExercises().size)
+        assertEquals(31 + 16, db.workoutDao().allExercises().size)
         val s = settings.current(Profiles.SWAG)
         assertEquals(20, s.pantryStaples.size)
         assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), s.trainingWeekdays)
@@ -192,5 +194,39 @@ class RepositoryTest {
         BackupManager(db, settings, context.contentResolver).decode(
             """{"app":"something.else","formatVersion":1,"exportedAt":"","settings":{"trainingWeekdays":[],"showNutrition":true,"showHalfPlateTip":true,"weightUnit":"LB","pantryStaples":[]},"recipes":[],"ingredients":[],"mealPlan":[],"shoppingChecks":[],"workoutDays":[],"exercises":[],"workoutSessions":[],"setLogs":[],"saunaLogs":[]}""",
         )
+    }
+
+    @Test
+    fun upgradeAddsNewSeedButNotDeletedRecipes() = runBlocking {
+        // A phone on the first release: Swag's content only, and he deleted the smash-burger bowl.
+        val oldDb = newDb()
+        val oldSettings = newSettings()
+        val seedRepo = SeedRepository(context)
+        val v1 = seedRepo.seed.copy(
+            version = 1,
+            recipes = seedRepo.seed.recipes.filter { it.since == 1 },
+            workoutDays = seedRepo.seed.workoutDays.filter { it.since == 1 },
+        )
+        for (r in v1.recipes) {
+            val id = oldDb.recipeDao().insert(com.personal.mealgym.data.seed.SeedParser.recipeOf(r).copy(protein = null))
+            oldDb.recipeDao().insertIngredients(com.personal.mealgym.data.seed.SeedParser.ingredientsOf(r, id, emptySet()))
+        }
+        for (d in v1.workoutDays) {
+            val dayId = oldDb.workoutDao().insertDay(com.personal.mealgym.data.seed.SeedParser.dayOf(d))
+            oldDb.workoutDao().insertExercises(com.personal.mealgym.data.seed.SeedParser.exercisesOf(d, dayId))
+        }
+        oldDb.metaDao().put(com.personal.mealgym.data.db.Meta("seedLevel", "1"))
+        oldDb.recipeDao().delete(oldDb.recipeDao().bySeedKey("D5")!!.id)
+
+        seedRepo.sync(oldDb, oldSettings, freshDatabase = false)
+
+        assertNull("deleted recipes stay deleted", oldDb.recipeDao().bySeedKey("D5"))
+        assertEquals(4, oldDb.workoutDao().getDays(Profiles.SWAG).size)
+        assertEquals(3, oldDb.workoutDao().getDays(Profiles.ASHLEY).size)
+        assertTrue(oldDb.recipeDao().bySeedKey("SB1") != null)
+
+        // Running again changes nothing.
+        seedRepo.sync(oldDb, oldSettings, freshDatabase = false)
+        assertEquals(3, oldDb.workoutDao().getDays(Profiles.ASHLEY).size)
     }
 }

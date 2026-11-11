@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -68,9 +67,13 @@ import com.personal.mealgym.domain.GymToday
 import com.personal.mealgym.gym.RestTimerController
 import com.personal.mealgym.gym.RestTimerState
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
+import com.personal.mealgym.ui.LocalCopy
 import com.personal.mealgym.ui.ShowMessages
+import com.personal.mealgym.ui.SideCopy
+import com.personal.mealgym.ui.components.sparkleOn
 import com.personal.mealgym.ui.components.ConfirmDialog
 import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.components.formatClock
@@ -139,7 +142,7 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
                 }
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                        Button(onClick = { checkIn = true }, modifier = Modifier.fillMaxWidth()) { Text("Finish workout") }
+                        AppButton(onClick = { checkIn = true }, modifier = Modifier.fillMaxWidth()) { Text("Finish workout") }
                         if (plan.draft != null) {
                             TextButton(onClick = { confirmDiscard = true }, modifier = Modifier.fillMaxWidth()) {
                                 Text("Discard this workout")
@@ -186,18 +189,18 @@ private fun StatusCard(plan: GymPlan, onTrainAnyway: () -> Unit) {
     when {
         status is GymToday.Done && plan.draft == null -> InfoCard {
             val s = plan.doneSession
-            Text("Done today", style = MaterialThemeCarvedLabel)
+            Text(LocalCopy.current.doneToday, style = MaterialThemeCarvedLabel)
             Text(s?.let { "Day ${it.dayOrder}: ${it.dayName}" } ?: "Workout", style = MaterialTheme.typography.titleMedium)
             s?.let { Text("How it went: ${it.feeling.label}${it.note?.let { n -> " · $n" } ?: ""}") }
             if (next != null) {
                 Text("Next time: ${next.title()}", style = MaterialTheme.typography.bodyMedium)
-                Button(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Start another session") }
+                AppButton(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Start another session") }
             }
         }
         status is GymToday.RestDay && plan.draft == null -> InfoCard {
             Text("Rest day", style = MaterialTheme.typography.titleMedium)
             if (next != null) Text("Next up: ${next.title()}", style = MaterialTheme.typography.bodyMedium)
-            Button(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Train anyway") }
+            AppButton(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Train anyway") }
         }
         plan.activeDay == null -> InfoCard {
             Text("No workouts set up", style = MaterialTheme.typography.titleMedium)
@@ -221,7 +224,15 @@ private fun InfoCard(content: @Composable () -> Unit) {
 private fun DayHeader(active: WorkoutDay, days: List<WorkoutDay>, onChoose: (Long) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(active.title(), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        val copy = LocalCopy.current
+        if (copy == SideCopy.Ashley) {
+            Column(Modifier.weight(1f)) {
+                Text(copy.workoutHeadline(active), style = MaterialTheme.typography.headlineSmall)
+                Text(active.title(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            Text(active.title(), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        }
         Box {
             TextButton(onClick = { open = true }) { Text("Do a different day") }
             DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -291,6 +302,7 @@ private fun ExerciseCard(
                     val done = i in ex.checkedSets
                     FilterChip(
                         selected = done,
+                        modifier = Modifier.sparkleOn(done),
                         onClick = { onToggleSet(i) },
                         label = { Text("${i + 1}") },
                         leadingIcon = if (done) {

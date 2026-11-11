@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?android:attr/colorControlNormal">
+    <!-- Original artwork for Ashley's Side. -->
+    <path android:fillColor="@android:color/white"
+        android:fillType="evenOdd" android:pathData="M9.5,2H14.5A1,1 0 0,1 15.5,3V10H8.5V3A1,1 0 0,1 9.5,2ZM10.4,3.6V8.8H11.3V3.6Z" />
+    <path android:fillColor="@android:color/white" android:pathData="M8,10.4H16V12H8Z" />
+    <path android:fillColor="@android:color/white" android:pathData="M8.6,12.4H15.4L14.8,21A1,1 0 0,1 13.8,21.9H10.2A1,1 0 0,1 9.2,21Z" />
+</vector>

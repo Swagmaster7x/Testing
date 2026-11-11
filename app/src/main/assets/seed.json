@@ -1,22 +1,53 @@
 {
-  "version": 1,
+  "version": 2,
   "recipes": [
     {
       "key": "B1",
       "name": "Egg white and chorizo breakfast tacos",
       "mealType": "BREAKFAST",
-      "cuisineTags": ["Hispanic"],
+      "cuisineTags": [
+        "Hispanic"
+      ],
       "servings": 1,
       "servingSize": "3 tacos",
       "nutrition": "~520 cal, 42 g protein, 40 g carbs, 20 g fat",
       "ingredients": [
-        {"quantity": "1", "unit": "cup", "name": "liquid egg whites", "section": "PROTEIN"},
-        {"quantity": "1", "name": "egg", "section": "PROTEIN"},
-        {"quantity": "2", "unit": "oz", "name": "soy or chicken chorizo", "section": "PROTEIN"},
-        {"quantity": "3", "name": "corn tortillas", "section": "CARBS"},
-        {"quantity": "1/4", "unit": "cup", "name": "pico de gallo", "section": "PRODUCE_FROZEN"},
-        {"name": "hot sauce", "section": "PANTRY"},
-        {"name": "cilantro", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "liquid egg whites",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "egg",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "oz",
+          "name": "soy or chicken chorizo",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "3",
+          "name": "corn tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "pico de gallo",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "hot sauce",
+          "section": "PANTRY"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Brown the chorizo in a pan.",
@@ -30,18 +61,49 @@
       "key": "B2",
       "name": "Mango-coconut overnight oats",
       "mealType": "BREAKFAST",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 1,
       "servingSize": "1 jar",
       "nutrition": "~480 cal, 38 g protein, 58 g carbs, 10 g fat",
       "mealPrep": true,
       "ingredients": [
-        {"quantity": "1/2", "unit": "cup", "name": "rolled oats", "section": "CARBS"},
-        {"quantity": "1", "unit": "scoop", "name": "vanilla whey protein", "section": "PROTEIN"},
-        {"quantity": "3/4", "unit": "cup", "name": "unsweetened almond or light coconut milk", "section": "PANTRY"},
-        {"quantity": "1/2", "unit": "cup", "name": "frozen mango", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tbsp", "name": "chia seeds", "section": "PANTRY"},
-        {"unit": "pinch of", "name": "salt", "section": "PANTRY"}
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "rolled oats",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "scoop",
+          "name": "vanilla whey protein",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "3/4",
+          "unit": "cup",
+          "name": "unsweetened almond or light coconut milk",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "frozen mango",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "chia seeds",
+          "section": "PANTRY"
+        },
+        {
+          "unit": "pinch of",
+          "name": "salt",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Stir everything together in a jar.",
@@ -53,19 +115,59 @@
       "key": "B3",
       "name": "Korean-style egg rice bowl",
       "mealType": "BREAKFAST",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 1,
       "servingSize": "1 bowl",
       "nutrition": "~540 cal, 40 g protein, 50 g carbs, 18 g fat",
       "ingredients": [
-        {"quantity": "1", "unit": "cup", "name": "cooked rice", "section": "CARBS"},
-        {"quantity": "2", "name": "eggs", "section": "PROTEIN"},
-        {"quantity": "1/2", "unit": "cup", "name": "liquid egg whites", "section": "PROTEIN"},
-        {"quantity": "1/2", "unit": "cup", "name": "kimchi", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tsp", "name": "sesame oil", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tbsp", "name": "low-sodium soy sauce", "section": "PANTRY"},
-        {"quantity": "1", "unit": "pack", "name": "seaweed snack", "section": "PANTRY"},
-        {"name": "gochujang", "note": "optional", "section": "PANTRY"}
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "liquid egg whites",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "kimchi",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sesame oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "pack",
+          "name": "seaweed snack",
+          "section": "PANTRY"
+        },
+        {
+          "name": "gochujang",
+          "note": "optional",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Heat sesame oil, fry or scramble eggs and whites.",
@@ -78,16 +180,41 @@
       "key": "B4",
       "name": "Greek yogurt power bowl",
       "mealType": "BREAKFAST",
-      "cuisineTags": ["American"],
+      "cuisineTags": [
+        "American"
+      ],
       "servings": 1,
       "servingSize": "1 bowl",
       "nutrition": "~450 cal, 45 g protein, 45 g carbs, 10 g fat",
       "ingredients": [
-        {"quantity": "1.5", "unit": "cups", "name": "nonfat Greek yogurt", "section": "PROTEIN"},
-        {"quantity": "1", "unit": "cup", "name": "mixed berries", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/4", "unit": "cup", "name": "granola", "section": "CARBS"},
-        {"quantity": "1", "unit": "tsp", "name": "honey", "section": "PANTRY"},
-        {"name": "cinnamon", "section": "PANTRY"}
+        {
+          "quantity": "1.5",
+          "unit": "cups",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "mixed berries",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "granola",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "honey",
+          "section": "PANTRY"
+        },
+        {
+          "name": "cinnamon",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Spoon yogurt into a bowl.",
@@ -98,25 +225,89 @@
       "key": "L1",
       "name": "Pollo guisado with rice and beans",
       "mealType": "LUNCH",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 4,
       "servingSize": "1 portion chicken + 3/4 cup rice + 1/2 cup beans",
       "nutrition": "~620 cal, 52 g protein, 65 g carbs, 14 g fat",
       "mealPrep": true,
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "chicken thighs", "note": "boneless skinless", "section": "PROTEIN"},
-        {"quantity": "1", "name": "onion", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "bell pepper", "section": "PRODUCE_FROZEN"},
-        {"quantity": "4", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "can", "name": "tomato sauce", "note": "8 oz", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "sofrito", "section": "PANTRY"},
-        {"quantity": "1", "unit": "packet", "name": "sazón", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "adobo", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tbsp", "name": "olive oil", "section": "PANTRY"},
-        {"quantity": "2", "name": "bay leaves", "section": "PANTRY"},
-        {"unit": "handful of", "name": "olives", "section": "PANTRY"},
-        {"quantity": "3", "unit": "cups", "name": "cooked rice", "section": "CARBS"},
-        {"quantity": "1", "unit": "can", "name": "black or pink beans", "section": "CARBS"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "chicken thighs",
+          "note": "boneless skinless",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "tomato sauce",
+          "note": "8 oz",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "sofrito",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "packet",
+          "name": "sazón",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "adobo",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "name": "bay leaves",
+          "section": "PANTRY"
+        },
+        {
+          "unit": "handful of",
+          "name": "olives",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black or pink beans",
+          "section": "CARBS"
+        }
       ],
       "steps": [
         "Season chicken with adobo, brown in oil, set aside.",
@@ -131,23 +322,77 @@
       "key": "L2",
       "name": "Teriyaki chicken and broccoli rice bowl",
       "mealType": "LUNCH",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 4,
       "servingSize": "1 bowl with 3/4 cup rice",
       "nutrition": "~580 cal, 50 g protein, 62 g carbs, 12 g fat",
       "mealPrep": true,
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "chicken breast", "note": "cubed", "section": "PROTEIN"},
-        {"quantity": "1/2", "unit": "cup", "name": "low-sodium soy sauce", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "honey", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tbsp", "name": "rice vinegar", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tbsp", "name": "ginger", "note": "grated", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tsp", "name": "cornstarch", "section": "PANTRY"},
-        {"quantity": "1", "unit": "large bag", "name": "frozen broccoli", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "unit": "cups", "name": "cooked jasmine rice", "section": "CARBS"},
-        {"name": "sesame seeds", "section": "PANTRY"},
-        {"name": "scallions", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "chicken breast",
+          "note": "cubed",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "honey",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "rice vinegar",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "note": "grated",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cornstarch",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "large bag",
+          "name": "frozen broccoli",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked jasmine rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "sesame seeds",
+          "section": "PANTRY"
+        },
+        {
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Whisk soy, honey, vinegar, ginger, garlic and cornstarch.",
@@ -162,24 +407,84 @@
       "key": "L3",
       "name": "Turkey picadillo bowl",
       "mealType": "LUNCH",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 4,
       "servingSize": "1 portion over 3/4 cup rice or 1 sweet potato",
       "nutrition": "~560 cal, 48 g protein, 55 g carbs, 16 g fat",
       "mealPrep": true,
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "93% lean ground turkey", "section": "PROTEIN"},
-        {"quantity": "1", "name": "onion", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "bell pepper", "section": "PRODUCE_FROZEN"},
-        {"quantity": "4", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "can", "name": "diced tomatoes", "section": "PANTRY"},
-        {"quantity": "1/3", "unit": "cup", "name": "raisins", "section": "PANTRY"},
-        {"quantity": "1/3", "unit": "cup", "name": "olives", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "capers", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "cumin", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "oregano", "section": "PANTRY"},
-        {"quantity": "1", "unit": "packet", "name": "sazón", "section": "PANTRY"},
-        {"quantity": "3", "unit": "cups", "name": "cooked rice", "note": "or 4 sweet potatoes", "section": "CARBS"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "93% lean ground turkey",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/3",
+          "unit": "cup",
+          "name": "raisins",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/3",
+          "unit": "cup",
+          "name": "olives",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "capers",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "oregano",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "packet",
+          "name": "sazón",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked rice",
+          "note": "or 4 sweet potatoes",
+          "section": "CARBS"
+        }
       ],
       "steps": [
         "Brown the turkey.",
@@ -194,21 +499,66 @@
       "key": "L4",
       "name": "Spicy tuna and avocado bowl",
       "mealType": "LUNCH",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 1,
       "servingSize": "1 bowl",
       "nutrition": "~540 cal, 46 g protein, 52 g carbs, 18 g fat",
       "ingredients": [
-        {"quantity": "2", "unit": "cans", "name": "tuna in water", "note": "or pouches", "section": "PROTEIN"},
-        {"quantity": "1", "unit": "tbsp", "name": "light mayo", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "sriracha", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "soy sauce", "section": "PANTRY"},
-        {"quantity": "1", "unit": "cup", "name": "cooked rice", "section": "CARBS"},
-        {"quantity": "1/4", "name": "avocado", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "name": "cucumber", "section": "PRODUCE_FROZEN"},
-        {"name": "pickled ginger", "section": "PANTRY"},
-        {"name": "seaweed snacks", "section": "PANTRY"},
-        {"name": "sesame seeds", "section": "PANTRY"}
+        {
+          "quantity": "2",
+          "unit": "cans",
+          "name": "tuna in water",
+          "note": "or pouches",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "light mayo",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sriracha",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/4",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "cucumber",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "pickled ginger",
+          "section": "PANTRY"
+        },
+        {
+          "name": "seaweed snacks",
+          "section": "PANTRY"
+        },
+        {
+          "name": "sesame seeds",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Drain tuna, mix with mayo, sriracha and soy.",
@@ -221,22 +571,75 @@
       "key": "D1",
       "name": "Mojo pork tenderloin, sweet potatoes, garlicky spinach",
       "mealType": "DINNER",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 4,
       "servingSize": "about 6 oz pork + 1 sweet potato + spinach",
       "nutrition": "~600 cal, 55 g protein, 50 g carbs, 18 g fat",
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "pork tenderloin", "section": "PROTEIN"},
-        {"quantity": "2", "name": "oranges", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "limes", "section": "PRODUCE_FROZEN"},
-        {"quantity": "8", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tsp", "name": "cumin", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "oregano", "section": "PANTRY"},
-        {"quantity": "3", "unit": "tbsp", "name": "olive oil", "note": "2 tbsp for the marinade + 1 tbsp for the potatoes", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "olive oil", "note": "for the spinach", "section": "PANTRY"},
-        {"quantity": "4", "name": "sweet potatoes", "section": "CARBS"},
-        {"quantity": "1", "unit": "large tub", "name": "baby spinach", "section": "PRODUCE_FROZEN"},
-        {"name": "salt", "section": "PANTRY"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "pork tenderloin",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "name": "oranges",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "limes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "8",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "oregano",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "note": "2 tbsp for the marinade + 1 tbsp for the potatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "olive oil",
+          "note": "for the spinach",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "4",
+          "name": "sweet potatoes",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "large tub",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Blend citrus juice, 6 garlic cloves, cumin, oregano, 2 tbsp oil and salt; marinate pork 1 to 24 hours.",
@@ -250,23 +653,83 @@
       "key": "D2",
       "name": "Thai basil chicken with jasmine rice",
       "mealType": "DINNER",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 4,
       "servingSize": "1 portion over 3/4 cup rice",
       "nutrition": "~580 cal, 52 g protein, 58 g carbs, 14 g fat",
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "ground chicken", "section": "PROTEIN"},
-        {"quantity": "6", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "name": "Thai chilies", "note": "or 1 jalapeño", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "onion", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "unit": "tbsp", "name": "oyster sauce", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "low-sodium soy sauce", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tbsp", "name": "fish sauce", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "sugar", "section": "PANTRY"},
-        {"quantity": "2", "unit": "cups", "name": "basil", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "bag", "name": "frozen green beans", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "unit": "cups", "name": "cooked jasmine rice", "section": "CARBS"},
-        {"quantity": "4", "name": "eggs", "note": "optional", "section": "PROTEIN"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "ground chicken",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "6",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "Thai chilies",
+          "note": "or 1 jalapeño",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "tbsp",
+          "name": "oyster sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "fish sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sugar",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "cups",
+          "name": "basil",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "bag",
+          "name": "frozen green beans",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked jasmine rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "4",
+          "name": "eggs",
+          "note": "optional",
+          "section": "PROTEIN"
+        }
       ],
       "steps": [
         "Stir-fry garlic and chili 30 seconds.",
@@ -281,24 +744,82 @@
       "key": "D3",
       "name": "Jerk salmon with rice and peas and mango salsa",
       "mealType": "DINNER",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 4,
       "servingSize": "1 fillet + 3/4 cup rice and peas",
       "nutrition": "~620 cal, 48 g protein, 52 g carbs, 24 g fat",
       "ingredients": [
-        {"quantity": "4", "name": "salmon portions", "note": "6 oz each", "section": "PROTEIN"},
-        {"quantity": "2", "unit": "tbsp", "name": "jerk seasoning", "section": "PANTRY"},
-        {"quantity": "1.5", "unit": "cups", "name": "rice", "section": "CARBS"},
-        {"quantity": "1", "unit": "can", "name": "light coconut milk", "section": "PANTRY"},
-        {"quantity": "1", "unit": "can", "name": "kidney beans", "section": "CARBS"},
-        {"quantity": "2", "name": "scallions", "section": "PRODUCE_FROZEN"},
-        {"name": "thyme", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "unit": "tsp", "name": "allspice", "section": "PANTRY"},
-        {"quantity": "1", "name": "mango", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/4", "name": "red onion", "section": "PRODUCE_FROZEN"},
-        {"name": "cilantro", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "lime", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "jalapeño", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "4",
+          "name": "salmon portions",
+          "note": "6 oz each",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "jerk seasoning",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1.5",
+          "unit": "cups",
+          "name": "rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "light coconut milk",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "kidney beans",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "thyme",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "tsp",
+          "name": "allspice",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "mango",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "name": "red onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "jalapeño",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Rub salmon with jerk seasoning.",
@@ -312,22 +833,73 @@
       "key": "D4",
       "name": "Lean beef bulgogi with kimchi and rice",
       "mealType": "DINNER",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 4,
       "servingSize": "1 portion over 3/4 cup rice",
       "nutrition": "~610 cal, 50 g protein, 55 g carbs, 20 g fat",
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "sirloin or flank steak", "section": "PROTEIN"},
-        {"quantity": "1/3", "unit": "cup", "name": "low-sodium soy sauce", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "brown sugar", "section": "PANTRY"},
-        {"quantity": "1", "name": "Asian pear", "note": "or apple", "section": "PRODUCE_FROZEN"},
-        {"quantity": "4", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tbsp", "name": "ginger", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tbsp", "name": "sesame oil", "section": "PANTRY"},
-        {"quantity": "2", "name": "scallions", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "unit": "cups", "name": "cooked rice", "section": "CARBS"},
-        {"name": "kimchi", "section": "PRODUCE_FROZEN"},
-        {"name": "bok choy or broccoli", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "sirloin or flank steak",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/3",
+          "unit": "cup",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "brown sugar",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "Asian pear",
+          "note": "or apple",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "sesame oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "kimchi",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "bok choy or broccoli",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Freeze the beef 30 minutes, slice thin.",
@@ -342,20 +914,62 @@
       "key": "D5",
       "name": "Smash-burger bowl",
       "mealType": "DINNER",
-      "cuisineTags": ["American"],
+      "cuisineTags": [
+        "American"
+      ],
       "servings": 1,
       "servingSize": "2 thin patties + greens + 1 cup wedges",
       "nutrition": "~580 cal, 48 g protein, 45 g carbs, 22 g fat",
       "ingredients": [
-        {"quantity": "7", "unit": "oz", "name": "90% lean ground beef", "section": "PROTEIN"},
-        {"quantity": "2", "unit": "big handfuls", "name": "arugula and baby spinach", "section": "PRODUCE_FROZEN"},
-        {"name": "pickles", "section": "PANTRY"},
-        {"quantity": "1", "name": "tomato", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/4", "name": "red onion", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "potato", "section": "CARBS"},
-        {"quantity": "1", "unit": "tbsp", "name": "light mayo", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "ketchup", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "mustard", "section": "PANTRY"}
+        {
+          "quantity": "7",
+          "unit": "oz",
+          "name": "90% lean ground beef",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "big handfuls",
+          "name": "arugula and baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "pickles",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "tomato",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "name": "red onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "potato",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "light mayo",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "ketchup",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "mustard",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Cut potato into wedges, roast at 425°F for 25 minutes.",
@@ -368,25 +982,85 @@
       "key": "D6",
       "name": "Slow-cooker ropa vieja",
       "mealType": "DINNER",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 6,
       "servingSize": "1 portion + 3/4 cup rice or yuca",
       "nutrition": "~590 cal, 54 g protein, 55 g carbs, 15 g fat",
       "mealPrep": true,
       "ingredients": [
-        {"quantity": "3", "unit": "lb", "name": "flank steak", "section": "PROTEIN"},
-        {"quantity": "2", "name": "onions", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "bell peppers", "section": "PRODUCE_FROZEN"},
-        {"quantity": "6", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "can", "name": "crushed tomatoes", "section": "PANTRY"},
-        {"quantity": "1/2", "unit": "cup", "name": "low-sodium broth", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "sofrito", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "cumin", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "oregano", "section": "PANTRY"},
-        {"quantity": "2", "name": "bay leaves", "section": "PANTRY"},
-        {"quantity": "1/3", "unit": "cup", "name": "olives", "section": "PANTRY"},
-        {"name": "rice or yuca", "section": "CARBS"},
-        {"quantity": "1", "name": "lime", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "3",
+          "unit": "lb",
+          "name": "flank steak",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "name": "onions",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "bell peppers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "6",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "crushed tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "low-sodium broth",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "sofrito",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "oregano",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "name": "bay leaves",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/3",
+          "unit": "cup",
+          "name": "olives",
+          "section": "PANTRY"
+        },
+        {
+          "name": "rice or yuca",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Put everything except olives, rice and lime in the slow cooker.",
@@ -399,20 +1073,60 @@
       "key": "D7",
       "name": "Sheet-pan fajita chicken with black beans",
       "mealType": "DINNER",
-      "cuisineTags": ["Hispanic"],
+      "cuisineTags": [
+        "Hispanic"
+      ],
       "servings": 1,
       "servingSize": "1 bowl or 2 tacos",
       "nutrition": "~560 cal, 52 g protein, 50 g carbs, 14 g fat",
       "ingredients": [
-        {"quantity": "8", "unit": "oz", "name": "chicken breast", "section": "PROTEIN"},
-        {"quantity": "1", "name": "bell pepper", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "name": "onion", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tsp", "name": "oil", "section": "PANTRY"},
-        {"name": "fajita seasoning", "section": "PANTRY"},
-        {"quantity": "1/2", "unit": "cup", "name": "black beans", "section": "CARBS"},
-        {"quantity": "2", "name": "corn tortillas", "note": "or 3/4 cup rice", "section": "CARBS"},
-        {"name": "salsa", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/4", "name": "avocado", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "8",
+          "unit": "oz",
+          "name": "chicken breast",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "oil",
+          "section": "PANTRY"
+        },
+        {
+          "name": "fajita seasoning",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "black beans",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "name": "corn tortillas",
+          "note": "or 3/4 cup rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Slice chicken, pepper and onion, toss with oil and seasoning.",
@@ -426,21 +1140,75 @@
       "key": "S1",
       "name": "Lighter sancocho-style chicken soup",
       "mealType": "SOUP",
-      "cuisineTags": ["Caribbean"],
+      "cuisineTags": [
+        "Caribbean"
+      ],
       "servings": 6,
       "servingSize": "1 big bowl with one piece of starch",
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "chicken thighs", "section": "PROTEIN"},
-        {"quantity": "1", "unit": "lb", "name": "calabaza", "note": "or sweet potato", "section": "CARBS"},
-        {"quantity": "1", "unit": "lb", "name": "yuca", "section": "CARBS"},
-        {"quantity": "2", "unit": "ears", "name": "corn", "note": "cut in rounds", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "unit": "head", "name": "cabbage", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "carrots", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "celery stalks", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "unit": "tbsp", "name": "sofrito", "section": "PANTRY"},
-        {"name": "cilantro", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "limes", "section": "PRODUCE_FROZEN"},
-        {"quantity": "8", "unit": "cups", "name": "low-sodium broth", "section": "PANTRY"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "chicken thighs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "calabaza",
+          "note": "or sweet potato",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "yuca",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "unit": "ears",
+          "name": "corn",
+          "note": "cut in rounds",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "head",
+          "name": "cabbage",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "celery stalks",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "sofrito",
+          "section": "PANTRY"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "limes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "8",
+          "unit": "cups",
+          "name": "low-sodium broth",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Simmer chicken in broth with sofrito 20 minutes.",
@@ -453,21 +1221,75 @@
       "key": "S2",
       "name": "Ginger chicken and vegetable soup",
       "mealType": "SOUP",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 4,
       "servingSize": "1 big bowl",
       "ingredients": [
-        {"quantity": "8", "unit": "cups", "name": "low-sodium chicken broth", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "ginger", "section": "PRODUCE_FROZEN"},
-        {"quantity": "4", "name": "garlic cloves", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1.5", "unit": "lb", "name": "chicken breast", "section": "PROTEIN"},
-        {"quantity": "4", "unit": "heads", "name": "baby bok choy", "section": "PRODUCE_FROZEN"},
-        {"quantity": "8", "unit": "oz", "name": "mushrooms", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "unit": "head", "name": "napa cabbage", "section": "PRODUCE_FROZEN"},
-        {"quantity": "3", "name": "scallions", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tsp", "name": "sesame oil", "section": "PANTRY"},
-        {"quantity": "2", "unit": "tbsp", "name": "soy sauce", "section": "PANTRY"},
-        {"name": "rice noodles", "note": "optional", "section": "CARBS"}
+        {
+          "quantity": "8",
+          "unit": "cups",
+          "name": "low-sodium chicken broth",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "ginger",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1.5",
+          "unit": "lb",
+          "name": "chicken breast",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "4",
+          "unit": "heads",
+          "name": "baby bok choy",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "8",
+          "unit": "oz",
+          "name": "mushrooms",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "head",
+          "name": "napa cabbage",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sesame oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "name": "rice noodles",
+          "note": "optional",
+          "section": "CARBS"
+        }
       ],
       "steps": [
         "Simmer broth with ginger and garlic.",
@@ -480,22 +1302,73 @@
       "key": "S3",
       "name": "Caldo de pollo",
       "mealType": "SOUP",
-      "cuisineTags": ["Hispanic"],
+      "cuisineTags": [
+        "Hispanic"
+      ],
       "servings": 6,
       "servingSize": "1 big bowl + 1 corn tortilla",
       "ingredients": [
-        {"quantity": "2", "unit": "lb", "name": "chicken breast or thighs", "section": "PROTEIN"},
-        {"quantity": "8", "unit": "cups", "name": "low-sodium broth", "section": "PANTRY"},
-        {"quantity": "2", "name": "zucchini", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "carrots", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "unit": "head", "name": "cabbage", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "name": "chayote", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "tomatoes", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "unit": "cup", "name": "rice", "section": "CARBS"},
-        {"name": "cilantro", "section": "PRODUCE_FROZEN"},
-        {"quantity": "2", "name": "limes", "section": "PRODUCE_FROZEN"},
-        {"name": "corn tortillas", "section": "CARBS"},
-        {"name": "hot sauce", "section": "PANTRY"}
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "chicken breast or thighs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "8",
+          "unit": "cups",
+          "name": "low-sodium broth",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "name": "zucchini",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "head",
+          "name": "cabbage",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "chayote",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "tomatoes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "limes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "corn tortillas",
+          "section": "CARBS"
+        },
+        {
+          "name": "hot sauce",
+          "section": "PANTRY"
+        }
       ],
       "steps": [
         "Simmer chicken in broth 20 minutes, remove and shred.",
@@ -508,17 +1381,52 @@
       "key": "S4",
       "name": "Protein egg drop soup",
       "mealType": "SOUP",
-      "cuisineTags": ["Asian"],
+      "cuisineTags": [
+        "Asian"
+      ],
       "servings": 1,
       "servingSize": "1 big bowl",
       "ingredients": [
-        {"quantity": "3", "unit": "cups", "name": "low-sodium broth", "section": "PANTRY"},
-        {"quantity": "1", "unit": "tsp", "name": "ginger", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1", "unit": "tbsp", "name": "soy sauce", "section": "PANTRY"},
-        {"quantity": "2", "unit": "handfuls", "name": "spinach", "section": "PRODUCE_FROZEN"},
-        {"quantity": "1/2", "unit": "cup", "name": "liquid egg whites", "section": "PROTEIN"},
-        {"quantity": "1", "name": "egg", "section": "PROTEIN"},
-        {"quantity": "1", "name": "scallion", "section": "PRODUCE_FROZEN"}
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "low-sodium broth",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "ginger",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "liquid egg whites",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "egg",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "scallion",
+          "section": "PRODUCE_FROZEN"
+        }
       ],
       "steps": [
         "Simmer broth with ginger and soy.",
@@ -526,73 +1434,736 @@
         "Beat egg whites and egg, pour in slowly while stirring.",
         "Top with scallion. Ready in 10 minutes."
       ]
+    },
+    {
+      "key": "SB1",
+      "name": "Protein Latte, grande",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Starbucks"
+      ],
+      "servings": 1,
+      "servingSize": "Grande Protein Latte",
+      "nutrition": "Breakfast guide: about 30–45 g protein",
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SB2",
+      "name": "Bacon & Gruyère Egg Bites + iced drink with Protein Cold Foam",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Starbucks"
+      ],
+      "servings": 1,
+      "servingSize": "Egg bites and an iced drink with Protein Cold Foam",
+      "nutrition": "Breakfast guide: about 30–45 g protein",
+      "protein": "EGG",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SB3",
+      "name": "Spinach, Feta & Egg White Wrap + Protein Latte",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Starbucks"
+      ],
+      "servings": 1,
+      "servingSize": "The wrap and a Protein Latte",
+      "nutrition": "Breakfast guide: about 30–45 g protein",
+      "protein": "EGG",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SB4",
+      "name": "Bacon, Sausage & Egg Wrap",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Starbucks"
+      ],
+      "servings": 1,
+      "servingSize": "The wrap (hungrier days)",
+      "nutrition": "Breakfast guide: about 30–45 g protein",
+      "protein": "EGG",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SB5",
+      "name": "Kale & Mushroom Egg Bites + iced drink with Protein Cold Foam",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Starbucks"
+      ],
+      "servings": 1,
+      "servingSize": "Egg bites and an iced drink with Protein Cold Foam",
+      "nutrition": "Breakfast guide: about 30–45 g protein",
+      "protein": "EGG",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SN1",
+      "name": "Greek yogurt cup",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1 cup",
+      "nutrition": "Snack guide: about 15–20 g protein",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "name": "Greek yogurt cup",
+          "section": "PROTEIN"
+        }
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SN2",
+      "name": "Protein shake",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1 shake",
+      "nutrition": "Snack guide: about 15–20 g protein",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "name": "ready-to-drink protein shake",
+          "section": "PROTEIN"
+        }
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SN3",
+      "name": "String cheese and fruit",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "2 sticks and a piece of fruit",
+      "nutrition": "Snack guide: about 15–20 g protein",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "name": "string cheese",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "piece",
+          "name": "fruit",
+          "section": "PRODUCE_FROZEN"
+        }
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 2
+    },
+    {
+      "key": "SN4",
+      "name": "Jerky",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1 small pack",
+      "nutrition": "Snack guide: about 15–20 g protein",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "small pack",
+          "name": "jerky",
+          "section": "PROTEIN"
+        }
+      ],
+      "protein": "BEEF",
+      "onlyFor": "ashley",
+      "since": 2
     }
   ],
   "freeVolumeFoods": [
-    "Arugula", "Baby spinach", "Shredded cabbage", "Bok choy", "Kale", "Cucumber", "Tomato",
-    "Bell pepper", "Radish", "Celery", "Onion", "Jalapeño", "Broccoli", "Cauliflower", "Green beans",
-    "Zucchini", "Mushrooms", "Asparagus", "Cauliflower rice mixed half-and-half with rice", "Kimchi",
-    "Pickles", "Pickled onions", "Salsa", "Pico de gallo", "Broth", "Lime", "Vinegar", "Hot sauce", "Herbs"
+    "Arugula",
+    "Baby spinach",
+    "Shredded cabbage",
+    "Bok choy",
+    "Kale",
+    "Cucumber",
+    "Tomato",
+    "Bell pepper",
+    "Radish",
+    "Celery",
+    "Onion",
+    "Jalapeño",
+    "Broccoli",
+    "Cauliflower",
+    "Green beans",
+    "Zucchini",
+    "Mushrooms",
+    "Asparagus",
+    "Cauliflower rice mixed half-and-half with rice",
+    "Kimchi",
+    "Pickles",
+    "Pickled onions",
+    "Salsa",
+    "Pico de gallo",
+    "Broth",
+    "Lime",
+    "Vinegar",
+    "Hot sauce",
+    "Herbs"
   ],
   "pantryStaples": [
-    "olive oil", "sesame oil", "low-sodium soy sauce", "rice vinegar", "oyster sauce", "fish sauce",
-    "sriracha", "gochujang", "honey", "cumin", "oregano", "allspice", "bay leaves", "adobo", "sazón",
-    "salt", "cornstarch", "hot sauce", "mustard", "ketchup"
+    "olive oil",
+    "sesame oil",
+    "low-sodium soy sauce",
+    "rice vinegar",
+    "oyster sauce",
+    "fish sauce",
+    "sriracha",
+    "gochujang",
+    "honey",
+    "cumin",
+    "oregano",
+    "allspice",
+    "bay leaves",
+    "adobo",
+    "sazón",
+    "salt",
+    "cornstarch",
+    "hot sauce",
+    "mustard",
+    "ketchup"
   ],
   "workoutDays": [
     {
       "order": 1,
       "name": "Upper Body",
       "exercises": [
-        {"group": "A", "name": "Barbell bench press", "sets": "3", "reps": "6–10", "swaps": ["Smith machine bench", "Chest press machine", "Dumbbell bench"]},
-        {"group": "B", "name": "Dumbbell press", "sets": "4", "reps": "8–12", "swaps": ["Incline machine press"]},
-        {"group": "B", "name": "Weighted chin-ups", "sets": "4", "reps": "3–6", "swaps": ["Lat pulldown, underhand grip", "Assisted chin-up machine"]},
-        {"group": "C", "name": "Curls", "sets": "4", "reps": "8–12", "swaps": ["Cable curls", "Machine curls"]},
-        {"group": "C", "name": "Hanging knee raises", "sets": "4", "reps": "to failure", "swaps": ["Captain's chair knee raises", "Ab machine"]},
-        {"group": "C", "name": "Face pulls", "sets": "4", "reps": "15–20", "swaps": ["Reverse pec-deck"]},
-        {"group": "D", "name": "Push-ups", "sets": "4", "reps": "to failure", "swaps": ["Chest press machine, light"]},
-        {"group": "D", "name": "Side raises", "sets": "4", "reps": "8–12", "swaps": ["Cable lateral raise", "Machine lateral raise"]},
-        {"group": "D", "name": "Calf raises", "sets": "4", "reps": "to failure", "swaps": ["Seated calf raise", "Leg-press calf raise"]}
+        {
+          "group": "A",
+          "name": "Barbell bench press",
+          "sets": "3",
+          "reps": "6–10",
+          "swaps": [
+            "Smith machine bench",
+            "Chest press machine",
+            "Dumbbell bench"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Dumbbell press",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Incline machine press"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Weighted chin-ups",
+          "sets": "4",
+          "reps": "3–6",
+          "swaps": [
+            "Lat pulldown, underhand grip",
+            "Assisted chin-up machine"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Curls",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Cable curls",
+            "Machine curls"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Hanging knee raises",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Captain's chair knee raises",
+            "Ab machine"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Face pulls",
+          "sets": "4",
+          "reps": "15–20",
+          "swaps": [
+            "Reverse pec-deck"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Push-ups",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Chest press machine, light"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Side raises",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Cable lateral raise",
+            "Machine lateral raise"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Calf raises",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Seated calf raise",
+            "Leg-press calf raise"
+          ]
+        }
       ]
     },
     {
       "order": 2,
       "name": "Lower Body",
       "exercises": [
-        {"group": "A", "name": "Barbell squat", "sets": "3", "reps": "6–10", "swaps": ["Leg press", "Hack squat", "Smith machine squat"]},
-        {"group": "B", "name": "Good mornings", "sets": "3", "reps": "6–12", "swaps": ["Romanian deadlift", "Seated or lying leg curl"]},
-        {"group": "C", "name": "Lunges", "sets": "4", "reps": "10–15", "swaps": ["Walking dumbbell lunges", "Bulgarian split squats", "Leg extension"]},
-        {"group": "C", "name": "Bodyweight pull-ups", "sets": "4", "reps": "to failure", "swaps": ["Lat pulldown", "Assisted pull-up machine"]},
-        {"group": "D", "name": "Wrist curls", "sets": "4", "reps": "8–12", "swaps": ["Dead hangs", "Farmer's carries"]},
-        {"group": "E", "name": "Hanging leg raises", "sets": "4", "reps": "to failure", "swaps": ["Captain's chair leg raises", "Cable crunches"]},
-        {"group": "E", "name": "Calf raises", "sets": "4", "reps": "to failure", "swaps": ["Standing calf machine"]}
+        {
+          "group": "A",
+          "name": "Barbell squat",
+          "sets": "3",
+          "reps": "6–10",
+          "swaps": [
+            "Leg press",
+            "Hack squat",
+            "Smith machine squat"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Good mornings",
+          "sets": "3",
+          "reps": "6–12",
+          "swaps": [
+            "Romanian deadlift",
+            "Seated or lying leg curl"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Lunges",
+          "sets": "4",
+          "reps": "10–15",
+          "swaps": [
+            "Walking dumbbell lunges",
+            "Bulgarian split squats",
+            "Leg extension"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Bodyweight pull-ups",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Lat pulldown",
+            "Assisted pull-up machine"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Wrist curls",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Dead hangs",
+            "Farmer's carries"
+          ]
+        },
+        {
+          "group": "E",
+          "name": "Hanging leg raises",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Captain's chair leg raises",
+            "Cable crunches"
+          ]
+        },
+        {
+          "group": "E",
+          "name": "Calf raises",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Standing calf machine"
+          ]
+        }
       ]
     },
     {
       "order": 3,
       "name": "Upper Body",
       "exercises": [
-        {"group": "A", "name": "Standing overhead press", "sets": "4", "reps": "6–10", "swaps": ["Seated dumbbell shoulder press", "Shoulder press machine", "Smith machine press"]},
-        {"group": "B", "name": "Pause bench press", "sets": "4", "reps": "4–8", "swaps": ["Incline dumbbell press with a pause"], "note": "Hold 1–2 seconds on the chest."},
-        {"group": "B", "name": "Face pulls", "sets": "4", "reps": "15–20", "swaps": ["Reverse pec-deck", "Band pull-aparts"]},
-        {"group": "C", "name": "Preacher curls", "sets": "4", "reps": "6–10", "swaps": ["Machine preacher curl", "Incline dumbbell curl"]},
-        {"group": "C", "name": "Bent-over side raises", "sets": "4", "reps": "8–12", "swaps": ["Rear-delt machine", "Cable rear-delt fly"]},
-        {"group": "C", "name": "Calf raises", "sets": "4", "reps": "to failure", "swaps": ["Any calf machine"]},
-        {"group": "D", "name": "Rows", "sets": "3", "reps": "8–12", "swaps": ["Chest-supported row machine", "Cable row", "Dumbbell row"]}
+        {
+          "group": "A",
+          "name": "Standing overhead press",
+          "sets": "4",
+          "reps": "6–10",
+          "swaps": [
+            "Seated dumbbell shoulder press",
+            "Shoulder press machine",
+            "Smith machine press"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Pause bench press",
+          "sets": "4",
+          "reps": "4–8",
+          "swaps": [
+            "Incline dumbbell press with a pause"
+          ],
+          "note": "Hold 1–2 seconds on the chest."
+        },
+        {
+          "group": "B",
+          "name": "Face pulls",
+          "sets": "4",
+          "reps": "15–20",
+          "swaps": [
+            "Reverse pec-deck",
+            "Band pull-aparts"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Preacher curls",
+          "sets": "4",
+          "reps": "6–10",
+          "swaps": [
+            "Machine preacher curl",
+            "Incline dumbbell curl"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Bent-over side raises",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Rear-delt machine",
+            "Cable rear-delt fly"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Calf raises",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Any calf machine"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Rows",
+          "sets": "3",
+          "reps": "8–12",
+          "swaps": [
+            "Chest-supported row machine",
+            "Cable row",
+            "Dumbbell row"
+          ]
+        }
       ]
     },
     {
       "order": 4,
       "name": "Full Body",
       "exercises": [
-        {"group": "A", "name": "Reverse lunges", "sets": "4", "reps": "10–15", "swaps": ["Leg press", "Hack squat"]},
-        {"group": "A", "name": "Chest flies", "sets": "4", "reps": "10–15", "swaps": ["Pec-deck", "Cable crossover"]},
-        {"group": "B", "name": "Weighted pull-ups", "sets": "4", "reps": "3–6", "swaps": ["Lat pulldown"]},
-        {"group": "B", "name": "Push-ups", "sets": "4", "reps": "to failure", "swaps": ["Machine chest press", "Dips"]},
-        {"group": "C", "name": "Romanian deadlift", "sets": "3", "reps": "8–12", "swaps": ["Leg curl machine", "Back extension"]},
-        {"group": "D", "name": "Triceps extensions", "sets": "4", "reps": "8–12", "swaps": ["Cable pushdowns", "Overhead cable extension", "Dips"]},
-        {"group": "D", "name": "Face pulls", "sets": "4", "reps": "15–20", "swaps": ["Reverse pec-deck"]},
-        {"group": "D", "name": "Leg raises", "sets": "4", "reps": "to failure", "swaps": ["Ab machine"]}
+        {
+          "group": "A",
+          "name": "Reverse lunges",
+          "sets": "4",
+          "reps": "10–15",
+          "swaps": [
+            "Leg press",
+            "Hack squat"
+          ]
+        },
+        {
+          "group": "A",
+          "name": "Chest flies",
+          "sets": "4",
+          "reps": "10–15",
+          "swaps": [
+            "Pec-deck",
+            "Cable crossover"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Weighted pull-ups",
+          "sets": "4",
+          "reps": "3–6",
+          "swaps": [
+            "Lat pulldown"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Push-ups",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Machine chest press",
+            "Dips"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Romanian deadlift",
+          "sets": "3",
+          "reps": "8–12",
+          "swaps": [
+            "Leg curl machine",
+            "Back extension"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Triceps extensions",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Cable pushdowns",
+            "Overhead cable extension",
+            "Dips"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Face pulls",
+          "sets": "4",
+          "reps": "15–20",
+          "swaps": [
+            "Reverse pec-deck"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Leg raises",
+          "sets": "4",
+          "reps": "to failure",
+          "swaps": [
+            "Ab machine"
+          ]
+        }
+      ]
+    },
+    {
+      "order": 1,
+      "name": "Glutes and hamstrings",
+      "shortName": "Glutes + hams",
+      "profile": "ashley",
+      "since": 2,
+      "exercises": [
+        {
+          "group": "A",
+          "name": "Hip thrust",
+          "sets": "4",
+          "reps": "8–12",
+          "swaps": [
+            "Smith machine hip thrust",
+            "Dumbbell glute bridge"
+          ],
+          "note": "Barbell or machine."
+        },
+        {
+          "group": "B",
+          "name": "Romanian deadlift",
+          "sets": "3",
+          "reps": "8–12",
+          "swaps": [
+            "Dumbbell Romanian deadlift",
+            "Cable pull-through"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Back extension",
+          "sets": "3",
+          "reps": "12–15",
+          "swaps": [
+            "Reverse hyper",
+            "Light hip thrust machine"
+          ],
+          "note": "Squeeze at the top."
+        },
+        {
+          "group": "D",
+          "name": "Seated leg curl",
+          "sets": "3",
+          "reps": "10–15",
+          "swaps": [
+            "Lying leg curl"
+          ]
+        },
+        {
+          "group": "E",
+          "name": "Hip abduction machine",
+          "sets": "3",
+          "reps": "15–20",
+          "swaps": [
+            "Banded side steps",
+            "Cable side kick"
+          ]
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "name": "Upper body plus glutes",
+      "shortName": "Upper",
+      "profile": "ashley",
+      "since": 2,
+      "exercises": [
+        {
+          "group": "A",
+          "name": "Lat pulldown",
+          "sets": "3",
+          "reps": "8–12",
+          "swaps": [
+            "Assisted pull-up machine"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Dumbbell shoulder press",
+          "sets": "3",
+          "reps": "8–12",
+          "swaps": [
+            "Shoulder press machine"
+          ]
+        },
+        {
+          "group": "C",
+          "name": "Seated cable row",
+          "sets": "3",
+          "reps": "10–12",
+          "swaps": [
+            "Chest-supported row machine"
+          ]
+        },
+        {
+          "group": "D",
+          "name": "Side raises",
+          "sets": "3",
+          "reps": "12–15",
+          "swaps": [
+            "Cable or machine lateral raise"
+          ]
+        },
+        {
+          "group": "E",
+          "name": "Cable glute kickback",
+          "sets": "3",
+          "reps": "12–15 each leg",
+          "swaps": [
+            "Kickback machine",
+            "Banded kickbacks"
+          ]
+        },
+        {
+          "group": "F",
+          "name": "Plank or cable crunch",
+          "sets": "3",
+          "reps": "sets",
+          "swaps": [
+            "Any ab machine"
+          ]
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "name": "Glutes and quads",
+      "shortName": "Glutes + quads",
+      "profile": "ashley",
+      "since": 2,
+      "exercises": [
+        {
+          "group": "A",
+          "name": "Bulgarian split squat",
+          "sets": "3",
+          "reps": "8–12 each leg",
+          "swaps": [
+            "Reverse lunge",
+            "Step-ups"
+          ]
+        },
+        {
+          "group": "B",
+          "name": "Leg press",
+          "sets": "3",
+          "reps": "10–15",
+          "swaps": [
+            "Hack squat",
+            "Goblet squat"
+          ],
+          "note": "Feet high and wide."
+        },
+        {
+          "group": "C",
+          "name": "Hip thrust",
+          "sets": "3",
+          "reps": "12–15",
+          "swaps": [
+            "Glute bridge machine",
+            "Single-leg glute bridge"
+          ],
+          "note": "Lighter, with a 2-second squeeze."
+        },
+        {
+          "group": "D",
+          "name": "Cable glute kickback",
+          "sets": "3",
+          "reps": "12–15 each leg",
+          "swaps": [
+            "Kickback machine"
+          ]
+        },
+        {
+          "group": "E",
+          "name": "Hip abduction machine",
+          "sets": "3",
+          "reps": "15–20",
+          "swaps": [
+            "Banded side steps"
+          ]
+        }
       ]
     }
   ],
@@ -605,5 +2176,40 @@
     "Gym packed? Do the superset exercises one after the other instead of back to back.",
     "Short on time? Skip the last group, not the first lift.",
     "Optional after lifting: 20 to 30 minutes of easy cardio, then sauna."
+  ],
+  "gymTipsAshley": [
+    "Rest 2 minutes after the first two exercises, about 1 minute after the rest.",
+    "Stop each set with one or two good reps left. Push the last set a bit harder.",
+    "When every set reaches the top of the rep range, add the smallest weight jump next time.",
+    "Feel it in the glutes, not the lower back. On hip thrusts, tuck the chin and keep the ribs down.",
+    "Setup for a shorter frame: use a low bench or step for hip thrusts, and slide machine seats forward."
+  ],
+  "easierToFinishTips": [
+    "Small appetite today? Eat the protein first, then the rice.",
+    "Drink some of it: a shake or protein latte counts.",
+    "Split the plate: half now, half in an hour.",
+    "Add, don't enlarge: a drizzle of olive oil, some avocado or cheese makes the same plate go further."
+  ],
+  "dailyGuide": [
+    {
+      "label": "Protein",
+      "text": "100–110 g, about 30 g at each meal plus a protein snack"
+    },
+    {
+      "label": "Calories",
+      "text": "roughly 1,700–1,900"
+    },
+    {
+      "label": "Carbs",
+      "text": "most of them around training: breakfast, the meal before and the meal after the gym"
+    },
+    {
+      "label": "Fats",
+      "text": "a thumb-sized portion per meal: avocado, olive oil, nuts, cheese"
+    },
+    {
+      "label": "Water",
+      "text": "a bottle with you at the gym and one through the day"
+    }
   ]
 }

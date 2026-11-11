@@ -18,12 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,11 +53,15 @@ import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.sauna.SaunaState
 import com.personal.mealgym.sauna.SaunaTimer
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.ShowMessages
+import com.personal.mealgym.R
 import com.personal.mealgym.ui.components.DetailTopBar
+import com.personal.mealgym.ui.components.GlamColors
+import com.personal.mealgym.ui.components.isGlam
 import com.personal.mealgym.ui.components.MinutesDialog
 import com.personal.mealgym.ui.components.formatClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -182,10 +187,14 @@ fun SaunaScreen(nav: AppNavigator, vm: SaunaViewModel = viewModel(factory = AppV
 
 @Composable
 private fun PickTime(onStart: (Int) -> Unit, onCustom: () -> Unit) {
-    Text("How long?", style = MaterialTheme.typography.headlineSmall)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (isGlam()) Icon(painterResource(R.drawable.ic_sparkle), null, tint = GlamColors.Lilac, modifier = Modifier.size(18.dp))
+        Text("How long?", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 8.dp))
+        if (isGlam()) Icon(painterResource(R.drawable.ic_sparkle), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         SaunaTimer.presets.forEach { minutes ->
-            Button(onClick = { onStart(minutes) }, modifier = Modifier.weight(1f).height(72.dp)) {
+            AppButton(onClick = { onStart(minutes) }, modifier = Modifier.weight(1f).height(72.dp)) {
                 Text("$minutes min", fontSize = 20.sp)
             }
         }
@@ -229,7 +238,7 @@ private fun FinishedCard(s: SaunaState.Finished, onOk: () -> Unit) {
                 if (s.loggedMinutes > 0) "${s.loggedMinutes} min logged for today." else "Stopped before a full minute, so nothing was logged.",
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Button(onClick = onOk) { Text("OK") }
+            AppButton(onClick = onOk) { Text("OK") }
         }
     }
 }

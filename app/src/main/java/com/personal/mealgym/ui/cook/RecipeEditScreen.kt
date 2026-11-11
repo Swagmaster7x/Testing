@@ -20,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -48,6 +47,7 @@ import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.DetailTopBar
@@ -187,7 +187,7 @@ fun RecipeEditScreen(nav: AppNavigator, vm: RecipeEditViewModel = viewModel(fact
                 )
             }
             item {
-                Button(onClick = { vm.save(onSaved) }, enabled = vm.canSave, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                AppButton(onClick = { vm.save(onSaved) }, enabled = vm.canSave, modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
                     Text("Save recipe")
                 }
             }

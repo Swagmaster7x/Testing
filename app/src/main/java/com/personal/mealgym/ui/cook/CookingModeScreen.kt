@@ -11,7 +11,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.DetailTopBar
@@ -107,7 +107,7 @@ fun CookingModeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory
                     modifier = Modifier.weight(1f),
                 ) { Text("Back", fontSize = 18.sp) }
                 val last = pager.currentPage == pageCount - 1
-                Button(
+                AppButton(
                     onClick = {
                         if (last) nav.back() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
                     },

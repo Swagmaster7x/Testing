@@ -169,43 +169,68 @@ class SeedRepository(private val context: Context) {
         SeedParser.parse(text)
     }
 
+    /**
+     * Adds whatever seed recipes, workout days and pantry staples this phone hasn't been
+     * offered yet. The keys offered so far are remembered, so anything deleted on the phone
+     * stays deleted, and an upgrade only brings what's new.
+     */
     suspend fun sync(db: AppDatabase, settings: SettingsRepository, freshDatabase: Boolean) {
         db.profileDao().insertAll(BackupFile.defaultProfiles)
-        val level = db.metaDao().get(SEED_LEVEL)?.toIntOrNull()
+        val meta = db.metaDao()
+        val level = meta.get(SEED_LEVEL)?.toIntOrNull()
             ?: if (freshDatabase || db.recipeDao().count() == 0) 0 else 1
-        if (level >= seed.version) return
-        val staples = (seed.pantryStaples + seed.extraPantryStaples).toSet()
 
+        // Before keys were tracked, everything from the installed level counts as offered.
+        val offeredRecipes = meta.get(SEED_RECIPES)?.let(::splitKeys)
+            ?: seed.recipes.filter { it.since <= level }.map { it.key }.toSet()
+        val offeredDays = meta.get(SEED_DAYS)?.let(::splitKeys)
+            ?: seed.workoutDays.filter { it.since <= level }.map(::dayKey).toSet()
+        val offeredStaples = meta.get(SEED_STAPLES)?.let(::splitKeys)
+            ?: if (level >= 1) seed.pantryStaples.toSet() else emptySet()
+
+        val allStaples = (seed.pantryStaples + seed.extraPantryStaples).toSet()
+        val recipeDao = db.recipeDao()
         db.withTransaction {
-            val recipeDao = db.recipeDao()
             for (r in seed.recipes) {
                 val existing = recipeDao.bySeedKey(r.key)
-                if (r.since > level && existing == null) {
-                    val id = recipeDao.insert(SeedParser.recipeOf(r))
-                    recipeDao.insertIngredients(SeedParser.ingredientsOf(r, id, staples))
-                } else if (existing != null && level < 2 && existing.protein == null) {
+                if (r.key !in offeredRecipes) {
+                    if (existing == null) {
+                        val id = recipeDao.insert(SeedParser.recipeOf(r))
+                        recipeDao.insertIngredients(SeedParser.ingredientsOf(r, id, allStaples))
+                    }
+                } else if (existing != null && existing.protein == null && r.protein != null) {
                     // Recipes from before the library upgrade gain their protein tag and swaps.
                     recipeDao.update(
                         existing.copy(
                             protein = r.protein,
-                            proteinSwaps = r.swaps,
+                            proteinSwaps = existing.proteinSwaps.ifEmpty { r.swaps },
                             onlyForProfileId = existing.onlyForProfileId ?: SeedParser.profileId(r.onlyFor),
                         ),
                     )
                 }
             }
-            for (d in seed.workoutDays.filter { it.since > level }) {
+            for (d in seed.workoutDays.filter { dayKey(it) !in offeredDays }) {
                 val dayId = db.workoutDao().insertDay(SeedParser.dayOf(d))
                 db.workoutDao().insertExercises(SeedParser.exercisesOf(d, dayId))
             }
-            db.metaDao().put(Meta(SEED_LEVEL, seed.version.toString()))
+            meta.put(Meta(SEED_RECIPES, (offeredRecipes + seed.recipes.map { it.key }).sorted().joinToString(",")))
+            meta.put(Meta(SEED_DAYS, (offeredDays + seed.workoutDays.map(::dayKey)).sorted().joinToString(",")))
+            meta.put(Meta(SEED_STAPLES, (offeredStaples + allStaples).sorted().joinToString(",")))
+            meta.put(Meta(SEED_LEVEL, maxOf(level, seed.version).toString()))
         }
 
-        if (level < 1) settings.setPantryStaples(seed.pantryStaples.toSet() + seed.extraPantryStaples)
-        else settings.addPantryStaples(seed.extraPantryStaples)
+        val newStaples = allStaples - offeredStaples
+        if (level == 0) settings.setPantryStaples(allStaples) else if (newStaples.isNotEmpty()) settings.addPantryStaples(newStaples)
     }
+
+    private fun splitKeys(text: String): Set<String> = text.split(',').filter { it.isNotBlank() }.toSet()
+
+    private fun dayKey(d: SeedWorkoutDay) = "${d.profile.lowercase()}-${d.order}"
 
     companion object {
         const val SEED_LEVEL = "seedLevel"
+        const val SEED_RECIPES = "seedRecipes"
+        const val SEED_DAYS = "seedDays"
+        const val SEED_STAPLES = "seedStaples"
     }
 }

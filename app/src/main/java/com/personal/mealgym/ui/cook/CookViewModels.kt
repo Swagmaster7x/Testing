@@ -18,6 +18,7 @@ import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.Quantities
 import com.personal.mealgym.ui.MessageViewModel
+import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.label
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,7 +57,13 @@ data class RecipeUi(
     val showNutrition: Boolean,
     val showHalfPlateTip: Boolean,
     val freeVolumeFoods: List<String>,
-)
+    /** Ashley's Side: "Make it easier to finish" instead of the half-plate and volume tips. */
+    val isAshley: Boolean = false,
+    val easierTips: List<String> = emptyList(),
+) {
+    /** Coffee-shop orders and the like: nothing to cook or buy. */
+    val isOrderOnly: Boolean get() = recipe.steps.isEmpty() && ingredients.isEmpty()
+}
 
 sealed interface RecipeState {
     data object Loading : RecipeState
@@ -79,6 +86,8 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
                     showNutrition = s.showNutrition,
                     showHalfPlateTip = s.showHalfPlateTip,
                     freeVolumeFoods = c.freeVolumeFoods,
+                    isAshley = Sides.isAshley(profileId),
+                    easierTips = c.seed.seed.easierToFinishTips,
                 ),
             )
         }

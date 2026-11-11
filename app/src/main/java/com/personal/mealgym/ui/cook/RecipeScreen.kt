@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -23,13 +24,13 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,11 +39,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.personal.mealgym.R
+import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.ui.AppNavigator
+import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.components.Badge
@@ -113,7 +118,7 @@ private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Un
         modifier = Modifier.fillMaxSize().padding(padding),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
     ) {
-        if (ui.showHalfPlateTip) {
+        if (ui.showHalfPlateTip && !ui.isAshley) {
             item {
                 Surface(
                     color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -139,13 +144,20 @@ private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Un
                 )
                 if (ui.showNutrition && !recipe.nutritionText.isNullOrBlank()) {
                     Text(
-                        "Per serving, approx.: ${recipe.nutritionText}",
+                        if (ui.isOrderOnly) recipe.nutritionText else "Per serving, approx.: ${recipe.nutritionText}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    Button(onClick = onCook, enabled = recipe.steps.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                if (ui.isAshley && recipe.mealType in portionTypes) {
+                    Text(
+                        "Your portion: about three-quarters of a serving.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (!ui.isOrderOnly) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    AppButton(onClick = onCook, enabled = recipe.steps.isNotEmpty(), modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
                         Text("Start cooking")
                     }
@@ -156,14 +168,14 @@ private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Un
                 }
             }
         }
-        item { SectionHeader("Ingredients") }
+        if (ui.ingredients.isNotEmpty()) item { SectionHeader("Ingredients") }
         itemsIndexed(ui.ingredients, key = { _, i -> "ing-${i.id}" }) { _, ingredient ->
             Row(Modifier.padding(vertical = 3.dp)) {
                 Text("•", modifier = Modifier.width(16.dp), color = MaterialTheme.colorScheme.primary)
                 Text(ingredient.displayLine(), style = MaterialTheme.typography.bodyLarge)
             }
         }
-        item { SectionHeader("Steps") }
+        if (recipe.steps.isNotEmpty()) item { SectionHeader("Steps") }
         itemsIndexed(recipe.steps, key = { index, _ -> "step-$index" }) { index, step ->
             Row(Modifier.padding(vertical = 4.dp)) {
                 Text(
@@ -176,7 +188,9 @@ private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Un
                 Text(step, style = MaterialTheme.typography.bodyLarge)
             }
         }
-        item {
+        if (ui.isAshley) {
+            if (!ui.isOrderOnly && ui.easierTips.isNotEmpty()) item { EasierToFinishCard(recipe.id, ui.easierTips) }
+        } else item {
             OutlinedCard(Modifier.fillMaxWidth().padding(top = 20.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -205,6 +219,29 @@ private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Un
                         Text(ui.freeVolumeFoods.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+            }
+        }
+    }
+}
+
+private val portionTypes = setOf(MealType.LUNCH, MealType.DINNER, MealType.SOUP)
+
+/** Ashley's Side: one tip for this recipe, the rest a tap away. */
+@Composable
+private fun EasierToFinishCard(recipeId: Long, tips: List<String>) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    val tip = tips[(recipeId % tips.size).toInt()]
+    OutlinedCard(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(painterResource(R.drawable.ic_heart), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Text("Make it easier to finish", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp))
+            }
+            Text(tip, style = MaterialTheme.typography.bodyMedium)
+            if (open) {
+                tips.filter { it != tip }.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
+            } else {
+                TextButton(onClick = { open = true }, contentPadding = PaddingValues(0.dp)) { Text("More tips") }
             }
         }
     }

@@ -30,7 +30,11 @@ data class TodayUi(
     val setsTicked: Int,
     val saunaMinutesToday: Int,
     val sauna: SaunaState,
+    /** Ashley's optional creatine checkbox: null when the reminder is off. */
+    val creatineTaken: Boolean? = null,
 )
+
+const val CREATINE = "creatine"
 
 class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
     val profileId = c.currentProfileId()
@@ -48,10 +52,20 @@ class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
         val sauna = combine(c.gym.saunaLogs(profileId), SaunaTimer.state) { logs, state ->
             logs.filter { it.date == Dates.iso(date) }.sumOf { it.minutes } to state
         }
-        combine(meals, gym, sauna) { (slots, recipes), (plan, count, ticked), (minutes, state) ->
-            TodayUi(date, slots, recipes, plan, count, ticked, minutes, state)
+        val creatine = combine(c.settings.settings(profileId), c.gym.supplementsOn(profileId, date)) { s, logs ->
+            if (s.creatineReminder) logs.any { it.item == CREATINE } else null
+        }
+        combine(meals, gym, sauna, creatine) { (slots, recipes), (plan, count, ticked), (minutes, state), creatineTaken ->
+            TodayUi(date, slots, recipes, plan, count, ticked, minutes, state, creatineTaken)
         }
     }.stateInVm(null)
+
+    /** Ashley's daily guide (reference text only). */
+    val dailyGuide = c.seed.seed.dailyGuide
+
+    fun setCreatine(date: LocalDate, taken: Boolean) {
+        viewModelScope.launch { c.gym.setSupplement(profileId, date, CREATINE, taken) }
+    }
 
     fun pick(date: LocalDate, slot: MealSlot, recipe: Recipe) {
         viewModelScope.launch { c.meals.setSlot(profileId, date, slot, recipe.id) }
