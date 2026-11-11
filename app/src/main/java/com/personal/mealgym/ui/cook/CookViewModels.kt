@@ -9,14 +9,17 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.personal.mealgym.AppContainer
+import com.personal.mealgym.data.LibraryFilter
 import com.personal.mealgym.data.ShoppingWeek
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.Quantities
+import com.personal.mealgym.domain.RecipeSwaps
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.label
@@ -34,8 +37,18 @@ import java.util.concurrent.atomic.AtomicLong
 
 data class CookUi(val thisWeek: List<Recipe>, val all: List<Recipe>)
 
-class CookViewModel(c: AppContainer) : MessageViewModel() {
+class CookViewModel(private val c: AppContainer) : MessageViewModel() {
     val profileId = c.currentProfileId()
+
+    val filter: StateFlow<LibraryFilter> = c.settings.settings(profileId).map { it.filter }.stateInVm(LibraryFilter())
+
+    fun setFilter(filter: LibraryFilter) {
+        viewModelScope.launch { c.settings.setFilter(profileId, filter) }
+    }
+
+    fun setFavorite(recipe: Recipe, favorite: Boolean) {
+        viewModelScope.launch { c.meals.setFavorite(recipe.id, favorite) }
+    }
 
     val ui: StateFlow<CookUi?> = c.today.flatMapLatest { today ->
         combine(c.meals.planForWeek(profileId, Dates.weekStart(today)), c.meals.recipesFor(profileId)) { plan, recipes ->
@@ -82,7 +95,7 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
             RecipeState.Loaded(
                 RecipeUi(
                     recipe = r.recipe,
-                    ingredients = r.ingredients.sortedBy { it.position },
+                    ingredients = RecipeSwaps.ingredientsFor(r.recipe, r.ingredients.sortedBy { it.position }),
                     showNutrition = s.showNutrition,
                     showHalfPlateTip = s.showHalfPlateTip,
                     freeVolumeFoods = c.freeVolumeFoods,
@@ -92,6 +105,34 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
             )
         }
     }.stateInVm(RecipeState.Loading)
+
+    fun setFavorite(favorite: Boolean) {
+        viewModelScope.launch { c.meals.setFavorite(id, favorite) }
+    }
+
+    fun setHidden(hidden: Boolean) {
+        viewModelScope.launch {
+            c.meals.setHidden(id, hidden)
+            say(if (hidden) "Hidden for now. Find it under Show hidden in Cook." else "Back in the library.")
+        }
+    }
+
+    /**
+     * Picks a "Make it with..." option ([index] null = the original). A swap that points to
+     * another recipe opens that recipe instead.
+     */
+    fun chooseSwap(index: Int?, openRecipe: (Long) -> Unit) {
+        val recipe = (state.value as? RecipeState.Loaded)?.ui?.recipe ?: return
+        val swap = index?.let { recipe.proteinSwaps.getOrNull(it) }
+        viewModelScope.launch {
+            val linked = swap?.useRecipeKey
+            if (linked != null) {
+                c.meals.recipeBySeedKey(linked)?.let { openRecipe(it.id) } ?: say("That recipe isn't in the library any more.")
+            } else {
+                c.meals.setActiveSwap(id, index)
+            }
+        }
+    }
 
     fun delete(onDone: () -> Unit) {
         viewModelScope.launch {
@@ -185,6 +226,7 @@ class RecipeEditViewModel(private val c: AppContainer, handle: SavedStateHandle)
         private set
     var name by mutableStateOf("")
     var mealType by mutableStateOf(MealType.DINNER)
+    var protein by mutableStateOf<ProteinTag?>(null)
     var cuisineTags by mutableStateOf("")
     var servings by mutableStateOf("1")
     var servingSize by mutableStateOf("")
@@ -207,6 +249,7 @@ class RecipeEditViewModel(private val c: AppContainer, handle: SavedStateHandle)
                     original = r.recipe
                     name = r.recipe.name
                     mealType = r.recipe.mealType
+                    protein = r.recipe.protein
                     cuisineTags = r.recipe.cuisineTags.joinToString(", ")
                     servings = r.recipe.servings.toString()
                     servingSize = r.recipe.servingSizeText
@@ -235,10 +278,12 @@ class RecipeEditViewModel(private val c: AppContainer, handle: SavedStateHandle)
 
     fun save(onSaved: (Long) -> Unit) {
         if (!canSave) return
-        val recipe = Recipe(
+        // Start from the stored recipe so favourite, hidden, swaps and side stay as they were.
+        val base = original ?: Recipe(name = "", mealType = mealType, isUserCreated = true)
+        val recipe = base.copy(
             id = id,
-            seedKey = original?.seedKey,
             name = name.trim(),
+            protein = protein,
             mealType = mealType,
             cuisineTags = cuisineTags.split(',').map { it.trim() }.filter { it.isNotEmpty() },
             servings = servings.trim().toIntOrNull()?.coerceIn(1, 50) ?: 1,
@@ -247,7 +292,6 @@ class RecipeEditViewModel(private val c: AppContainer, handle: SavedStateHandle)
             steps = steps.map { it.text.trim() }.filter { it.isNotEmpty() },
             volumeTip = volumeTip.trim().ifEmpty { null },
             isMealPrep = isMealPrep,
-            isUserCreated = original?.isUserCreated ?: true,
         )
         val rows = ingredients.filter { it.name.isNotBlank() }.mapIndexed { index, f ->
             val qtyText = f.quantity.trim()

@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
@@ -86,6 +87,18 @@ fun RecipeEditScreen(nav: AppNavigator, vm: RecipeEditViewModel = viewModel(fact
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MealType.entries.forEach { t ->
                         FilterChip(selected = vm.mealType == t, onClick = { vm.mealType = t }, label = { Text(t.label) })
+                    }
+                }
+            }
+            item {
+                Text("Main protein", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 4.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ProteinTag.entries.forEach { t ->
+                        FilterChip(
+                            selected = vm.protein == t,
+                            onClick = { vm.protein = if (vm.protein == t) null else t },
+                            label = { Text(t.label) },
+                        )
                     }
                 }
             }

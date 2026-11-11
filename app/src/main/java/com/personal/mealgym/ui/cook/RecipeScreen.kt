@@ -5,6 +5,7 @@ package com.personal.mealgym.ui.cook
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -20,11 +21,19 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -35,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,10 +56,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.R
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
+import com.personal.mealgym.ui.ShowMessages
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.ConfirmDialog
 import com.personal.mealgym.ui.components.DetailTopBar
@@ -64,7 +76,10 @@ const val HALF_PLATE_TIP = "Serve half first. Seconds are the other half."
 fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = AppViewModels.Factory)) {
     val state by vm.state.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
     val loaded = state as? RecipeState.Loaded
+    val snackbar = remember { SnackbarHostState() }
+    vm.ShowMessages(snackbar)
 
     AppScaffold(
         topBar = {
@@ -73,16 +88,36 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
                 onBack = nav::back,
                 actions = {
                     if (loaded != null) {
-                        IconButton(onClick = { nav.editRecipe(loaded.ui.recipe.id) }) {
+                        val r = loaded.ui.recipe
+                        IconButton(onClick = { vm.setFavorite(!r.isFavorite) }) {
+                            Icon(
+                                if (r.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = if (r.isFavorite) "Unpin from the top" else "Pin to the top",
+                                tint = if (r.isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            )
+                        }
+                        IconButton(onClick = { nav.editRecipe(r.id) }) {
                             Icon(Icons.Filled.Edit, contentDescription = "Edit recipe")
                         }
-                        IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete recipe")
+                        Box {
+                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(if (r.isHidden) "Show again" else "Hide for now") },
+                                    onClick = { menu = false; vm.setHidden(!r.isHidden) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete") },
+                                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                                    onClick = { menu = false; confirmDelete = true },
+                                )
+                            }
                         }
                     }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         when (val s = state) {
             RecipeState.Loading -> Unit
@@ -92,6 +127,7 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
                 padding = padding,
                 onCook = { nav.cooking(s.ui.recipe.id) },
                 onShopping = nav::shopping,
+                onSwap = { index -> vm.chooseSwap(index) { id -> nav.recipe(id) } },
             )
         }
     }
@@ -111,7 +147,13 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
 }
 
 @Composable
-private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Unit, onShopping: () -> Unit) {
+private fun RecipeContent(
+    ui: RecipeUi,
+    padding: PaddingValues,
+    onCook: () -> Unit,
+    onShopping: () -> Unit,
+    onSwap: (Int?) -> Unit,
+) {
     val recipe = ui.recipe
     var bulkOpen by rememberSaveable { mutableStateOf(false) }
     LazyColumn(
@@ -166,6 +208,7 @@ private fun RecipeContent(ui: RecipeUi, padding: PaddingValues, onCook: () -> Un
                         Text("Shopping list")
                     }
                 }
+                if (recipe.proteinSwaps.isNotEmpty()) SwapPicker(recipe, onSwap)
             }
         }
         if (ui.ingredients.isNotEmpty()) item { SectionHeader("Ingredients") }
@@ -242,6 +285,46 @@ private fun EasierToFinishCard(recipeId: Long, tips: List<String>) {
                 tips.filter { it != tip }.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
             } else {
                 TextButton(onClick = { open = true }, contentPadding = PaddingValues(0.dp)) { Text("More tips") }
+            }
+        }
+    }
+}
+
+/** "Make it with...": swap the main protein, or jump to the matching recipe. */
+@Composable
+private fun SwapPicker(recipe: Recipe, onSwap: (Int?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val active = recipe.activeSwap?.let { recipe.proteinSwaps.getOrNull(it) }
+    Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (active != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    listOfNotNull("Made with ${active.label.lowercase()}.", active.note).joinToString(" "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+        }
+        Box {
+            OutlinedButton(onClick = { open = true }) {
+                Text(if (active == null) "Make it with..." else "Make it with... (${active.label})")
+            }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                DropdownMenuItem(
+                    text = { Text("The original" + (recipe.protein?.let { " (${it.label.lowercase()})" } ?: "")) },
+                    onClick = { open = false; onSwap(null) },
+                )
+                recipe.proteinSwaps.forEachIndexed { index, swap ->
+                    DropdownMenuItem(
+                        text = { Text(if (swap.useRecipeKey != null) "${swap.label} (opens that recipe)" else swap.label) },
+                        onClick = { open = false; onSwap(index) },
+                    )
+                }
             }
         }
     }

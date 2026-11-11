@@ -5,6 +5,7 @@ import com.personal.mealgym.data.BackupManager
 import com.personal.mealgym.data.GymRepository
 import com.personal.mealgym.data.MealRepository
 import com.personal.mealgym.data.Profiles
+import com.personal.mealgym.data.RecipePacks
 import com.personal.mealgym.data.SettingsRepository
 import com.personal.mealgym.data.SideState
 import com.personal.mealgym.data.db.AppDatabase
@@ -40,6 +41,7 @@ class AppContainer(context: Context) {
     val meals = MealRepository(db, settings)
     val gym = GymRepository(db)
     val backup = BackupManager(db, settings, appContext.contentResolver)
+    val packs = RecipePacks(db, appContext.contentResolver)
     val workoutDraft = WorkoutDraftStore(File(appContext.filesDir, "workout-draft.json"), appScope)
     val restTimer = RestTimerController(appContext, appScope)
 

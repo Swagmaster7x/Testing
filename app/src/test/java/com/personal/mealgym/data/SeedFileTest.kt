@@ -4,6 +4,7 @@ import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.seed.SeedParser
 import com.personal.mealgym.domain.Quantities
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -105,5 +106,36 @@ class SeedFileTest {
         assertTrue(hers.filter { it.mealType == MealType.BREAKFAST }.all { it.steps.isEmpty() && it.ingredients.isEmpty() })
         assertEquals(4, seed.easierToFinishTips.size)
         assertEquals(listOf("Protein", "Calories", "Carbs", "Fats", "Water"), seed.dailyGuide.map { it.label })
+    }
+
+    @Test
+    fun everyRecipeHasAProteinAndSwapsMakeSense() {
+        assertTrue(seed.recipes.all { it.protein != null })
+        val byKey = seed.recipes.associateBy { it.key }
+        assertEquals(setOf("L1", "L2", "D2", "D7", "S1", "S2", "S3"), seed.recipes.filter { it.swaps.isNotEmpty() }.map { it.key }.toSet())
+        for (r in seed.recipes) for (swap in r.swaps) {
+            if (swap.useRecipeKey != null) {
+                assertNotNull("${r.key} points at ${swap.useRecipeKey}", byKey[swap.useRecipeKey])
+            } else {
+                assertTrue(
+                    "${r.key}: '${swap.replace}' must be one of its ingredients",
+                    r.ingredients.any { com.personal.mealgym.domain.ShoppingList.ingredientKey(it.name) == com.personal.mealgym.domain.ShoppingList.ingredientKey(swap.replace!!) },
+                )
+                assertNotEquals(r.protein, swap.protein)
+            }
+        }
+    }
+
+    @Test
+    fun eightNewBeefAndPorkRecipes() {
+        val added = listOf("L5", "L6", "L7", "L8", "D8", "D9", "D10", "D11").map { k -> seed.recipes.single { it.key == k } }
+        assertTrue(added.all { it.protein == com.personal.mealgym.data.db.ProteinTag.BEEF || it.protein == com.personal.mealgym.data.db.ProteinTag.PORK })
+        assertTrue(added.all { it.steps.size >= 5 && it.ingredients.size >= 10 && it.nutrition != null })
+        assertEquals(listOf("gochugaru", "achiote paste", "lemongrass paste", "chipotles in adobo", "canned pigeon peas"), seed.extraPantryStaples)
+        // New staples match the recipe ingredients they are meant to cover.
+        val all = seed.recipes.flatMap { it.ingredients }.map { it.name }
+        for (staple in seed.extraPantryStaples) {
+            assertTrue(staple, all.any { com.personal.mealgym.domain.ShoppingList.isAlwaysHave(it, setOf(staple)) })
+        }
     }
 }

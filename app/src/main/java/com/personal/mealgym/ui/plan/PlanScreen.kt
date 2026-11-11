@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.R
+import com.personal.mealgym.data.LibraryFilter
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
@@ -72,6 +73,7 @@ private data class SlotRef(val date: LocalDate, val slot: MealSlot, val recipe: 
 @Composable
 fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppViewModels.Factory)) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val filter by vm.filter.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var picking by remember { mutableStateOf<SlotRef?>(null) }
@@ -109,6 +111,11 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                     }
                 }
             }
+            item {
+                OutlinedButton(onClick = vm::fillMyWeek, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (filter == LibraryFilter()) "Fill my week" else "Fill my week (filters on)", maxLines = 1)
+                }
+            }
             items(state.days, key = { it.date.toString() }) { day ->
                 DayRow(
                     day = day,
@@ -127,6 +134,8 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                 slot = target.slot,
                 dateLabel = Dates.longLabel(target.date),
                 recipes = state.recipes,
+                filter = filter,
+                onFilterChange = vm::setFilter,
                 onPick = { vm.setSlot(target.date, target.slot, it); picking = null },
                 onFillBatch = { vm.fillBatch(target.date, target.slot, it); picking = null },
                 onDismiss = { picking = null },

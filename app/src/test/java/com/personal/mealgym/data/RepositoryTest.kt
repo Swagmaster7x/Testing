@@ -76,14 +76,14 @@ class RepositoryTest {
 
     @Test
     fun seedingLoadsRecipesWorkoutsAndStaples() = runBlocking {
-        assertEquals(19, recipes.values.count { it.onlyForProfileId == null })
+        assertEquals(19 + 8, recipes.values.count { it.onlyForProfileId == null })
         assertEquals(9, recipes.values.count { it.onlyForProfileId == Profiles.ASHLEY })
         assertEquals(listOf("Glutes and hamstrings", "Upper body plus glutes", "Glutes and quads"), db.workoutDao().getDays(Profiles.ASHLEY).map { it.name })
         val days = db.workoutDao().getDays(Profiles.SWAG)
         assertEquals(listOf(1, 2, 3, 4), days.map { it.dayOrder }.sorted())
         assertEquals(31 + 16, db.workoutDao().allExercises().size)
         val s = settings.current(Profiles.SWAG)
-        assertEquals(20, s.pantryStaples.size)
+        assertEquals(20 + 5, s.pantryStaples.size)
         assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), s.trainingWeekdays)
 
         val guisado = meals.getRecipe(recipes.getValue("L1").id)!!
@@ -228,5 +228,53 @@ class RepositoryTest {
         // Running again changes nothing.
         seedRepo.sync(oldDb, oldSettings, freshDatabase = false)
         assertEquals(3, oldDb.workoutDao().getDays(Profiles.ASHLEY).size)
+    }
+
+    @Test
+    fun upgradeTagsOldRecipesWithProteinAndSwaps() = runBlocking {
+        val oldDb = newDb()
+        val seedRepo = SeedRepository(context)
+        for (r in seedRepo.seed.recipes.filter { it.since == 1 }) {
+            oldDb.recipeDao().insert(com.personal.mealgym.data.seed.SeedParser.recipeOf(r).copy(protein = null, proteinSwaps = emptyList()))
+        }
+        oldDb.metaDao().put(com.personal.mealgym.data.db.Meta("seedLevel", "1"))
+        seedRepo.sync(oldDb, newSettings(), freshDatabase = false)
+        val teriyaki = oldDb.recipeDao().bySeedKey("L2")!!
+        assertEquals(com.personal.mealgym.data.db.ProteinTag.CHICKEN, teriyaki.protein)
+        assertEquals(2, teriyaki.proteinSwaps.size)
+        assertTrue(oldDb.recipeDao().bySeedKey("D10") != null)
+    }
+
+    @Test
+    fun aProteinSwapChangesTheShoppingList() = runBlocking {
+        val teriyaki = recipes.getValue("L2")
+        meals.fillBatch(Profiles.SWAG, mon, MealSlot.LUNCH, teriyaki)
+        meals.setActiveSwap(teriyaki.id, 0)
+        val names = meals.shoppingWeek(Profiles.SWAG, mon, both = false).first().result.sections.flatMap { it.items }.map { it.name.lowercase() }
+        assertTrue("flank steak, sliced thin" in names)
+        assertTrue("chicken breast" !in names)
+    }
+
+    @Test
+    fun recipePacksAddNewRecipesAndSkipDuplicates() = runBlocking {
+        val packs = RecipePacks(db, context.contentResolver)
+        val text = """{"version":1,"recipes":[
+            {"key":"X1","name":"Shrimp tacos","mealType":"DINNER","cuisineTags":["Hispanic"],"servings":2,"servingSize":"3 tacos","protein":"FISH",
+             "ingredients":[{"quantity":"1","unit":"lb","name":"shrimp","section":"PROTEIN"}],"steps":["Cook the shrimp.","Build tacos."]},
+            {"key":"X2","name":"Beef and broccoli","mealType":"DINNER","cuisineTags":["Asian"],"servings":4,"servingSize":"1 bowl","steps":["x"]}
+        ]}"""
+        val result = packs.add(packs.decode(text))
+        assertEquals(PackImportResult(added = 1, skipped = 1), result)
+        val shrimp = db.recipeDao().byName("Shrimp tacos")!!
+        assertTrue(shrimp.isUserCreated)
+        assertNull(shrimp.seedKey)
+        assertEquals(1.0, meals.getRecipe(shrimp.id)!!.ingredients.single().quantity!!, 0.0)
+
+        // Exporting the phone's own recipes gives a pack that imports cleanly elsewhere.
+        val exported = packs.encode(packs.ownRecipes())
+        val otherDb = newDb()
+        val again = RecipePacks(otherDb, context.contentResolver)
+        assertEquals(1, again.add(again.decode(exported)).added)
+        assertEquals(com.personal.mealgym.data.db.ProteinTag.FISH, otherDb.recipeDao().byName("Shrimp tacos")!!.protein)
     }
 }

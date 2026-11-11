@@ -113,6 +113,25 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
             .onFailure { say("Export didn't work: ${it.message}") }
     }
 
+    fun importPack(uri: Uri) = launch {
+        runCatching { c.packs.importFrom(uri) }
+            .onSuccess { r ->
+                say(
+                    buildString {
+                        append("Added ${r.added} recipe${if (r.added == 1) "" else "s"}.")
+                        if (r.skipped > 0) append(" ${r.skipped} already in the library.")
+                    },
+                )
+            }
+            .onFailure { say("Couldn't read that recipe pack: ${it.message}") }
+    }
+
+    fun exportPack(uri: Uri) = launch {
+        runCatching { c.packs.exportTo(uri) }
+            .onSuccess { say("Exported $it recipe${if (it == 1) "" else "s"}.") }
+            .onFailure { say(it.message ?: "Export didn't work.") }
+    }
+
     fun import(uri: Uri) = launch {
         runCatching { c.backup.importFrom(uri) }
             .onSuccess {
@@ -140,6 +159,10 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         importUri = uri
+    }
+    val packImport = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::importPack) }
+    val packExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let(vm::exportPack)
     }
 
     AppScaffold(
@@ -299,6 +322,24 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                         onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                         modifier = Modifier.weight(1f),
                     ) { Text("Import") }
+                }
+            }
+
+            item { SectionHeader("Recipe packs") }
+            item {
+                Text(
+                    "A recipe pack is a JSON file in the same shape as the app's seed.json. Import adds its recipes to the library (skipping ones you already have); export saves the recipes you added yourself.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedButton(
+                        onClick = { packImport.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Import a pack") }
+                    OutlinedButton(onClick = { packExport.launch("my-recipes-${LocalDate.now()}.json") }, modifier = Modifier.weight(1f)) {
+                        Text("Export my recipes")
+                    }
                 }
             }
 

@@ -18,6 +18,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import com.personal.mealgym.data.LibraryFilter
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -59,6 +61,12 @@ class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
             TodayUi(date, slots, recipes, plan, count, ticked, minutes, state, creatineTaken)
         }
     }.stateInVm(null)
+
+    val filter: StateFlow<LibraryFilter> = c.settings.settings(profileId).map { it.filter }.stateInVm(LibraryFilter())
+
+    fun setFilter(filter: LibraryFilter) {
+        viewModelScope.launch { c.settings.setFilter(profileId, filter) }
+    }
 
     /** Ashley's daily guide (reference text only). */
     val dailyGuide = c.seed.seed.dailyGuide

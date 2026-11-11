@@ -2,6 +2,7 @@ package com.personal.mealgym.ui.cook
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.FilledTonalButton
@@ -35,7 +38,9 @@ import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
+import com.personal.mealgym.domain.WeekFiller
 import com.personal.mealgym.ui.components.Badge
+import com.personal.mealgym.ui.components.LibraryFilterBar
 import com.personal.mealgym.ui.components.SectionHeader
 import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.label
@@ -43,8 +48,10 @@ import com.personal.mealgym.ui.label
 @Composable
 fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppViewModels.Factory)) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val filter by vm.filter.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var type by rememberSaveable { mutableStateOf<MealType?>(null) }
+    var showHidden by rememberSaveable { mutableStateOf(false) }
 
     AppScaffold(
         topBar = {
@@ -60,10 +67,14 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
     ) { padding ->
         val state = ui ?: return@AppScaffold
         val q = query.trim()
+        val hiddenCount = state.all.count { it.isHidden }
         val filtered = state.all
+            .filter { showHidden == it.isHidden }
             .filter { type == null || it.mealType == type }
+            .filter { WeekFiller.matches(it, filter) }
             .filter { r -> q.isEmpty() || r.name.contains(q, true) || r.cuisineTags.any { it.contains(q, true) } }
-            .sortedWith(compareBy<Recipe> { it.mealType.ordinal }.thenBy { it.name.lowercase() })
+            .sortedWith(compareBy<Recipe> { !it.isFavorite }.thenBy { it.mealType.ordinal }.thenBy { it.name.lowercase() })
+        val cuisines = state.all.flatMap { it.cuisineTags }.distinct().sorted()
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -80,7 +91,9 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
             }
             if (state.thisWeek.isNotEmpty() && q.isEmpty() && type == null) {
                 item { SectionHeader("Cooking this week", Modifier.padding(horizontal = 16.dp)) }
-                items(state.thisWeek, key = { "week-${it.id}" }) { recipe -> RecipeRow(recipe) { nav.recipe(recipe.id) } }
+                items(state.thisWeek, key = { "week-${it.id}" }) { recipe ->
+                    RecipeRow(recipe, onFavorite = { vm.setFavorite(recipe, it) }) { nav.recipe(recipe.id) }
+                }
             }
             item { SectionHeader("All recipes", Modifier.padding(horizontal = 16.dp)) }
             item {
@@ -99,12 +112,20 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     item { FilterChip(selected = type == null, onClick = { type = null }, label = { Text("All") }) }
-                    items(MealType.entries) { t ->
+                    items(MealType.entries.filter { t -> state.all.any { it.mealType == t } }) { t ->
                         FilterChip(selected = type == t, onClick = { type = if (type == t) null else t }, label = { Text(t.label) })
+                    }
+                    if (hiddenCount > 0) {
+                        item {
+                            FilterChip(selected = showHidden, onClick = { showHidden = !showHidden }, label = { Text("Show hidden ($hiddenCount)") })
+                        }
                     }
                 }
             }
-            items(filtered, key = { "all-${it.id}" }) { recipe -> RecipeRow(recipe) { nav.recipe(recipe.id) } }
+            item { LibraryFilterBar(filter = filter, cuisines = cuisines, onChange = vm::setFilter) }
+            items(filtered, key = { "all-${it.id}" }) { recipe ->
+                RecipeRow(recipe, onFavorite = { vm.setFavorite(recipe, it) }) { nav.recipe(recipe.id) }
+            }
             if (filtered.isEmpty()) {
                 item {
                     Text(
@@ -119,23 +140,33 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
 }
 
 @Composable
-fun RecipeRow(recipe: Recipe, onClick: () -> Unit) {
+fun RecipeRow(recipe: Recipe, onFavorite: ((Boolean) -> Unit)? = null, onClick: () -> Unit) {
     ListItem(
         modifier = Modifier.clickable(onClick = onClick),
         headlineContent = { Text(recipe.name) },
         supportingContent = {
-            Text(
-                listOfNotNull(
-                    recipe.cuisineTags.joinToString(", ").takeIf { it.isNotBlank() },
-                    recipe.mealType.label,
-                    "Serves ${recipe.servings}",
-                ).joinToString(" · "),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    listOfNotNull(
+                        recipe.protein?.label,
+                        recipe.cuisineTags.joinToString(", ").takeIf { it.isNotBlank() },
+                        recipe.mealType.label,
+                        "Serves ${recipe.servings}",
+                    ).joinToString(" · "),
+                )
+                if (recipe.isMealPrep) Badge("makes ${recipe.slotsPerCook}")
+            }
         },
-        trailingContent = if (recipe.isMealPrep) {
-            { Badge("makes ${recipe.slotsPerCook}") }
-        } else {
-            null
+        trailingContent = onFavorite?.let { toggle ->
+            {
+                IconButton(onClick = { toggle(!recipe.isFavorite) }) {
+                    Icon(
+                        if (recipe.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (recipe.isFavorite) "Unpin from the top" else "Pin to the top",
+                        tint = if (recipe.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         },
     )
 }

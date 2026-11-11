@@ -55,7 +55,8 @@
         "Warm tortillas on the burner or a dry pan.",
         "Fill and top with pico, hot sauce and cilantro."
       ],
-      "volumeTip": "Add a big handful of spinach, peppers and onion to the scramble."
+      "volumeTip": "Add a big handful of spinach, peppers and onion to the scramble.",
+      "protein": "EGG"
     },
     {
       "key": "B2",
@@ -109,7 +110,8 @@
         "Stir everything together in a jar.",
         "Refrigerate overnight.",
         "Eat cold. Make 3 or 4 jars at once."
-      ]
+      ],
+      "protein": "VEGETARIAN"
     },
     {
       "key": "B3",
@@ -174,7 +176,8 @@
         "Put rice in a bowl, add eggs and kimchi.",
         "Drizzle soy, crumble seaweed on top."
       ],
-      "volumeTip": "Wilt a bag of spinach in the pan first."
+      "volumeTip": "Wilt a bag of spinach in the pan first.",
+      "protein": "EGG"
     },
     {
       "key": "B4",
@@ -219,7 +222,8 @@
       "steps": [
         "Spoon yogurt into a bowl.",
         "Top with berries, granola, honey and cinnamon."
-      ]
+      ],
+      "protein": "VEGETARIAN"
     },
     {
       "key": "L1",
@@ -316,7 +320,15 @@
         "Cover and simmer 30 minutes.",
         "Portion over rice with beans."
       ],
-      "volumeTip": "Serve over a big bed of arugula and spinach with the rice underneath."
+      "volumeTip": "Serve over a big bed of arugula and spinach with the rice underneath.",
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Beef: Carne guisada",
+          "protein": "BEEF",
+          "useRecipeKey": "L5"
+        }
+      ]
     },
     {
       "key": "L2",
@@ -401,7 +413,24 @@
         "Steam broccoli.",
         "Portion rice, chicken and broccoli; top with sesame and scallions."
       ],
-      "volumeTip": "Two full cups of broccoli per bowl; swap half the rice for cauliflower rice."
+      "volumeTip": "Two full cups of broccoli per bowl; swap half the rice for cauliflower rice.",
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Flank steak",
+          "protein": "BEEF",
+          "replace": "chicken breast",
+          "with": "flank steak, sliced thin",
+          "note": "Same sauce."
+        },
+        {
+          "label": "Pork tenderloin",
+          "protein": "PORK",
+          "replace": "chicken breast",
+          "with": "pork tenderloin, sliced thin",
+          "note": "Same sauce."
+        }
+      ]
     },
     {
       "key": "L3",
@@ -493,7 +522,8 @@
         "Simmer 15 minutes.",
         "Serve over rice or roasted sweet potato."
       ],
-      "volumeTip": "Spoon hot over arugula and spinach so the greens wilt."
+      "volumeTip": "Spoon hot over arugula and spinach so the greens wilt.",
+      "protein": "TURKEY"
     },
     {
       "key": "L4",
@@ -565,7 +595,8 @@
         "Put rice in a bowl, add tuna, sliced cucumber and avocado.",
         "Top with ginger, seaweed and sesame. No cooking."
       ],
-      "volumeTip": "Double the cucumber and add shredded cabbage."
+      "volumeTip": "Double the cucumber and add shredded cabbage.",
+      "protein": "FISH"
     },
     {
       "key": "D1",
@@ -647,7 +678,8 @@
         "Sear pork, then roast to 145°F inside, about 15 minutes. Rest 5 minutes.",
         "Wilt spinach with 2 garlic cloves in 1 tsp oil.",
         "Slice pork and serve."
-      ]
+      ],
+      "protein": "PORK"
     },
     {
       "key": "D2",
@@ -738,7 +770,22 @@
         "Stir in basil off the heat.",
         "Serve over rice, fried egg on top if wanted."
       ],
-      "volumeTip": "Double the green beans, add zucchini, rice on the side."
+      "volumeTip": "Double the green beans, add zucchini, rice on the side.",
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Ground pork",
+          "protein": "PORK",
+          "replace": "ground chicken",
+          "with": "lean ground pork"
+        },
+        {
+          "label": "Ground beef",
+          "protein": "BEEF",
+          "replace": "ground chicken",
+          "with": "90% lean ground beef"
+        }
+      ]
     },
     {
       "key": "D3",
@@ -827,7 +874,8 @@
         "Bake salmon at 400°F for 12 to 14 minutes.",
         "Dice mango, onion, jalapeño and cilantro, add lime juice.",
         "Plate with salsa on top."
-      ]
+      ],
+      "protein": "FISH"
     },
     {
       "key": "D4",
@@ -908,7 +956,8 @@
         "Steam the greens.",
         "Serve with rice and kimchi."
       ],
-      "volumeTip": "Half rice, half cauliflower rice, with cucumber, carrot and radish on the side."
+      "volumeTip": "Half rice, half cauliflower rice, with cucumber, carrot and radish on the side.",
+      "protein": "BEEF"
     },
     {
       "key": "D5",
@@ -976,7 +1025,8 @@
         "Form beef into 2 balls, smash flat in a very hot pan, salt, cook 2 minutes a side.",
         "Mix mayo, ketchup, mustard and a splash of pickle juice.",
         "Pile greens, tomato, onion and pickles in a bowl, add patties, wedges and sauce."
-      ]
+      ],
+      "protein": "BEEF"
     },
     {
       "key": "D6",
@@ -1067,7 +1117,8 @@
         "Cook on low 8 hours.",
         "Shred the beef with two forks, stir in olives.",
         "Serve with rice or boiled yuca and a lime wedge."
-      ]
+      ],
+      "protein": "BEEF"
     },
     {
       "key": "D7",
@@ -1134,7 +1185,17 @@
         "Warm the beans.",
         "Build tacos or a bowl with salsa and avocado."
       ],
-      "volumeTip": "Use a shredded cabbage base and eat it as a huge bowl."
+      "volumeTip": "Use a shredded cabbage base and eat it as a huge bowl.",
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Flank or skirt steak",
+          "protein": "BEEF",
+          "replace": "chicken breast",
+          "with": "flank or skirt steak",
+          "note": "Roast 10–12 minutes."
+        }
+      ]
     },
     {
       "key": "S1",
@@ -1215,6 +1276,16 @@
         "Add yuca, calabaza, corn and carrots, cook 20 minutes.",
         "Add cabbage and celery, cook 10 minutes.",
         "Shred chicken back in, finish with cilantro and lime."
+      ],
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Beef stew meat",
+          "protein": "BEEF",
+          "replace": "chicken thighs",
+          "with": "beef stew meat",
+          "note": "Simmer the beef 60 minutes before the vegetables."
+        }
       ]
     },
     {
@@ -1296,6 +1367,16 @@
         "Poach chicken 15 minutes, remove and shred.",
         "Add mushrooms and cabbage 5 minutes, bok choy 2 minutes.",
         "Return chicken, add soy, sesame oil and scallions."
+      ],
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Pork loin",
+          "protein": "PORK",
+          "replace": "chicken breast",
+          "with": "pork loin, sliced thin",
+          "note": "Poach 5 minutes."
+        }
       ]
     },
     {
@@ -1375,6 +1456,16 @@
         "Add rice, carrots, chayote and tomato, cook 12 minutes.",
         "Add zucchini and cabbage, cook 8 minutes.",
         "Return chicken, finish with cilantro and lime."
+      ],
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Caldo de res (beef)",
+          "protein": "BEEF",
+          "replace": "chicken breast or thighs",
+          "with": "beef shank or stew meat",
+          "note": "Caldo de res: simmer the beef 90 minutes first."
+        }
       ]
     },
     {
@@ -1433,6 +1524,813 @@
         "Add spinach.",
         "Beat egg whites and egg, pour in slowly while stirring.",
         "Top with scallion. Ready in 10 minutes."
+      ],
+      "protein": "EGG"
+    },
+    {
+      "key": "L5",
+      "name": "Carne guisada (Caribbean beef stew)",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Caribbean"
+      ],
+      "servings": 4,
+      "mealPrep": true,
+      "servingSize": "1 portion over 3/4 cup rice",
+      "nutrition": "~610 cal, 50 g protein, 60 g carbs, 16 g fat",
+      "protein": "BEEF",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "lean beef stew meat",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb",
+          "note": "top round or trimmed chuck"
+        },
+        {
+          "name": "potatoes",
+          "section": "CARBS",
+          "quantity": "2"
+        },
+        {
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2"
+        },
+        {
+          "name": "onion",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1"
+        },
+        {
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "4"
+        },
+        {
+          "name": "sofrito",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "tomato sauce",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "can",
+          "note": "8 oz"
+        },
+        {
+          "name": "sazón",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "packet"
+        },
+        {
+          "name": "adobo",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "oregano",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "bay leaves",
+          "section": "PANTRY",
+          "quantity": "2"
+        },
+        {
+          "name": "olives",
+          "section": "PANTRY",
+          "unit": "handful of"
+        },
+        {
+          "name": "olive oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "low-sodium beef broth",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "cups"
+        },
+        {
+          "name": "cooked rice",
+          "section": "CARBS",
+          "quantity": "3",
+          "unit": "cups"
+        }
+      ],
+      "steps": [
+        "Season beef with adobo, brown in oil in batches.",
+        "Soften onion, pepper, garlic and sofrito in the same pot.",
+        "Add tomato sauce, sazón, oregano, bay leaves, broth and beef.",
+        "Cover and simmer 60 minutes.",
+        "Add potatoes, carrots and olives, simmer 25 minutes until tender.",
+        "Serve over rice."
+      ]
+    },
+    {
+      "key": "L6",
+      "name": "Korean ground beef bowls",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 4,
+      "mealPrep": true,
+      "servingSize": "1 bowl with 3/4 cup rice",
+      "nutrition": "~620 cal, 50 g protein, 55 g carbs, 22 g fat",
+      "protein": "BEEF",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "90% lean ground beef",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb"
+        },
+        {
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY",
+          "quantity": "1/3",
+          "unit": "cup"
+        },
+        {
+          "name": "brown sugar",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "4"
+        },
+        {
+          "name": "ginger",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "sesame oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "gochujang",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "3"
+        },
+        {
+          "name": "cooked rice",
+          "section": "CARBS",
+          "quantity": "3",
+          "unit": "cups"
+        },
+        {
+          "name": "cucumbers",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2"
+        },
+        {
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2",
+          "note": "shredded"
+        },
+        {
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1",
+          "unit": "tub"
+        },
+        {
+          "name": "sesame seeds",
+          "section": "PANTRY"
+        }
+      ],
+      "steps": [
+        "Brown the beef, drain any fat.",
+        "Add garlic and ginger for 1 minute.",
+        "Stir in soy, sugar, sesame oil and gochujang, simmer 3 minutes.",
+        "Wilt the spinach in a separate pan.",
+        "Portion rice, beef, spinach, cucumber and carrot; top with scallions and sesame."
+      ]
+    },
+    {
+      "key": "L7",
+      "name": "Pork al pastor bowls",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "mealPrep": true,
+      "servingSize": "1 bowl with 3/4 cup rice and 1/4 cup beans, or 3 tacos",
+      "nutrition": "~590 cal, 54 g protein, 65 g carbs, 10 g fat",
+      "protein": "PORK",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "pork tenderloin",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb",
+          "note": "sliced thin"
+        },
+        {
+          "name": "chipotles in adobo",
+          "section": "PANTRY",
+          "quantity": "2",
+          "note": "plus 1 tbsp of the sauce"
+        },
+        {
+          "name": "pineapple juice",
+          "section": "PANTRY",
+          "quantity": "1/2",
+          "unit": "cup"
+        },
+        {
+          "name": "white vinegar",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "3"
+        },
+        {
+          "name": "cumin",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "oregano",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "achiote paste",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp",
+          "note": "or paprika"
+        },
+        {
+          "name": "pineapple chunks",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2",
+          "unit": "cups"
+        },
+        {
+          "name": "onion",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "limes",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2"
+        },
+        {
+          "name": "cooked rice",
+          "section": "CARBS",
+          "quantity": "3",
+          "unit": "cups",
+          "note": "or 12 corn tortillas"
+        },
+        {
+          "name": "black beans",
+          "section": "CARBS",
+          "quantity": "1",
+          "unit": "can"
+        }
+      ],
+      "steps": [
+        "Blend chipotles, sauce, pineapple juice, vinegar, garlic, cumin, oregano and achiote.",
+        "Marinate pork 1 to 24 hours.",
+        "Sear pork in a very hot pan in batches until charred at the edges.",
+        "Char pineapple chunks and sliced onion in the same pan.",
+        "Serve over rice and beans or in tortillas with cilantro and lime."
+      ]
+    },
+    {
+      "key": "L8",
+      "name": "Lemongrass pork noodle bowls (Vietnamese-style)",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 4,
+      "mealPrep": true,
+      "servingSize": "1 bowl",
+      "nutrition": "~560 cal, 52 g protein, 58 g carbs, 11 g fat",
+      "protein": "PORK",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "pork tenderloin",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb",
+          "note": "sliced thin"
+        },
+        {
+          "name": "lemongrass paste",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp",
+          "note": "or 2 stalks, minced"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "4"
+        },
+        {
+          "name": "shallot",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1"
+        },
+        {
+          "name": "fish sauce",
+          "section": "PANTRY",
+          "quantity": "3",
+          "unit": "tbsp"
+        },
+        {
+          "name": "sugar",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "soy sauce",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "rice vermicelli",
+          "section": "CARBS",
+          "quantity": "8",
+          "unit": "oz"
+        },
+        {
+          "name": "cucumbers",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2"
+        },
+        {
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2"
+        },
+        {
+          "name": "rice vinegar",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "mint",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "limes",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2"
+        },
+        {
+          "name": "chili",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1"
+        }
+      ],
+      "steps": [
+        "Mix lemongrass, garlic, shallot, 2 tbsp fish sauce, 1 tbsp sugar, soy and oil; marinate pork 30 minutes or more.",
+        "Shred carrots, toss with vinegar and a pinch of sugar.",
+        "Cook noodles, rinse cold.",
+        "Sear pork in a hot pan until browned.",
+        "Stir 1 tbsp fish sauce, 1 tbsp sugar, lime juice, chili and 3 tbsp water for the dressing.",
+        "Build bowls: noodles, pork, cucumber, carrot, herbs, dressing."
+      ]
+    },
+    {
+      "key": "D8",
+      "name": "Slow-cooker pernil-style pork",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Caribbean"
+      ],
+      "servings": 6,
+      "mealPrep": true,
+      "servingSize": "about 6 oz pork + 3/4 cup rice with pigeon peas",
+      "nutrition": "~640 cal, 48 g protein, 50 g carbs, 26 g fat",
+      "protein": "PORK",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "boneless pork shoulder",
+          "section": "PROTEIN",
+          "quantity": "3",
+          "unit": "lb",
+          "note": "trimmed"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "10"
+        },
+        {
+          "name": "oregano",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "adobo",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "sazón",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "packet"
+        },
+        {
+          "name": "olive oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "orange juice",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1/4",
+          "unit": "cup"
+        },
+        {
+          "name": "lime juice",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1/4",
+          "unit": "cup"
+        },
+        {
+          "name": "rice",
+          "section": "CARBS",
+          "quantity": "2",
+          "unit": "cups"
+        },
+        {
+          "name": "pigeon peas",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "can",
+          "note": "gandules"
+        },
+        {
+          "name": "sofrito",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        }
+      ],
+      "steps": [
+        "Mash garlic with oregano, adobo, sazón, oil and the juices.",
+        "Cut slits in the pork, rub the paste in, rest overnight if possible.",
+        "Slow cook on low 8 hours.",
+        "Shred, spread on a sheet pan and broil 4 minutes to crisp the edges.",
+        "Cook rice with sofrito and pigeon peas.",
+        "Serve pork over the rice with a spoon of the cooking juices."
+      ]
+    },
+    {
+      "key": "D9",
+      "name": "Spicy pork bulgogi",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 4,
+      "servingSize": "1 portion over 3/4 cup rice",
+      "nutrition": "~590 cal, 54 g protein, 58 g carbs, 14 g fat",
+      "protein": "PORK",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "pork loin or tenderloin",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb",
+          "note": "sliced thin"
+        },
+        {
+          "name": "gochujang",
+          "section": "PANTRY",
+          "quantity": "3",
+          "unit": "tbsp"
+        },
+        {
+          "name": "gochugaru",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp",
+          "note": "Korean chili flakes, optional"
+        },
+        {
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "sugar",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "sesame oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "4"
+        },
+        {
+          "name": "ginger",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "onion",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1"
+        },
+        {
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "3"
+        },
+        {
+          "name": "cabbage",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1/2",
+          "unit": "head"
+        },
+        {
+          "name": "cooked rice",
+          "section": "CARBS",
+          "quantity": "3",
+          "unit": "cups"
+        },
+        {
+          "name": "kimchi",
+          "section": "PRODUCE_FROZEN"
+        }
+      ],
+      "steps": [
+        "Mix gochujang, chili flakes, soy, sugar, sesame oil, garlic and ginger.",
+        "Toss with pork and sliced onion, marinate 30 minutes or more.",
+        "Stir-fry in a very hot pan in batches until the edges caramelize.",
+        "Add sliced cabbage for the last 2 minutes.",
+        "Serve over rice with scallions and kimchi."
+      ]
+    },
+    {
+      "key": "D10",
+      "name": "Beef and broccoli",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 4,
+      "servingSize": "1 portion over 3/4 cup rice",
+      "nutrition": "~610 cal, 55 g protein, 55 g carbs, 18 g fat",
+      "protein": "BEEF",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "flank steak",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb",
+          "note": "sliced thin against the grain"
+        },
+        {
+          "name": "cornstarch",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY",
+          "quantity": "1/3",
+          "unit": "cup"
+        },
+        {
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp",
+          "note": "for the beef"
+        },
+        {
+          "name": "oyster sauce",
+          "section": "PANTRY",
+          "quantity": "2",
+          "unit": "tbsp"
+        },
+        {
+          "name": "brown sugar",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "low-sodium beef broth",
+          "section": "PANTRY",
+          "quantity": "1/2",
+          "unit": "cup"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "4"
+        },
+        {
+          "name": "ginger",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "sesame oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "broccoli",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2",
+          "unit": "large heads",
+          "note": "or 1 large frozen bag"
+        },
+        {
+          "name": "cooked rice",
+          "section": "CARBS",
+          "quantity": "3",
+          "unit": "cups"
+        }
+      ],
+      "steps": [
+        "Toss beef with 1 tbsp cornstarch and 1 tbsp soy, rest 15 minutes.",
+        "Whisk the remaining soy, oyster sauce, sugar, broth and 1 tbsp cornstarch.",
+        "Steam broccoli until just tender.",
+        "Sear beef in batches in a very hot pan, 1 minute a side.",
+        "Add garlic and ginger, pour in the sauce, simmer until glossy.",
+        "Fold in broccoli and sesame oil, serve over rice."
+      ]
+    },
+    {
+      "key": "D11",
+      "name": "Bistec encebollado (steak and onions)",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Caribbean"
+      ],
+      "servings": 4,
+      "servingSize": "1 portion + 3/4 cup rice + 1/4 cup beans",
+      "nutrition": "~600 cal, 54 g protein, 55 g carbs, 16 g fat",
+      "protein": "BEEF",
+      "since": 2,
+      "ingredients": [
+        {
+          "name": "thin-sliced top round or cube steak",
+          "section": "PROTEIN",
+          "quantity": "2",
+          "unit": "lb"
+        },
+        {
+          "name": "onions",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "2",
+          "note": "large, sliced into rings"
+        },
+        {
+          "name": "white vinegar",
+          "section": "PANTRY",
+          "quantity": "1/4",
+          "unit": "cup"
+        },
+        {
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN",
+          "quantity": "4"
+        },
+        {
+          "name": "oregano",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "sazón",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "packet"
+        },
+        {
+          "name": "adobo",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tsp"
+        },
+        {
+          "name": "olive oil",
+          "section": "PANTRY",
+          "quantity": "1",
+          "unit": "tbsp"
+        },
+        {
+          "name": "low-sodium beef broth",
+          "section": "PANTRY",
+          "quantity": "1/2",
+          "unit": "cup"
+        },
+        {
+          "name": "cooked rice",
+          "section": "CARBS",
+          "quantity": "3",
+          "unit": "cups"
+        },
+        {
+          "name": "pink or black beans",
+          "section": "CARBS",
+          "quantity": "1",
+          "unit": "can"
+        }
+      ],
+      "steps": [
+        "Marinate steak with vinegar, garlic, oregano, sazón, adobo and half the onions for 1 hour or overnight.",
+        "Sear steak in oil, 1 to 2 minutes a side, set aside.",
+        "Cook all the onions in the same pan until soft.",
+        "Return steak with the marinade and broth, cover and simmer 20 minutes until tender.",
+        "Serve with rice and beans."
       ]
     },
     {
@@ -2211,5 +3109,12 @@
       "label": "Water",
       "text": "a bottle with you at the gym and one through the day"
     }
+  ],
+  "extraPantryStaples": [
+    "gochugaru",
+    "achiote paste",
+    "lemongrass paste",
+    "chipotles in adobo",
+    "canned pigeon peas"
   ]
 }

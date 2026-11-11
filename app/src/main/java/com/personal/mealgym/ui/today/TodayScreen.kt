@@ -73,6 +73,7 @@ import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 @Composable
 fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppViewModels.Factory)) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+    val filter by vm.filter.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var picking by rememberSaveable { mutableStateOf<MealSlot?>(null) }
@@ -125,6 +126,8 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
                 slot = slot,
                 dateLabel = "Today, ${Dates.longLabel(state.date)}",
                 recipes = state.recipes,
+                filter = filter,
+                onFilterChange = vm::setFilter,
                 onPick = { vm.pick(state.date, slot, it); picking = null },
                 onFillBatch = { vm.fillBatch(state.date, slot, it); picking = null },
                 onDismiss = { picking = null },

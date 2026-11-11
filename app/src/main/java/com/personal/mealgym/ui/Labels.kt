@@ -4,6 +4,7 @@ import com.personal.mealgym.data.db.Feeling
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.SetLog
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.Quantities
@@ -23,6 +24,17 @@ val MealType.label: String
         MealType.DINNER -> "Dinner"
         MealType.SOUP -> "Soup"
         MealType.SNACK -> "Snack"
+    }
+
+val ProteinTag.label: String
+    get() = when (this) {
+        ProteinTag.BEEF -> "Beef"
+        ProteinTag.PORK -> "Pork"
+        ProteinTag.CHICKEN -> "Chicken"
+        ProteinTag.TURKEY -> "Turkey"
+        ProteinTag.FISH -> "Fish"
+        ProteinTag.EGG -> "Egg"
+        ProteinTag.VEGETARIAN -> "Vegetarian"
     }
 
 val StoreSection.label: String

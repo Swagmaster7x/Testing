@@ -92,7 +92,7 @@ class ScreenshotTest {
         compose.onAllNodesWithText("Teriyaki chicken and broccoli rice bowl").onFirst().performClick()
         waitForText("Your portion")
         shot("22-ashley-recipe$suffix")
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Make it easier to finish"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Make it easier to finish"))
         compose.waitForIdle()
         shot("22b-ashley-recipe-tips$suffix")
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back")).onFirst().performClick()
@@ -111,6 +111,36 @@ class ScreenshotTest {
     }
 
     @Test
+    fun recipeLibrary() {
+        tab("Cook")
+        waitForText("Cooking this week")
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Not chicken"))
+        compose.onAllNodesWithText("Not chicken").onFirst().performClick()
+        compose.waitForIdle()
+        shot("30-library-not-chicken")
+        tab("Plan")
+        waitForText("Fill my week")
+        compose.onAllNodesWithText("Fill my week", substring = true).onFirst().performClick()
+        compose.waitForIdle()
+        waitForText("Filled")
+        shot("31-plan-filled")
+    }
+
+    @Test
+    fun proteinSwap() {
+        tab("Cook")
+        waitForText("Cooking this week")
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Teriyaki chicken and broccoli rice bowl"))
+        compose.onAllNodesWithText("Teriyaki chicken and broccoli rice bowl").onFirst().performClick()
+        waitForText("Make it with...")
+        compose.onAllNodesWithText("Make it with...").onFirst().performClick()
+        waitForText("Flank steak")
+        compose.onAllNodesWithText("Flank steak").onFirst().performClick()
+        waitForText("Made with flank steak")
+        shot("32-recipe-swapped")
+    }
+
+    @Test
     fun ashleysSide() = ashleyTour("")
 
     @Test
@@ -122,7 +152,7 @@ class ScreenshotTest {
         planAshleysDay()
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()
         waitForText("This phone opens")
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Creatine reminder"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Creatine reminder"))
         compose.waitForIdle()
         shot("24-ashley-settings")
     }
@@ -204,7 +234,7 @@ class ScreenshotTest {
     @Config(qualifiers = "xhdpi")
     fun gymCheckIn() {
         startWorkout()
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Finish workout"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Finish workout"))
         compose.onAllNodesWithText("Finish workout").onFirst().performClick()
         waitForText("How did it go?")
         shot("8-checkin")
@@ -216,7 +246,7 @@ class ScreenshotTest {
 
     @Test
     fun sauna() {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Open"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Open"))
         compose.onAllNodesWithText("Open").onFirst().performClick()
         waitForText("How long?")
         shot("9-sauna")
@@ -225,7 +255,7 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "xhdpi")
     fun saunaLogByHand() {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Open"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Open"))
         compose.onAllNodesWithText("Open").onFirst().performClick()
         waitForText("How long?")
         compose.onAllNodesWithText("Log sauna time by hand").onFirst().performClick()
@@ -262,7 +292,7 @@ class ScreenshotTest {
         waitForText("Pollo guisado")
         shot("17-plan-dark")
         tab("Today")
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Open"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Open"))
         compose.onAllNodesWithText("Open").onFirst().performClick()
         waitForText("How long?")
         shot("18-sauna-dark")
