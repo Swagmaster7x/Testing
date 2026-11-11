@@ -4,6 +4,7 @@ import android.content.Context
 import com.personal.mealgym.data.BackupManager
 import com.personal.mealgym.data.GymRepository
 import com.personal.mealgym.data.MealRepository
+import com.personal.mealgym.data.PlanTransfer
 import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.RecipePacks
 import com.personal.mealgym.data.SettingsRepository
@@ -42,6 +43,7 @@ class AppContainer(context: Context) {
     val gym = GymRepository(db)
     val backup = BackupManager(db, settings, appContext.contentResolver)
     val packs = RecipePacks(db, appContext.contentResolver)
+    val planTransfer = PlanTransfer(db, packs, appContext.contentResolver)
     val workoutDraft = WorkoutDraftStore(File(appContext.filesDir, "workout-draft.json"), appScope)
     val restTimer = RestTimerController(appContext, appScope)
 

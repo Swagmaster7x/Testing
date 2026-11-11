@@ -45,6 +45,7 @@ import com.personal.mealgym.ui.label
 fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(factory = AppViewModels.Factory)) {
     val week by vm.ui.collectAsStateWithLifecycle()
     val offset by vm.weekOffset.collectAsStateWithLifecycle()
+    val both by vm.both.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     AppScaffold(
@@ -74,6 +75,17 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
             item {
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    listOf("Just mine" to false, "Both of us" to true).forEachIndexed { index, (label, value) ->
+                        SegmentedButton(
+                            selected = both == value,
+                            onClick = { vm.setBoth(value) },
+                            shape = SegmentedButtonDefaults.itemShape(index, 2),
+                        ) { Text(label) }
+                    }
+                }
+            }
+            item {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                     listOf("This week", "Next week").forEachIndexed { index, label ->
                         SegmentedButton(
@@ -87,7 +99,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
             val w = week ?: return@LazyColumn
             item {
                 Text(
-                    "Week of ${Dates.weekLabel(w.weekStart)}",
+                    "Week of ${Dates.weekLabel(w.weekStart)}" + if (both) " · both meal plans on this phone" else "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),

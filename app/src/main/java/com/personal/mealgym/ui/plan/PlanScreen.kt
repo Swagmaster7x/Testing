@@ -148,6 +148,10 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                 onOpen = { acting = null; target.recipe?.let { nav.recipe(it.id) } },
                 onChange = { acting = null; picking = target },
                 onCopy = { acting = null; copying = target },
+                otherSideName = vm.otherSideName.takeIf {
+                    target.slot != MealSlot.SNACK && target.recipe?.onlyForProfileId == null
+                },
+                onAddToOtherSide = { acting = null; target.recipe?.let { vm.addToOtherSide(target.date, target.slot, it) } },
                 onClear = { acting = null; vm.clearSlot(target.date, target.slot) },
                 onDismiss = { acting = null },
             )
@@ -249,6 +253,8 @@ private fun SlotActionsSheet(
     onOpen: () -> Unit,
     onChange: () -> Unit,
     onCopy: () -> Unit,
+    otherSideName: String?,
+    onAddToOtherSide: () -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -268,6 +274,13 @@ private fun SlotActionsSheet(
             ListItem(headlineContent = { Text("Open recipe") }, modifier = Modifier.clickable(onClick = onOpen))
             ListItem(headlineContent = { Text("Change") }, modifier = Modifier.clickable(onClick = onChange))
             ListItem(headlineContent = { Text("Copy to other days") }, modifier = Modifier.clickable(onClick = onCopy))
+            if (otherSideName != null) {
+                ListItem(
+                    headlineContent = { Text("Add to the other side too") },
+                    supportingContent = { Text("Same meal, same slot, on $otherSideName") },
+                    modifier = Modifier.clickable(onClick = onAddToOtherSide),
+                )
+            }
             ListItem(headlineContent = { Text("Clear this slot") }, modifier = Modifier.clickable(onClick = onClear))
         }
     }

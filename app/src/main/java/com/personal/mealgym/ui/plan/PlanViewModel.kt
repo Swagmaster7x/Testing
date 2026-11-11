@@ -7,6 +7,7 @@ import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.LibraryFilter
+import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.SlotKey
@@ -152,6 +153,17 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
         viewModelScope.launch {
             c.meals.copyTo(profileId, dates, slot, recipe.id)
             say("Copied to ${dates.size} day${if (dates.size == 1) "" else "s"}.")
+        }
+    }
+
+    val otherSideName: String = Profiles.sideName(Profiles.other(profileId))
+
+    /** "Add to the other side too": the same meal in the same slot on the other side's plan. */
+    fun addToOtherSide(date: LocalDate, slot: MealSlot, recipe: Recipe) {
+        val other = Profiles.other(profileId)
+        viewModelScope.launch {
+            c.meals.setSlot(other, date, slot, recipe.id)
+            say("Also on $otherSideName.")
         }
     }
 

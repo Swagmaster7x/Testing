@@ -127,6 +127,21 @@ class ScreenshotTest {
     }
 
     @Test
+    fun sharedShoppingList() {
+        runBlocking {
+            val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
+            container.meals.fillBatch(Profiles.ASHLEY, Dates.weekStart(LocalDate.now()), MealSlot.LUNCH, recipes.getValue("L6"))
+        }
+        tab("Plan")
+        waitForText("Shopping list")
+        compose.onAllNodesWithText("Shopping list").onFirst().performClick()
+        waitForText("Both of us")
+        compose.onAllNodesWithText("Both of us").onFirst().performClick()
+        waitForText("both meal plans")
+        shot("40-shopping-both")
+    }
+
+    @Test
     fun proteinSwap() {
         tab("Cook")
         waitForText("Cooking this week")

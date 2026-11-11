@@ -277,4 +277,50 @@ class RepositoryTest {
         assertEquals(1, again.add(again.decode(exported)).added)
         assertEquals(com.personal.mealgym.data.db.ProteinTag.FISH, otherDb.recipeDao().byName("Shrimp tacos")!!.protein)
     }
+
+    @Test
+    fun bothOfUsRollsUpBothPlansWithAshleysPortions() = runBlocking {
+        val guisado = recipes.getValue("L1") // serves 4, 2 lb chicken thighs
+        meals.fillBatch(Profiles.SWAG, mon, MealSlot.LUNCH, guisado) // 4 servings
+        meals.fillBatch(Profiles.ASHLEY, mon, MealSlot.LUNCH, guisado) // 4 x 3/4 = 3 servings
+
+        fun thighs(week: ShoppingWeek) = week.result.sections.flatMap { it.items }.single { it.key == "chicken thigh" }.amountText
+
+        assertEquals("2 lb", thighs(meals.shoppingWeek(Profiles.SWAG, mon, both = false).first()))
+        assertEquals("2 lb", thighs(meals.shoppingWeek(Profiles.ASHLEY, mon, both = false).first()))
+        // 7 servings in all: two batches of the recipe.
+        val both = meals.shoppingWeek(Profiles.SWAG, mon, both = true).first()
+        assertEquals("4 lb", thighs(both))
+        assertEquals("both", both.listKey)
+    }
+
+    @Test
+    fun aMealPlanMovesToTheOtherPhoneOnTheSameSide() = runBlocking {
+        // Swag's phone: a seed lunch and a recipe of his own.
+        val packs = RecipePacks(db, context.contentResolver)
+        packs.add(
+            packs.decode(
+                """{"recipes":[{"key":"X","name":"Steak salad","mealType":"DINNER","cuisineTags":["American"],"servings":1,
+                "servingSize":"1 bowl","protein":"BEEF","ingredients":[{"quantity":"8","unit":"oz","name":"sirloin","section":"PROTEIN"}],"steps":["Grill.","Slice."]}]}""",
+            ),
+        )
+        meals.fillBatch(Profiles.SWAG, mon, MealSlot.LUNCH, recipes.getValue("L1"))
+        meals.setSlot(Profiles.SWAG, mon, MealSlot.DINNER, db.recipeDao().byName("Steak salad")!!.id)
+        val transfer = PlanTransfer(db, packs, context.contentResolver)
+        val text = transfer.encode(transfer.snapshot(Profiles.SWAG, mon))
+
+        // Ashley's phone: same seed, no steak salad.
+        val herDb = newDb()
+        SeedRepository(context).sync(herDb, newSettings(), freshDatabase = true)
+        val herTransfer = PlanTransfer(herDb, RecipePacks(herDb, context.contentResolver), context.contentResolver)
+        val result = herTransfer.apply(herTransfer.decode(text))
+
+        assertEquals(PlanImportResult(Profiles.SWAG, meals = 5, newRecipes = 1), result)
+        val swagsPlanThere = herDb.planDao().getRange(Profiles.SWAG, mon.toString(), mon.plusDays(6).toString())
+        assertEquals(5, swagsPlanThere.size)
+        assertEquals(herDb.recipeDao().bySeedKey("L1")!!.id, swagsPlanThere.first { it.slot == MealSlot.LUNCH }.recipeId)
+        assertTrue(herDb.planDao().getRange(Profiles.ASHLEY, mon.toString(), mon.plusDays(6).toString()).isEmpty())
+        val salad = herDb.recipeDao().byName("Steak salad")!!
+        assertEquals(1, herDb.recipeDao().getWithIngredients(salad.id)!!.ingredients.size)
+    }
 }

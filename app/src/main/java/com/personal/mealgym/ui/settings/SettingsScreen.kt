@@ -113,6 +113,23 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
             .onFailure { say("Export didn't work: ${it.message}") }
     }
 
+    fun exportPlan(uri: Uri) = launch {
+        runCatching { c.planTransfer.exportTo(uri, profileId, Dates.weekStart(c.today.value)) }
+            .onSuccess { say("Saved $it planned meal${if (it == 1) "" else "s"} from this week and next.") }
+            .onFailure { say(it.message ?: "Export didn't work.") }
+    }
+
+    fun importPlan(uri: Uri) = launch {
+        runCatching { c.planTransfer.importFrom(uri) }
+            .onSuccess { r ->
+                say(
+                    "Added ${r.meals} meals to ${Profiles.sideName(r.profileId)}" +
+                        if (r.newRecipes > 0) " and ${r.newRecipes} new recipe${if (r.newRecipes == 1) "" else "s"} to the library." else ".",
+                )
+            }
+            .onFailure { say("Couldn't read that meal plan: ${it.message}") }
+    }
+
     fun importPack(uri: Uri) = launch {
         runCatching { c.packs.importFrom(uri) }
             .onSuccess { r ->
@@ -160,6 +177,10 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         importUri = uri
     }
+    val planExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let(vm::exportPlan)
+    }
+    val planImport = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::importPlan) }
     val packImport = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::importPack) }
     val packExport = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let(vm::exportPack)
@@ -322,6 +343,25 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                         onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                         modifier = Modifier.weight(1f),
                     ) { Text("Import") }
+                }
+            }
+
+            item { SectionHeader("Meal plan to the other phone") }
+            item {
+                Text(
+                    "Each phone keeps its own data. Save this side's plan for this week and next as a file, send it over, and import it on the other phone. It lands on the same side there, so \"Both of us\" on the shopping list covers both plans.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedButton(
+                        onClick = { planExport.launch("${Profiles.name(vm.profileId).lowercase()}-meal-plan-${LocalDate.now()}.json") },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Export my plan") }
+                    OutlinedButton(
+                        onClick = { planImport.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Import a plan") }
                 }
             }
 
