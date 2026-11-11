@@ -2,6 +2,7 @@ package com.personal.mealgym
 
 import android.content.Context
 import com.personal.mealgym.data.BackupManager
+import com.personal.mealgym.data.DemoRepository
 import com.personal.mealgym.data.GymRepository
 import com.personal.mealgym.data.MealRepository
 import com.personal.mealgym.data.PlanTransfer
@@ -44,6 +45,7 @@ class AppContainer(context: Context) {
     val backup = BackupManager(db, settings, appContext.contentResolver)
     val packs = RecipePacks(db, appContext.contentResolver)
     val planTransfer = PlanTransfer(db, packs, appContext.contentResolver)
+    val demos = DemoRepository(appContext)
     val workoutDraft = WorkoutDraftStore(File(appContext.filesDir, "workout-draft.json"), appScope)
     val restTimer = RestTimerController(appContext, appScope)
 

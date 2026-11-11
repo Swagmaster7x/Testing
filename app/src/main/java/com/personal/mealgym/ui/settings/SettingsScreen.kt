@@ -387,7 +387,8 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
             item { ListItem(headlineContent = { Text("History") }, modifier = Modifier.clickable(onClick = nav::history)) }
             item {
                 Text(
-                    "Meal & Gym works offline. Nothing leaves this phone unless you export a backup or share a shopping list.",
+                    "Meal & Gym works offline. Nothing leaves this phone unless you export a backup or share a shopping list. " +
+                        "Exercise photos and instructions come from free-exercise-db, which is in the public domain.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),

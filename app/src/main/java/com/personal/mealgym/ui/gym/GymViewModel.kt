@@ -4,6 +4,7 @@ package com.personal.mealgym.ui.gym
 
 import androidx.lifecycle.viewModelScope
 import com.personal.mealgym.AppContainer
+import com.personal.mealgym.data.Demo
 import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.data.db.Exercise
 import com.personal.mealgym.data.db.Feeling
@@ -29,6 +30,8 @@ data class ExerciseUi(
     val weight: String,
     val reps: String,
     val lastTime: String?,
+    /** The demo for what's actually being done, so it follows a swap. */
+    val demo: Demo,
 )
 
 data class GroupUi(val label: String, val exercises: List<ExerciseUi>) {
@@ -72,6 +75,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
                             weight = draft?.weights?.get(e.id).orEmpty(),
                             reps = draft?.reps?.get(e.id).orEmpty(),
                             lastTime = logs[name.lowercase()]?.lastTimeText(),
+                            demo = c.demos.demoFor(name),
                         )
                     },
                 )
@@ -148,6 +152,8 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
             say(SideCopy.forProfile(profileId).workoutSaved)
         }
     }
+
+    fun frame(path: String) = c.demos.frame(path)
 
     fun startRest(seconds: Int) = c.restTimer.start(seconds, chime)
 

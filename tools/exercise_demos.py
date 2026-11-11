@@ -138,6 +138,25 @@ ALIASES = {
 # Moves the dataset doesn't cover well; better to show form cues than a wrong picture.
 KNOWN_GAPS = {"dead hangs", "banded side steps", "cable side kick"}
 
+# Three short cues for each move without a picture (written for this app).
+FORM_CUES = {
+    "Dead hangs": [
+        "Grip the bar a little wider than your shoulders, arms straight.",
+        "Let the shoulders relax, then draw them slightly down and back.",
+        "Breathe steadily and hold; come down before your grip gives out.",
+    ],
+    "Banded side steps": [
+        "Band just above the knees or at the ankles, feet hip-width apart.",
+        "Sit into a quarter squat with your chest up.",
+        "Step sideways without letting the knees cave in; keep the band tight.",
+    ],
+    "Cable side kick": [
+        "Ankle strap on the outside leg, standing side-on to the machine.",
+        "Hold the frame, hips square, slight bend in the standing knee.",
+        "Lift the leg out to the side with control, pause, lower slowly.",
+    ],
+}
+
 STOP = {"a", "an", "the", "with", "of", "on", "or", "and", "to"}
 
 
@@ -263,7 +282,12 @@ def bundle(args) -> None:
             img.save(folder / f"{i}.webp", "WEBP", quality=72, method=6)
         done.add(ex["id"])
         print("bundled", ex["id"])
-    (DEMOS / "demos.json").write_text(json.dumps({"source": "free-exercise-db (public domain, Unlicense)", "exercises": manifest}, indent=1, ensure_ascii=False) + "\n")
+    payload = {
+        "source": "free-exercise-db (public domain, Unlicense)",
+        "exercises": manifest,
+        "cues": {name: FORM_CUES[name] for name, m in matches.items() if not m["id"] and name in FORM_CUES},
+    }
+    (DEMOS / "demos.json").write_text(json.dumps(payload, indent=1, ensure_ascii=False) + "\n")
     print(f"{len(done)} demos bundled into {DEMOS.relative_to(ROOT)}")
 
 

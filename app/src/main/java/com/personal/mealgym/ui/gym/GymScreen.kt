@@ -3,6 +3,8 @@
 package com.personal.mealgym.ui.gym
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,6 +55,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -60,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.R
+import com.personal.mealgym.data.Demo
 import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.data.db.Feeling
 import com.personal.mealgym.data.db.WorkoutDay
@@ -133,6 +139,8 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
                         ExerciseCard(
                             ex = ex,
                             weightUnit = state.weightUnit,
+                            loadFrame = vm::frame,
+                            onDemo = { nav.demo(ex.displayName) },
                             onToggleSet = { i -> vm.toggleSet(ex.exercise.id, i) },
                             onSwap = { name -> vm.swap(ex.exercise.id, name) },
                             onWeight = { vm.setWeight(ex.exercise.id, it) },
@@ -280,6 +288,8 @@ private fun RestTimerCard(rest: RestTimerState?, onStart: (Int) -> Unit, onCance
 private fun ExerciseCard(
     ex: ExerciseUi,
     weightUnit: WeightUnit,
+    loadFrame: (String) -> ImageBitmap?,
+    onDemo: () -> Unit,
     onToggleSet: (Int) -> Unit,
     onSwap: (String?) -> Unit,
     onWeight: (String) -> Unit,
@@ -288,13 +298,18 @@ private fun ExerciseCard(
     val e = ex.exercise
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(ex.displayName, style = MaterialTheme.typography.titleMedium)
-            if (ex.swappedTo != null) {
-                Text("Instead of ${e.name}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(ex.displayName, style = MaterialTheme.typography.titleMedium)
+                    if (ex.swappedTo != null) {
+                        Text("Instead of ${e.name}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("${e.setsText} sets × ${e.repsText}", style = MaterialTheme.typography.bodyMedium)
+                    e.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    ex.lastTime?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
+                }
+                DemoThumb(ex.demo, loadFrame, onDemo)
             }
-            Text("${e.setsText} sets × ${e.repsText}", style = MaterialTheme.typography.bodyMedium)
-            e.note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            ex.lastTime?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Sets", style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(40.dp))
@@ -421,4 +436,26 @@ private fun CheckInDialog(onSave: (Feeling, String) -> Unit, onDismiss: () -> Un
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Not yet") } },
     )
+}
+
+/** A small start-position photo that opens the demo; moves without a photo get a "Form tips" button. */
+@Composable
+private fun DemoThumb(demo: Demo, loadFrame: (String) -> ImageBitmap?, onOpen: () -> Unit) {
+    if (demo is Demo.Photos) {
+        val frame = rememberFrame(demo.frames.first(), loadFrame)
+        Box(
+            Modifier
+                .padding(start = 8.dp)
+                .size(72.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clickable(onClickLabel = "Show the demo", onClick = onOpen),
+        ) {
+            frame?.let {
+                Image(it, contentDescription = "Demo of ${demo.exerciseName}", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+        }
+    } else {
+        TextButton(onClick = onOpen) { Text("Form tips") }
+    }
 }

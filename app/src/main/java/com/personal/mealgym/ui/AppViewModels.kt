@@ -11,6 +11,7 @@ import com.personal.mealgym.ui.cook.CookViewModel
 import com.personal.mealgym.ui.cook.RecipeEditViewModel
 import com.personal.mealgym.ui.cook.RecipeViewModel
 import com.personal.mealgym.ui.cook.ShoppingViewModel
+import com.personal.mealgym.ui.gym.DemoViewModel
 import com.personal.mealgym.ui.gym.GymViewModel
 import com.personal.mealgym.ui.gym.WorkoutEditViewModel
 import com.personal.mealgym.ui.history.HistoryViewModel
@@ -29,6 +30,7 @@ object AppViewModels {
         initializer { ShoppingViewModel(container()) }
         initializer { GymViewModel(container()) }
         initializer { WorkoutEditViewModel(container()) }
+        initializer { DemoViewModel(container(), createSavedStateHandle()) }
         initializer { SaunaViewModel(container()) }
         initializer { SettingsViewModel(container()) }
         initializer { HistoryViewModel(container()) }

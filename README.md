@@ -6,6 +6,14 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26)
 
 **Look:** a dark-fantasy theme inspired by the mood of Berserk. It uses original artwork only (no characters, symbols or text from the manga): black iron and blood red when the phone is in dark mode, aged parchment and ink in light mode, headings in Cinzel, cut-corner "armour plate" cards, and an original broadsword-and-red-moon app icon. The colours, fonts and shapes live in `ui/theme/Theme.kt`.
 
+## Version 2 ([SPEC-V2.md](SPEC-V2.md))
+
+- **Two sides.** The first launch shows two doors, "Swag's Side" and "Ashley's Side"; the phone remembers the choice and Settings can switch. Each side has its own theme, meal plan, gym days, history and settings; the recipe library and pantry list are shared. Upgrading keeps everything already on the phone as Swag's.
+- **Ashley's Side.** An original Y2K glam look (pink to lilac, deep plum at night, Fredoka and Pacifico, glossy pink buttons, rhinestone dividers, star/heart/butterfly/flip-phone/lip-gloss motifs, sparkles that can be turned off). Her three gym days on Mon/Wed/Fri with badges on the week view, a Snack slot, her coffee-shop breakfast orders, "Make it easier to finish" tips, a daily guide shown as reference text only, and an optional creatine checkbox. No brand logos, characters or fonts are used.
+- **Recipe library.** Protein tags, filters including a "Not chicken" chip that stays on, "Make it with..." protein swaps (the shopping list follows), "Fill my week" (never the same protein two dinners running), favourites, "Hide for now", recipe packs (import/export, same shape as `seed.json`), and eight new beef and pork recipes.
+- **Shopping across sides.** "Just mine" or "Both of us" on the shopping list (Ashley's lunches and dinners count as about three-quarters of a serving), "Add to the other side too" on a planned meal, and a meal plan can be exported on one phone and imported on the other (there is no sync).
+- **Exercise demos.** Each exercise shows a start photo; tapping it opens the start and end positions flipping like a GIF, with written steps. Photos and steps come from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain), bundled with `tools/exercise_demos.py` after reviewing `tools/exercise-match-report.md`. Three moves without a good photo get form cues instead, and every demo has a "Watch a demo" button that opens a web search in the phone's browser.
+
 ## Put it on your phone
 
 You need `app-debug.apk`, either the one from the Claude session or one you build (below).
@@ -63,5 +71,7 @@ app/src/main/
     gym/                      In-progress workout and rest timer
     sauna/                    Sauna timer foreground service, notifications, sound and buzz
     ui/                       Compose screens, one folder per tab plus settings and history
-  res/font/                   Cinzel (SIL Open Font License, see licenses/Cinzel-OFL.txt)
+  assets/demos/               exercise photos (free-exercise-db, public domain)
+  res/font/                   Cinzel, Fredoka, Pacifico (SIL Open Font License, see licenses/)
+tools/exercise_demos.py       matches and bundles the exercise demos
 ```

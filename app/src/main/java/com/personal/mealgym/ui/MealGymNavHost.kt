@@ -35,6 +35,7 @@ import com.personal.mealgym.ui.cook.CookingModeScreen
 import com.personal.mealgym.ui.cook.RecipeEditScreen
 import com.personal.mealgym.ui.cook.RecipeScreen
 import com.personal.mealgym.ui.cook.ShoppingListScreen
+import com.personal.mealgym.ui.gym.DemoScreen
 import com.personal.mealgym.ui.gym.GymScreen
 import com.personal.mealgym.ui.gym.WorkoutEditScreen
 import com.personal.mealgym.ui.history.HistoryScreen
@@ -58,10 +59,12 @@ object Routes {
     const val SETTINGS = "settings"
     const val HISTORY = "history"
     const val WORKOUT_EDIT = "workout-edit"
+    const val DEMO = "demo/{name}"
 
     fun recipe(id: Long) = "recipe/$id"
     fun cooking(id: Long) = "cooking/$id"
     fun recipeEdit(id: Long = 0) = "recipe-edit/$id"
+    fun demo(exerciseName: String) = "demo/" + android.net.Uri.encode(exerciseName)
 }
 
 /** Every way one screen can open another. */
@@ -86,6 +89,7 @@ class AppNavigator(private val nav: NavHostController) {
     fun settings() = nav.navigate(Routes.SETTINGS) { launchSingleTop = true }
     fun history() = nav.navigate(Routes.HISTORY) { launchSingleTop = true }
     fun editWorkouts() = nav.navigate(Routes.WORKOUT_EDIT) { launchSingleTop = true }
+    fun demo(exerciseName: String) = nav.navigate(Routes.demo(exerciseName))
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -167,6 +171,9 @@ fun MealGymNavHost(
             composable(Routes.SETTINGS) { SettingsScreen(navigator) }
             composable(Routes.HISTORY) { HistoryScreen(navigator) }
             composable(Routes.WORKOUT_EDIT) { WorkoutEditScreen(navigator) }
+            composable(Routes.DEMO, arguments = listOf(navArgument("name") { type = NavType.StringType })) {
+                DemoScreen(navigator)
+            }
         }
     }
     }

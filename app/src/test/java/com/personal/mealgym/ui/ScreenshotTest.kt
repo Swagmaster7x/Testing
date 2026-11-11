@@ -127,6 +127,24 @@ class ScreenshotTest {
     }
 
     @Test
+    fun exerciseDemo() {
+        startWorkout()
+        compose.waitUntil(15_000) {
+            compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Demo of Barbell bench press")).fetchSemanticsNodes().isNotEmpty()
+        }
+        shot("50-gym-demo-thumbnails")
+        // The demo flips forever, so freeze the clock while it is on screen.
+        compose.mainClock.autoAdvance = false
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Demo of Barbell bench press")).onFirst().performClick()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitUntil(15_000) {
+            compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("End position")).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.mainClock.advanceTimeBy(850)
+        shot("51-demo-viewer")
+    }
+
+    @Test
     fun sharedShoppingList() {
         runBlocking {
             val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
