@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
@@ -32,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -111,11 +114,11 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
 }
 
 @Composable
-private fun CardLabel(text: String) {
+private fun CardLabel(text: String, color: Color = MaterialTheme.colorScheme.primary) {
     Text(
         text.uppercase(),
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = color,
         fontWeight = FontWeight.SemiBold,
     )
 }
@@ -163,7 +166,7 @@ private fun GymCard(state: TodayUi, onOpenGym: () -> Unit) {
             Icon(painterResource(R.drawable.ic_fitness), contentDescription = null)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                CardLabel("Gym")
+                CardLabel("Gym", color = LocalContentColor.current)
                 when (val status = plan.status) {
                     is GymToday.Done -> {
                         val session = plan.doneSession
@@ -187,7 +190,7 @@ private fun GymCard(state: TodayUi, onOpenGym: () -> Unit) {
                 }
             }
             if (plan.status is GymToday.TrainingDay || plan.draft != null) {
-                FilledTonalButton(onClick = onOpenGym) { Text(if (plan.draft != null) "Continue" else "Start") }
+                Button(onClick = onOpenGym) { Text(if (plan.draft != null) "Continue" else "Start") }
             }
         }
     }

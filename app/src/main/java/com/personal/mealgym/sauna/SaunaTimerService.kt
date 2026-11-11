@@ -1,15 +1,18 @@
 package com.personal.mealgym.sauna
 
+import android.Manifest
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.personal.mealgym.MainActivity
@@ -116,7 +119,9 @@ class SaunaTimerService : LifecycleService() {
 
     private fun postDoneNotification(minutes: Int) {
         val manager = NotificationManagerCompat.from(this)
-        if (!manager.areNotificationsEnabled()) return
+        val allowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (!allowed || !manager.areNotificationsEnabled()) return
         val notification = NotificationCompat.Builder(this, Alerts.CHANNEL_DONE)
             .setSmallIcon(R.drawable.ic_timer)
             .setContentTitle("Sauna done")

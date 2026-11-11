@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /** There is deliberately no table for body weight, calorie totals or goals. */
 @Database(
@@ -31,7 +32,14 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun saunaDao(): SaunaDao
 
     companion object {
-        fun build(context: Context): AppDatabase =
-            Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "mealgym.db").build()
+        /** [onCreated] runs once, when the database file is first created (first launch). */
+        fun build(context: Context, onCreated: () -> Unit = {}): AppDatabase =
+            Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "mealgym.db")
+                .addCallback(
+                    object : Callback() {
+                        override fun onCreate(db: SupportSQLiteDatabase) = onCreated()
+                    },
+                )
+                .build()
     }
 }

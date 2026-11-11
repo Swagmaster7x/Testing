@@ -16,13 +16,12 @@ object Dates {
     fun weekStart(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
     fun weekDays(weekStart: LocalDate): List<LocalDate> = (0L until 7L).map { weekStart.plusDays(it) }
 
-    private val longDay = DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
-    private val shortDay = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
-    private val monthDay = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
+    // Built per call so a locale change while the app is open is picked up.
+    private fun pattern(p: String) = DateTimeFormatter.ofPattern(p, Locale.getDefault())
 
-    fun longLabel(date: LocalDate): String = date.format(longDay)
-    fun shortLabel(date: LocalDate): String = date.format(shortDay)
-    fun monthDay(date: LocalDate): String = date.format(monthDay)
+    fun longLabel(date: LocalDate): String = date.format(pattern("EEEE, MMM d"))
+    fun shortLabel(date: LocalDate): String = date.format(pattern("EEE, MMM d"))
+    fun monthDay(date: LocalDate): String = date.format(pattern("MMM d"))
 
     fun weekLabel(weekStart: LocalDate): String {
         val end = weekStart.plusDays(6)

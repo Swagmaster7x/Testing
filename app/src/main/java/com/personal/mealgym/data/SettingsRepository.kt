@@ -5,7 +5,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -38,7 +37,6 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val showHalfPlateTip = booleanPreferencesKey("show_half_plate_tip")
         val weightUnit = stringPreferencesKey("weight_unit")
         val pantryStaples = stringSetPreferencesKey("pantry_staples")
-        val seedVersion = intPreferencesKey("seed_version")
     }
 
     val settings: Flow<AppSettings> = store.data.map { p ->
@@ -55,10 +53,6 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
     }
 
     suspend fun current(): AppSettings = settings.first()
-
-    suspend fun seedVersion(): Int = store.data.first()[Keys.seedVersion] ?: 0
-
-    suspend fun setSeedVersion(version: Int) = store.edit { it[Keys.seedVersion] = version }
 
     suspend fun setTrainingWeekdays(days: Set<DayOfWeek>) =
         store.edit { it[Keys.trainingWeekdays] = days.map { d -> d.name }.toSet() }

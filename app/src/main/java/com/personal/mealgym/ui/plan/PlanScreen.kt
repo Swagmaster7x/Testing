@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -87,13 +88,21 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
             item { WeekSwitcher(state, onShift = vm::shiftWeek, onThisWeek = vm::goToThisWeek) }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = vm::repeatLastWeek, modifier = Modifier.weight(1f)) {
-                        Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                        Text("Repeat last week")
+                    OutlinedButton(
+                        onClick = vm::repeatLastWeek,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                    ) {
+                        Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.padding(end = 6.dp).size(18.dp))
+                        Text("Repeat last week", maxLines = 1)
                     }
-                    FilledTonalButton(onClick = nav::shopping, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.ShoppingCart, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                        Text("Shopping list")
+                    FilledTonalButton(
+                        onClick = nav::shopping,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 12.dp),
+                    ) {
+                        Icon(Icons.Filled.ShoppingCart, contentDescription = null, modifier = Modifier.padding(end = 6.dp).size(18.dp))
+                        Text("Shopping list", maxLines = 1)
                     }
                 }
             }

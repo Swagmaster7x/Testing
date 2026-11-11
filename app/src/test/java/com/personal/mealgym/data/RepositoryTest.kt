@@ -1,0 +1,196 @@
+package com.personal.mealgym.data
+
+import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.personal.mealgym.data.db.AppDatabase
+import com.personal.mealgym.data.db.Feeling
+import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.Recipe
+import com.personal.mealgym.data.db.SetLog
+import com.personal.mealgym.data.seed.SeedRepository
+import com.personal.mealgym.ui.label
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import java.io.File
+import java.time.DayOfWeek
+import java.time.LocalDate
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [35])
+class RepositoryTest {
+
+    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val scopes = mutableListOf<CoroutineScope>()
+    private val dbs = mutableListOf<AppDatabase>()
+
+    private lateinit var db: AppDatabase
+    private lateinit var settings: SettingsRepository
+    private lateinit var meals: MealRepository
+    private lateinit var gym: GymRepository
+    private lateinit var recipes: Map<String, Recipe>
+
+    // 2026-11-09 is a Monday.
+    private val mon = LocalDate.of(2026, 11, 9)
+
+    private fun newDb() = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+        .allowMainThreadQueries()
+        .build()
+        .also { dbs += it }
+
+    private fun newSettings(): SettingsRepository {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also { scopes += it }
+        val file = File(context.filesDir, "settings-${System.nanoTime()}.preferences_pb")
+        return SettingsRepository(PreferenceDataStoreFactory.create(scope = scope) { file })
+    }
+
+    @Before
+    fun setUp() = runBlocking {
+        db = newDb()
+        settings = newSettings()
+        meals = MealRepository(db, settings)
+        gym = GymRepository(db)
+        SeedRepository(context).install(db, settings)
+        recipes = db.recipeDao().allRecipes().associateBy { it.seedKey!! }
+    }
+
+    @After
+    fun tearDown() {
+        dbs.forEach { it.close() }
+        scopes.forEach { it.cancel() }
+    }
+
+    @Test
+    fun seedingLoadsRecipesWorkoutsAndStaples() = runBlocking {
+        assertEquals(19, recipes.size)
+        val days = db.workoutDao().allDays()
+        assertEquals(listOf(1, 2, 3, 4), days.map { it.dayOrder }.sorted())
+        assertEquals(31, db.workoutDao().allExercises().size)
+        val s = settings.current()
+        assertEquals(20, s.pantryStaples.size)
+        assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), s.trainingWeekdays)
+
+        val guisado = meals.getRecipe(recipes.getValue("L1").id)!!
+        val thighs = guisado.ingredients.first { it.name == "chicken thighs" }
+        assertEquals(2.0, thighs.quantity!!, 0.0)
+        assertEquals("lb", thighs.unit)
+        assertTrue(guisado.ingredients.first { it.name == "olive oil" }.isPantryStaple)
+    }
+
+    @Test
+    fun mealPrepFillsFourLunchesAndIsBoughtOnce() = runBlocking {
+        val guisado = recipes.getValue("L1")
+        assertEquals(4, meals.fillBatch(mon, MealSlot.LUNCH, guisado))
+        meals.setSlot(mon, MealSlot.DINNER, recipes.getValue("S1").id)
+
+        val plan = meals.planForWeek(mon).first()
+        assertEquals(
+            listOf(mon, mon.plusDays(1), mon.plusDays(2), mon.plusDays(3)).map { it.toString() },
+            plan.filter { it.slot == MealSlot.LUNCH }.map { it.date }.sorted(),
+        )
+
+        val week = meals.shoppingWeek(mon).first()
+        val items = week.result.sections.flatMap { it.items }.associateBy { it.key }
+        // Pollo guisado (2 lb, cooked once for 4 lunches) + sancocho (2 lb) = 4 lb.
+        assertEquals("4 lb", items.getValue("chicken thigh").amountText)
+        assertNull("olive oil is a pantry staple", items["olive oil"])
+        assertTrue("olive oil" in week.result.skippedAlwaysHave)
+        assertEquals(
+            listOf("Protein", "Produce and Frozen", "Carbs", "Pantry"),
+            week.result.sections.map { it.section.label },
+        )
+    }
+
+    @Test
+    fun fillBatchStopsAtTheEndOfTheWeekAndSkipsTakenSlots() = runBlocking {
+        val guisado = recipes.getValue("L1")
+        val saturday = mon.plusDays(5)
+        assertEquals(2, meals.fillBatch(saturday, MealSlot.LUNCH, guisado))
+
+        meals.setSlot(mon.plusDays(1), MealSlot.LUNCH, recipes.getValue("L4").id)
+        assertEquals(4, meals.fillBatch(mon, MealSlot.LUNCH, guisado))
+        val lunches = meals.planForWeek(mon).first().filter { it.slot == MealSlot.LUNCH }.associate { it.date to it.recipeId }
+        assertEquals(recipes.getValue("L4").id, lunches[mon.plusDays(1).toString()])
+        assertEquals(guisado.id, lunches[mon.plusDays(4).toString()])
+    }
+
+    @Test
+    fun repeatLastWeekOnlyFillsEmptySlots() = runBlocking {
+        val lastMon = mon.minusDays(7)
+        meals.setSlot(lastMon, MealSlot.BREAKFAST, recipes.getValue("B1").id)
+        meals.setSlot(lastMon, MealSlot.DINNER, recipes.getValue("D1").id)
+        meals.setSlot(mon, MealSlot.DINNER, recipes.getValue("D2").id)
+
+        assertEquals(1, meals.repeatLastWeek(mon))
+
+        val plan = meals.planForWeek(mon).first().associate { it.slot to it.recipeId }
+        assertEquals(recipes.getValue("B1").id, plan[MealSlot.BREAKFAST])
+        assertEquals(recipes.getValue("D2").id, plan[MealSlot.DINNER])
+    }
+
+    @Test
+    fun deletingARecipeClearsItsPlannedSlots() = runBlocking {
+        val tacos = recipes.getValue("B1")
+        meals.setSlot(mon, MealSlot.BREAKFAST, tacos.id)
+        meals.deleteRecipe(tacos.id)
+        assertTrue(meals.planForWeek(mon).first().isEmpty())
+    }
+
+    @Test
+    fun lastTimeFollowsTheExerciseNameActuallyDone() = runBlocking {
+        val day1 = db.workoutDao().allDays().first { it.dayOrder == 1 }
+        val bench = db.workoutDao().allExercises().first { it.name == "Barbell bench press" }
+        gym.saveSession(mon, day1, Feeling.FINE, null, listOf(SetLog(sessionId = 0, exerciseId = bench.id, exerciseNameUsed = "Barbell bench press", weight = 135.0, reps = 8)))
+        gym.saveSession(mon.plusDays(7), day1, Feeling.GREAT, "Busy gym", listOf(SetLog(sessionId = 0, exerciseId = bench.id, exerciseNameUsed = "Smith machine bench", weight = 115.0, reps = 10)))
+
+        val logs = gym.latestLogs.first()
+        assertEquals(135.0, logs.getValue("barbell bench press").weight!!, 0.0)
+        assertEquals(10, logs.getValue("smith machine bench").reps)
+    }
+
+    @Test
+    fun exportThenImportRestoresEverything() = runBlocking {
+        meals.fillBatch(mon, MealSlot.LUNCH, recipes.getValue("L2"))
+        meals.setChecked(mon, "chicken breast", true)
+        val day2 = db.workoutDao().allDays().first { it.dayOrder == 2 }
+        gym.saveSession(mon, day2, Feeling.ROUGH, "Short on sleep", emptyList())
+        gym.logSauna(mon, 15)
+        settings.setShowNutrition(false)
+        settings.setTrainingWeekdays(setOf(DayOfWeek.WEDNESDAY))
+
+        val backup = BackupManager(db, settings, context.contentResolver)
+        val text = backup.encode(backup.snapshot())
+
+        val otherDb = newDb()
+        val otherSettings = newSettings()
+        val restorer = BackupManager(otherDb, otherSettings, context.contentResolver)
+        restorer.restore(restorer.decode(text))
+
+        val before = backup.snapshot().copy(exportedAt = "")
+        val after = restorer.snapshot().copy(exportedAt = "")
+        assertEquals(before, after)
+        assertEquals(setOf(DayOfWeek.WEDNESDAY), otherSettings.current().trainingWeekdays)
+        assertEquals(false, otherSettings.current().showNutrition)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun importRejectsOtherFiles() {
+        BackupManager(db, settings, context.contentResolver).decode(
+            """{"app":"something.else","formatVersion":1,"exportedAt":"","settings":{"trainingWeekdays":[],"showNutrition":true,"showHalfPlateTip":true,"weightUnit":"LB","pantryStaples":[]},"recipes":[],"ingredients":[],"mealPlan":[],"shoppingChecks":[],"workoutDays":[],"exercises":[],"workoutSessions":[],"setLogs":[],"saunaLogs":[]}""",
+        )
+    }
+}

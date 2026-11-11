@@ -24,13 +24,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Hand-wired dependencies; small enough that no DI framework is needed. */
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val db: AppDatabase = AppDatabase.build(appContext)
+    private val databaseIsNew = AtomicBoolean(false)
+    val db: AppDatabase = AppDatabase.build(appContext) { databaseIsNew.set(true) }
     val settings = SettingsRepository(appContext.settingsDataStore)
     val seed = SeedRepository(appContext)
     val meals = MealRepository(db, settings)
@@ -54,7 +56,9 @@ class AppContainer(context: Context) {
 
     fun start() {
         appScope.launch {
-            runCatching { seed.installIfNeeded(db, settings) }
+            // Opening the database runs Room's onCreate on first launch; that is when the seed data goes in.
+            db.recipeDao().count()
+            if (databaseIsNew.get()) runCatching { seed.install(db, settings) }
             _ready.value = true
         }
     }

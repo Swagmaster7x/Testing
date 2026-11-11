@@ -19,6 +19,17 @@ android {
         versionName = "1.0"
     }
 
+    // A fixed key kept in the repo, so a build from any computer installs over the last one
+    // and the app's data survives updates. Only for this personal, sideloaded app.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("signing/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true

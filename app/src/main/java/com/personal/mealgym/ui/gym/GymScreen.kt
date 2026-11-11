@@ -186,18 +186,18 @@ private fun StatusCard(plan: GymPlan, onTrainAnyway: () -> Unit) {
     when {
         status is GymToday.Done && plan.draft == null -> InfoCard {
             val s = plan.doneSession
-            Text("Done today", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text("Done today", style = MaterialTheme.typography.labelLarge)
             Text(s?.let { "Day ${it.dayOrder}: ${it.dayName}" } ?: "Workout", style = MaterialTheme.typography.titleMedium)
             s?.let { Text("How it went: ${it.feeling.label}${it.note?.let { n -> " · $n" } ?: ""}") }
             if (next != null) {
                 Text("Next time: ${next.title()}", style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = onTrainAnyway, contentPadding = PaddingValues(0.dp)) { Text("Start another session") }
+                Button(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Start another session") }
             }
         }
         status is GymToday.RestDay && plan.draft == null -> InfoCard {
             Text("Rest day", style = MaterialTheme.typography.titleMedium)
             if (next != null) Text("Next up: ${next.title()}", style = MaterialTheme.typography.bodyMedium)
-            FilledTonalButton(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Train anyway") }
+            Button(onClick = onTrainAnyway, modifier = Modifier.padding(top = 4.dp)) { Text("Train anyway") }
         }
         plan.activeDay == null -> InfoCard {
             Text("No workouts set up", style = MaterialTheme.typography.titleMedium)

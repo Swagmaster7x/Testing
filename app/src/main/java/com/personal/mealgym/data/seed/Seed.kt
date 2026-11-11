@@ -110,7 +110,7 @@ object SeedParser {
         }
 }
 
-/** Loads the bundled seed file and, on first launch, fills the database from it. */
+/** Loads the bundled seed file; [install] fills a new database from it. */
 class SeedRepository(private val context: Context) {
 
     val seed: SeedFile by lazy {
@@ -118,14 +118,8 @@ class SeedRepository(private val context: Context) {
         SeedParser.parse(text)
     }
 
-    suspend fun installIfNeeded(db: AppDatabase, settings: SettingsRepository) {
-        if (settings.seedVersion() >= seed.version) return
-        if (db.recipeDao().count() == 0) install(db)
-        settings.setPantryStaples(seed.pantryStaples.toSet())
-        settings.setSeedVersion(seed.version)
-    }
-
-    private suspend fun install(db: AppDatabase) {
+    /** Adds the seed recipes and workouts, and pre-ticks the pantry staples. */
+    suspend fun install(db: AppDatabase, settings: SettingsRepository) {
         val staples = seed.pantryStaples.toSet()
         db.withTransaction {
             for (r in seed.recipes) {
@@ -137,5 +131,6 @@ class SeedRepository(private val context: Context) {
                 db.workoutDao().insertExercises(SeedParser.exercisesOf(d, dayId))
             }
         }
+        settings.setPantryStaples(staples)
     }
 }

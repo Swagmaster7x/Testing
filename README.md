@@ -1,0 +1,64 @@
+# Meal & Gym
+
+A personal Android app (one phone, no accounts, fully offline) that plans the week's meals, shows the recipes, builds the shopping list, says which gym day it is, and runs a sauna timer. Built from [SPEC.md](SPEC.md).
+
+Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26), targets Android 17 (API 37).
+
+## Put it on your phone
+
+You need `app-debug.apk`, either the one from the Claude session or one you build (below).
+
+- **With a cable:** turn on Developer options and USB debugging on the phone, plug it in, then run
+  `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+- **Without a cable:** send the APK to yourself (Google Drive, email), open it on the phone, and allow "Install unknown apps" for the app you opened it from when Android asks.
+
+Android may show a Play Protect warning for an app it hasn't seen before. That's expected for a personal build.
+
+**Updating:** build again and install over the top. Your data stays because every build is signed with the same key (`app/signing/debug.keystore`, kept in this repo for that reason). Use **Settings > Export** before switching phones.
+
+## Build it
+
+1. Install a JDK (17 or newer) and the Android SDK (Android Studio, or just the command-line tools). The build needs SDK platform 37; Gradle downloads the rest itself.
+2. Point the build at the SDK: set `ANDROID_HOME`, or put `sdk.dir=/path/to/Android/sdk` in `local.properties`.
+3. Run `./gradlew assembleDebug` (on Windows, `gradlew.bat assembleDebug`).
+4. The APK is at `app/build/outputs/apk/debug/app-debug.apk`.
+
+## Tests
+
+- `./gradlew testDebugUnitTest` runs everything: the shopping-list roll-up, "which workout is today", quantity parsing, the seed file, repository and backup tests on a real Room database, and a smoke test that opens every main screen.
+- `./gradlew recordRoborazziDebug` also saves screenshots of those screens to `app/build/outputs/roborazzi/`.
+
+## How it works
+
+| Tab | What it does |
+| --- | --- |
+| Today | Today's breakfast, lunch and dinner; which gym day it is (or "Rest day"); sauna shortcut. |
+| Plan | The week, Monday to Sunday, as seven rows of three slots. Pick from recipes for that slot, copy a meal to other days, "Repeat last week", clear a slot. Meal-prep recipes can fill several slots in one go ("makes 4"). |
+| Cook | Recipes (searchable, editable, and you can add your own), step-by-step cooking mode with big text and the screen kept on, and the shopping list. |
+| Gym | Today's workout with tick boxes for sets, one-tap busy-gym swaps, optional weight and reps ("Last time: 135 x 8"), a rest timer, and a "How did it go?" check-in. Workouts are editable (pencil icon). |
+
+Settings (gear icon) has training days, nutrition text on or off, the half-plate reminder, lb or kg, the pantry "always have" list, and Export/Import. History (clock icon) is a plain list by date.
+
+**Ground rules kept:** no calorie totals, no body-weight logging, no streaks, no "you missed a day" messages. Nutrition is reference text on each recipe card and is never added up.
+
+## Choices made where the spec left room
+
+- **Shopping amounts.** Recipe quantities are for the whole recipe, so a recipe that serves 4 and fills 4 lunch slots is bought once; a 5th slot means cooking it twice. Single-serving recipes scale with every slot. The same ingredient is combined across recipes (2 lb + 2 lb chicken thighs = 4 lb), and ounces fold into pounds when both appear.
+- **"Always have" matching.** A ticked staple also covers more general or more specific names, so "low-sodium soy sauce" covers plain "soy sauce", and "olive oil" covers "oil".
+- **Meal-prep.** B2, L1, L2, L3 and D6 are marked meal-prep. The overnight oats serve 1 per jar, so they show "makes 4" (4 jars).
+- **Gym cycle.** Day 1 to Day 4 run in order across your training weekdays. The next session is always the day after the last one you actually did, so skipping never shifts or flags anything. "Do a different day" picks one by hand, and the cycle continues from there.
+- **Permissions.** Notifications and a foreground service, as the spec says. Android 14+ also requires a foreground-service *type* permission (`FOREGROUND_SERVICE_SPECIAL_USE`), and the timer uses `VIBRATE` and `WAKE_LOCK` so it can buzz and stay on time with the screen off. Those three are granted at install with no prompt. The internet permission is explicitly blocked, and Android cloud backup is turned off.
+- **First launch.** The recipes and workouts load from `app/src/main/assets/seed.json` when the database is first created.
+
+## Layout
+
+```
+app/src/main/
+  assets/seed.json            19 recipes, 4 workout days, pantry staples, free-volume foods, gym tips
+  java/com/personal/mealgym/
+    domain/                   ShoppingList, WorkoutCycle, Quantities, Dates (plain Kotlin, unit-tested)
+    data/                     Room entities and DAOs, repositories, settings, seed loader, backup
+    gym/                      In-progress workout and rest timer
+    sauna/                    Sauna timer foreground service, notifications, sound and buzz
+    ui/                       Compose screens, one folder per tab plus settings and history
+```
