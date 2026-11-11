@@ -37,7 +37,7 @@ class ShoppingListTest {
 
     private data class Ing(val qty: Double?, val unit: String?, val name: String, val section: StoreSection)
 
-    private fun planned(r: Pair<Recipe, List<Ingredient>>, slots: Int) = PlannedRecipe(r.first, r.second, slots)
+    private fun planned(r: Pair<Recipe, List<Ingredient>>, slots: Int) = PlannedRecipe(r.first, r.second, slots.toDouble())
 
     private fun ShoppingResult.item(name: String): ShoppingItem? =
         sections.flatMap { it.items }.firstOrNull { it.key == ShoppingList.ingredientKey(name) }
@@ -77,12 +77,16 @@ class ShoppingListTest {
 
     @Test
     fun batchesNeeded() {
-        assertEquals(0, ShoppingList.batchesNeeded(0, 4))
-        assertEquals(1, ShoppingList.batchesNeeded(1, 4))
-        assertEquals(1, ShoppingList.batchesNeeded(4, 4))
-        assertEquals(2, ShoppingList.batchesNeeded(5, 4))
-        assertEquals(3, ShoppingList.batchesNeeded(3, 1))
-        assertEquals(2, ShoppingList.batchesNeeded(2, 0))
+        assertEquals(0, ShoppingList.batchesNeeded(0.0, 4))
+        assertEquals(1, ShoppingList.batchesNeeded(1.0, 4))
+        assertEquals(1, ShoppingList.batchesNeeded(4.0, 4))
+        assertEquals(2, ShoppingList.batchesNeeded(5.0, 4))
+        assertEquals(3, ShoppingList.batchesNeeded(3.0, 1))
+        assertEquals(2, ShoppingList.batchesNeeded(2.0, 0))
+        // Ashley's three-quarter portions: four lunches use three servings.
+        assertEquals(1, ShoppingList.batchesNeeded(4 * 0.75, 4))
+        assertEquals(1, ShoppingList.batchesNeeded(1.0 + 4 * 0.75, 4))
+        assertEquals(2, ShoppingList.batchesNeeded(4.0 + 4 * 0.75, 4))
     }
 
     @Test

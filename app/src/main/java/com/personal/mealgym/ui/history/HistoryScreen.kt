@@ -47,8 +47,10 @@ data class HistoryDay(
 
 /** A plain, read-only list by date. No charts, no totals across days. */
 class HistoryViewModel(c: AppContainer) : MessageViewModel() {
+    private val profileId = c.currentProfileId()
+
     val ui: StateFlow<List<HistoryDay>?> = c.today.flatMapLatest { today ->
-        combine(c.meals.planUpTo(today), c.meals.recipes, c.gym.sessions, c.gym.saunaLogs) { plan, recipes, sessions, sauna ->
+        combine(c.meals.planUpTo(profileId, today), c.meals.recipes, c.gym.sessions(profileId), c.gym.saunaLogs(profileId)) { plan, recipes, sessions, sauna ->
             val names = recipes.associate { it.id to it.name }
             val todayIso = Dates.iso(today)
             val dates = (plan.map { it.date } + sessions.map { it.date } + sauna.map { it.date })

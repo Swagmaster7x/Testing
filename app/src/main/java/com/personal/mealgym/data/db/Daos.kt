@@ -11,6 +11,29 @@ import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+interface ProfileDao {
+    @Query("SELECT * FROM Profile ORDER BY id")
+    fun observeAll(): Flow<List<Profile>>
+
+    @Query("SELECT * FROM Profile ORDER BY id")
+    suspend fun all(): List<Profile>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(profiles: List<Profile>)
+
+    @Query("DELETE FROM Profile") suspend fun deleteAll()
+}
+
+@Dao
+interface MetaDao {
+    @Query("SELECT value FROM Meta WHERE `key` = :key")
+    suspend fun get(key: String): String?
+
+    @Upsert
+    suspend fun put(meta: Meta)
+}
+
+@Dao
 interface RecipeDao {
     @Query("SELECT * FROM Recipe ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<Recipe>>
@@ -27,6 +50,12 @@ interface RecipeDao {
     @Query("SELECT * FROM Recipe WHERE id = :id")
     suspend fun getWithIngredients(id: Long): RecipeWithIngredients?
 
+    @Query("SELECT * FROM Recipe WHERE seedKey = :key LIMIT 1")
+    suspend fun bySeedKey(key: String): Recipe?
+
+    @Query("SELECT * FROM Recipe WHERE name = :name COLLATE NOCASE LIMIT 1")
+    suspend fun byName(name: String): Recipe?
+
     @Query("SELECT COUNT(*) FROM Recipe")
     suspend fun count(): Int
 
@@ -38,6 +67,15 @@ interface RecipeDao {
 
     @Update
     suspend fun update(recipe: Recipe)
+
+    @Query("UPDATE Recipe SET isFavorite = :favorite WHERE id = :id")
+    suspend fun setFavorite(id: Long, favorite: Boolean)
+
+    @Query("UPDATE Recipe SET isHidden = :hidden WHERE id = :id")
+    suspend fun setHidden(id: Long, hidden: Boolean)
+
+    @Query("UPDATE Recipe SET activeSwap = :swap WHERE id = :id")
+    suspend fun setActiveSwap(id: Long, swap: Int?)
 
     @Query("DELETE FROM Recipe WHERE id = :id")
     suspend fun delete(id: Long)
@@ -57,24 +95,28 @@ interface RecipeDao {
 
 @Dao
 interface PlanDao {
+    @Query("SELECT * FROM MealPlanEntry WHERE profileId = :profileId AND date BETWEEN :start AND :end")
+    fun observeRange(profileId: Long, start: String, end: String): Flow<List<MealPlanEntry>>
+
+    /** Both sides at once, for the shared shopping list. */
     @Query("SELECT * FROM MealPlanEntry WHERE date BETWEEN :start AND :end")
-    fun observeRange(start: String, end: String): Flow<List<MealPlanEntry>>
+    fun observeRangeAllProfiles(start: String, end: String): Flow<List<MealPlanEntry>>
 
-    @Query("SELECT * FROM MealPlanEntry WHERE date BETWEEN :start AND :end")
-    suspend fun getRange(start: String, end: String): List<MealPlanEntry>
+    @Query("SELECT * FROM MealPlanEntry WHERE profileId = :profileId AND date BETWEEN :start AND :end")
+    suspend fun getRange(profileId: Long, start: String, end: String): List<MealPlanEntry>
 
-    @Query("SELECT * FROM MealPlanEntry WHERE date <= :end ORDER BY date DESC")
-    fun observeUpTo(end: String): Flow<List<MealPlanEntry>>
+    @Query("SELECT * FROM MealPlanEntry WHERE profileId = :profileId AND date <= :end ORDER BY date DESC")
+    fun observeUpTo(profileId: Long, end: String): Flow<List<MealPlanEntry>>
 
-    /** Replaces whatever is already in that date and slot. */
+    /** Replaces whatever is already in that side's date and slot. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun put(entry: MealPlanEntry)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putAll(entries: List<MealPlanEntry>)
 
-    @Query("DELETE FROM MealPlanEntry WHERE date = :date AND slot = :slot")
-    suspend fun clear(date: String, slot: MealSlot)
+    @Query("DELETE FROM MealPlanEntry WHERE profileId = :profileId AND date = :date AND slot = :slot")
+    suspend fun clear(profileId: Long, date: String, slot: MealSlot)
 
     // Backup
     @Query("SELECT * FROM MealPlanEntry") suspend fun all(): List<MealPlanEntry>
@@ -83,14 +125,14 @@ interface PlanDao {
 
 @Dao
 interface ShoppingDao {
-    @Query("SELECT * FROM ShoppingCheck WHERE weekStartDate = :weekStart")
-    fun observeWeek(weekStart: String): Flow<List<ShoppingCheck>>
+    @Query("SELECT * FROM ShoppingCheck WHERE listKey = :listKey AND weekStartDate = :weekStart")
+    fun observeWeek(listKey: String, weekStart: String): Flow<List<ShoppingCheck>>
 
     @Upsert
     suspend fun upsert(check: ShoppingCheck)
 
-    @Query("DELETE FROM ShoppingCheck WHERE weekStartDate = :weekStart")
-    suspend fun clearWeek(weekStart: String)
+    @Query("DELETE FROM ShoppingCheck WHERE listKey = :listKey AND weekStartDate = :weekStart")
+    suspend fun clearWeek(listKey: String, weekStart: String)
 
     // Backup
     @Query("SELECT * FROM ShoppingCheck") suspend fun all(): List<ShoppingCheck>
@@ -100,11 +142,11 @@ interface ShoppingDao {
 
 @Dao
 interface WorkoutDao {
-    @Query("SELECT * FROM WorkoutDay ORDER BY dayOrder")
-    fun observeDays(): Flow<List<WorkoutDay>>
+    @Query("SELECT * FROM WorkoutDay WHERE profileId = :profileId ORDER BY dayOrder")
+    fun observeDays(profileId: Long): Flow<List<WorkoutDay>>
 
-    @Query("SELECT * FROM WorkoutDay ORDER BY dayOrder")
-    suspend fun getDays(): List<WorkoutDay>
+    @Query("SELECT * FROM WorkoutDay WHERE profileId = :profileId ORDER BY dayOrder")
+    suspend fun getDays(profileId: Long): List<WorkoutDay>
 
     @Query("SELECT * FROM Exercise ORDER BY workoutDayId, groupLabel, position")
     fun observeExercises(): Flow<List<Exercise>>
@@ -122,18 +164,19 @@ interface WorkoutDao {
     @Query("SELECT COALESCE(MAX(position), 0) FROM Exercise WHERE workoutDayId = :dayId")
     suspend fun maxPosition(dayId: Long): Int
 
-    @Query("SELECT * FROM WorkoutSession ORDER BY date DESC, id DESC")
-    fun observeSessions(): Flow<List<WorkoutSession>>
+    @Query("SELECT * FROM WorkoutSession WHERE profileId = :profileId ORDER BY date DESC, id DESC")
+    fun observeSessions(profileId: Long): Flow<List<WorkoutSession>>
 
     @Insert suspend fun insertSession(session: WorkoutSession): Long
     @Insert suspend fun insertSetLogs(logs: List<SetLog>)
 
-    /** The latest note per exercise name, for "Last time: 135 x 8". */
+    /** The latest note per exercise name on one side, for "Last time: 135 x 8". */
     @Query(
         "SELECT * FROM SetLog WHERE id IN (" +
-            "SELECT MAX(id) FROM SetLog WHERE weight IS NOT NULL OR reps IS NOT NULL GROUP BY exerciseNameUsed)",
+            "SELECT MAX(id) FROM SetLog WHERE profileId = :profileId AND (weight IS NOT NULL OR reps IS NOT NULL) " +
+            "GROUP BY exerciseNameUsed)",
     )
-    fun observeLatestLogs(): Flow<List<SetLog>>
+    fun observeLatestLogs(profileId: Long): Flow<List<SetLog>>
 
     // Backup
     @Query("SELECT * FROM WorkoutDay") suspend fun allDays(): List<WorkoutDay>
@@ -148,8 +191,8 @@ interface WorkoutDao {
 
 @Dao
 interface SaunaDao {
-    @Query("SELECT * FROM SaunaLog ORDER BY date DESC, id DESC")
-    fun observeAll(): Flow<List<SaunaLog>>
+    @Query("SELECT * FROM SaunaLog WHERE profileId = :profileId ORDER BY date DESC, id DESC")
+    fun observeAll(profileId: Long): Flow<List<SaunaLog>>
 
     @Insert suspend fun insert(log: SaunaLog): Long
 
@@ -157,4 +200,21 @@ interface SaunaDao {
     @Query("SELECT * FROM SaunaLog") suspend fun all(): List<SaunaLog>
     @Insert suspend fun insertAll(logs: List<SaunaLog>)
     @Query("DELETE FROM SaunaLog") suspend fun deleteAll()
+}
+
+@Dao
+interface SupplementDao {
+    @Query("SELECT * FROM SupplementLog WHERE profileId = :profileId AND date = :date")
+    fun observeDay(profileId: Long, date: String): Flow<List<SupplementLog>>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(log: SupplementLog)
+
+    @Query("DELETE FROM SupplementLog WHERE profileId = :profileId AND date = :date AND item = :item")
+    suspend fun delete(profileId: Long, date: String, item: String)
+
+    // Backup
+    @Query("SELECT * FROM SupplementLog") suspend fun all(): List<SupplementLog>
+    @Insert suspend fun insertAll(logs: List<SupplementLog>)
+    @Query("DELETE FROM SupplementLog") suspend fun deleteAll()
 }

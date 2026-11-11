@@ -46,6 +46,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.AppSettings
+import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.ShoppingList
@@ -69,8 +70,9 @@ data class PantryItem(val name: String, val ticked: Boolean, val coveredBy: Stri
 data class SettingsUi(val settings: AppSettings, val pantry: List<PantryItem>)
 
 class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
 
-    val ui: StateFlow<SettingsUi?> = combine(c.settings.settings, c.meals.pantryIngredientNames) { s, names ->
+    val ui: StateFlow<SettingsUi?> = combine(c.settings.settings(profileId), c.meals.pantryIngredientNames) { s, names ->
         val seen = HashSet<String>()
         val candidates = (s.pantryStaples.sorted() + c.seed.seed.pantryStaples + names)
             .filter { seen.add(ShoppingList.ingredientKey(it)) }
@@ -84,13 +86,19 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
     }.stateInVm(null)
 
     fun toggleWeekday(day: DayOfWeek) = launch {
-        val current = c.settings.current().trainingWeekdays
-        c.settings.setTrainingWeekdays(if (day in current) current - day else current + day)
+        val current = c.settings.current(profileId).trainingWeekdays
+        c.settings.setTrainingWeekdays(profileId, if (day in current) current - day else current + day)
     }
 
-    fun setShowNutrition(show: Boolean) = launch { c.settings.setShowNutrition(show) }
-    fun setShowHalfPlateTip(show: Boolean) = launch { c.settings.setShowHalfPlateTip(show) }
-    fun setWeightUnit(unit: WeightUnit) = launch { c.settings.setWeightUnit(unit) }
+    fun setShowNutrition(show: Boolean) = launch { c.settings.setShowNutrition(profileId, show) }
+    fun setShowHalfPlateTip(show: Boolean) = launch { c.settings.setShowHalfPlateTip(profileId, show) }
+    fun setWeightUnit(unit: WeightUnit) = launch { c.settings.setWeightUnit(profileId, unit) }
+    fun setMotion(on: Boolean) = launch { c.settings.setMotion(profileId, on) }
+    fun setChime(on: Boolean) = launch { c.settings.setChime(profileId, on) }
+    fun setCreatineReminder(on: Boolean) = launch { c.settings.setCreatineReminder(profileId, on) }
+
+    /** Opens the other side on this phone from now on. */
+    fun switchSide() = c.chooseSide(Profiles.other(profileId))
     fun setStaple(name: String, alwaysHave: Boolean) = launch { c.settings.setPantryStaple(name, alwaysHave) }
 
     fun addStaple(name: String) {
@@ -143,6 +151,20 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
+            item { SectionHeader("Side") }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f)) {
+                        Text("This phone opens ${Profiles.sideName(vm.profileId)}", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "Each side keeps its own plans, gym days and history.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(onClick = vm::switchSide) { Text("Switch to ${Profiles.name(Profiles.other(vm.profileId))}") }
+                }
+            }
             item { SectionHeader("Gym") }
             item {
                 Text("Training days", style = MaterialTheme.typography.bodyLarge)

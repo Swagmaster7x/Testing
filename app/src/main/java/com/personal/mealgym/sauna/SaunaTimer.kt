@@ -22,10 +22,13 @@ object SaunaTimer {
     internal val mutableState = MutableStateFlow<SaunaState>(SaunaState.Idle)
     val state: StateFlow<SaunaState> = mutableState.asStateFlow()
 
-    fun start(context: Context, minutes: Int) {
+    /** [profileId] is the side the minutes are logged to; [chime] plays a sound at the end. */
+    fun start(context: Context, minutes: Int, profileId: Long, chime: Boolean) {
         val intent = Intent(context, SaunaTimerService::class.java)
             .setAction(SaunaTimerService.ACTION_START)
             .putExtra(SaunaTimerService.EXTRA_MINUTES, minutes)
+            .putExtra(SaunaTimerService.EXTRA_PROFILE, profileId)
+            .putExtra(SaunaTimerService.EXTRA_CHIME, chime)
         ContextCompat.startForegroundService(context, intent)
     }
 

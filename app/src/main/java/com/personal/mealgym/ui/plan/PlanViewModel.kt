@@ -8,6 +8,7 @@ import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.ui.MessageViewModel
+import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.label
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,17 +38,20 @@ data class PlanUi(
 }
 
 class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
+    val slots: List<MealSlot> = Sides.slotsFor(profileId)
+
     private val weekStart = MutableStateFlow(Dates.weekStart(c.today.value))
 
     val ui: StateFlow<PlanUi?> = combine(weekStart, c.today) { ws, today -> ws to today }
         .flatMapLatest { (ws, today) ->
-            combine(c.meals.planForWeek(ws), c.meals.recipes) { plan, recipes ->
+            combine(c.meals.planForWeek(profileId, ws), c.meals.recipesFor(profileId)) { plan, recipes ->
                 val byId = recipes.associateBy { it.id }
                 val days = Dates.weekDays(ws).map { date ->
                     val iso = Dates.iso(date)
                     PlanDay(
                         date = date,
-                        slots = MealSlot.entries.associateWith { slot ->
+                        slots = slots.associateWith { slot ->
                             plan.firstOrNull { it.date == iso && it.slot == slot }?.let { byId[it.recipeId] }
                         },
                     )
@@ -64,24 +68,24 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
     }
 
     fun setSlot(date: LocalDate, slot: MealSlot, recipe: Recipe) {
-        viewModelScope.launch { c.meals.setSlot(date, slot, recipe.id) }
+        viewModelScope.launch { c.meals.setSlot(profileId, date, slot, recipe.id) }
     }
 
     fun fillBatch(date: LocalDate, slot: MealSlot, recipe: Recipe) {
         viewModelScope.launch {
-            val n = c.meals.fillBatch(date, slot, recipe)
+            val n = c.meals.fillBatch(profileId, date, slot, recipe)
             say("${recipe.name} is in $n ${slot.label.lowercase()} slot${if (n == 1) "" else "s"}.")
         }
     }
 
     fun clearSlot(date: LocalDate, slot: MealSlot) {
-        viewModelScope.launch { c.meals.clearSlot(date, slot) }
+        viewModelScope.launch { c.meals.clearSlot(profileId, date, slot) }
     }
 
     fun copyTo(dates: Collection<LocalDate>, slot: MealSlot, recipe: Recipe) {
         if (dates.isEmpty()) return
         viewModelScope.launch {
-            c.meals.copyTo(dates, slot, recipe.id)
+            c.meals.copyTo(profileId, dates, slot, recipe.id)
             say("Copied to ${dates.size} day${if (dates.size == 1) "" else "s"}.")
         }
     }
@@ -89,7 +93,7 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
     fun repeatLastWeek() {
         val ws = weekStart.value
         viewModelScope.launch {
-            val n = c.meals.repeatLastWeek(ws)
+            val n = c.meals.repeatLastWeek(profileId, ws)
             say(if (n == 0) "Nothing to copy: last week had no meals for this week's empty slots." else "Copied $n meal${if (n == 1) "" else "s"} from last week.")
         }
     }

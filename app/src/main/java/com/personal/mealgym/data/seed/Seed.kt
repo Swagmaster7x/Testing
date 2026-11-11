@@ -2,11 +2,16 @@ package com.personal.mealgym.data.seed
 
 import android.content.Context
 import androidx.room.withTransaction
+import com.personal.mealgym.data.BackupFile
+import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.SettingsRepository
 import com.personal.mealgym.data.db.AppDatabase
 import com.personal.mealgym.data.db.Exercise
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.data.db.Meta
+import com.personal.mealgym.data.db.ProteinSwap
+import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.data.db.WorkoutDay
@@ -17,13 +22,26 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class SeedFile(
+    /** Seed level: 1 = first release, 2 = the two sides and the bigger recipe library. */
     val version: Int,
     val recipes: List<SeedRecipe>,
     val freeVolumeFoods: List<String>,
     val pantryStaples: List<String>,
+    /** Staples added after level 1, ticked on upgrade too. */
+    val extraPantryStaples: List<String> = emptyList(),
     val workoutDays: List<SeedWorkoutDay>,
+    /** Swag's gym-screen text. */
     val gymTips: List<String>,
+    /** Ashley's gym-screen text. */
+    val gymTipsAshley: List<String> = emptyList(),
+    /** Ashley's "Make it easier to finish" tips. */
+    val easierToFinishTips: List<String> = emptyList(),
+    /** Ashley's daily guide, shown as reference text only. */
+    val dailyGuide: List<GuideLine> = emptyList(),
 )
+
+@Serializable
+data class GuideLine(val label: String, val text: String)
 
 @Serializable
 data class SeedRecipe(
@@ -35,9 +53,15 @@ data class SeedRecipe(
     val servingSize: String,
     val nutrition: String? = null,
     val mealPrep: Boolean = false,
-    val ingredients: List<SeedIngredient>,
-    val steps: List<String>,
+    val ingredients: List<SeedIngredient> = emptyList(),
+    val steps: List<String> = emptyList(),
     val volumeTip: String? = null,
+    val protein: ProteinTag? = null,
+    val swaps: List<ProteinSwap> = emptyList(),
+    /** "ashley" for entries only on her side (her coffee-shop breakfasts). */
+    val onlyFor: String? = null,
+    /** Seed level the recipe arrived in. */
+    val since: Int = 1,
 )
 
 @Serializable
@@ -50,7 +74,15 @@ data class SeedIngredient(
 )
 
 @Serializable
-data class SeedWorkoutDay(val order: Int, val name: String, val exercises: List<SeedExercise>)
+data class SeedWorkoutDay(
+    val order: Int,
+    val name: String,
+    val exercises: List<SeedExercise>,
+    /** "swag" or "ashley". */
+    val profile: String = "swag",
+    val shortName: String? = null,
+    val since: Int = 1,
+)
 
 @Serializable
 data class SeedExercise(
@@ -67,6 +99,12 @@ object SeedParser {
 
     fun parse(text: String): SeedFile = json.decodeFromString(SeedFile.serializer(), text)
 
+    fun profileId(key: String?): Long? = when (key?.lowercase()) {
+        null -> null
+        "ashley" -> Profiles.ASHLEY
+        else -> Profiles.SWAG
+    }
+
     fun recipeOf(seed: SeedRecipe): Recipe = Recipe(
         seedKey = seed.key,
         name = seed.name,
@@ -79,6 +117,9 @@ object SeedParser {
         volumeTip = seed.volumeTip,
         isMealPrep = seed.mealPrep,
         isUserCreated = false,
+        protein = seed.protein,
+        proteinSwaps = seed.swaps,
+        onlyForProfileId = profileId(seed.onlyFor),
     )
 
     fun ingredientsOf(seed: SeedRecipe, recipeId: Long, staples: Set<String>): List<Ingredient> =
@@ -95,6 +136,13 @@ object SeedParser {
             )
         }
 
+    fun dayOf(seed: SeedWorkoutDay): WorkoutDay = WorkoutDay(
+        dayOrder = seed.order,
+        name = seed.name,
+        profileId = profileId(seed.profile) ?: Profiles.SWAG,
+        shortName = seed.shortName,
+    )
+
     fun exercisesOf(seed: SeedWorkoutDay, dayId: Long): List<Exercise> =
         seed.exercises.mapIndexed { index, e ->
             Exercise(
@@ -110,7 +158,10 @@ object SeedParser {
         }
 }
 
-/** Loads the bundled seed file; [install] fills a new database from it. */
+/**
+ * Loads the bundled seed file and brings the database up to its level: everything on a new
+ * install, only what's new on an upgrade (so recipes deleted on the phone don't come back).
+ */
 class SeedRepository(private val context: Context) {
 
     val seed: SeedFile by lazy {
@@ -118,19 +169,43 @@ class SeedRepository(private val context: Context) {
         SeedParser.parse(text)
     }
 
-    /** Adds the seed recipes and workouts, and pre-ticks the pantry staples. */
-    suspend fun install(db: AppDatabase, settings: SettingsRepository) {
-        val staples = seed.pantryStaples.toSet()
+    suspend fun sync(db: AppDatabase, settings: SettingsRepository, freshDatabase: Boolean) {
+        db.profileDao().insertAll(BackupFile.defaultProfiles)
+        val level = db.metaDao().get(SEED_LEVEL)?.toIntOrNull()
+            ?: if (freshDatabase || db.recipeDao().count() == 0) 0 else 1
+        if (level >= seed.version) return
+        val staples = (seed.pantryStaples + seed.extraPantryStaples).toSet()
+
         db.withTransaction {
+            val recipeDao = db.recipeDao()
             for (r in seed.recipes) {
-                val id = db.recipeDao().insert(SeedParser.recipeOf(r))
-                db.recipeDao().insertIngredients(SeedParser.ingredientsOf(r, id, staples))
+                val existing = recipeDao.bySeedKey(r.key)
+                if (r.since > level && existing == null) {
+                    val id = recipeDao.insert(SeedParser.recipeOf(r))
+                    recipeDao.insertIngredients(SeedParser.ingredientsOf(r, id, staples))
+                } else if (existing != null && level < 2 && existing.protein == null) {
+                    // Recipes from before the library upgrade gain their protein tag and swaps.
+                    recipeDao.update(
+                        existing.copy(
+                            protein = r.protein,
+                            proteinSwaps = r.swaps,
+                            onlyForProfileId = existing.onlyForProfileId ?: SeedParser.profileId(r.onlyFor),
+                        ),
+                    )
+                }
             }
-            for (d in seed.workoutDays) {
-                val dayId = db.workoutDao().insertDay(WorkoutDay(dayOrder = d.order, name = d.name))
+            for (d in seed.workoutDays.filter { it.since > level }) {
+                val dayId = db.workoutDao().insertDay(SeedParser.dayOf(d))
                 db.workoutDao().insertExercises(SeedParser.exercisesOf(d, dayId))
             }
+            db.metaDao().put(Meta(SEED_LEVEL, seed.version.toString()))
         }
-        settings.setPantryStaples(staples)
+
+        if (level < 1) settings.setPantryStaples(seed.pantryStaples.toSet() + seed.extraPantryStaples)
+        else settings.addPantryStaples(seed.extraPantryStaples)
+    }
+
+    companion object {
+        const val SEED_LEVEL = "seedLevel"
     }
 }

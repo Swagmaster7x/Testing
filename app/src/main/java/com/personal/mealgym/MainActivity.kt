@@ -5,8 +5,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.Modifier
+import com.personal.mealgym.data.SideState
 import com.personal.mealgym.ui.MealGymNavHost
+import com.personal.mealgym.ui.SideChooserScreen
 import com.personal.mealgym.ui.theme.MealGymTheme
+import com.personal.mealgym.ui.theme.ThemedBackground
+import com.personal.mealgym.ui.themeFor
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
@@ -18,12 +28,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) pendingOpen.value = intent?.getStringExtra(EXTRA_OPEN)
+        val container = (application as MealGymApp).container
         setContent {
-            MealGymTheme {
-                MealGymNavHost(
-                    pendingOpen = pendingOpen,
-                    onOpenHandled = { pendingOpen.value = null },
-                )
+            val side by container.sideState.collectAsStateWithLifecycle()
+            when (val s = side) {
+                SideState.Loading -> MealGymTheme { ThemedBackground { Box(Modifier.fillMaxSize()) } }
+                SideState.NotChosen -> MealGymTheme { SideChooserScreen(onChoose = container::chooseSide) }
+                // Keyed by side, so switching sides starts every screen afresh on the other side's data.
+                is SideState.Chosen -> key(s.profileId) {
+                    MealGymTheme(side = themeFor(s.profileId)) {
+                        MealGymNavHost(
+                            pendingOpen = pendingOpen,
+                            onOpenHandled = { pendingOpen.value = null },
+                        )
+                    }
+                }
             }
         }
     }

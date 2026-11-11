@@ -105,7 +105,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
                 item(key = "h-${section.section}") { SectionHeader(section.section.label) }
                 items(section.items, key = { "i-${it.key}" }) { item ->
                     val checked = item.key in w.checkedKeys
-                    ShoppingRow(item, checked) { vm.toggle(w.weekStart, item.key, !checked) }
+                    ShoppingRow(item, checked) { vm.toggle(w, item.key, !checked) }
                 }
             }
             if (w.result.skippedAlwaysHave.isNotEmpty()) {
@@ -125,7 +125,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
             }
             if (w.checkedKeys.isNotEmpty()) {
                 item {
-                    TextButton(onClick = { vm.uncheckAll(w.weekStart) }) { Text("Untick everything") }
+                    TextButton(onClick = { vm.uncheckAll(w) }) { Text("Untick everything") }
                 }
             }
         }

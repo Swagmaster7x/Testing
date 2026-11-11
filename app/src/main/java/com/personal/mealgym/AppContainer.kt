@@ -4,7 +4,9 @@ import android.content.Context
 import com.personal.mealgym.data.BackupManager
 import com.personal.mealgym.data.GymRepository
 import com.personal.mealgym.data.MealRepository
+import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.SettingsRepository
+import com.personal.mealgym.data.SideState
 import com.personal.mealgym.data.db.AppDatabase
 import com.personal.mealgym.data.seed.SeedRepository
 import com.personal.mealgym.data.settingsDataStore
@@ -43,8 +45,19 @@ class AppContainer(context: Context) {
 
     private val _ready = MutableStateFlow(false)
 
-    /** False until first-launch seeding has finished. */
+    /** False until the seed data is in place. */
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
+
+    /** Which side this phone shows, or that it still needs choosing. */
+    val sideState: StateFlow<SideState> =
+        settings.sideState.stateIn(appScope, SharingStarted.Eagerly, SideState.Loading)
+
+    /** The side currently open. Screens are rebuilt when it changes, so they read it once. */
+    fun currentProfileId(): Long = (sideState.value as? SideState.Chosen)?.profileId ?: Profiles.SWAG
+
+    fun chooseSide(profileId: Long) {
+        appScope.launch { settings.setActiveProfile(profileId) }
+    }
 
     /** Today's date, updated when the clock passes midnight. */
     val today: StateFlow<LocalDate> = flow {
@@ -56,13 +69,15 @@ class AppContainer(context: Context) {
 
     fun start() {
         appScope.launch {
-            // Opening the database runs Room's onCreate on first launch; that is when the seed data goes in.
+            // Opening the database runs Room's onCreate (first launch) or the upgrade migration.
             db.recipeDao().count()
-            if (databaseIsNew.get()) runCatching { seed.install(db, settings) }
+            runCatching { seed.sync(db, settings, freshDatabase = databaseIsNew.get()) }
             _ready.value = true
         }
     }
 
     val freeVolumeFoods: List<String> get() = seed.seed.freeVolumeFoods
-    val gymTips: List<String> get() = seed.seed.gymTips
+
+    fun gymTips(profileId: Long): List<String> =
+        if (profileId == Profiles.ASHLEY && seed.seed.gymTipsAshley.isNotEmpty()) seed.seed.gymTipsAshley else seed.seed.gymTips
 }

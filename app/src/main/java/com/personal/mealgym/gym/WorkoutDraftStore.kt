@@ -19,6 +19,8 @@ data class WorkoutDraft(
     /** ISO date the workout belongs to. */
     val date: String,
     val dayId: Long,
+    /** Which side the workout belongs to. */
+    val profileId: Long = 1,
     val checkedSets: Map<Long, Set<Int>> = emptyMap(),
     /** Exercise id -> the alternative being done instead. */
     val swaps: Map<Long, String> = emptyMap(),
@@ -36,7 +38,7 @@ class WorkoutDraftStore(private val file: File, private val scope: CoroutineScop
     private val _draft = MutableStateFlow(load())
     val draft: StateFlow<WorkoutDraft?> = _draft.asStateFlow()
 
-    fun start(date: String, dayId: Long) = set(WorkoutDraft(date = date, dayId = dayId))
+    fun start(profileId: Long, date: String, dayId: Long) = set(WorkoutDraft(date = date, dayId = dayId, profileId = profileId))
 
     fun update(transform: (WorkoutDraft) -> WorkoutDraft) {
         _draft.update { it?.let(transform) }

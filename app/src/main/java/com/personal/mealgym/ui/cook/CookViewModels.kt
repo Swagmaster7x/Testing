@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicLong
@@ -33,8 +34,10 @@ import java.util.concurrent.atomic.AtomicLong
 data class CookUi(val thisWeek: List<Recipe>, val all: List<Recipe>)
 
 class CookViewModel(c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
+
     val ui: StateFlow<CookUi?> = c.today.flatMapLatest { today ->
-        combine(c.meals.planForWeek(Dates.weekStart(today)), c.meals.recipes) { plan, recipes ->
+        combine(c.meals.planForWeek(profileId, Dates.weekStart(today)), c.meals.recipesFor(profileId)) { plan, recipes ->
             val byId = recipes.associateBy { it.id }
             val planned = plan.sortedWith(compareBy<MealPlanEntry> { it.date }.thenBy { it.slot.ordinal })
                 .map { it.recipeId }
@@ -63,8 +66,9 @@ sealed interface RecipeState {
 
 class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : MessageViewModel() {
     private val id: Long = handle.get<Long>("id") ?: 0L
+    val profileId = c.currentProfileId()
 
-    val state: StateFlow<RecipeState> = combine(c.meals.recipe(id), c.settings.settings) { r, s ->
+    val state: StateFlow<RecipeState> = combine(c.meals.recipe(id), c.settings.settings(profileId)) { r, s ->
         if (r == null) {
             RecipeState.Missing
         } else {
@@ -91,23 +95,32 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
 // ---------- Shopping list ----------
 
 class ShoppingViewModel(private val c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
+
     /** 0 = this week, 1 = next week. */
     val weekOffset = MutableStateFlow(0L)
 
-    val ui: StateFlow<ShoppingWeek?> = combine(c.today, weekOffset) { today, offset ->
-        Dates.weekStart(today).plusWeeks(offset)
-    }.flatMapLatest { c.meals.shoppingWeek(it) }.stateInVm(null)
+    /** "Just mine" (false) or "Both of us" (true), remembered per side. */
+    val both: StateFlow<Boolean> = c.settings.settings(profileId).map { it.shoppingBoth }.stateInVm(false)
+
+    val ui: StateFlow<ShoppingWeek?> = combine(c.today, weekOffset, both) { today, offset, both ->
+        Dates.weekStart(today).plusWeeks(offset) to both
+    }.flatMapLatest { (ws, both) -> c.meals.shoppingWeek(profileId, ws, both) }.stateInVm(null)
+
+    fun setBoth(both: Boolean) {
+        viewModelScope.launch { c.settings.setShoppingBoth(profileId, both) }
+    }
 
     fun setWeekOffset(offset: Long) {
         weekOffset.value = offset
     }
 
-    fun toggle(weekStart: LocalDate, key: String, checked: Boolean) {
-        viewModelScope.launch { c.meals.setChecked(weekStart, key, checked) }
+    fun toggle(week: ShoppingWeek, key: String, checked: Boolean) {
+        viewModelScope.launch { c.meals.setChecked(week.listKey, week.weekStart, key, checked) }
     }
 
-    fun uncheckAll(weekStart: LocalDate) {
-        viewModelScope.launch { c.meals.clearChecks(weekStart) }
+    fun uncheckAll(week: ShoppingWeek) {
+        viewModelScope.launch { c.meals.clearChecks(week.listKey, week.weekStart) }
     }
 
     companion object {

@@ -18,13 +18,15 @@ class RestTimerController(private val context: Context, private val scope: Corou
     val state: StateFlow<RestTimerState?> = _state.asStateFlow()
     private var job: Job? = null
 
-    fun start(seconds: Int) {
+    /** Buzzes at the end; [chime] also plays a sound. */
+    fun start(seconds: Int, chime: Boolean = false) {
         job?.cancel()
         _state.value = RestTimerState(seconds, System.currentTimeMillis() + seconds * 1000L)
         job = scope.launch {
             delay(seconds * 1000L)
             _state.value = null
             Alerts.vibrate(context, Alerts.restPattern)
+            if (chime) Alerts.playSound(context)
         }
     }
 

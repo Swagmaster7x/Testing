@@ -192,7 +192,7 @@ private fun DayRow(day: PlanDay, isToday: Boolean, onSlot: (MealSlot, Recipe?) -
                 }
             }
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MealSlot.entries.forEach { slot ->
+                day.slots.keys.forEach { slot ->
                     SlotTile(
                         slot = slot,
                         recipe = day.slots[slot],

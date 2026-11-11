@@ -25,6 +25,7 @@ data class GymPlan(
 }
 
 fun planGym(
+    profileId: Long,
     date: LocalDate,
     days: List<WorkoutDay>,
     sessions: List<WorkoutSession>,
@@ -33,7 +34,7 @@ fun planGym(
 ): GymPlan {
     val refs = sessions.map { SessionRef(Dates.parse(it.date), it.dayOrder, it.id) }
     val status = WorkoutCycle.today(date, trainingDays, refs, days.size)
-    val draftToday = draft?.takeIf { d -> d.date == Dates.iso(date) && days.any { it.id == d.dayId } }
+    val draftToday = draft?.takeIf { d -> d.profileId == profileId && d.date == Dates.iso(date) && days.any { it.id == d.dayId } }
     val defaultOrder = when (status) {
         is GymToday.Done -> status.nextDayOrder
         is GymToday.TrainingDay -> status.dayOrder

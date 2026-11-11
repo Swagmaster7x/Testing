@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -118,6 +119,86 @@ private val ParchmentColors = lightColorScheme(
     surfaceContainerHighest = Color(0xFFDCD0BA),
 )
 
+/** Ashley's Side by day: soft pink to lilac, hot pink, chrome. Pink text uses a deeper shade for 4.5:1 contrast. */
+private val GlamColors = lightColorScheme(
+    primary = Color(0xFFC8106E),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFD1E8),
+    onPrimaryContainer = Color(0xFF3B0A2A),
+    inversePrimary = Color(0xFFFF8AC2),
+    secondary = Color(0xFF6E44C9),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFEBD9FF),
+    onSecondaryContainer = Color(0xFF2A0F4F),
+    tertiary = Color(0xFF1B6E9E),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFD3EEFF),
+    onTertiaryContainer = Color(0xFF0B3550),
+    background = Color(0xFFFFE4F1),
+    onBackground = Color(0xFF3B0A2A),
+    surface = Color(0xFFFFF5FA),
+    onSurface = Color(0xFF3B0A2A),
+    surfaceVariant = Color(0xFFF6DDEB),
+    onSurfaceVariant = Color(0xFF6B3A5A),
+    surfaceTint = Color(0xFFFF2E93),
+    inverseSurface = Color(0xFF3B0A2A),
+    inverseOnSurface = Color(0xFFFFEAF4),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    outline = Color(0xFF9C8A97),
+    outlineVariant = Color(0xFFC9CED6),
+    scrim = Color(0xFF000000),
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceDim = Color(0xFFF3D3E4),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFFFFBFD),
+    surfaceContainer = Color(0xFFFFF3F9),
+    surfaceContainerHigh = Color(0xFFFFEAF4),
+    surfaceContainerHighest = Color(0xFFFBE0EE),
+)
+
+/** Ashley's Side at night: deep plum with the same pink and lilac. */
+private val GlamNightColors = darkColorScheme(
+    primary = Color(0xFFFF7AB8),
+    onPrimary = Color(0xFF4A0028),
+    primaryContainer = Color(0xFF7A0E4A),
+    onPrimaryContainer = Color(0xFFFFD9EA),
+    inversePrimary = Color(0xFFC8106E),
+    secondary = Color(0xFFCDB2FF),
+    onSecondary = Color(0xFF2E1260),
+    secondaryContainer = Color(0xFF4B2F7A),
+    onSecondaryContainer = Color(0xFFEBDDFF),
+    tertiary = Color(0xFF8FD3FF),
+    onTertiary = Color(0xFF00344F),
+    tertiaryContainer = Color(0xFF184A66),
+    onTertiaryContainer = Color(0xFFD3EEFF),
+    background = Color(0xFF2A0A22),
+    onBackground = Color(0xFFFFE9F4),
+    surface = Color(0xFF2F0D27),
+    onSurface = Color(0xFFFFE9F4),
+    surfaceVariant = Color(0xFF4A2441),
+    onSurfaceVariant = Color(0xFFE6C2D8),
+    surfaceTint = Color(0xFFFF2E93),
+    inverseSurface = Color(0xFFFFE9F4),
+    inverseOnSurface = Color(0xFF2A0A22),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    outline = Color(0xFFA88A9D),
+    outlineVariant = Color(0xFF7A6573),
+    scrim = Color(0xFF000000),
+    surfaceBright = Color(0xFF55234A),
+    surfaceDim = Color(0xFF2A0A22),
+    surfaceContainerLowest = Color(0xFF1F0619),
+    surfaceContainerLow = Color(0xFF35112D),
+    surfaceContainer = Color(0xFF3C1534),
+    surfaceContainerHigh = Color(0xFF461A3D),
+    surfaceContainerHighest = Color(0xFF512047),
+)
+
 private val base = Typography()
 
 private fun TextStyle.carved(weight: FontWeight = FontWeight.Bold, spacing: Float = 0.5f) =
@@ -142,6 +223,15 @@ private val AppTypography = Typography(
     labelSmall = base.labelSmall,
 )
 
+/** Soft and rounded for Ashley's Side. */
+private val GlamShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp),
+)
+
 /** Cut corners, like plates of armour. */
 private val AppShapes = Shapes(
     extraSmall = CutCornerShape(2.dp),
@@ -151,20 +241,41 @@ private val AppShapes = Shapes(
     extraLarge = CutCornerShape(16.dp),
 )
 
-/** Small carved heading, e.g. section titles and card labels. */
+/** Ashley's Side keeps the system face for now; her fonts arrive with her theme. */
+private val GlamTypography = Typography()
+
+/** Small heading for section titles and card labels: carved on Swag's Side, bold on Ashley's. */
 val MaterialThemeCarvedLabel: TextStyle
-    @Composable get() = MaterialTheme.typography.titleSmall.carved(spacing = 1f)
+    @Composable get() = if (LocalSideTheme.current == SideTheme.GLAM) {
+        MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+    } else {
+        MaterialTheme.typography.titleSmall.carved(spacing = 1f)
+    }
+
+/** Which side's look to use. */
+enum class SideTheme { IRON, GLAM }
 
 private val LocalIsDark = staticCompositionLocalOf { false }
 
+/** The look currently in use, for the few components that draw differently per side. */
+val LocalSideTheme = staticCompositionLocalOf { SideTheme.IRON }
+
 /** Light and dark follow the system setting. */
 @Composable
-fun MealGymTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalIsDark provides darkTheme) {
+fun MealGymTheme(
+    side: SideTheme = SideTheme.IRON,
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
+) {
+    val colors = when (side) {
+        SideTheme.IRON -> if (darkTheme) IronColors else ParchmentColors
+        SideTheme.GLAM -> if (darkTheme) GlamNightColors else GlamColors
+    }
+    CompositionLocalProvider(LocalIsDark provides darkTheme, LocalSideTheme provides side) {
         MaterialTheme(
-            colorScheme = if (darkTheme) IronColors else ParchmentColors,
-            typography = AppTypography,
-            shapes = AppShapes,
+            colorScheme = colors,
+            typography = if (side == SideTheme.GLAM) GlamTypography else AppTypography,
+            shapes = if (side == SideTheme.GLAM) GlamShapes else AppShapes,
             content = content,
         )
     }
@@ -178,12 +289,22 @@ fun MealGymTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composabl
 fun ThemedBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val colors = MaterialTheme.colorScheme
     val dark = LocalIsDark.current
-    val glowColor = colors.primary.copy(alpha = if (dark) 0.16f else 0.07f)
-    val fade = listOf(
-        colors.surfaceContainerLow,
-        colors.background,
-        colors.surfaceContainerLowest.copy(alpha = if (dark) 1f else 0.6f),
-    )
+    val glam = LocalSideTheme.current == SideTheme.GLAM
+    val glowColor = if (glam) {
+        Color(0xFFFFFFFF).copy(alpha = if (dark) 0.06f else 0.55f)
+    } else {
+        colors.primary.copy(alpha = if (dark) 0.16f else 0.07f)
+    }
+    val fade = when {
+        // Soft pink fading to lilac, or deep plum to violet at night.
+        glam && dark -> listOf(Color(0xFF2A0A22), Color(0xFF241030), Color(0xFF1E0A2E))
+        glam -> listOf(Color(0xFFFFE4F1), Color(0xFFF6DEF8), Color(0xFFEBD9FF))
+        else -> listOf(
+            colors.surfaceContainerLow,
+            colors.background,
+            colors.surfaceContainerLowest.copy(alpha = if (dark) 1f else 0.6f),
+        )
+    }
     Box(
         modifier
             .fillMaxSize()

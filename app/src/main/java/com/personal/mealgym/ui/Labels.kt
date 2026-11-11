@@ -13,6 +13,7 @@ val MealSlot.label: String
         MealSlot.BREAKFAST -> "Breakfast"
         MealSlot.LUNCH -> "Lunch"
         MealSlot.DINNER -> "Dinner"
+        MealSlot.SNACK -> "Snack"
     }
 
 val MealType.label: String
@@ -21,6 +22,7 @@ val MealType.label: String
         MealType.LUNCH -> "Lunch"
         MealType.DINNER -> "Dinner"
         MealType.SOUP -> "Soup"
+        MealType.SNACK -> "Snack"
     }
 
 val StoreSection.label: String
@@ -43,6 +45,7 @@ fun MealSlot.accepts(type: MealType): Boolean = when (this) {
     MealSlot.BREAKFAST -> type == MealType.BREAKFAST
     MealSlot.LUNCH -> type == MealType.LUNCH || type == MealType.SOUP
     MealSlot.DINNER -> type == MealType.DINNER || type == MealType.SOUP
+    MealSlot.SNACK -> type == MealType.SNACK
 }
 
 /** "2 lb chicken thighs, boneless skinless" */

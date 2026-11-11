@@ -64,13 +64,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class SaunaUi(val state: SaunaState, val minutesToday: Int, val todayLogs: List<SaunaLog>)
 
 class SaunaViewModel(private val c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
+    val chime: StateFlow<Boolean> = c.settings.settings(profileId).map { it.chime }.stateInVm(profileId == 1L)
+
     val ui: StateFlow<SaunaUi?> = c.today.flatMapLatest { date ->
-        combine(SaunaTimer.state, c.gym.saunaLogs) { state, logs ->
+        combine(SaunaTimer.state, c.gym.saunaLogs(profileId)) { state, logs ->
             val today = logs.filter { it.date == Dates.iso(date) }
             SaunaUi(state, today.sumOf { it.minutes }, today)
         }
@@ -78,7 +82,7 @@ class SaunaViewModel(private val c: AppContainer) : MessageViewModel() {
 
     fun logByHand(minutes: Int) {
         viewModelScope.launch {
-            c.gym.logSauna(c.today.value, minutes)
+            c.gym.logSauna(profileId, c.today.value, minutes)
             say("$minutes min logged for today.")
         }
     }
@@ -112,7 +116,7 @@ fun SaunaScreen(nav: AppNavigator, vm: SaunaViewModel = viewModel(factory = AppV
 
     // Ask for the notification permission the first time; the timer runs either way.
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        pendingMinutes?.let { SaunaTimer.start(context, it) }
+        pendingMinutes?.let { SaunaTimer.start(context, it, vm.profileId, vm.chime.value) }
         pendingMinutes = null
     }
     val start: (Int) -> Unit = { minutes ->
@@ -122,7 +126,7 @@ fun SaunaScreen(nav: AppNavigator, vm: SaunaViewModel = viewModel(factory = AppV
             pendingMinutes = minutes
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            SaunaTimer.start(context, minutes)
+            SaunaTimer.start(context, minutes, vm.profileId, vm.chime.value)
         }
     }
 

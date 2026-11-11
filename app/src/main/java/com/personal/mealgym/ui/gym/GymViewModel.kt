@@ -44,12 +44,15 @@ data class GymUi(
 )
 
 class GymViewModel(private val c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
+    private var chime = false
 
     val ui: StateFlow<GymUi?> = c.today.flatMapLatest { date ->
-        val planFlow = combine(c.gym.days, c.gym.sessions, c.settings.settings, c.workoutDraft.draft) { days, sessions, s, draft ->
-            planGym(date, days, sessions, s.trainingWeekdays, draft) to s.weightUnit
+        val planFlow = combine(c.gym.days(profileId), c.gym.sessions(profileId), c.settings.settings(profileId), c.workoutDraft.draft) { days, sessions, s, draft ->
+            chime = s.chime
+            planGym(profileId, date, days, sessions, s.trainingWeekdays, draft) to s.weightUnit
         }
-        combine(planFlow, c.gym.exercises, c.gym.latestLogs, c.restTimer.state) { (plan, unit), exercises, logs, rest ->
+        combine(planFlow, c.gym.exercises, c.gym.latestLogs(profileId), c.restTimer.state) { (plan, unit), exercises, logs, rest ->
             val draft = plan.draft
             val dayExercises = exercises
                 .filter { it.workoutDayId == plan.activeDay?.id }
@@ -72,7 +75,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
                     },
                 )
             }
-            GymUi(date, plan, groups, unit, c.gymTips, rest)
+            GymUi(date, plan, groups, unit, c.gymTips(profileId), rest)
         }
     }.stateInVm(null)
 
@@ -81,7 +84,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
         val state = ui.value ?: return false
         if (state.plan.draft != null) return true
         val day = state.plan.activeDay ?: return false
-        c.workoutDraft.start(Dates.iso(state.date), day.id)
+        c.workoutDraft.start(profileId, Dates.iso(state.date), day.id)
         return true
     }
 
@@ -116,7 +119,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
 
     fun chooseDay(dayId: Long) {
         val state = ui.value ?: return
-        c.workoutDraft.start(Dates.iso(state.date), dayId)
+        c.workoutDraft.start(profileId, Dates.iso(state.date), dayId)
     }
 
     fun trainAnyway() {
@@ -138,14 +141,14 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
             }
         }
         viewModelScope.launch {
-            c.gym.saveSession(state.date, day, feeling, note, logs)
+            c.gym.saveSession(profileId, state.date, day, feeling, note, logs)
             c.workoutDraft.clear()
             c.restTimer.cancel()
             say("Saved to history.")
         }
     }
 
-    fun startRest(seconds: Int) = c.restTimer.start(seconds)
+    fun startRest(seconds: Int) = c.restTimer.start(seconds, chime)
 
     fun cancelRest() = c.restTimer.cancel()
 }

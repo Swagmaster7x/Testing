@@ -5,11 +5,11 @@ import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.StoreSection
 import kotlin.math.ceil
 
-/** A recipe as it appears in one week's plan: how many meal slots it fills. */
+/** A recipe as it appears in one week's plan: how many servings its planned slots add up to. */
 data class PlannedRecipe(
     val recipe: Recipe,
     val ingredients: List<Ingredient>,
-    val slotsPlanned: Int,
+    val portions: Double,
 )
 
 /** One unit's running total for a shopping item. A null quantity means "some" (e.g. "cilantro"). */
@@ -39,7 +39,8 @@ data class ShoppingResult(
  * Rolls a week's planned recipes up into one shopping list.
  *
  * - Ingredient quantities are for the whole recipe, so a recipe that serves 4 and fills
- *   4 slots is bought once; filling 5 slots means cooking it twice.
+ *   4 slots is bought once; filling 5 slots means cooking it twice. A slot can be less than a
+ *   whole serving (Ashley's lunches and dinners are about three-quarters).
  * - The same ingredient across recipes is combined (2 lb chicken thighs + 2 lb = 4 lb).
  * - Items the user ticked as "always have" are left off.
  * - Sections are ordered Protein, Produce and Frozen, Carbs, Pantry.
@@ -53,10 +54,10 @@ object ShoppingList {
         StoreSection.PANTRY,
     )
 
-    fun batchesNeeded(slotsPlanned: Int, servings: Int): Int {
-        if (slotsPlanned <= 0) return 0
+    fun batchesNeeded(portions: Double, servings: Int): Int {
+        if (portions <= 0.0) return 0
         val perBatch = servings.coerceAtLeast(1)
-        return ceil(slotsPlanned.toDouble() / perBatch).toInt()
+        return ceil(portions / perBatch - 1e-9).toInt()
     }
 
     fun build(planned: List<PlannedRecipe>, alwaysHave: Set<String>): ShoppingResult {
@@ -64,7 +65,7 @@ object ShoppingList {
         val skipped = LinkedHashMap<String, String>()
 
         for (p in planned) {
-            val batches = batchesNeeded(p.slotsPlanned, p.recipe.servings)
+            val batches = batchesNeeded(p.portions, p.recipe.servings)
             if (batches == 0) continue
             for (ing in p.ingredients.sortedBy { it.position }) {
                 val key = ingredientKey(ing.name)

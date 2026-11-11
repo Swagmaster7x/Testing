@@ -31,11 +31,17 @@ class SaunaTimerService : LifecycleService() {
 
     private var countdown: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var profileId: Long = 1
+    private var chime: Boolean = true
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         when (intent?.action) {
-            ACTION_START -> start(intent.getIntExtra(EXTRA_MINUTES, 15).coerceIn(1, 120))
+            ACTION_START -> {
+                profileId = intent.getLongExtra(EXTRA_PROFILE, 1L)
+                chime = intent.getBooleanExtra(EXTRA_CHIME, true)
+                start(intent.getIntExtra(EXTRA_MINUTES, 15).coerceIn(1, 120))
+            }
             ACTION_STOP -> stopEarly()
             else -> finishService()
         }
@@ -76,11 +82,11 @@ class SaunaTimerService : LifecycleService() {
 
     private suspend fun complete(minutes: Int, stoppedEarly: Boolean) {
         if (minutes > 0) {
-            (application as MealGymApp).container.gym.logSauna(LocalDate.now(), minutes)
+            (application as MealGymApp).container.gym.logSauna(profileId, LocalDate.now(), minutes)
         }
         SaunaTimer.mutableState.value = SaunaState.Finished(minutes, stoppedEarly)
         if (!stoppedEarly) {
-            Alerts.playSound(this)
+            if (chime) Alerts.playSound(this)
             Alerts.vibrate(this, Alerts.saunaPattern)
             postDoneNotification(minutes)
         }
@@ -157,6 +163,8 @@ class SaunaTimerService : LifecycleService() {
         const val ACTION_START = "com.personal.mealgym.sauna.START"
         const val ACTION_STOP = "com.personal.mealgym.sauna.STOP"
         const val EXTRA_MINUTES = "minutes"
+        const val EXTRA_PROFILE = "profile"
+        const val EXTRA_CHIME = "chime"
         private const val NOTIFICATION_RUNNING = 1
         private const val NOTIFICATION_DONE = 2
 

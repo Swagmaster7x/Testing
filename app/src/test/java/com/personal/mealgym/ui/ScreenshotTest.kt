@@ -12,6 +12,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.personal.mealgym.MainActivity
 import com.personal.mealgym.MealGymApp
+import com.personal.mealgym.data.Profiles
+import com.personal.mealgym.data.SideState
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.domain.Dates
 import kotlinx.coroutines.flow.first
@@ -43,20 +45,40 @@ class ScreenshotTest {
 
     private val container get() = (compose.activity.application as MealGymApp).container
 
+    private fun openSide(profileId: Long) = runBlocking {
+        container.settings.setActiveProfile(profileId)
+        withTimeout(10_000) { container.sideState.first { it == SideState.Chosen(profileId) } }
+    }
+
     @Before
     fun planAWeek() = runBlocking {
         withTimeout(30_000) { container.ready.first { it } }
+        openSide(Profiles.SWAG)
+        val swag = Profiles.SWAG
         val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
         val today = LocalDate.now()
         val weekStart = Dates.weekStart(today)
         val meals = container.meals
         Dates.weekDays(weekStart).forEachIndexed { i, day ->
-            meals.setSlot(day, MealSlot.BREAKFAST, recipes.getValue(listOf("B1", "B2", "B3", "B4")[i % 4]).id)
+            meals.setSlot(swag, day, MealSlot.BREAKFAST, recipes.getValue(listOf("B1", "B2", "B3", "B4")[i % 4]).id)
         }
-        meals.fillBatch(weekStart, MealSlot.LUNCH, recipes.getValue("L1"))
-        meals.setSlot(weekStart, MealSlot.DINNER, recipes.getValue("D3").id)
-        meals.setSlot(weekStart.plusDays(1), MealSlot.DINNER, recipes.getValue("S1").id)
-        meals.setSlot(today, MealSlot.DINNER, recipes.getValue("D2").id)
+        meals.fillBatch(swag, weekStart, MealSlot.LUNCH, recipes.getValue("L1"))
+        meals.setSlot(swag, weekStart, MealSlot.DINNER, recipes.getValue("D3").id)
+        meals.setSlot(swag, weekStart.plusDays(1), MealSlot.DINNER, recipes.getValue("S1").id)
+        meals.setSlot(swag, today, MealSlot.DINNER, recipes.getValue("D2").id)
+    }
+
+    @Test
+    fun chooserThenAshleysSide() {
+        runBlocking {
+            container.settings.clearActiveProfile()
+            withTimeout(10_000) { container.sideState.first { it == SideState.NotChosen } }
+        }
+        waitForText("Whose phone is this?")
+        shot("00-chooser")
+        compose.onAllNodesWithText("Ashley's Side").onFirst().performClick()
+        waitForText("Snack")
+        shot("00b-ashley-today")
     }
 
     private fun waitForText(text: String) {

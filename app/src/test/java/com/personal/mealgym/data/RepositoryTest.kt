@@ -64,7 +64,7 @@ class RepositoryTest {
         settings = newSettings()
         meals = MealRepository(db, settings)
         gym = GymRepository(db)
-        SeedRepository(context).install(db, settings)
+        SeedRepository(context).sync(db, settings, freshDatabase = true)
         recipes = db.recipeDao().allRecipes().associateBy { it.seedKey!! }
     }
 
@@ -77,10 +77,10 @@ class RepositoryTest {
     @Test
     fun seedingLoadsRecipesWorkoutsAndStaples() = runBlocking {
         assertEquals(19, recipes.size)
-        val days = db.workoutDao().allDays()
+        val days = db.workoutDao().getDays(Profiles.SWAG)
         assertEquals(listOf(1, 2, 3, 4), days.map { it.dayOrder }.sorted())
         assertEquals(31, db.workoutDao().allExercises().size)
-        val s = settings.current()
+        val s = settings.current(Profiles.SWAG)
         assertEquals(20, s.pantryStaples.size)
         assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), s.trainingWeekdays)
 
@@ -94,16 +94,16 @@ class RepositoryTest {
     @Test
     fun mealPrepFillsFourLunchesAndIsBoughtOnce() = runBlocking {
         val guisado = recipes.getValue("L1")
-        assertEquals(4, meals.fillBatch(mon, MealSlot.LUNCH, guisado))
-        meals.setSlot(mon, MealSlot.DINNER, recipes.getValue("S1").id)
+        assertEquals(4, meals.fillBatch(Profiles.SWAG, mon, MealSlot.LUNCH, guisado))
+        meals.setSlot(Profiles.SWAG, mon, MealSlot.DINNER, recipes.getValue("S1").id)
 
-        val plan = meals.planForWeek(mon).first()
+        val plan = meals.planForWeek(Profiles.SWAG, mon).first()
         assertEquals(
             listOf(mon, mon.plusDays(1), mon.plusDays(2), mon.plusDays(3)).map { it.toString() },
             plan.filter { it.slot == MealSlot.LUNCH }.map { it.date }.sorted(),
         )
 
-        val week = meals.shoppingWeek(mon).first()
+        val week = meals.shoppingWeek(Profiles.SWAG, mon, both = false).first()
         val items = week.result.sections.flatMap { it.items }.associateBy { it.key }
         // Pollo guisado (2 lb, cooked once for 4 lunches) + sancocho (2 lb) = 4 lb.
         assertEquals("4 lb", items.getValue("chicken thigh").amountText)
@@ -119,11 +119,11 @@ class RepositoryTest {
     fun fillBatchStopsAtTheEndOfTheWeekAndSkipsTakenSlots() = runBlocking {
         val guisado = recipes.getValue("L1")
         val saturday = mon.plusDays(5)
-        assertEquals(2, meals.fillBatch(saturday, MealSlot.LUNCH, guisado))
+        assertEquals(2, meals.fillBatch(Profiles.SWAG, saturday, MealSlot.LUNCH, guisado))
 
-        meals.setSlot(mon.plusDays(1), MealSlot.LUNCH, recipes.getValue("L4").id)
-        assertEquals(4, meals.fillBatch(mon, MealSlot.LUNCH, guisado))
-        val lunches = meals.planForWeek(mon).first().filter { it.slot == MealSlot.LUNCH }.associate { it.date to it.recipeId }
+        meals.setSlot(Profiles.SWAG, mon.plusDays(1), MealSlot.LUNCH, recipes.getValue("L4").id)
+        assertEquals(4, meals.fillBatch(Profiles.SWAG, mon, MealSlot.LUNCH, guisado))
+        val lunches = meals.planForWeek(Profiles.SWAG, mon).first().filter { it.slot == MealSlot.LUNCH }.associate { it.date to it.recipeId }
         assertEquals(recipes.getValue("L4").id, lunches[mon.plusDays(1).toString()])
         assertEquals(guisado.id, lunches[mon.plusDays(4).toString()])
     }
@@ -131,13 +131,13 @@ class RepositoryTest {
     @Test
     fun repeatLastWeekOnlyFillsEmptySlots() = runBlocking {
         val lastMon = mon.minusDays(7)
-        meals.setSlot(lastMon, MealSlot.BREAKFAST, recipes.getValue("B1").id)
-        meals.setSlot(lastMon, MealSlot.DINNER, recipes.getValue("D1").id)
-        meals.setSlot(mon, MealSlot.DINNER, recipes.getValue("D2").id)
+        meals.setSlot(Profiles.SWAG, lastMon, MealSlot.BREAKFAST, recipes.getValue("B1").id)
+        meals.setSlot(Profiles.SWAG, lastMon, MealSlot.DINNER, recipes.getValue("D1").id)
+        meals.setSlot(Profiles.SWAG, mon, MealSlot.DINNER, recipes.getValue("D2").id)
 
-        assertEquals(1, meals.repeatLastWeek(mon))
+        assertEquals(1, meals.repeatLastWeek(Profiles.SWAG, mon))
 
-        val plan = meals.planForWeek(mon).first().associate { it.slot to it.recipeId }
+        val plan = meals.planForWeek(Profiles.SWAG, mon).first().associate { it.slot to it.recipeId }
         assertEquals(recipes.getValue("B1").id, plan[MealSlot.BREAKFAST])
         assertEquals(recipes.getValue("D2").id, plan[MealSlot.DINNER])
     }
@@ -145,32 +145,32 @@ class RepositoryTest {
     @Test
     fun deletingARecipeClearsItsPlannedSlots() = runBlocking {
         val tacos = recipes.getValue("B1")
-        meals.setSlot(mon, MealSlot.BREAKFAST, tacos.id)
+        meals.setSlot(Profiles.SWAG, mon, MealSlot.BREAKFAST, tacos.id)
         meals.deleteRecipe(tacos.id)
-        assertTrue(meals.planForWeek(mon).first().isEmpty())
+        assertTrue(meals.planForWeek(Profiles.SWAG, mon).first().isEmpty())
     }
 
     @Test
     fun lastTimeFollowsTheExerciseNameActuallyDone() = runBlocking {
-        val day1 = db.workoutDao().allDays().first { it.dayOrder == 1 }
+        val day1 = db.workoutDao().getDays(Profiles.SWAG).first { it.dayOrder == 1 }
         val bench = db.workoutDao().allExercises().first { it.name == "Barbell bench press" }
-        gym.saveSession(mon, day1, Feeling.FINE, null, listOf(SetLog(sessionId = 0, exerciseId = bench.id, exerciseNameUsed = "Barbell bench press", weight = 135.0, reps = 8)))
-        gym.saveSession(mon.plusDays(7), day1, Feeling.GREAT, "Busy gym", listOf(SetLog(sessionId = 0, exerciseId = bench.id, exerciseNameUsed = "Smith machine bench", weight = 115.0, reps = 10)))
+        gym.saveSession(Profiles.SWAG, mon, day1, Feeling.FINE, null, listOf(SetLog(sessionId = 0, exerciseId = bench.id, exerciseNameUsed = "Barbell bench press", weight = 135.0, reps = 8)))
+        gym.saveSession(Profiles.SWAG, mon.plusDays(7), day1, Feeling.GREAT, "Busy gym", listOf(SetLog(sessionId = 0, exerciseId = bench.id, exerciseNameUsed = "Smith machine bench", weight = 115.0, reps = 10)))
 
-        val logs = gym.latestLogs.first()
+        val logs = gym.latestLogs(Profiles.SWAG).first()
         assertEquals(135.0, logs.getValue("barbell bench press").weight!!, 0.0)
         assertEquals(10, logs.getValue("smith machine bench").reps)
     }
 
     @Test
     fun exportThenImportRestoresEverything() = runBlocking {
-        meals.fillBatch(mon, MealSlot.LUNCH, recipes.getValue("L2"))
-        meals.setChecked(mon, "chicken breast", true)
-        val day2 = db.workoutDao().allDays().first { it.dayOrder == 2 }
-        gym.saveSession(mon, day2, Feeling.ROUGH, "Short on sleep", emptyList())
-        gym.logSauna(mon, 15)
-        settings.setShowNutrition(false)
-        settings.setTrainingWeekdays(setOf(DayOfWeek.WEDNESDAY))
+        meals.fillBatch(Profiles.SWAG, mon, MealSlot.LUNCH, recipes.getValue("L2"))
+        meals.setChecked("p1", mon, "chicken breast", true)
+        val day2 = db.workoutDao().getDays(Profiles.SWAG).first { it.dayOrder == 2 }
+        gym.saveSession(Profiles.SWAG, mon, day2, Feeling.ROUGH, "Short on sleep", emptyList())
+        gym.logSauna(Profiles.SWAG, mon, 15)
+        settings.setShowNutrition(Profiles.SWAG, false)
+        settings.setTrainingWeekdays(Profiles.SWAG, setOf(DayOfWeek.WEDNESDAY))
 
         val backup = BackupManager(db, settings, context.contentResolver)
         val text = backup.encode(backup.snapshot())
@@ -183,8 +183,8 @@ class RepositoryTest {
         val before = backup.snapshot().copy(exportedAt = "")
         val after = restorer.snapshot().copy(exportedAt = "")
         assertEquals(before, after)
-        assertEquals(setOf(DayOfWeek.WEDNESDAY), otherSettings.current().trainingWeekdays)
-        assertEquals(false, otherSettings.current().showNutrition)
+        assertEquals(setOf(DayOfWeek.WEDNESDAY), otherSettings.current(Profiles.SWAG).trainingWeekdays)
+        assertEquals(false, otherSettings.current(Profiles.SWAG).showNutrition)
     }
 
     @Test(expected = IllegalArgumentException::class)

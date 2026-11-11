@@ -56,7 +56,9 @@ import kotlinx.coroutines.launch
 data class WorkoutEditUi(val days: List<WorkoutDay>, val exercises: Map<Long, List<Exercise>>)
 
 class WorkoutEditViewModel(private val c: AppContainer) : MessageViewModel() {
-    val ui: StateFlow<WorkoutEditUi?> = combine(c.gym.days, c.gym.exercises) { days, exercises ->
+    val profileId = c.currentProfileId()
+
+    val ui: StateFlow<WorkoutEditUi?> = combine(c.gym.days(profileId), c.gym.exercises) { days, exercises ->
         WorkoutEditUi(
             days,
             exercises.groupBy { it.workoutDayId }
@@ -65,7 +67,7 @@ class WorkoutEditViewModel(private val c: AppContainer) : MessageViewModel() {
     }.stateInVm(null)
 
     fun renameDay(day: WorkoutDay, name: String) = launch { c.gym.renameDay(day, name) }
-    fun addDay(name: String) = launch { c.gym.addDay(name) }
+    fun addDay(name: String) = launch { c.gym.addDay(profileId, name) }
     fun deleteDay(day: WorkoutDay) = launch { c.gym.deleteDay(day) }
     fun saveExercise(exercise: Exercise) = launch { c.gym.saveExercise(exercise) }
     fun deleteExercise(exercise: Exercise) = launch { c.gym.deleteExercise(exercise) }

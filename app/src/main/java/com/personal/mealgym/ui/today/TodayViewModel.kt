@@ -10,6 +10,7 @@ import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.sauna.SaunaState
 import com.personal.mealgym.sauna.SaunaTimer
 import com.personal.mealgym.ui.MessageViewModel
+import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.gym.GymPlan
 import com.personal.mealgym.ui.gym.planGym
 import com.personal.mealgym.ui.label
@@ -32,18 +33,19 @@ data class TodayUi(
 )
 
 class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
+    val profileId = c.currentProfileId()
 
     val ui: StateFlow<TodayUi?> = c.today.flatMapLatest { date ->
-        val meals = combine(c.meals.planForRange(date, date), c.meals.recipes) { plan, recipes ->
+        val meals = combine(c.meals.planForRange(profileId, date, date), c.meals.recipesFor(profileId)) { plan, recipes ->
             val byId = recipes.associateBy { it.id }
-            MealSlot.entries.map { slot -> slot to plan.firstOrNull { it.slot == slot }?.let { byId[it.recipeId] } } to recipes
+            Sides.slotsFor(profileId).map { slot -> slot to plan.firstOrNull { it.slot == slot }?.let { byId[it.recipeId] } } to recipes
         }
-        val gym = combine(c.gym.days, c.gym.sessions, c.settings.settings, c.workoutDraft.draft, c.gym.exercises) { days, sessions, s, draft, exercises ->
-            val plan = planGym(date, days, sessions, s.trainingWeekdays, draft)
+        val gym = combine(c.gym.days(profileId), c.gym.sessions(profileId), c.settings.settings(profileId), c.workoutDraft.draft, c.gym.exercises) { days, sessions, s, draft, exercises ->
+            val plan = planGym(profileId, date, days, sessions, s.trainingWeekdays, draft)
             val count = exercises.count { it.workoutDayId == plan.activeDay?.id }
             Triple(plan, count, plan.draft?.checkedSets?.values?.sumOf { it.size } ?: 0)
         }
-        val sauna = combine(c.gym.saunaLogs, SaunaTimer.state) { logs, state ->
+        val sauna = combine(c.gym.saunaLogs(profileId), SaunaTimer.state) { logs, state ->
             logs.filter { it.date == Dates.iso(date) }.sumOf { it.minutes } to state
         }
         combine(meals, gym, sauna) { (slots, recipes), (plan, count, ticked), (minutes, state) ->
@@ -52,12 +54,12 @@ class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
     }.stateInVm(null)
 
     fun pick(date: LocalDate, slot: MealSlot, recipe: Recipe) {
-        viewModelScope.launch { c.meals.setSlot(date, slot, recipe.id) }
+        viewModelScope.launch { c.meals.setSlot(profileId, date, slot, recipe.id) }
     }
 
     fun fillBatch(date: LocalDate, slot: MealSlot, recipe: Recipe) {
         viewModelScope.launch {
-            val n = c.meals.fillBatch(date, slot, recipe)
+            val n = c.meals.fillBatch(profileId, date, slot, recipe)
             say("${recipe.name} is in $n ${slot.label.lowercase()} slot${if (n == 1) "" else "s"} this week.")
         }
     }
