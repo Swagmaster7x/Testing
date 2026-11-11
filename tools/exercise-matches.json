@@ -1,0 +1,620 @@
+{
+  "Barbell bench press": {
+    "id": "Barbell_Bench_Press_-_Medium_Grip",
+    "datasetName": "Barbell Bench Press - Medium Grip",
+    "how": "alias",
+    "checked": false
+  },
+  "Smith machine bench": {
+    "id": "Smith_Machine_Bench_Press",
+    "datasetName": "Smith Machine Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Chest press machine": {
+    "id": "Machine_Bench_Press",
+    "datasetName": "Machine Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Dumbbell bench": {
+    "id": "Dumbbell_Bench_Press",
+    "datasetName": "Dumbbell Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Dumbbell press": {
+    "id": "Dumbbell_Bench_Press",
+    "datasetName": "Dumbbell Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Incline machine press": {
+    "id": "Smith_Machine_Incline_Bench_Press",
+    "datasetName": "Smith Machine Incline Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Weighted chin-ups": {
+    "id": "Chin-Up",
+    "datasetName": "Chin-Up",
+    "how": "alias",
+    "checked": false
+  },
+  "Lat pulldown, underhand grip": {
+    "id": "Underhand_Cable_Pulldowns",
+    "datasetName": "Underhand Cable Pulldowns",
+    "how": "alias",
+    "checked": false
+  },
+  "Assisted chin-up machine": {
+    "id": "Band_Assisted_Pull-Up",
+    "datasetName": "Band Assisted Pull-Up",
+    "how": "alias",
+    "checked": false
+  },
+  "Curls": {
+    "id": "Barbell_Curl",
+    "datasetName": "Barbell Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable curls": {
+    "id": "Standing_Biceps_Cable_Curl",
+    "datasetName": "Standing Biceps Cable Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Machine curls": {
+    "id": "Machine_Bicep_Curl",
+    "datasetName": "Machine Bicep Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Hanging knee raises": {
+    "id": "Knee_Hip_Raise_On_Parallel_Bars",
+    "datasetName": "Knee/Hip Raise On Parallel Bars",
+    "how": "alias",
+    "checked": false
+  },
+  "Captain's chair knee raises": {
+    "id": "Knee_Hip_Raise_On_Parallel_Bars",
+    "datasetName": "Knee/Hip Raise On Parallel Bars",
+    "how": "alias",
+    "checked": false
+  },
+  "Ab machine": {
+    "id": "Ab_Crunch_Machine",
+    "datasetName": "Ab Crunch Machine",
+    "how": "alias",
+    "checked": false
+  },
+  "Face pulls": {
+    "id": "Face_Pull",
+    "datasetName": "Face Pull",
+    "how": "alias",
+    "checked": false
+  },
+  "Reverse pec-deck": {
+    "id": "Reverse_Machine_Flyes",
+    "datasetName": "Reverse Machine Flyes",
+    "how": "alias",
+    "checked": false
+  },
+  "Push-ups": {
+    "id": "Pushups",
+    "datasetName": "Pushups",
+    "how": "alias",
+    "checked": false
+  },
+  "Chest press machine, light": {
+    "id": "Machine_Bench_Press",
+    "datasetName": "Machine Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Side raises": {
+    "id": "Side_Lateral_Raise",
+    "datasetName": "Side Lateral Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable lateral raise": {
+    "id": "Cable_Seated_Lateral_Raise",
+    "datasetName": "Cable Seated Lateral Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Machine lateral raise": {
+    "id": "Seated_Side_Lateral_Raise",
+    "datasetName": "Seated Side Lateral Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Calf raises": {
+    "id": "Standing_Calf_Raises",
+    "datasetName": "Standing Calf Raises",
+    "how": "alias",
+    "checked": false
+  },
+  "Seated calf raise": {
+    "id": "Seated_Calf_Raise",
+    "datasetName": "Seated Calf Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Leg-press calf raise": {
+    "id": "Calf_Press_On_The_Leg_Press_Machine",
+    "datasetName": "Calf Press On The Leg Press Machine",
+    "how": "alias",
+    "checked": false
+  },
+  "Barbell squat": {
+    "id": "Barbell_Squat",
+    "datasetName": "Barbell Squat",
+    "how": "alias",
+    "checked": false
+  },
+  "Leg press": {
+    "id": "Leg_Press",
+    "datasetName": "Leg Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Hack squat": {
+    "id": "Hack_Squat",
+    "datasetName": "Hack Squat",
+    "how": "alias",
+    "checked": false
+  },
+  "Smith machine squat": {
+    "id": "Smith_Machine_Squat",
+    "datasetName": "Smith Machine Squat",
+    "how": "alias",
+    "checked": false
+  },
+  "Good mornings": {
+    "id": "Good_Morning",
+    "datasetName": "Good Morning",
+    "how": "alias",
+    "checked": false
+  },
+  "Romanian deadlift": {
+    "id": "Romanian_Deadlift",
+    "datasetName": "Romanian Deadlift",
+    "how": "fuzzy",
+    "checked": false
+  },
+  "Seated or lying leg curl": {
+    "id": "Seated_Leg_Curl",
+    "datasetName": "Seated Leg Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Lunges": {
+    "id": "Dumbbell_Lunges",
+    "datasetName": "Dumbbell Lunges",
+    "how": "alias",
+    "checked": false
+  },
+  "Walking dumbbell lunges": {
+    "id": "Dumbbell_Lunges",
+    "datasetName": "Dumbbell Lunges",
+    "how": "alias",
+    "checked": false
+  },
+  "Bulgarian split squats": {
+    "id": "Split_Squat_with_Dumbbells",
+    "datasetName": "Split Squat with Dumbbells",
+    "how": "alias",
+    "checked": false
+  },
+  "Leg extension": {
+    "id": "Leg_Extensions",
+    "datasetName": "Leg Extensions",
+    "how": "alias",
+    "checked": false
+  },
+  "Bodyweight pull-ups": {
+    "id": "Pullups",
+    "datasetName": "Pullups",
+    "how": "alias",
+    "checked": false
+  },
+  "Lat pulldown": {
+    "id": "Wide-Grip_Lat_Pulldown",
+    "datasetName": "Wide-Grip Lat Pulldown",
+    "how": "alias",
+    "checked": false
+  },
+  "Assisted pull-up machine": {
+    "id": "Band_Assisted_Pull-Up",
+    "datasetName": "Band Assisted Pull-Up",
+    "how": "alias",
+    "checked": false
+  },
+  "Wrist curls": {
+    "id": "Seated_Palm-Up_Barbell_Wrist_Curl",
+    "datasetName": "Seated Palm-Up Barbell Wrist Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Dead hangs": {
+    "id": null,
+    "datasetName": null,
+    "how": "no good picture",
+    "checked": false
+  },
+  "Farmer's carries": {
+    "id": "Farmers_Walk",
+    "datasetName": "Farmer's Walk",
+    "how": "alias",
+    "checked": false
+  },
+  "Hanging leg raises": {
+    "id": "Hanging_Leg_Raise",
+    "datasetName": "Hanging Leg Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Captain's chair leg raises": {
+    "id": "Knee_Hip_Raise_On_Parallel_Bars",
+    "datasetName": "Knee/Hip Raise On Parallel Bars",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable crunches": {
+    "id": "Cable_Crunch",
+    "datasetName": "Cable Crunch",
+    "how": "alias",
+    "checked": false
+  },
+  "Standing calf machine": {
+    "id": "Standing_Calf_Raises",
+    "datasetName": "Standing Calf Raises",
+    "how": "alias",
+    "checked": false
+  },
+  "Standing overhead press": {
+    "id": "Standing_Military_Press",
+    "datasetName": "Standing Military Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Seated dumbbell shoulder press": {
+    "id": "Dumbbell_Shoulder_Press",
+    "datasetName": "Dumbbell Shoulder Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Shoulder press machine": {
+    "id": "Machine_Shoulder_Military_Press",
+    "datasetName": "Machine Shoulder (Military) Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Smith machine press": {
+    "id": "Smith_Machine_Overhead_Shoulder_Press",
+    "datasetName": "Smith Machine Overhead Shoulder Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Pause bench press": {
+    "id": "Barbell_Bench_Press_-_Medium_Grip",
+    "datasetName": "Barbell Bench Press - Medium Grip",
+    "how": "alias",
+    "checked": false
+  },
+  "Incline dumbbell press with a pause": {
+    "id": "Incline_Dumbbell_Press",
+    "datasetName": "Incline Dumbbell Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Band pull-aparts": {
+    "id": "Band_Pull_Apart",
+    "datasetName": "Band Pull Apart",
+    "how": "alias",
+    "checked": false
+  },
+  "Preacher curls": {
+    "id": "Preacher_Curl",
+    "datasetName": "Preacher Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Machine preacher curl": {
+    "id": "Machine_Preacher_Curls",
+    "datasetName": "Machine Preacher Curls",
+    "how": "alias",
+    "checked": false
+  },
+  "Incline dumbbell curl": {
+    "id": "Incline_Dumbbell_Curl",
+    "datasetName": "Incline Dumbbell Curl",
+    "how": "fuzzy",
+    "checked": false
+  },
+  "Bent-over side raises": {
+    "id": "Seated_Bent-Over_Rear_Delt_Raise",
+    "datasetName": "Seated Bent-Over Rear Delt Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Rear-delt machine": {
+    "id": "Reverse_Machine_Flyes",
+    "datasetName": "Reverse Machine Flyes",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable rear-delt fly": {
+    "id": "Cable_Rear_Delt_Fly",
+    "datasetName": "Cable Rear Delt Fly",
+    "how": "alias",
+    "checked": false
+  },
+  "Any calf machine": {
+    "id": "Standing_Calf_Raises",
+    "datasetName": "Standing Calf Raises",
+    "how": "alias",
+    "checked": false
+  },
+  "Rows": {
+    "id": "Bent_Over_Barbell_Row",
+    "datasetName": "Bent Over Barbell Row",
+    "how": "alias",
+    "checked": false
+  },
+  "Chest-supported row machine": {
+    "id": "Leverage_Iso_Row",
+    "datasetName": "Leverage Iso Row",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable row": {
+    "id": "Seated_Cable_Rows",
+    "datasetName": "Seated Cable Rows",
+    "how": "alias",
+    "checked": false
+  },
+  "Dumbbell row": {
+    "id": "One-Arm_Dumbbell_Row",
+    "datasetName": "One-Arm Dumbbell Row",
+    "how": "alias",
+    "checked": false
+  },
+  "Reverse lunges": {
+    "id": "Dumbbell_Rear_Lunge",
+    "datasetName": "Dumbbell Rear Lunge",
+    "how": "alias",
+    "checked": false
+  },
+  "Chest flies": {
+    "id": "Dumbbell_Flyes",
+    "datasetName": "Dumbbell Flyes",
+    "how": "alias",
+    "checked": false
+  },
+  "Pec-deck": {
+    "id": "Butterfly",
+    "datasetName": "Butterfly",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable crossover": {
+    "id": "Cable_Crossover",
+    "datasetName": "Cable Crossover",
+    "how": "fuzzy",
+    "checked": false
+  },
+  "Weighted pull-ups": {
+    "id": "Pullups",
+    "datasetName": "Pullups",
+    "how": "alias",
+    "checked": false
+  },
+  "Machine chest press": {
+    "id": "Machine_Bench_Press",
+    "datasetName": "Machine Bench Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Dips": {
+    "id": "Dips_-_Chest_Version",
+    "datasetName": "Dips - Chest Version",
+    "how": "alias",
+    "checked": false
+  },
+  "Leg curl machine": {
+    "id": "Lying_Leg_Curls",
+    "datasetName": "Lying Leg Curls",
+    "how": "alias",
+    "checked": false
+  },
+  "Back extension": {
+    "id": "Hyperextensions_Back_Extensions",
+    "datasetName": "Hyperextensions (Back Extensions)",
+    "how": "alias",
+    "checked": false
+  },
+  "Triceps extensions": {
+    "id": "Standing_Dumbbell_Triceps_Extension",
+    "datasetName": "Standing Dumbbell Triceps Extension",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable pushdowns": {
+    "id": "Triceps_Pushdown",
+    "datasetName": "Triceps Pushdown",
+    "how": "alias",
+    "checked": false
+  },
+  "Overhead cable extension": {
+    "id": "Cable_Rope_Overhead_Triceps_Extension",
+    "datasetName": "Cable Rope Overhead Triceps Extension",
+    "how": "alias",
+    "checked": false
+  },
+  "Leg raises": {
+    "id": "Flat_Bench_Lying_Leg_Raise",
+    "datasetName": "Flat Bench Lying Leg Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Hip thrust": {
+    "id": "Barbell_Hip_Thrust",
+    "datasetName": "Barbell Hip Thrust",
+    "how": "alias",
+    "checked": false
+  },
+  "Smith machine hip thrust": {
+    "id": "Barbell_Hip_Thrust",
+    "datasetName": "Barbell Hip Thrust",
+    "how": "alias",
+    "checked": false
+  },
+  "Dumbbell glute bridge": {
+    "id": "Barbell_Glute_Bridge",
+    "datasetName": "Barbell Glute Bridge",
+    "how": "alias",
+    "checked": false
+  },
+  "Dumbbell Romanian deadlift": {
+    "id": "Stiff-Legged_Dumbbell_Deadlift",
+    "datasetName": "Stiff-Legged Dumbbell Deadlift",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable pull-through": {
+    "id": "Pull_Through",
+    "datasetName": "Pull Through",
+    "how": "alias",
+    "checked": false
+  },
+  "Reverse hyper": {
+    "id": "Reverse_Hyperextension",
+    "datasetName": "Reverse Hyperextension",
+    "how": "alias",
+    "checked": false
+  },
+  "Light hip thrust machine": {
+    "id": "Barbell_Hip_Thrust",
+    "datasetName": "Barbell Hip Thrust",
+    "how": "alias",
+    "checked": false
+  },
+  "Seated leg curl": {
+    "id": "Seated_Leg_Curl",
+    "datasetName": "Seated Leg Curl",
+    "how": "alias",
+    "checked": false
+  },
+  "Lying leg curl": {
+    "id": "Lying_Leg_Curls",
+    "datasetName": "Lying Leg Curls",
+    "how": "alias",
+    "checked": false
+  },
+  "Hip abduction machine": {
+    "id": "Thigh_Abductor",
+    "datasetName": "Thigh Abductor",
+    "how": "alias",
+    "checked": false
+  },
+  "Banded side steps": {
+    "id": null,
+    "datasetName": null,
+    "how": "no good picture",
+    "checked": false
+  },
+  "Cable side kick": {
+    "id": null,
+    "datasetName": null,
+    "how": "no good picture",
+    "checked": false
+  },
+  "Dumbbell shoulder press": {
+    "id": "Dumbbell_Shoulder_Press",
+    "datasetName": "Dumbbell Shoulder Press",
+    "how": "alias",
+    "checked": false
+  },
+  "Seated cable row": {
+    "id": "Seated_Cable_Rows",
+    "datasetName": "Seated Cable Rows",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable or machine lateral raise": {
+    "id": "Cable_Seated_Lateral_Raise",
+    "datasetName": "Cable Seated Lateral Raise",
+    "how": "alias",
+    "checked": false
+  },
+  "Cable glute kickback": {
+    "id": "One-Legged_Cable_Kickback",
+    "datasetName": "One-Legged Cable Kickback",
+    "how": "alias",
+    "checked": false
+  },
+  "Kickback machine": {
+    "id": "Glute_Kickback",
+    "datasetName": "Glute Kickback",
+    "how": "alias",
+    "checked": false
+  },
+  "Banded kickbacks": {
+    "id": "Glute_Kickback",
+    "datasetName": "Glute Kickback",
+    "how": "alias",
+    "checked": false
+  },
+  "Plank or cable crunch": {
+    "id": "Plank",
+    "datasetName": "Plank",
+    "how": "alias",
+    "checked": false
+  },
+  "Any ab machine": {
+    "id": "Ab_Crunch_Machine",
+    "datasetName": "Ab Crunch Machine",
+    "how": "alias",
+    "checked": false
+  },
+  "Bulgarian split squat": {
+    "id": "Split_Squat_with_Dumbbells",
+    "datasetName": "Split Squat with Dumbbells",
+    "how": "alias",
+    "checked": false
+  },
+  "Reverse lunge": {
+    "id": "Dumbbell_Rear_Lunge",
+    "datasetName": "Dumbbell Rear Lunge",
+    "how": "alias",
+    "checked": false
+  },
+  "Step-ups": {
+    "id": "Dumbbell_Step_Ups",
+    "datasetName": "Dumbbell Step Ups",
+    "how": "alias",
+    "checked": false
+  },
+  "Goblet squat": {
+    "id": "Goblet_Squat",
+    "datasetName": "Goblet Squat",
+    "how": "alias",
+    "checked": false
+  },
+  "Glute bridge machine": {
+    "id": "Barbell_Glute_Bridge",
+    "datasetName": "Barbell Glute Bridge",
+    "how": "alias",
+    "checked": false
+  },
+  "Single-leg glute bridge": {
+    "id": "Single_Leg_Glute_Bridge",
+    "datasetName": "Single Leg Glute Bridge",
+    "how": "alias",
+    "checked": false
+  }
+}
