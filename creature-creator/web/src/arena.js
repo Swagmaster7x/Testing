@@ -1,0 +1,656 @@
+// The colosseum: scenery, the two fighters, the fight loop and its screens.
+import * as THREE from 'three';
+import { buildCreature, disposeTree, bounds, applyShellStep } from './creature.js';
+import { makeMaterials, applyLook } from './materials.js';
+import { TEMPLATES } from './templates.js';
+import { statsOf, traits, makeFighter, step, usePower, useGuard, useAbility, ai, oppMul, championPoints, ABILITY_CD, ENDLESS, HEAL } from './battle.js';
+import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock, eliteFor, LEVELS, titlePoints, ELITES, VENUES, venue, venueFor, temper, temperFor, BERSERK_ATK, weeklyFor, weekKey, weekEnds } from './items.js';
+import { randomCreature } from './random.js';
+import { rng, setDetail } from './geom.js';
+import { makeRig, applyRig, strikePose, zero, resetBones, STRIKE_LEN, STYLES } from './anim.js';
+import { makeFx } from './fx.js';
+import { play, synth, music } from './audio.js';
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const ease = (x) => x * x * (3 - 2 * x);
+
+function canvasTex(w, hgt, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = hgt; draw(c.getContext('2d'), w, hgt);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+function buildScenery() {
+  const g = new THREE.Group(), R = 12;
+  const sand = canvasTex(256, 256, (c, w, hh) => {
+    c.fillStyle = '#d2a45c'; c.fillRect(0, 0, w, hh);
+    for (let i = 0; i < 5000; i++) { c.fillStyle = `rgba(${Math.random() < 0.5 ? '90,60,30' : '255,235,190'},${Math.random() * 0.12})`; c.fillRect(Math.random() * w, Math.random() * hh, 1 + Math.random() * 3, 1 + Math.random() * 2); }
+    const gr = c.createRadialGradient(w / 2, hh / 2, w * 0.1, w / 2, hh / 2, w / 2); gr.addColorStop(0, 'rgba(255,240,200,0.25)'); gr.addColorStop(1, 'rgba(60,35,15,0.45)');
+    c.fillStyle = gr; c.fillRect(0, 0, w, hh);
+  });
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R, 64), new THREE.MeshStandardMaterial({ map: sand, roughness: 1 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
+  const stone = new THREE.MeshStandardMaterial({ color: 0x8f775c, roughness: 0.95, side: THREE.DoubleSide });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x6d5d4c, roughness: 1, side: THREE.DoubleSide });
+  // Wall and stepped seating, as one profile spun around the centre.
+  const prof = [new THREE.Vector2(R, 0), new THREE.Vector2(R, 1.5)];
+  for (let k = 0; k < 6; k++) prof.push(new THREE.Vector2(R + 0.5 + k * 1.15, 1.5 + k * 0.8), new THREE.Vector2(R + 0.5 + (k + 1) * 1.15, 1.5 + k * 0.8), new THREE.Vector2(R + 0.5 + (k + 1) * 1.15, 1.5 + (k + 1) * 0.8));
+  prof.push(new THREE.Vector2(R + 8, 8.5));
+  g.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 72), stone));
+  const rimTop = new THREE.Mesh(new THREE.TorusGeometry(R, 0.14, 6, 72), dark); rimTop.rotation.x = Math.PI / 2; rimTop.position.y = 1.5; g.add(rimTop);
+  // Crowd: a few hundred coloured blobs on the steps.
+  const n = 900, crowd = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 6, 5), new THREE.MeshStandardMaterial({ roughness: 0.9 }), n);
+  const m4 = new THREE.Matrix4(), col = new THREE.Color(), seats = [];
+  for (let i = 0; i < n; i++) {
+    const k = Math.floor(Math.random() * 6), a = Math.random() * Math.PI * 2, r = R + 1.05 + k * 1.15 + (Math.random() - 0.5) * 0.4;
+    seats.push({ x: Math.cos(a) * r, y: 1.5 + k * 0.8 + 0.3, z: Math.sin(a) * r, ph: Math.random() * 6.28 });
+    crowd.setColorAt(i, col.setHSL(Math.random(), 0.3 + Math.random() * 0.5, 0.25 + Math.random() * 0.35));
+  }
+  g.add(crowd);
+  // Pillars, gates and banners.
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2, r = R + 7.7;
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, 3.4, 10), stone); p.position.set(Math.cos(a) * r, 8.2, Math.sin(a) * r); g.add(p);
+  }
+  const lintel = new THREE.Mesh(new THREE.TorusGeometry(R + 7.7, 0.32, 6, 72), stone); lintel.rotation.x = Math.PI / 2; lintel.position.y = 10; g.add(lintel);
+  const gateMat = new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 1 });
+  for (const sx of [-1, 1]) { const gate = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.25), gateMat); gate.position.set(sx * (R - 0.02), 0.62, 0); gate.rotation.y = -sx * Math.PI / 2; g.add(gate); }
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + 0.3;
+    const b = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.0), new THREE.MeshStandardMaterial({ color: i % 2 ? 0x9a1c1c : 0xd9a020, roughness: 0.8, side: THREE.DoubleSide }));
+    b.position.set(Math.cos(a) * (R - 0.03), 0.9, Math.sin(a) * (R - 0.03)); b.lookAt(0, 0.9, 0); g.add(b);
+  }
+  // Each venue repaints the same bowl: sky, sand, stone, the light, and something in the air.
+  const grad = (a, b, c3) => canvasTex(4, 256, (c) => { const gr = c.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, a); gr.addColorStop(0.45, b); gr.addColorStop(1, c3); c.fillStyle = gr; c.fillRect(0, 0, 4, 256); });
+  const LOOK = {
+    sands: { sky: ['#2f5fa8', '#7fa6d0', '#e9c79a'], floor: 0xffffff, stone: 0x8f775c, sun: 0xfff2dd, power: 2.2 },
+    mire: { sky: ['#24402f', '#5d7f58', '#a9b98a'], floor: 0x7f9a62, stone: 0x66705a, sun: 0xd8f0c0, power: 1.7, air: { color: 0xb6ff7a, n: 150, vy: 0.35, size: 0.14, drift: 0.5 } },
+    frost: { sky: ['#5f7f9f', '#b9d3e6', '#f2f7fb'], floor: 0xdfeeff, stone: 0x9fb0bf, sun: 0xeaf4ff, power: 2.0, air: { color: 0xffffff, n: 260, vy: -1.1, size: 0.12, drift: 0.6 } },
+    forge: { sky: ['#1a0a08', '#5a1c10', '#e0662a'], floor: 0xc98a6a, stone: 0x5c4038, sun: 0xffb070, power: 2.4, air: { color: 0xffa040, n: 160, vy: 1.6, size: 0.11, drift: 0.9 } },
+    storm: { sky: ['#1c2330', '#48556a', '#8a93a0'], floor: 0xa9a59a, stone: 0x6f6f72, sun: 0xcdd8ee, power: 1.5, air: { color: 0xaec6e8, n: 300, vy: -9, size: 0.07, drift: 0.1 } },
+    moon: { sky: ['#070b1c', '#1b2550', '#4a4f86'], floor: 0x8f9bd0, stone: 0x5a5f80, sun: 0xaebcff, power: 1.3, air: { color: 0xfff6a0, n: 60, vy: 0.08, size: 0.14, drift: 1.2 } },
+  };
+  for (const k in LOOK) LOOK[k].tex = grad(...LOOK[k].sky);
+  const N = 300, pos = new Float32Array(N * 3), seedv = new Float32Array(N);
+  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 16 - 2; seedv[i] = Math.random() * 6.28; }
+  const ageo = new THREE.BufferGeometry(); ageo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const air = new THREE.Points(ageo, new THREE.PointsMaterial({ size: 0.08, transparent: true, opacity: 0.85, depthWrite: false })); air.visible = false; air.frustumCulled = false; g.add(air);
+  return { g, crowd, seats, m4, sky: LOOK.sands.tex, LOOK, floor, stone, dark, air, pos, seedv, N };
+}
+
+/** A simple model for a held weapon, about one unit long, pointing along +Y. */
+function weaponMesh(id) {
+  const g = new THREE.Group();
+  const mat = (c, r = 0.5, e) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: c === 0x9aa4ad ? 0.7 : 0, emissive: e || 0 });
+  const add = (geo, m, x, y, z, rz) => { const k = new THREE.Mesh(geo, m); k.position.set(x || 0, y || 0, z || 0); if (rz) k.rotation.z = rz; g.add(k); return k; };
+  const wood = mat(0x6b4a2e, 0.8), iron = mat(0x9aa4ad, 0.35), bone = mat(0xe8e0cc, 0.6);
+  const shaft = (len = 1) => add(new THREE.CylinderGeometry(0.035, 0.045, len, 8), wood, 0, len / 2);
+  if (id === 'club') { add(new THREE.CylinderGeometry(0.13, 0.04, 1, 10), bone, 0, 0.5); add(new THREE.SphereGeometry(0.14, 10, 8), bone, 0, 1); }
+  else if (id === 'cleaver') { shaft(0.6); add(new THREE.BoxGeometry(0.34, 0.5, 0.03), iron, 0.14, 0.78); }
+  else if (id === 'fang') { shaft(0.3); add(new THREE.ConeGeometry(0.07, 0.6, 8), bone, 0, 0.6); }
+  else if (id === 'mace') { shaft(0.85); add(new THREE.IcosahedronGeometry(0.17, 0), iron, 0, 0.95); for (let i = 0; i < 6; i++) add(new THREE.ConeGeometry(0.04, 0.16, 5), iron, Math.cos(i) * 0.2, 0.95 + Math.sin(i * 2) * 0.12, Math.sin(i) * 0.2, -Math.cos(i) * 1.57); }
+  else if (id === 'buckler') { const d = add(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 20), iron, 0, 0.3, 0.1); d.rotation.x = Math.PI / 2; const sp = add(new THREE.ConeGeometry(0.08, 0.25, 8), bone, 0, 0.3, 0.25); sp.rotation.x = Math.PI / 2; }
+  else if (id === 'sling') { add(new THREE.TorusGeometry(0.2, 0.02, 5, 14), wood, 0, 0.3); add(new THREE.SphereGeometry(0.09, 8, 6), mat(0x8a8a86, 0.9), 0, 0.1); }
+  else if (id === 'brand') { shaft(0.8); add(new THREE.ConeGeometry(0.13, 0.42, 8), mat(0xff8a20, 0.4, 0xff5a00), 0, 1.0); }
+  else if (id === 'pick') { shaft(0.95); const h = add(new THREE.ConeGeometry(0.06, 0.6, 6), iron, 0, 0.9); h.rotation.z = Math.PI / 2; }
+  else if (id === 'hooks') { shaft(0.6); add(new THREE.TorusGeometry(0.16, 0.03, 6, 12, Math.PI * 1.2), iron, 0.16, 0.62); }
+  else if (id === 'whip') { shaft(0.3); add(new THREE.TorusGeometry(0.3, 0.022, 5, 16, Math.PI * 1.4), mat(0x7a1c1c, 0.7), 0.3, 0.35); }
+  else if (id === 'maul') { add(new THREE.CylinderGeometry(0.045, 0.055, 1.4, 8), wood, 0, 0.7); add(new THREE.BoxGeometry(0.5, 0.32, 0.32), iron, 0, 1.4); }
+  else { shaft(1.2); for (const x of [-0.13, 0, 0.13]) add(new THREE.ConeGeometry(0.035, 0.4, 6), iron, x, 1.35 - Math.abs(x) * 0.6); add(new THREE.BoxGeometry(0.3, 0.04, 0.04), iron, 0, 1.15); }
+  return g;
+}
+
+/** env: { scene, camera, M (the player's materials), h (DOM helper), store, onDone(result) } */
+export function createArena(env) {
+  const { scene, camera, h, store } = env;
+  const S = buildScenery(); S.g.visible = false; scene.add(S.g);
+  const fx = makeFx(S.g);
+  const ME = makeMaterials();                 // the opponent gets its own set so the two looks do not clash
+  const blobTex = canvasTex(64, 64, (c) => { const gr = c.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(0, 0, 64, 64); });
+  const el = document.getElementById('battle');
+  const calm = () => !!env.meta().calm;         // "reduce motion" in settings: no shake, flashes, slow motion or weather
+  let airNow = null;
+  function applyVenue(v) {
+    const L = S.LOOK[v.id] || S.LOOK.sands;
+    scene.background = L.tex; S.floor.material.color.setHex(L.floor); S.stone.color.setHex(L.stone); S.dark.color.setHex(L.stone).multiplyScalar(0.75);
+    env.sun.color.setHex(L.sun); env.sun.intensity = L.power;
+    airNow = calm() ? null : L.air || null; S.air.visible = !!airNow;
+    if (airNow) { S.air.material.color.setHex(airNow.color); S.air.material.size = airNow.size; S.air.geometry.setDrawRange(0, airNow.n); }
+  }
+  function blowAir(dt, t) {
+    if (!airNow) return;
+    const p = S.pos, a = airNow;
+    for (let i = 0; i < a.n; i++) {
+      p[i * 3 + 1] += a.vy * dt; p[i * 3] += Math.sin(t * 0.7 + S.seedv[i]) * a.drift * dt;
+      if (p[i * 3 + 1] > 9) p[i * 3 + 1] = 0; else if (p[i * 3 + 1] < 0) p[i * 3 + 1] = 9;
+    }
+    S.air.geometry.attributes.position.needsUpdate = true;
+  }
+  const A = { active: false, phase: 'off', run: null, data: null, views: [null, null], F: null, t: 0, phaseT: 0, enemy: null, shake: 0, cheer: 0, rand: Math.random, confetti: null, queue: [], eLoad: null, auto: false, freeze: 0, slow: 0, punch: 0, entered: false };
+  let keepBg = null;
+
+  const ABILITY_STYLE = { Pounce: 'pounce', 'Tail Sweep': 'tail', Gore: 'charge', Hurl: 'slash', Rend: 'slash', Constrict: 'lash', 'Fire Breath': 'roar', Sling: 'slash' };
+  function makeView(data, mats, side, load, walk) {
+    applyLook(mats, data.look, TEMPLATES[data.type].bellyDir);
+    resetBones(mats);
+    const anchors = [];
+    setDetail(0.62);                          // fighters are seen small, so they are built lighter than in the workshop
+    let cr; try { cr = buildCreature(data, mats, { anchors, animated: true }); } finally { setDetail(1); }
+    applyShellStep(cr, Math.max(2, env.gfx().step));
+    const box = bounds(cr), size = box.getSize(new THREE.Vector3());
+    const st = statsOf(data);
+    const s = clamp(1.9 / Math.max(size.y, size.z * 0.85, size.x * 0.55, 0.6), 0.5, 2.4) * (0.85 + 0.35 * clamp(Math.cbrt(st.hp / 200), 0.6, 1.4));
+    const hover = data.type === 'aquatic' ? 0.45 : 0;
+    cr.group.scale.setScalar(s);
+    cr.group.position.set(-(box.min.x + box.max.x) / 2 * s, -box.min.y * s + hover, -box.max.z * s + size.z * s / 2);     // the pose node sits at the body's middle
+    // Put each weapon in a hand (two-handed ones take the next hand too). It rides on the arm so it swings with it.
+    let hand = 0;
+    for (const w of (load ? load.weapons : [])) {
+      const a = anchors[hand]; hand += item(w.id, 'weapon').hands;
+      if (!a) continue;
+      const wm = weaponMesh(w.id), len = clamp(size.y * 0.3, 0.22, 0.6);
+      wm.scale.setScalar(len);
+      wm.position.copy(a.p).addScaledVector(a.t, a.r * 2.2);
+      wm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), a.t.clone().multiplyScalar(0.25).add(new THREE.Vector3(0.2, 0.5, 0.85)).normalize());
+      wm.traverse((o) => { o.castShadow = true; });
+      a.node.add(wm);
+    }
+    const pose = new THREE.Group(), holder = new THREE.Group();
+    pose.add(cr.group); holder.add(pose);
+    const blob = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.45 }));
+    blob.rotation.x = -Math.PI / 2; blob.position.set(0, 0.012, -size.z * s / 2); blob.scale.set(Math.max(size.x * s, 0.6) * 1.2, size.z * s * 1.1, 1); holder.add(blob);
+    holder.position.x = side * (0.75 + (walk || 0)); holder.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    S.g.add(holder);
+    const rig = makeRig(cr), kinds = new Set(data.parts.map((p) => p.kind));
+    const styles = [];
+    if (rig.arms > 0) styles.push('slash'); else if (st.claws && st.legs >= 4) styles.push('swipe');
+    if (st.mouth) styles.push('bite');
+    if (st.horns) styles.push('charge');
+    if (st.wings) styles.push('swoop');
+    if (st.tentacles >= 2) styles.push('lash');
+    if (['tail_club', 'tail_thick', 'tail_fluke', 'tail_fish'].some((k) => kinds.has(k))) styles.push('tail');
+    if (kinds.has('tail_stinger')) styles.push('sting');
+    if (!styles.length) styles.push('lunge');
+    rig.armSel = -1; rig.len = size.z * s;
+    return { cr, mats, glow: [mats.skin, ...mats.shells], pose, holder, side, rig, styles, style: styles[0], styleN: 0, hover, st, walk: walk || 0, half: size.x * s / 2, len: size.z * s,
+      head: new THREE.Vector3(0, size.y * s + hover + 0.15, -size.z * s * 0.3), mid: new THREE.Vector3(0, size.y * s * 0.55 + hover, -size.z * s * 0.2), front: new THREE.Vector3(0, size.y * s * 0.5 + hover, 0.1),
+      strikeT: -1, winding: false, power: false, recoil: 0, flash: 0, dead: -1, dodge: -1, fxT: 0, thud: false, ph: Math.random() * 6 };
+  }
+  const world = (v, local) => v.holder.localToWorld(local.clone());
+  function dropView(i) {
+    const v = A.views[i]; if (!v) return;
+    S.g.remove(v.holder);
+    // Free everything under the holder; materials that belong to a shared set (skin, horn, eyes...) are kept.
+    const shared = new Set([...Object.values(v.mats).filter((m) => m && m.isMaterial), ...v.mats.shells, ...v.mats.eyeCache.values()]);
+    v.holder.traverse((o) => { if (!o.isMesh) return; o.geometry.dispose(); if (!shared.has(o.material)) o.material.dispose(); });
+    A.views[i] = null;
+  }
+  const icons = (load) => [...load.weapons, ...load.abilities, ...load.relics].map((e) => item(e.id, e.cat).icon).join('');
+  function screenPos(v, local) {
+    const p = local.clone(); v.holder.localToWorld(p); p.project(camera);
+    return [(p.x * 0.5 + 0.5) * innerWidth, (-p.y * 0.5 + 0.5) * innerHeight];
+  }
+  function floater(i, text, cls) {
+    const v = A.views[i]; if (!v) return;
+    const [x, y] = screenPos(v, v.head);
+    const d = h('div', { class: 'float ' + (cls || ''), style: `left:${x + (Math.random() - 0.5) * 40}px;top:${y}px` }, text);
+    el.querySelector('.floaters').append(d); setTimeout(() => d.remove(), 1100);
+  }
+
+  // ---------------------------------------------------------------- screens
+  function hud() {
+    const names = [A.data.name, A.enemy ? A.enemy.name : ''];
+    const press = (fnc) => (e) => { e.preventDefault(); if (A.phase === 'fight') fnc(); };
+    el.replaceChildren(
+      h('div', { class: 'hud' },
+        h('div', { class: 'who l' }, h('b', null, names[0]), h('div', { class: 'hp' }, h('u', { id: 'hg0' }), h('i', { id: 'hp0' })), h('small', { id: 'st0' }), h('div', { class: 'kit' }, icons(A.run.load))),
+        h('div', { class: 'round' }, h('small', null, (A.venue && A.venue.id !== 'sands' ? A.venue.icon + ' ' : '') + env.tr(endless() ? 'Endless' : lvl().name)), h('b', null, (A.run.round + 1) + (endless() ? '' : ' / ' + fights()))),
+        h('div', { class: 'who r' }, h('b', null, names[1]), h('div', { class: 'hp' }, h('u', { id: 'hg1' }), h('i', { id: 'hp1' })), h('small', { id: 'st1' }), h('div', { class: 'kit' }, A.eLoad ? icons(A.eLoad) : ''))),
+      h('div', { class: 'msg', id: 'bmsg' }),
+      h('div', { class: 'floaters' }),
+      h('div', { class: 'acts' },
+        h('div', null,
+          h('button', { id: 'bpow', onpointerdown: press(() => usePower(A.F[0]) && play('draw')) }, h('i'), h('em', null, '⚔️'), h('span', null, 'Power')),
+          h('button', { id: 'bgrd', onpointerdown: press(() => useGuard(A.F[0]) && play('switch')) }, h('i'), h('em', null, '🛡️'), h('span', null, 'Guard'))),
+        h('div', null, A.run.load.abilities.map((a, k) =>
+          h('button', { class: 'abil', id: 'bab' + k, onpointerdown: press(() => { useAbility(A.F, 0, k, A.rand, A.queue); }) }, h('i'), h('em', null, item(a.id, 'ability').icon), h('span', null, item(a.id, 'ability').name))))));
+  }
+  // The gauntlet being run: its difficulty level, how many fights it has, and whether it is the endless pit.
+  const wk = () => (A.run.weekly ? weeklyFor(A.run.weekly) : null);          // the weekly challenge, if this run is one
+  const lvl = () => wk() || LEVELS[A.run.level ?? 2], endless = () => !!A.run.endless && !A.run.weekly, fights = () => (endless() ? Infinity : lvl().fights);
+  const safe = () => endless() || !!A.run.weekly;                            // exhibitions: the creature survives a loss
+  const isBoss = (round) => (endless() ? round % 10 === 9 : round === fights() - 1);
+  const ofN = () => (endless() ? '' : ' of ' + fights());
+  /** What this run has done so far, shown when it ends. */
+  function summary() {
+    const q = A.run.sum || {};
+    return h('div', { class: 'stats' }, ...[['Fights won', A.run.round], ['Damage dealt', Math.round(q.dealt || 0)], ['Damage taken', Math.round(q.taken || 0)], ['Biggest hit', q.big || 0], ['Critical hits', q.crits || 0], ['Blocks', q.blocks || 0], ['Points', A.run.earned || 0]]
+      .map(([k, val]) => h('div', null, h('small', null, k), h('b', null, String(val)))));
+  }
+  function panel(...kids) { const p = h('div', { class: 'panel' }, kids); el.append(p); return p; }
+  function statGrid(s) {
+    return h('div', { class: 'stats' },
+      ...[['Health', s.hp], ['Attack', s.atk.toFixed(1)], ['Armour', Math.round(s.def * 100) + '%'], ['Speed', s.spd.toFixed(2)]].map(([k, val]) => h('div', null, h('small', null, k), h('b', null, String(val)))));
+  }
+  function gate() {
+    A.phase = 'gate'; el.replaceChildren();
+    const s = statsOf(A.data), tr = traits(s), meta = env.meta();
+    const cell = (k, val) => h('div', null, h('small', null, k), h('b', null, String(val)));
+    const choose = (level, pit, week) => { A.run.level = level; A.run.endless = pit; A.run.weekly = week || 0; if (!week) { meta.levelSel = level; meta.endlessSel = pit; env.saveMeta(); } gate(); };
+    const W = wk(), wrec = meta.weekly && meta.weekly.key === weekKey() ? meta.weekly : { best: 0, done: 0 };
+    const L = lvl();
+    panel(h('h2', null, W ? 'Weekly Challenge' : endless() ? 'The Endless Pit' : 'The Colosseum · ' + L.name),
+      W ? h('p', null, h('b', null, env.tr(W.rule.name)), ' · ', env.tr(W.venue.name), ': ', env.tr(W.rule.text), ' ', env.tr(W.venue.text), ' ', W.fights + ' fights, the same for every player this week. ', wrec.done ? 'Already won this week: a repeat win pays ' + W.again + ' points.' : 'The first win this week pays ' + W.prize + ' points.', ' ', 'Your best this week: ' + wrec.best + ' / ' + W.fights + '.')
+      : endless()
+        ? h('p', null, h('b', null, A.data.name), ' fights on for as long as it can. Opponents never stop getting stronger, with a champion every tenth fight. How far can it go?')
+        : h('p', null, h('b', null, A.data.name), ' faces ' + L.fights + ' fights in a row, each tougher than the last, ending with the reigning champion. Choose a reward after every win.'),
+      h('div', { class: 'stats' }, cell('Health', s.hp), cell('Attack', s.atk.toFixed(1)), cell('Armour', Math.round(s.def * 100) + '%'), cell('Speed', s.spd.toFixed(2)), cell('Hands', s.slots), cell('Abilities', s.abilitySlots), cell('Revives', meta.revives || 0)),
+      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.map(env.tr).join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle holds one weapon.' : 'No hands: it carries one weapon in its jaws, at reduced effect. Add arms or tentacles to wield more.', ' Its body decides which abilities and relics turn up.'),
+      W ? h('p', { class: 'warn' }, 'The challenge is an exhibition: if it falls it is carried out alive.') : endless() ? h('p', { class: 'warn' }, 'The pit is an exhibition: when it falls it is carried out alive, and keeps its points.') : h('p', { class: 'warn' }, 'Fights are to the death. If it dies with no revive, it is gone for good.'),
+      h('div', { class: 'ranks' }, h('small', null, 'Difficulty: harder levels have more fights, tougher opponents and pay more. Win the title to open the next.'),
+        h('div', { class: 'chips' },
+          LEVELS.map((d, i) => i <= meta.level + 1 && h('button', { class: !safe() && i === A.run.level ? 'on' : '', disabled: i > meta.level, onclick: () => choose(i, false) }, (i > meta.level ? '🔒 ' : '') + env.tr(d.name) + ' · ' + d.fights)),
+          h('button', { class: endless() ? 'on' : '', disabled: !meta.champions, onclick: () => choose(A.run.level, true) }, (meta.champions ? '' : '🔒 ') + '∞ Endless'),
+          h('button', { class: W ? 'on' : '', onclick: () => choose(A.run.level, false, weekKey()) }, '📅 ', 'Weekly', wrec.done ? ' ✓' : ''),
+          h('button', { onclick: async () => {
+            const text = prompt('Paste a critter code from a friend. One free fight, nothing at stake.');
+            if (!text) return;
+            const got = await env.decode(text);
+            if (!got || got.kind !== 'c' || !env.valid(got.data)) { env.toast('That is not a critter code.'); return; }
+            A.run.duel = got.data; env.track('duel'); nextFight();
+          } }, '🤝 Duel a friend'))),
+      h('p', { class: 'runs', id: 'gruns' }),
+      h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
+        h('button', { class: 'ad', id: 'gad', onclick: async (e) => { if (await adFor(e, 'gate')) { addRun(meta); env.saveMeta(); } tickRuns(); } }, '📺 Watch an ad: +1 run'),
+        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; if (wk()) A.run.seed = wk().seed; saveRun(); env.track('run_start', { level: endless() ? 'endless' : lvl().name, type: A.data.type }); play('gate'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
+    tickRuns();
+  }
+  // A friendly duel is never saved: it is one free fight with nothing at stake.
+  const saveRun = () => { if (!A.run.duel) store.set('cc.run', A.run); };
+  /** First step after the gate: the Head Start gift (once per gauntlet), then the first fight. */
+  function enter() {
+    if ((env.meta().boosts.head || 0) > 0 && !A.run.headTaken) { A.run.headTaken = true; saveRun(); reward('A gift from the crowd', 'Choose a reward before the first fight.'); }
+    else nextFight();
+  }
+  /** Run a rewarded ad from a button. True only if it was earned and the screen is still the one that offered it. */
+  async function adFor(e, phase) {
+    const row = e.target.closest('.row'), bs = row ? [...row.querySelectorAll('button')] : [e.target];
+    bs.forEach((b) => { b.disabled = true; });
+    const r = await env.showAd();
+    bs.forEach((b) => { b.disabled = false; });
+    if (!r.ok && r.why) env.toast(r.why);
+    return r.ok && A.active && A.phase === phase;
+  }
+  /** Keeps the "runs left" line on the gate current while the clock ticks. */
+  function tickRuns() {
+    const line = document.getElementById('gruns'); if (!line) return;
+    const r = runsNow(env.meta());
+    line.textContent = r.free ? env.tr('⚡ Arena Patron: unlimited runs.') : env.tr('⚡ Runs: ' + r.n + ' / ' + r.max) + (r.next ? env.tr(' · next in ' + clock(r.next)) : '') + env.tr(r.n ? '. Entering uses one.' : '. None left: wait, or watch an ad.');
+    document.getElementById('ggo').disabled = r.n <= 0;
+    document.getElementById('gad').classList.toggle('hidden', r.n >= r.max);
+  }
+  setInterval(() => { if (A.phase === 'gate') tickRuns(); }, 1000);
+  /** The three-card reward screen. */
+  function reward(title, sub) {
+    A.phase = 'won';
+    const s = statsOf(A.data), load = A.run.load;
+    if (!A.run.draft) { A.run.draft = draft(Math.random, s, load, env.meta(), Math.min(A.run.round, 12)); saveRun(); }
+    el.replaceChildren(h('div', { class: 'floaters' }));
+    for (let k = 0; k < 3; k++) setTimeout(() => A.phase === 'won' && play('card', 0.7), 60 + k * 100);
+    const pick = (o) => { env.track('reward', { item: o.cat + ':' + o.id, rarity: o.rar }); take(load, o); env.meta().seen[o.cat + ':' + o.id] = 1; env.stat('mostWeapons', load.weapons.length, true); env.saveMeta(); A.run.draft = null; saveRun(); play(o.cat === 'weapon' ? 'draw' : 'confirm'); nextFight(); };
+    const card = (o) => {
+      const it = item(o.id, o.cat), owned = o.cat === 'ability' && load.abilities.find((a) => a.id === o.id);
+      const shown = o.cat === 'ability' ? { ...o, lvl: (owned ? owned.lvl + 1 + (o.rar > 0 ? 1 : 0) : 1 + o.rar) } : o;
+      return h('button', { class: 'reward r' + o.rar + ' c-' + o.cat, onclick: () => pick(o) },
+        h('small', null, RARITY[o.rar] + ' ' + (o.cat === 'relic' ? 'relic' : o.cat) + (owned ? ' · level up' : '')),
+        h('div', { class: 'ico' }, it.icon), h('b', null, it.name), h('p', null, describe(shown)),
+        o.syn && h('em', null, 'Synergy: ' + it.tags.filter((g) => [...load.weapons, ...load.relics, ...load.abilities].some((e) => item(e.id, e.cat).tags.includes(g))).join(', ')));
+    };
+    const p = panel(h('h2', null, title), h('p', null, sub),
+      h('div', { class: 'rewards' }, A.run.draft.length ? A.run.draft.map(card) : h('p', { class: 'dim' }, 'Nothing more fits this body.')),
+      h('p', { class: 'dim' }, 'Hands ' + handsUsed(load) + '/' + s.slots + ' · Abilities ' + load.abilities.length + '/' + s.abilitySlots + ' · Relics ' + load.relics.length, icons(load) ? '   ' + icons(load) : ''),
+      h('div', { class: 'row' },
+        A.run.lastPts > 0 && h('button', { class: 'ad', onclick: async (e) => {
+          if (!(await adFor(e, 'won')) || !(A.run.lastPts > 0)) return;
+          const m = env.meta(); m.points += A.run.lastPts; A.run.earned += A.run.lastPts; env.saveMeta();
+          env.toast('Doubled: +' + A.run.lastPts + ' points'); A.run.lastPts = 0; saveRun(); e.target.remove();
+        } }, '📺 Watch an ad: double the ' + A.run.lastPts + ' points'),
+        A.run.rerolls > 0 && h('button', { onclick: () => { A.run.rerolls--; A.run.draft = null; reward(title, sub); } }, 'Reroll (' + A.run.rerolls + ' left)'),
+        !A.run.draft.length && h('button', { class: 'go', onclick: () => { A.run.draft = null; nextFight(); } }, 'Next fight')));
+    p.classList.add('wide');
+  }
+  function nextFight() {
+    dropView(1); dropView(0);
+    const boss = !A.run.duel && isBoss(A.run.round), meta = env.meta(), b = meta.boosts;
+    if (!A.run.sum) A.run.sum = { dealt: 0, taken: 0, big: 0, crits: 0, blocks: 0 };
+    A.views[0] = makeView(A.data, env.M, -1, A.run.load, A.entered ? 0 : 5.5); A.entered = true;
+    A.enemy = A.run.duel ? JSON.parse(JSON.stringify(A.run.duel)) : randomCreature(rng(A.run.seed + A.run.round * 7919), { titled: true });
+    if (boss) A.enemy.name = A.enemy.name.split(' ')[0] + ', Champion of the Sands';
+    const ps = statsOf(A.data), es = statsOf(A.enemy);
+    A.eLoad = A.run.duel ? newLoad() : enemyLoad(rng(A.run.seed + A.run.round), es, A.run.round);
+    const W = wk(), rule = W ? W.rule.id : '';
+    A.elite = A.run.duel ? null : eliteFor(rng(A.run.seed * 3 + A.run.round), A.run.round, boss);
+    if (rule === 'elite' && !A.elite && A.run.round > 0 && !boss) A.elite = ELITES[Math.floor(rng(A.run.seed * 5 + A.run.round)() * ELITES.length)];
+    A.venue = A.run.duel ? VENUES[0] : W ? W.venue : venueFor(rng(A.run.seed * 11 + A.run.round * 31), A.run.round);
+    A.temper = A.run.duel ? temper('brawler') : temperFor(rng(A.run.seed * 13 + A.run.round * 17), A.run.round);
+    applyVenue(A.venue);
+    const both = (m) => { for (const k in (A.venue.mods || {})) m[k] = (m[k] || 0) + A.venue.mods[k]; if (rule === 'glass') m.atkP = (m.atkP || 0) + 0.4; return m; };
+    if (A.elite) A.enemy.name = A.elite.name + ' ' + A.enemy.name.split(' ')[0];
+    A.hurt = false;
+    A.views[1] = makeView(A.enemy, ME, 1, A.eLoad, 6);
+    if (boss) A.views[1].holder.scale.setScalar(1.18);
+    A.F = [makeFighter(ps, { mods: both(loadMods(A.run.load, ps)), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
+      makeFighter(es, { mul: A.run.duel ? { hp: 1, atk: 1 } : oppMul(A.run.round * (endless() ? ENDLESS.slope : lvl().slope), endless() ? 0 : lvl().tier, boss, endless()), mods: (() => { const m = both(loadMods(A.eLoad, es)); if (A.elite) for (const k in A.elite.mods) m[k] = (m[k] || 0) + A.elite.mods[k]; if (rule === 'titans') m.hpP = (m.hpP || 0) + 0.25; if (A.temper.id === 'berserker') m.atkP = (m.atkP || 0) + BERSERK_ATK; return m; })() })];
+    A.F.field = A.venue.field || null; A.F[1].temper = A.temper.id;
+    if (A.run.hp != null) A.F[0].hp = Math.min(A.F[0].max, A.run.hp);
+    A.rand = Math.random; A.queue = [];
+    A.run.fighting = true; A.run.dead = false; saveRun();
+    hud(); bars();
+    A.phase = 'intro'; A.phaseT = 0;
+    music(boss ? 'boss' : 'battle');
+    if (A.elite) A.views[1].holder.scale.setScalar(A.elite.id === 'giant' ? 1.25 : 1.08);
+    message(A.run.duel ? 'Friendly duel' : boss ? (endless() ? 'Champion!' : 'Final fight') : A.elite ? 'Elite!' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name + (A.elite ? ' (+50% points)' : ''));
+    const m = document.getElementById('bmsg');
+    A.introLen = 1.9 + (A.venue.id !== 'sands' ? 1.6 : 0) + (A.temper.id !== 'brawler' ? 1.4 : 0);
+    if (m && A.venue.id !== 'sands') m.append(h('span', { class: 'venue' }, A.venue.icon + ' ', env.tr(A.venue.name), ': ', env.tr(A.venue.text)));
+    if (m && A.temper.id !== 'brawler') m.append(h('span', { class: 'venue' }, env.tr(A.temper.name), ': ', env.tr(A.temper.text)));
+  }
+  function message(big, small) { const m = document.getElementById('bmsg'); if (m) m.replaceChildren(big ? h('b', null, big) : '', small ? h('span', null, small) : ''); }
+  function bars() {
+    for (let i = 0; i < 2; i++) {
+      const f = A.F[i], b = document.getElementById('hp' + i); if (!b) continue;
+      const k = clamp(f.hp / f.max, 0, 1), st = f.st;
+      document.getElementById('hg' + i).style.width = (k * 100) + '%';
+      b.style.width = (k * 100) + '%'; b.style.background = env.meta().cb ? (st.poison > 0 ? '#c9a0ff' : k > 0.5 ? '#4aa3ff' : k > 0.25 ? '#ffd23f' : '#ff7a1a') : st.poison > 0 ? '#8fd14f' : k > 0.5 ? '#3fd0a4' : k > 0.25 ? '#ffb347' : '#ff5a4a';
+      b.parentNode.classList.toggle('shield', f.shield > 0);
+      const txt = Math.max(0, Math.ceil(f.hp)) + ' / ' + f.max + (f.shield > 0 ? ' +' + Math.ceil(f.shield) : '') + (st.bleed > 0 ? ' 🩸' + st.bleed : '') + (st.poison > 0 ? ' ☣️' : '') + (st.burn > 0 ? ' 🔥' : '') + (st.stun > 0 ? ' 💫' : '') + (st.weak > 0 ? ' ⬇️' : '') + (st.slow > 0 ? ' 🕸️' : '') + (st.blind > 0 ? ' 🌫️' : '') + (f.buff.shell > 0 ? ' 🐢' : '') + (f.buff.evade > 0 ? ' 🦅' : '') + (f.buff.frenzy > 0 ? ' 😤' : '');
+      const sEl = document.getElementById('st' + i); if (sEl.textContent !== txt) sEl.textContent = txt;
+    }
+    const cd = (id, left, total, on) => { const b = document.getElementById(id); if (!b) return; b.firstChild.style.height = (clamp(left / total, 0, 1) * 100) + '%'; b.classList.toggle('armed', !!on); };
+    cd('bpow', A.F[0].powerCd, 7, A.F[0].power); cd('bgrd', A.F[0].guardCd, A.F[0].guardEvery, A.F[0].guard > 0);
+    A.F[0].abil.forEach((a, k) => cd('bab' + k, a.cd, ABILITY_CD[a.id], false));
+  }
+  /** A friendly duel ends here either way: no points, no deaths. */
+  function duelOver(won) {
+    A.phase = 'won'; music(null); synth(won ? 'win' : 'lose');
+    el.querySelector('.acts').classList.add('hidden'); message('', '');
+    panel(h('h2', { class: won ? 'gold' : '' }, won ? A.data.name + ' wins the duel' : A.enemy.name + ' wins the duel'), h('p', null, 'A friendly match: nobody was hurt and nothing was won or lost.'), summary(),
+      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'))).classList.add('low', 'wide');
+  }
+  function wonFight() {
+    if (A.run.duel) { duelOver(true); return; }
+    env.track('fight_won', { fight: A.run.round + 1, level: endless() ? 'endless' : lvl().name, elite: A.elite ? A.elite.id : '' });
+    const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round, endless() ? 1 : lvl().pay, !!A.elite);
+    env.stat('fightsWon'); if (!endless()) env.stat('bestFight', A.run.round + 1, true); else env.stat('bestEndless', A.run.round + 1, true);
+    if (A.elite) env.stat('elites');
+    if (!meta.venues) meta.venues = {}; meta.venues[A.venue.id] = 1;
+    const W = wk(); if (W) { const r = meta.weekly && meta.weekly.key === W.key ? meta.weekly : { key: W.key, best: 0, done: 0 }; r.best = Math.max(r.best, A.run.round + 1); meta.weekly = r; }
+    if (!A.hurt) env.stat('flawless'); if (f.hp < f.max * 0.1) env.stat('closeCalls');
+    meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; A.run.lastPts = pts; env.saveMeta(); play('coins');
+    A.run.bonusHp = (A.run.bonusHp || 0) + f.m.killHp;
+    A.run.round++; A.run.fighting = false;
+    A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * ((HEAL + 0.04 * (meta.boosts.recov || 0)) * (W && W.rule.id === 'lean' ? 0.5 : 1) + f.m.killHeal));
+    A.run.draft = null;
+    if (A.run.round >= fights()) { if (W) weeklyWon(); else champion(); return; }
+    saveRun();
+    reward(A.enemy.name.split(',')[0] + ' is dead', '+' + pts + ' points. ' + A.data.name + ' recovers to ' + Math.round(A.run.hp) + ' / ' + f.max + ' health. ' + (isBoss(A.run.round) ? (endless() ? 'A champion is next. ' : 'Only the champion remains. ') : '') + 'Choose a reward:');
+  }
+  function weeklyWon() {
+    const W = wk(), meta = env.meta(), first = !meta.weekly.done, pts = first ? W.prize : W.again;
+    A.phase = 'champion'; store.set('cc.run', null); music(null); synth('win'); synth('crowd'); A.cheer = 6;
+    dropView(1); A.views[0].holder.position.x = 0; A.views[0].holder.rotation.y = 0.35;
+    meta.weekly.done = (meta.weekly.done || 0) + 1; A.run.earned = (A.run.earned || 0) + pts; env.bonus(pts); env.stat('weeklies'); endRun();
+    env.track('weekly_won', { rule: W.rule.id });
+    el.replaceChildren(h('div', { class: 'floaters' }));
+    panel(h('h2', { class: 'gold' }, 'Weekly Challenge won!'),
+      h('p', null, h('b', null, A.data.name), ' beat all ' + W.fights + ' fights: +' + pts + ' points.', ' ', first ? 'A new challenge starts on Monday.' : ''),
+      summary(),
+      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'))).classList.add('low', 'wide');
+  }
+  function champion() {
+    A.phase = 'champion'; store.set('cc.run', null); music(null); synth('win'); synth('crowd'); A.cheer = 6;
+    dropView(0); A.views[0] = makeView(A.data, env.M, -1, A.run.load);
+    const level = A.run.level ?? 2, pts = titlePoints(level, A.F[0].hp / A.F[0].max), earned = A.run.earned || 0, opens = level >= (env.meta().level || 0) && level < LEVELS.length - 1;
+    dropView(1); A.views[0].holder.position.x = 0; A.views[0].holder.rotation.y = 0.35;
+    // Confetti.
+    const n = 260, geo = new THREE.PlaneGeometry(0.09, 0.14), cm = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), n), c = new THREE.Color();
+    A.confetti = { mesh: cm, bits: [] };
+    for (let i = 0; i < n; i++) { A.confetti.bits.push({ x: (Math.random() - 0.5) * 9, y: 3 + Math.random() * 7, z: (Math.random() - 0.5) * 5, v: 0.8 + Math.random() * 1.2, r: Math.random() * 6, w: 1 + Math.random() * 4 }); cm.setColorAt(i, c.setHSL(Math.random(), 0.9, 0.6)); }
+    S.g.add(cm);
+    el.replaceChildren(h('div', { class: 'floaters' }));
+    A.run.earned = earned + pts;
+    panel(h('h2', { class: 'gold' }, lvl().name + ' Champion!'),
+      h('p', null, h('b', null, A.data.name), ' won all ' + fights() + ' fights and takes the title: +' + pts + ' points.', opens && ' ' + LEVELS[level + 1].name + ' is now open.', !env.meta().champions && ' The Endless Pit is now open too.'),
+      summary(),
+      h('div', { class: 'row' },
+        h('button', { class: 'ad', onclick: async (e) => { if (await adFor(e, 'champion')) { env.bonus(pts); finish({ type: 'champion', points: pts * 2 }); } } }, '📺 Watch an ad: double the title prize (+' + pts + ')'),
+        h('button', { class: 'go', onclick: () => finish({ type: 'champion', points: pts }) }, 'Take the crown'))).classList.add('low', 'wide');
+    endRun();
+    env.track('title', { level: lvl().name, type: A.data.type });
+    env.crown(pts, A.run);            // the prize is banked now, so closing the app on this screen cannot lose it
+  }
+  /** Lifetime totals from this run. Called once, when the run is over for good. */
+  function endRun() { const q = A.run.sum || {}; if (A.run.counted) return; A.run.counted = true; env.stat('damage', Math.round(q.dealt || 0)); env.stat('biggestHit', q.big || 0, true); env.stat('runs'); }
+  function died() {
+    if (A.run.duel) { duelOver(false); return; }
+    env.track('run_lost', { fight: A.run.round + 1, level: endless() ? 'endless' : lvl().name, type: A.data.type });
+    A.phase = 'dead'; music(null); synth('lose');
+    A.run.dead = true; A.run.fighting = false; saveRun();      // closing the app here does not undo the death
+    el.querySelector('.acts').classList.add('hidden'); message('', '');
+    const meta = env.meta(), again = () => { A.run.hp = Math.round(A.F[0].max * 0.5); saveRun(); synth('heal'); nextFight(); };
+    const adBtn = (label) => !A.run.adRevived && h('button', { class: 'ad', onclick: async (e) => { if (!(await adFor(e, 'dead'))) return; A.run.adRevived = true; again(); } }, label);
+    if (safe()) {                                     // exhibitions never cost a creature
+      const W = wk();
+      panel(h('h2', null, A.data.name + (W ? ' is carried out' : ' is carried from the pit')),
+        W ? h('p', null, 'Beaten by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ' of ' + W.fights + '.', ' ', 'You can try the challenge again any time this week.')
+          : h('p', null, 'Beaten by ' + A.enemy.name + ' after ' + A.run.round + (A.run.round === 1 ? ' win' : ' wins') + '. Your best in the pit is ' + Math.max(A.run.round, (meta.stats.bestEndless || 0)) + '.'),
+        summary(),
+        h('div', { class: 'row' }, adBtn('📺 Watch an ad to fight on'),
+          h('button', { class: 'go', onclick: () => { endRun(); store.set('cc.run', null); finish(W ? { type: 'back' } : { type: 'retired', wins: A.run.round }); } }, W ? 'Back to the workshop' : 'Leave the pit'))).classList.add('low', 'wide');
+      return;
+    }
+    panel(h('h2', { class: 'red' }, A.data.name + ' has fallen'),
+      h('p', null, 'Killed by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ofN() + ' on ' + lvl().name + '.'),
+      summary(),
+      h('p', { class: 'dim' }, !A.run.adRevived && 'Watch an ad to bring it back once, at half health. ', meta.revives > 0 ? 'You hold ' + meta.revives + (meta.revives === 1 ? ' revive.' : ' revives.') : 'Revives are sold in the shop.', ' Otherwise the dead do not return.'),
+      h('div', { class: 'row' }, adBtn('📺 Watch an ad to revive'),
+        meta.revives > 0 && h('button', { class: 'go', onclick: () => { meta.revives--; env.saveMeta(); again(); } }, 'Use a revive'),
+        h('button', { class: meta.revives > 0 || !A.run.adRevived ? '' : 'go', onclick: () => { endRun(); store.set('cc.run', null); finish({ type: 'dead', round: A.run.round, by: A.enemy.name }); } }, meta.revives > 0 ? 'Let it die' : 'Create a new creature'))).classList.add('low', 'wide');
+  }
+  function finish(result) {
+    if (!A.active) return;
+    dropView(0); dropView(1);
+    if (A.confetti) { S.g.remove(A.confetti.mesh); A.confetti.mesh.geometry.dispose(); A.confetti.mesh.material.dispose(); A.confetti.mesh.dispose(); A.confetti = null; }
+    A.active = false; A.phase = 'off'; S.g.visible = false; scene.background = keepBg; env.sun.color.setHex(0xfff2dd); env.sun.intensity = 2.2; fx.clear(); resetBones(env.M); camera.zoom = 1;
+    el.classList.add('hidden'); el.replaceChildren();
+    env.onDone(result);
+  }
+
+  // ---------------------------------------------------------------- per-frame
+  function animate(v, i, dt, t) {
+    const f = A.F && A.F[i], T = zero(), rig = v.rig;
+    const breathe = Math.sin(t * 2 + v.ph);
+    T.sy = 1 + breathe * 0.012; T.y = v.hover ? Math.sin(t * 1.3 + v.ph) * 0.06 : 0;
+    if (v.st.wings) T.flap = v.hover ? 0.3 : 0.05;
+    if (v.walk > 0) {                                   // walking in from the gate
+      const d = Math.min(v.walk, 4.6 * dt); v.walk -= d; v.holder.position.x = v.side * (0.75 + v.walk);
+      T.gait = 1; T.y += Math.abs(Math.sin(rig.gaitPh)) * 0.04; T.pitch = 0.04;
+      v.fxT += dt; if (v.fxT > 0.16) { v.fxT = 0; play('step', 0.35); fx.burst('dust', world(v, new THREE.Vector3(0, 0.05, -v.len * 0.5)), 2, { speed: 0.5 }); }
+    } else if (v.dead >= 0) {                           // collapse and go limp
+      v.dead += dt; const k = Math.min(1, v.dead / 0.75), e = k * k * (3 - 2 * k);
+      Object.assign(T, { roll: 1.48 * e * (i ? -1 : 1), y: Math.sin(e * Math.PI / 2) * v.half * 0.85 + Math.sin(k * Math.PI) * 0.25, z: -0.5 * e, pitch: -0.2 * Math.sin(k * Math.PI), legF: -0.5 * e, legH: 0.55 * e, kneeF: 0.9 * e, kneeH: 0.5 * e, elbow: -0.8 * e, legOut: 0.35 * e, armAll: -0.7 * e, armOut: 0.5 * e, wing: -0.7 * e, tent: -0.6 * e, tailUp: -0.3 * e, wag: 0, flap: 0, sy: 1 - 0.06 * e });
+      if (k >= 0.8 && !v.thud) { v.thud = true; play('thud'); fx.burst('dust', world(v, new THREE.Vector3(0, 0.1, -v.len * 0.5)), 26, { spread: v.len * 0.8 }); A.shake = Math.max(A.shake, 0.18); }
+    } else if (A.phase === 'champion' || (A.phase === 'ending' && A.winner === i && A.phaseT > 0.5)) {   // celebrate
+      const hop = Math.abs(Math.sin(t * 5.5));
+      Object.assign(T, { y: T.y + hop * 0.22, sy: 1 + (hop - 0.5) * 0.08, kneeF: 0.5 * (1 - hop), kneeH: 0.5 * (1 - hop), elbow: -0.3, armAll: -2.7, armOut: 0.35, wing: 0.7, flap: 0.5, tailUp: 0.5, wag: 3, pitch: -0.15, tent: -0.9, legF: -0.25 * hop });
+    } else if (f && A.phase === 'fight') {
+      if (f.st.stun > 0) Object.assign(T, { roll: 0.13 * Math.sin(t * 9), pitch: 0.12, kneeF: 0.35, kneeH: 0.35, elbow: -0.5, legOut: 0.12, armAll: 0.2, wing: -0.3, wag: 0, sy: 0.96 });
+      else {
+        if (v.strikeT < 0 && f.t < 0.45) {
+          if (!v.winding) { v.winding = true; v.style = v.styles[v.styleN++ % v.styles.length]; v.power = f.power; rig.armSel = rig.arms ? (v.styleN % rig.arms) : -1; if (f.power && rig.arms > 1) rig.armSel = -1; }
+          Object.assign(T, strikePose(v.style, 1 - f.t / 0.45, -1, v.power));
+        } else if (v.strikeT < 0) v.winding = false;
+        if (v.strikeT >= 0) {
+          Object.assign(T, strikePose(v.style, 1, v.strikeT, v.power));
+          v.strikeT += dt; if (v.strikeT > STRIKE_LEN) { v.strikeT = -1; v.winding = false; }
+        }
+        if (f.guard > 0) Object.assign(T, { sy: 0.9, pitch: 0.12, armAll: -1.0, elbow: -1.7, kneeF: 0.5, kneeH: 0.5, armOut: 0.3, wing: 0.7, z: (T.z || 0) - 0.12, legF: 0.15, tailUp: -0.2 });
+        if (f.buff.shell > 0) { T.sy = 0.82; T.legOut = 0.2; T.armAll = -0.8; }
+        if (f.buff.frenzy > 0) { T.sy *= 1 + 0.03 * Math.sin(t * 22); T.wag = 4; }
+        if (f.buff.evade > 0) { T.y += 1.3; T.flap = 1; T.pitch = -0.2; }
+      }
+    }
+    if (v.recoil > 0) { v.recoil = Math.max(0, v.recoil - dt * 3.2); const r = v.recoil; T.z = (T.z || 0) - 0.5 * r; T.pitch = (T.pitch || 0) - 0.28 * r; T.roll = (T.roll || 0) + 0.14 * r * Math.sin(t * 30); T.legF = (T.legF || 0) - 0.35 * r; T.armAll = (T.armAll || 0) + 0.5 * r; T.wing = (T.wing || 0) + 0.4 * r; T.sy = T.sy * (1 - 0.06 * r); }
+    if (v.dodge >= 0) { v.dodge += dt * 3.2; if (v.dodge >= 1) v.dodge = -1; else { const d = Math.sin(v.dodge * Math.PI); T.x = (T.x || 0) + 0.95 * d; T.roll = (T.roll || 0) - 0.35 * d; T.z = (T.z || 0) - 0.3 * d; T.gait = 1; } }
+    applyRig(rig, T, dt, v.pose);
+    v.flash = Math.max(0, v.flash - dt * 5);
+    const guard = f && f.guard > 0 ? 0.1 : 0, shell = f && f.buff.shell > 0 ? 0.12 : 0;
+    for (const m of v.glow) m.emissive.setRGB(v.flash * 0.5 + guard * 0.2 + shell, guard * 0.6 + shell, guard + shell);
+    v.holder.updateMatrixWorld(true);
+    // Lingering ailments show on the body.
+    if (f && v.dead < 0 && A.phase === 'fight') {
+      v.fxT += dt;
+      if (v.fxT > 0.07) {
+        v.fxT = 0;
+        const at = () => world(v, new THREE.Vector3((Math.random() - 0.5) * v.half * 1.6, v.mid.y * (0.4 + Math.random() * 1.2), -v.len * Math.random()));
+        if (f.st.burn > 0) fx.burst('fire', at(), 2, { spread: 0.15 });
+        if (f.st.poison > 0 && Math.random() < 0.5) fx.burst('venom', at(), 1, { spread: 0.1 });
+        if (f.st.bleed > 0 && Math.random() < 0.12 * f.st.bleed) fx.burst('blood', at(), 1, { speed: 0.3 });
+        if (f.st.stun > 0) fx.burst('star', world(v, v.head), 1, { spread: 0.5, speed: 0.4 });
+        if (f.shield > 0 && Math.random() < 0.4) fx.burst('shield', at(), 1, { speed: 0.2 });
+        if (f.buff.frenzy > 0) fx.burst('fire', at(), 1, { spread: 0.1, size: 0.6 });
+        if (f.st.blind > 0) fx.burst('ink', world(v, v.head), 1, { spread: 0.4, speed: 0.3, size: 0.6 });
+        if (f.st.slow > 0 && Math.random() < 0.4) fx.burst('web', at(), 1, { speed: 0.2 });
+      }
+    }
+  }
+  function onEvent(ev) {
+    if (ev.type === 'bolt') {
+      const v = A.views[ev.on];
+      if (ev.on === 0) A.hurt = true;
+      if (A.run.sum && ev.on === 0) A.run.sum.taken += ev.dmg;
+      floater(ev.on, '⚡ -' + ev.dmg, 'big'); fx.burst('magic', world(v, v.mid), 30, { spread: 0.8 }); fx.ring(world(v, new THREE.Vector3(0, 0.05, -v.len / 2)), 0xcfe4ff, 2.4);
+      synth('fire'); play('thud', 0.8); if (!calm()) { A.flash = 0.25; A.shake = Math.max(A.shake, 0.25); }
+      return;
+    }
+    if (ev.type === 'dot') {
+      if (ev.on === 0) A.hurt = true;
+      if (A.run.sum) { if (ev.on === 0) A.run.sum.taken += ev.dmg; else A.run.sum.dealt += ev.dmg; }
+      floater(ev.on, '-' + ev.dmg, ev.kind === 'venom' ? 'venom' : ev.kind === 'burn' ? 'burn' : 'bleed');
+      fx.burst(ev.kind === 'venom' ? 'venom' : ev.kind === 'burn' ? 'fire' : 'blood', world(A.views[ev.on], A.views[ev.on].mid), 6); return;
+    }
+    if (ev.type === 'cast') {
+      const me = A.views[ev.by], foe = A.views[1 - ev.by];
+      floater(ev.by, ev.name, 'cast'); synth(ev.name === 'Roar' || ev.name === 'Frenzy' ? 'roar' : 'cast');
+      me.style = 'roar'; me.strikeT = 0; me.power = false;
+      const on = { 'Ink Cloud': ['ink', foe, 26], Web: ['web', foe, 40], 'Venom Spit': ['venom', foe, 26], Roar: ['magic', me, 14], 'Shell Up': ['shield', me, 22], Frenzy: ['fire', me, 22], Dive: ['dust', me, 18] }[ev.name] || ['magic', me, 16];
+      fx.burst(on[0], world(on[1], on[1].mid), on[2], { spread: 0.9 });
+      if (ev.name === 'Roar') { fx.ring(world(me, me.front), 0xffd76a, 3.2, false); A.shake = 0.15; }
+      if (ev.name === 'Shell Up') fx.ring(world(me, new THREE.Vector3(0, 0.05, -me.len / 2)), 0x7fd0ff, 2);
+      return;
+    }
+    if (ev.type === 'heal') { floater(ev.on, ev.name, 'venom'); synth('heal'); fx.burst('heal', world(A.views[ev.on], A.views[ev.on].mid), 30, { spread: 1.1 }); return; }
+    const a = A.views[ev.by], d = A.views[1 - ev.by];
+    if ((ev.by === 1 && ev.dmg > 0) || (ev.by === 0 && (ev.thorns || ev.riposte))) A.hurt = true;
+    const q = A.run.sum;
+    if (q) { if (ev.by === 0) { q.dealt += ev.dmg || 0; q.taken += (ev.thorns || 0) + (ev.riposte || 0); if (ev.dmg > q.big) q.big = ev.dmg; if (ev.crit) q.crits++; } else { q.taken += ev.dmg || 0; q.dealt += (ev.thorns || 0) + (ev.riposte || 0); if (ev.blocked) q.blocks++; } }
+    if (ev.name && ABILITY_STYLE[ev.name]) { const want = ABILITY_STYLE[ev.name]; a.style = (want === 'tail' && !a.rig.kinds.has('tail')) || (want === 'slash' && !a.rig.arms) || (want === 'lash' && !a.rig.kinds.has('tentacle')) ? 'lunge' : want; a.rig.armSel = -1; }
+    a.strikeT = 0; a.power = !!ev.power || !!ev.ability;
+    if (ev.name) floater(ev.by, ev.name, 'cast');
+    if (ev.miss) { floater(1 - ev.by, 'Miss', 'dim'); play('whoosh', 0.8); d.dodge = 0; fx.burst('dust', world(d, new THREE.Vector3(0, 0.05, -d.len * 0.4)), 8); return; }
+    const hard = ev.power || ev.crit || ev.ability, at = world(d, d.front);
+    d.recoil = ev.blocked ? 0.3 : hard ? 1 : 0.6; if (!ev.blocked) d.flash = 1;
+    A.shake = ev.blocked ? 0.05 : ev.power ? 0.3 : hard ? 0.2 : 0.1; A.cheer = Math.max(A.cheer, hard ? 1 : 0.4);
+    A.freeze = ev.blocked ? 0.03 : hard ? 0.09 : 0.045; if (hard && !ev.blocked) A.punch = 0.07;
+    if (ev.blocked) { fx.burst('shield', at, 16); fx.ring(at, 0x7fd0ff, 1.1, false); }
+    else {
+      fx.burst('spark', at, hard ? 22 : 10, { dir: new THREE.Vector3(-a.side, 0.3, 0) });
+      fx.burst('dust', world(d, new THREE.Vector3(0, 0.05, -d.len * 0.4)), hard ? 10 : 4);
+      if (hard) fx.ring(at, ev.crit ? 0xffd76a : 0xffffff, ev.power ? 1.8 : 1.3, false);
+      if (ev.bleed || ev.crit) fx.burst('blood', at, 10);
+      if (ev.burn || ev.name === 'Fire Breath') fx.burst('fire', at, 24, { spread: 0.8 });
+      if (ev.venom) fx.burst('venom', at, 14, { spread: 0.6 });
+      if (ev.stun) fx.burst('star', world(d, d.head), 12, { spread: 0.5 });
+    }
+    floater(1 - ev.by, (ev.blocked ? 'Blocked ' : '') + '-' + ev.dmg + (ev.crit ? '!' : ''), ev.blocked ? 'dim' : hard ? 'big' : '');
+    if (ev.thorns) { floater(ev.by, '-' + ev.thorns, 'dim'); fx.burst('spark', world(a, a.front), 6); }
+    if (ev.riposte) { floater(ev.by, 'Riposte -' + ev.riposte, 'dim'); a.recoil = 0.5; a.flash = 1; }
+    const tag = ev.stun ? 'Stunned' : ev.venom ? 'Poisoned' : ev.burn ? 'Burning' : ev.bleed ? 'Bleeding' : '';
+    if (tag) floater(1 - ev.by, tag, ev.venom ? 'venom' : ev.burn ? 'burn' : 'bleed');
+    if (ev.blocked) play('block', 0.9); else { play(hard ? 'heavy' : 'hit', hard ? 1 : 0.8); if (a.style === 'slash' || a.style === 'swipe' || a.style === 'sting') play('slash', 0.6); if (ev.burn || ev.name === 'Fire Breath') synth('fire'); }
+  }
+  A.update = (real, t) => {
+    // Heavy hits freeze the action for an instant; a kill plays out in slow motion.
+    let dt = real;
+    if (calm()) A.freeze = A.slow = 0;
+    if (A.freeze > 0) { A.freeze -= real; dt = real * 0.05; }
+    if (A.slow > 0) { A.slow -= real; dt *= 0.3; }
+    A.t += dt; A.phaseT += dt;
+    if (A.phase === 'intro' && A.phaseT > (A.introLen || 1.9)) {
+      const go = () => { A.phase = 'fight'; A.phaseT = 0; message('Fight!', ''); setTimeout(() => A.phase === 'fight' && message('', ''), 700); };
+      if (!env.meta().tutFight && !window.__ccPause) {     // first fight ever: explain the two buttons before it starts
+        A.phase = 'tip'; message('', '');
+        const p = panel(h('h2', null, 'How fights work'),
+          h('p', null, 'Your critter attacks by itself. You help with two buttons:'),
+          h('p', null, h('b', null, '⚔️ Power'), ' makes its next attack hit more than twice as hard.'),
+          h('p', null, h('b', null, '🛡️ Guard'), ' blocks most of a hit. Press it just as the enemy rears back to strike.'),
+          h('p', { class: 'dim' }, 'Both need a few seconds to recharge. Later you will win abilities with buttons of their own.'),
+          h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => { env.meta().tutFight = 1; env.saveMeta(); env.track('tutorial', { step: 'fight' }); p.remove(); go(); } }, 'Got it')));
+      } else go();
+    }
+    if (A.phase === 'fight') {
+      const evs = A.queue.splice(0), skill = Math.min(0.6, 0.15 + 0.035 * A.run.round);
+      let w = -1;
+      for (let k = 0; k < 2 && w < 0; k++) { ai(A.F, 1, dt / 2, A.rand, skill, evs); if (A.auto) ai(A.F, 0, dt / 2, A.rand, 0.5, evs); w = step(A.F, dt / 2, A.rand, evs); }
+      evs.forEach(onEvent); bars();
+      if (w >= 0) { A.phase = 'ending'; A.phaseT = 0; A.winner = w; A.views[1 - w].dead = 0; A.cheer = 3; A.slow = 0.9; A.punch = 0.14; message('K.O.', ''); synth('crowd'); if (w === 0) synth('level'); }
+    }
+    if (A.phase === 'ending' && A.phaseT > 2.1) { if (A.winner === 0) wonFight(); else died(); }
+    for (let i = 0; i < 2; i++) if (A.views[i]) animate(A.views[i], i, dt, A.t);
+    fx.resize(window.innerHeight); fx.update(dt); blowAir(dt, A.t);
+    if (A.flash > 0) { A.flash -= real; env.sun.intensity = (S.LOOK[A.venue ? A.venue.id : 'sands'] || S.LOOK.sands).power * (1 + 3 * Math.max(0, A.flash) / 0.25); }
+    if (calm()) { A.shake = 0; A.punch = 0; }
+    // Crowd bounce, camera sway and shake.
+    A.cheer = Math.max(0, A.cheer - dt * 0.8);
+    const amp = 0.03 + 0.14 * Math.min(A.cheer, 1);
+    A.tick = (A.tick || 0) + 1;
+    if (A.tick % 2 === 0) S.seats.forEach((s, i) => { S.m4.makeTranslation(s.x, s.y + Math.abs(Math.sin(t * 6 * (1 + (i % 5) * 0.2) + s.ph)) * amp, s.z); S.crowd.setMatrixAt(i, S.m4); });
+    if (A.tick % 2 === 0) S.crowd.instanceMatrix.needsUpdate = true;
+    if (A.confetti) {
+      A.confetti.bits.forEach((b, i) => { b.y -= b.v * dt; if (b.y < 0) b.y = 8; S.m4.makeRotationFromEuler(new THREE.Euler(b.r + A.t * b.w, b.r * 2 + A.t * b.w * 0.7, 0)).setPosition(b.x + Math.sin(A.t + b.r) * 0.3, b.y, b.z); A.confetti.mesh.setMatrixAt(i, S.m4); });
+      A.confetti.mesh.instanceMatrix.needsUpdate = true;
+    }
+    A.shake = Math.max(0, A.shake - real * 1.2);
+    const narrow = clamp(1.9 / camera.aspect, 1, 1.6);
+    const win = A.phase === 'champion';
+    A.punch = Math.max(0, A.punch - real * 0.35);
+    if (Math.abs(camera.zoom - (1 + A.punch)) > 0.0005) { camera.zoom = 1 + A.punch; camera.updateProjectionMatrix(); }
+    camera.position.set(Math.sin(A.t * 0.25) * 0.8 + (Math.random() - 0.5) * A.shake, (win ? 1.5 : 1.9) + (Math.random() - 0.5) * A.shake, (win ? 7.2 : 7.1) * narrow);
+    camera.lookAt(0, win ? -0.25 : 1.05, 0);          // on the champion screen the panel sits low, so frame the creature high
+  };
+  /** Start (or resume) a gauntlet with this creature. */
+  A.start = (data, run) => {
+    A.data = data; A.active = true; A.t = 0; A.enemy = null; A.F = null; A.entered = false; A.freeze = A.slow = A.punch = 0;
+    env.sun.target.position.set(0, 0, 0); env.sun.position.set(3, 7, 5);
+    A.run = run || { id: data.id, round: 0, hp: null, level: Math.min(env.meta().levelSel || 0, env.meta().level || 0), endless: !!(env.meta().endlessSel && env.meta().champions), seed: Math.floor(Math.random() * 1e9), load: newLoad(), bonusHp: 0, earned: 0, rerolls: env.meta().boosts.reroll || 0, draft: null };
+    if (!A.run.load) A.run.load = newLoad();
+    A.eLoad = null; A.queue = [];
+    keepBg = scene.background; S.g.visible = true; A.venue = VENUES[0]; applyVenue(A.venue); music('battle');
+    el.classList.remove('hidden');
+    A.views[0] = makeView(data, env.M, -1, A.run.load);
+    // Coming back after the app was closed. A death stays a death; walking out mid-fight is forgiven once.
+    const walkedOut = A.run.fighting && A.run.retried;
+    if (A.run.dead || walkedOut) { nextFight(); A.phase = 'ending'; A.F[0].hp = 0; A.views[0].dead = 5; A.views[1].walk = 0; A.views[1].holder.position.x = 0.75; message('', ''); died(); }
+    else if (A.run.draft) reward('Back to the sands', 'Choose your reward:');
+    else if (A.run.round > 0 || A.run.paid) {
+      const again = !!A.run.fighting;
+      if (again) { A.run.retried = true; saveRun(); }
+      A.phase = 'won'; el.replaceChildren();
+      panel(h('h2', null, 'Back to the sands'), h('p', null, A.data.name + ' has won ' + A.run.round + ofN() + ' fights' + (A.run.hp != null ? ' and has ' + Math.round(A.run.hp) + ' health.' : '.')),
+        again && h('p', { class: 'warn' }, 'You left in the middle of a fight, so it starts again. That is forgiven once per gauntlet: leave mid-fight again and it counts as a death.'),
+        h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => enter() }, 'Next fight')));
+    } else gate();
+  };
+  A.setVenue = (id) => { A.venue = venue(id); applyVenue(A.venue); if (A.F) A.F.field = A.venue.field || null; };      // for tests and screenshots
+  A.back = () => { if (A.phase === 'gate') finish({ type: 'back' }); return true; };
+  return A;
+}

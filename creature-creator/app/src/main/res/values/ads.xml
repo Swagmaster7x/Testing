@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      These are Google's public TEST IDs. They always show test ads and earn nothing.
+      Before publishing, replace all three with the IDs from your own AdMob account
+      (AdMob > Apps > your app > App settings, and Ad units > your rewarded and interstitial units).
+      Never tap real ads on your own device: add it as a test device in AdMob instead.
+    -->
+    <string name="admob_app_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_rewarded_id" translatable="false">ca-app-pub-3940256099942544/5224354917</string>
+    <string name="admob_interstitial_id" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
+</resources>
