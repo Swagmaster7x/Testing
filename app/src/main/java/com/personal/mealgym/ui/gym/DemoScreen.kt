@@ -40,6 +40,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.AppContainer
+import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.data.Demo
 import com.personal.mealgym.data.DemoRepository
 import com.personal.mealgym.ui.AppNavigator
@@ -107,7 +108,10 @@ fun DemoScreen(nav: AppNavigator, vm: DemoViewModel = viewModel(factory = AppVie
                     )
                 }
                 is Demo.Cues -> {
-                    Text("No photo for this one, so here are three quick form cues.", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (BuildConfig.STORE) "Three quick form cues." else "No photo for this one, so here are three quick form cues.",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
                     demo.cues.forEachIndexed { i, cue ->
                         Row {
                             Text("${i + 1}.", modifier = Modifier.width(28.dp), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)

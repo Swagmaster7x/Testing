@@ -24,19 +24,19 @@ class ProfileRepository(
      * saves their training days. Returns the new person's id.
      */
     suspend fun create(profile: Profile, template: WorkoutTemplate?, trainingDays: Set<DayOfWeek>): Long {
-        val id = db.withTransaction {
-            val id = dao.maxId() + 1
-            dao.upsert(profile.copy(id = id, name = profile.name.trim(), templateKey = template?.key))
+        val id = dao.maxId() + 1
+        // Settings first: the app opens a person's screens as soon as their profile exists.
+        // A deleted person's id can come back, so start from clean settings.
+        settings.forget(id)
+        settings.setTrainingWeekdays(id, trainingDays)
+        settings.setChime(id, true)
+        db.withTransaction {
             template?.days?.forEach { d ->
                 val dayId = db.workoutDao().insertDay(SeedParser.dayOf(d, id))
                 db.workoutDao().insertExercises(SeedParser.exercisesOf(d, dayId))
             }
-            id
+            dao.upsert(profile.copy(id = id, name = profile.name.trim(), templateKey = template?.key))
         }
-        // A deleted person's id can come back; start from clean settings.
-        settings.forget(id)
-        settings.setTrainingWeekdays(id, trainingDays)
-        settings.setChime(id, true)
         return id
     }
 
