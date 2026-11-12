@@ -11,6 +11,7 @@ import com.personal.mealgym.data.PlanTransfer
 import com.personal.mealgym.data.ProfileRepository
 import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.RecipePacks
+import com.personal.mealgym.data.RestaurantRepository
 import com.personal.mealgym.data.SettingsRepository
 import com.personal.mealgym.data.SideState
 import com.personal.mealgym.data.db.AppDatabase
@@ -56,6 +57,7 @@ class AppContainer(context: Context) {
     val packs = RecipePacks(db, appContext.contentResolver)
     val planTransfer = PlanTransfer(db, packs, appContext.contentResolver)
     val demos = DemoRepository(appContext)
+    val restaurants = RestaurantRepository(appContext)
     val workoutDraft = WorkoutDraftStore(File(appContext.filesDir, "workout-draft.json"), appScope)
     val restTimer = RestTimerController(appContext, appScope)
     val monetization: Monetization = createMonetization(appContext, appScope, settings)

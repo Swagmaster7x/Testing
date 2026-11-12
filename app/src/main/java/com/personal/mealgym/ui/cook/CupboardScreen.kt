@@ -55,6 +55,7 @@ import com.personal.mealgym.domain.CupboardItem
 import com.personal.mealgym.domain.CupboardMatch
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.RecipeSwaps
+import com.personal.mealgym.domain.Search
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.AppViewModels
@@ -199,7 +200,7 @@ fun CupboardScreen(nav: AppNavigator, vm: CupboardViewModel = viewModel(factory 
                     )
                 }
                 val q = query.trim()
-                val shown = state.items.filter { q.isEmpty() || it.name.contains(q, ignoreCase = true) }
+                val shown = state.items.filter { Search.matches(it.name, q) }
                 if (shown.isEmpty()) {
                     item {
                         EmptyState(

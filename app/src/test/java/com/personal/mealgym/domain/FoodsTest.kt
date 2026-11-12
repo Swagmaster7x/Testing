@@ -72,6 +72,38 @@ class FoodsTest {
         assertEquals(setOf(Avoid.FISH), has("tuna steaks"))
     }
 
+    @Test
+    fun foodsFromAroundTheWorld() {
+        assertEquals(setOf(Avoid.GLUTEN), has("baguette"))
+        assertEquals(setOf(Avoid.GLUTEN), has("whole-wheat sub rolls"))
+        assertEquals(setOf(Avoid.GLUTEN), has("rye bread"))
+        assertEquals(setOf(Avoid.GLUTEN), has("bulgur"))
+        assertEquals(setOf(Avoid.GLUTEN), has("naan"))
+        assertEquals(setOf(Avoid.GLUTEN), has("orzo"))
+        assertEquals(setOf(Avoid.SESAME), has("za'atar"))
+        assertEquals(setOf(Avoid.SESAME), has("tahini"))
+        assertEquals(setOf(Avoid.DAIRY), has("halloumi, sliced"))
+        assertEquals(setOf(Avoid.DAIRY), has("paneer"))
+        assertEquals(setOf(Avoid.DAIRY), has("goat cheese"))
+        assertEquals(setOf(Avoid.DAIRY), has("light sour cream"))
+        assertEquals(setOf(Avoid.SOY), has("miso paste"))
+        assertEquals(setOf(Avoid.GLUTEN, Avoid.SOY), has("hoisin sauce"))
+        assertEquals(setOf(Avoid.FISH), has("sardines"))
+        assertEquals(setOf(Avoid.FISH), has("haddock"))
+        assertEquals(setOf(Avoid.FISH), has("Worcestershire sauce"))
+        assertEquals(setOf(Avoid.TREE_NUT), has("pine nuts"))
+        assertEquals(setOf(Avoid.PEANUT), has("peanut butter"))
+        assertEquals(setOf(Avoid.PORK), has("Canadian bacon"))
+        assertEquals(setOf(Avoid.PORK), has("lean ham"))
+        assertEquals(setOf(Avoid.POULTRY), has("andouille chicken sausage"))
+        assertEquals(setOf(Avoid.POULTRY), has("turkey kielbasa"))
+        // Corn, rice and seeds that sound like something else.
+        for (plain in listOf("masa harina", "cornmeal", "quick grits", "corn tortillas", "rice noodles", "rolled cabbage",
+            "unsweetened shredded coconut", "light coconut milk", "pumpkin seeds", "nori", "sumac", "berbere", "plantains")) {
+            assertEquals(plain, emptySet<Avoid>(), has(plain))
+        }
+    }
+
     private fun ing(name: String) = Ingredient(recipeId = 1, position = 0, name = name, storeSection = StoreSection.PANTRY)
 
     @Test

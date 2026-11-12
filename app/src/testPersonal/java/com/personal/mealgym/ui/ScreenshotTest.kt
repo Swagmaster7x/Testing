@@ -246,6 +246,30 @@ class ScreenshotTest {
     }
 
     @Test
+    fun whatAreYouCraving() {
+        fun scrollTo(text: String) =
+            compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText(text, substring = true))
+        tab("Cook")
+        waitForText("What are you craving?")
+        compose.onAllNodesWithText("What are you craving?").onFirst().performClick()
+        waitForText("Eating out")
+        shot("80-cravings")
+        scrollTo("Panda Express")
+        compose.onAllNodesWithText("Panda Express").onFirst().performClick()
+        waitForText("Better picks")
+        shot("81-restaurant")
+        scrollTo("Make it at home")
+        // A recipe written for the list, and one that was already in the library.
+        scrollTo("String bean chicken stir-fry")
+        scrollTo("Beef and broccoli")
+        scrollTo("Like the Broccoli Beef")
+        shot("82-restaurant-make-it-at-home")
+        compose.onAllNodesWithText("Beef and broccoli").onFirst().performClick()
+        waitForText("Like the Broccoli Beef at Panda Express")
+        shot("83-recipe-like")
+    }
+
+    @Test
     fun swagTriesANewLookAndGoesBack() {
         fun swag() = container.profiles.value.single { it.id == TestPeople.SWAG }
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()

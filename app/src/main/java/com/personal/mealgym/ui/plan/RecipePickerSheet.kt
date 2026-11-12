@@ -40,6 +40,7 @@ import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.LocalCopy
 import com.personal.mealgym.data.LibraryFilter
+import com.personal.mealgym.domain.Search
 import com.personal.mealgym.domain.WeekFiller
 import com.personal.mealgym.ui.accepts
 import com.personal.mealgym.ui.components.LibraryFilterBar
@@ -75,7 +76,7 @@ fun RecipePickerSheet(
         .filter { WeekFiller.matches(it, filter) }
         .filter { r ->
             val q = query.trim()
-            q.isEmpty() || r.name.contains(q, ignoreCase = true) || r.cuisineTags.any { it.contains(q, ignoreCase = true) }
+            Search.matches(r.name, q) || r.cuisineTags.any { Search.matches(it, q) }
         }
         .sortedWith(compareBy<Recipe> { !it.isFavorite }.thenBy { it.mealType.ordinal }.thenBy { it.name.lowercase() })
 

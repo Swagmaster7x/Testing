@@ -78,6 +78,9 @@ data class ProteinSwap(
     val replace: String? = null,
     /** What goes in instead, e.g. "flank steak, sliced thin". */
     val with: String? = null,
+    /** How much of it, when the original amount doesn't carry over (2 cans of chickpeas for 1 1/2 lb chicken). */
+    val quantity: Double? = null,
+    val unit: String? = null,
     /** Cooking change, e.g. "Roast 10–12 minutes." */
     val note: String? = null,
     /** Instead of swapping, point to another recipe (seed key), e.g. Carne guisada. */

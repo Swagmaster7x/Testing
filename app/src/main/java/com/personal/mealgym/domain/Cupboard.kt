@@ -3,6 +3,7 @@ package com.personal.mealgym.domain
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.StoreSection
+import java.util.concurrent.ConcurrentHashMap
 
 /** Something that can be ticked as "in my cupboard". [key] is what's stored. */
 data class CupboardItem(val key: String, val name: String, val section: StoreSection)
@@ -31,7 +32,7 @@ object Cupboard {
     private val descriptors = Regex(
         "\\b(?:low-sodium|reduced-sodium|nonfat|non-fat|low-fat|reduced-fat|light|unsweetened|frozen|cooked|boneless|skinless|" +
             "lean|extra-lean|baby|fresh|canned|ready-to-drink|liquid|vanilla|thin-sliced|large|small|medium|plain|ripe|" +
-            "extra-virgin|jasmine|basmati|white(?= rice)|long-grain|shredded|grated|chopped|sliced|minced|dried|ground(?= (?:cumin|" +
+            "extra-virgin|jasmine|basmati|white(?= rice)|long-grain|shredded|grated|chopped|sliced|minced|(?<!-)dried|ground(?= (?:cumin|" +
             "cinnamon|ginger|allspice|coriander|turmeric|pepper))|\\d+% lean)\\b",
     )
 
@@ -64,10 +65,23 @@ object Cupboard {
         return stripped.ifEmpty { name.lowercase().trim() }
     }
 
+    private val leave = Regex("\\bleave$")
+    private val grit = Regex("\\bgrit$")
+
+    /** Keys already worked out. The same few hundred names come up across the whole library. */
+    private val keys = ConcurrentHashMap<String, String>()
+
     /** The plain food name used for matching, singular: "garlic cloves" -> "garlic", "eggs" -> "egg". */
-    fun key(name: String): String =
-        // "bay leaves" would otherwise come out as "bay leave".
-        ShoppingList.ingredientKey(plain(name)).replace(Regex("\\bleave$"), "leaf")
+    fun key(name: String): String {
+        keys[name]?.let { return it }
+        // "bay leaves" would otherwise come out as "bay leave", and "grits" as "grit".
+        val key = ShoppingList.ingredientKey(plain(name)).replace(leave, "leaf").replace(grit, "grits")
+        if (keys.size >= MAX_KEYS) keys.clear()
+        keys[name] = key
+        return key
+    }
+
+    private const val MAX_KEYS = 4000
 
     /** The foods an ingredient line names; more than one for "X or Y". */
     private fun parts(name: String): List<String> {

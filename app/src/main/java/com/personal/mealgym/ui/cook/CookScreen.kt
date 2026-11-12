@@ -34,14 +34,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.personal.mealgym.R
 import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
+import com.personal.mealgym.domain.Search
 import com.personal.mealgym.domain.WeekFiller
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.LibraryFilterBar
@@ -79,7 +82,7 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
             .filter { showAvoided == (it.id in conflicts) }
             .filter { type == null || it.mealType == type }
             .filter { WeekFiller.matches(it, filter) }
-            .filter { r -> q.isEmpty() || r.name.contains(q, true) || r.cuisineTags.any { it.contains(q, true) } }
+            .filter { r -> Search.matches(r.name, q) || r.cuisineTags.any { Search.matches(it, q) } }
             .sortedWith(compareBy<Recipe> { !it.isFavorite }.thenBy { it.mealType.ordinal }.thenBy { it.name.lowercase() })
         val cuisines = state.all.flatMap { it.cuisineTags }.distinct().sorted()
 
@@ -103,6 +106,15 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
                 ) {
                     Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
                     Text("What can I make from my cupboard?")
+                }
+            }
+            item {
+                OutlinedButton(
+                    onClick = nav::cravings,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                ) {
+                    Icon(painterResource(R.drawable.ic_restaurant), contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("What are you craving?")
                 }
             }
             if (state.thisWeek.isNotEmpty() && q.isEmpty() && type == null) {

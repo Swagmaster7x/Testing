@@ -84,6 +84,8 @@ data class RecipeUi(
     val easierTips: List<String> = emptyList(),
     /** The person's lunch and dinner portion, when it isn't a whole serving. */
     val portion: Double = 1.0,
+    /** "Like the chili at Wendy's": the restaurant food this is a home version of. */
+    val inspirations: List<String> = emptyList(),
 ) {
     /** Coffee-shop orders and the like: nothing to cook or buy. */
     val isOrderOnly: Boolean get() = recipe.steps.isEmpty() && ingredients.isEmpty()
@@ -115,6 +117,7 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
                     portion = person.portion,
                     contains = Foods.inRecipe(r.recipe, r.ingredients),
                     conflicts = Foods.inRecipe(r.recipe, r.ingredients) intersect person.answers?.avoids.orEmpty(),
+                    inspirations = c.restaurants.file.inspirations(r.recipe.seedKey),
                 ),
             )
         }

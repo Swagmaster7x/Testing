@@ -1,5 +1,6 @@
 package com.personal.mealgym
 
+import com.personal.mealgym.data.RestaurantRepository
 import com.personal.mealgym.data.seed.SeedParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,7 +25,7 @@ class StoreSeedTest {
     fun hasNothingPersonal() {
         for (word in listOf("Ashley", "Swag", "Starbucks")) assertFalse(word, text.contains(word))
         assertTrue(seed.recipes.none { it.onlyFor != null })
-        assertEquals(67, seed.recipes.size)
+        assertEquals(181, seed.recipes.size)
     }
 
     @Test
@@ -41,5 +42,17 @@ class StoreSeedTest {
     @Test
     fun recipeKeysAreUnique() {
         assertEquals(seed.recipes.size, seed.recipes.map { it.key }.toSet().size)
+    }
+
+    @Test
+    fun everyHomeVersionOnTheRestaurantListIsInTheLibrary() {
+        val recipes = seed.recipes.associateBy { it.key }
+        val places = RestaurantRepository.parse(File("src/main/assets/restaurants.json").readText()).restaurants
+        val linked = places.flatMap { p -> p.copycats.map { it.recipe } }.toSet()
+        for (key in linked) assertTrue(key, key in recipes)
+        // Recipes written as home versions are tagged, and every tagged one says what it is like.
+        val tagged = seed.recipes.filter { RestaurantRepository.COPYCAT_TAG in it.cuisineTags }.map { it.key }.toSet()
+        assertEquals(tagged, linked.filter { it.startsWith("CC") }.toSet())
+        assertEquals(14, tagged.size)
     }
 }

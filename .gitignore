@@ -16,3 +16,4 @@
 keystore.properties
 *.jks
 upload-keystore*
+__pycache__/

@@ -199,6 +199,9 @@ private fun RecipeContent(
                     recipe.cuisineTags.forEach { Badge(it) }
                     if (recipe.isMealPrep) Badge("Meal-prep · makes ${recipe.slotsPerCook}")
                 }
+                ui.inspirations.forEach { line ->
+                    Text(line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
                 Text(
                     listOf("Serves ${recipe.servings}", recipe.servingSizeText).filter { it.isNotBlank() }.joinToString(" · "),
                     style = MaterialTheme.typography.bodyLarge,

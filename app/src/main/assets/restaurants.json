@@ -1,0 +1,707 @@
+{
+ "asOf": "November 2026",
+ "restaurants": [
+  {
+   "key": "mcdonalds",
+   "name": "McDonald's",
+   "kind": "Burgers and breakfast",
+   "search": "McDonald's nutrition",
+   "picks": [
+    {
+     "name": "Egg McMuffin",
+     "about": "about 310 cal, 17 g protein",
+     "note": "One of the better breakfast sandwiches anywhere.",
+     "has": [
+      "EGG",
+      "DAIRY",
+      "GLUTEN",
+      "PORK"
+     ]
+    },
+    {
+     "name": "Hamburger",
+     "about": "about 250 cal, 12 g protein",
+     "note": "Two of them still come in under most of the big burgers.",
+     "has": [
+      "BEEF",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "McDouble",
+     "about": "about 390 cal, 22 g protein",
+     "note": "The most protein for the calories on the burger menu.",
+     "has": [
+      "BEEF",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Chicken McNuggets, 6 piece",
+     "about": "about 250 cal, 14 g protein",
+     "note": "Dipping sauces add up: some are over 100 calories each.",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Fruit & Maple Oatmeal",
+     "about": "about 320 cal, 6 g protein",
+     "note": "Filling, but low in protein. Ask for it without the brown sugar.",
+     "has": [
+      "DAIRY",
+      "GLUTEN"
+     ]
+    }
+   ],
+   "tips": [
+    "Fries and a regular soda can double the calories of a meal. Go for water, unsweetened tea or a diet drink.",
+    "Order from the regular menu instead of a meal, then add apple slices if you want a side.",
+    "Ask for no mayo or no cheese: every sandwich is made to order."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC1",
+     "like": "the Egg McMuffin"
+    },
+    {
+     "recipe": "B8",
+     "like": "the Sausage Burrito"
+    },
+    {
+     "recipe": "D5",
+     "like": "a cheeseburger"
+    }
+   ]
+  },
+  {
+   "key": "chick-fil-a",
+   "name": "Chick-fil-A",
+   "kind": "Chicken",
+   "search": "Chick-fil-A nutrition",
+   "picks": [
+    {
+     "name": "Grilled Nuggets, 8 count",
+     "about": "about 130 cal, 25 g protein",
+     "note": "About as lean as fast food gets.",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
+     "name": "Egg White Grill",
+     "about": "about 300 cal, 27 g protein",
+     "note": "Grilled chicken, egg whites and cheese on an English muffin.",
+     "has": [
+      "POULTRY",
+      "EGG",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Grilled Chicken Sandwich",
+     "about": "roughly 320 to 390 cal, 28 g protein",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Grilled Cool Wrap",
+     "about": "about 350 cal, 42 g protein",
+     "note": "Before dressing.",
+     "has": [
+      "POULTRY",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Market Salad with grilled chicken",
+     "about": "about 320 cal, 28 g protein",
+     "note": "Before dressing. Has nuts and granola in the toppings.",
+     "has": [
+      "POULTRY",
+      "DAIRY",
+      "TREE_NUT"
+     ]
+    }
+   ],
+   "tips": [
+    "Grilled nuggets have about half the calories of the breaded ones, with as much protein.",
+    "The sauces are where it adds up: one tub of the signature sauce is about 140 calories. Barbecue or buffalo are far lighter.",
+    "Swap the waffle fries for a fruit cup, a side salad or the kale salad."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC2",
+     "like": "the Grilled Nuggets"
+    },
+    {
+     "recipe": "CC3",
+     "like": "the Grilled Chicken Sandwich"
+    }
+   ]
+  },
+  {
+   "key": "chipotle",
+   "name": "Chipotle",
+   "kind": "Burrito bowls",
+   "search": "Chipotle nutrition",
+   "picks": [
+    {
+     "name": "Chicken",
+     "about": "about 180 cal, 32 g protein a serving",
+     "note": "The best protein for the calories on the line.",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
+     "name": "Steak",
+     "about": "about 150 cal, 21 g protein a serving",
+     "has": [
+      "BEEF"
+     ]
+    },
+    {
+     "name": "Sofritas (braised tofu)",
+     "about": "about 150 cal, 8 g protein a serving",
+     "has": [
+      "SOY"
+     ]
+    },
+    {
+     "name": "Black beans",
+     "about": "about 130 cal, 8 g protein a serving",
+     "note": "Fiber and protein together.",
+     "has": []
+    },
+    {
+     "name": "Fajita veggies",
+     "about": "about 20 cal a serving",
+     "note": "Always worth adding.",
+     "has": []
+    },
+    {
+     "name": "Brown rice",
+     "about": "about 210 cal, 4 g protein a serving",
+     "note": "Ask for half if you want room for beans.",
+     "has": []
+    }
+   ],
+   "tips": [
+    "Get a bowl or a salad: the burrito tortilla alone is about 300 calories.",
+    "A solid bowl: chicken, black beans, fajita veggies, fresh tomato salsa and lettuce, with half rice.",
+    "Pick one of cheese, sour cream, queso or guacamole, not all of them.",
+    "Chips are a meal's worth of calories on their own. Share them or skip them."
+   ],
+   "copycats": [
+    {
+     "recipe": "L9",
+     "like": "a chicken burrito bowl"
+    },
+    {
+     "recipe": "CC4",
+     "like": "a Sofritas bowl"
+    }
+   ]
+  },
+  {
+   "key": "subway",
+   "name": "Subway",
+   "kind": "Subs",
+   "search": "Subway nutrition",
+   "picks": [
+    {
+     "name": "Oven-Roasted Turkey, 6 inch",
+     "about": "about 270 cal, 20 g protein",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Rotisserie-Style Chicken, 6 inch",
+     "about": "about 310 cal, 24 g protein",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Grilled Chicken, 6 inch",
+     "about": "roughly 300 to 330 cal, 27 g protein",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Veggie Delite, 6 inch",
+     "about": "about 210 cal, 9 g protein",
+     "note": "Add egg or double the vegetables to make it a meal.",
+     "has": [
+      "GLUTEN"
+     ]
+    }
+   ],
+   "tips": [
+    "These figures are for a 6-inch sub on multigrain bread with vegetables, before cheese and sauce.",
+    "Mustard, vinegar or a little oil instead of mayo or ranch.",
+    "Ask for every vegetable. They are free and they fill the sub out.",
+    "Any sub can be made as a salad or a bowl with no bread."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC5",
+     "like": "a turkey sub"
+    }
+   ]
+  },
+  {
+   "key": "taco-bell",
+   "name": "Taco Bell",
+   "kind": "Tacos and burritos",
+   "search": "Taco Bell nutrition",
+   "picks": [
+    {
+     "name": "Chicken Soft Taco",
+     "about": "about 160 cal, 12 g protein",
+     "has": [
+      "POULTRY",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Crunchy Taco",
+     "about": "about 170 cal, 8 g protein",
+     "has": [
+      "BEEF",
+      "DAIRY"
+     ]
+    },
+    {
+     "name": "Bean Burrito",
+     "about": "roughly 360 to 380 cal, 13 g protein",
+     "note": "A filling meatless choice.",
+     "has": [
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Cantina Chicken Bowl",
+     "about": "roughly 480 to 580 cal, 25 g protein",
+     "note": "The most complete meal on the menu.",
+     "has": [
+      "POULTRY",
+      "DAIRY"
+     ]
+    }
+   ],
+   "tips": [
+    "Ask for anything \"Fresco style\": pico de gallo replaces the cheese and creamy sauces.",
+    "Two tacos and a side of black beans beats most of the big burritos.",
+    "The frozen and fountain drinks can have more calories than the food."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC6",
+     "like": "a Crunchwrap Supreme"
+    },
+    {
+     "recipe": "L12",
+     "like": "the tacos, in lettuce and not a shell"
+    }
+   ]
+  },
+  {
+   "key": "wendys",
+   "name": "Wendy's",
+   "kind": "Burgers and chili",
+   "search": "Wendy's nutrition",
+   "picks": [
+    {
+     "name": "Chili, small",
+     "about": "roughly 250 to 280 cal, 15 to 19 g protein",
+     "note": "Beans and beef: more fiber than anything else here.",
+     "has": [
+      "BEEF"
+     ]
+    },
+    {
+     "name": "Jr. Hamburger",
+     "about": "roughly 250 to 270 cal, 13 g protein",
+     "has": [
+      "BEEF",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Plain baked potato",
+     "about": "about 270 cal, 7 g protein",
+     "note": "A far better side than fries. Go easy on the toppings.",
+     "has": []
+    }
+   ],
+   "tips": [
+    "A small chili with a plain baked potato is a full meal for about the calories of one large burger.",
+    "The salads are good choices with grilled chicken. Use half the dressing packet.",
+    "A small Frosty is still a dessert: have it sometimes, not with every order."
+   ],
+   "copycats": [
+    {
+     "recipe": "D16",
+     "like": "the chili"
+    },
+    {
+     "recipe": "D5",
+     "like": "a cheeseburger"
+    }
+   ]
+  },
+  {
+   "key": "starbucks",
+   "name": "Starbucks",
+   "kind": "Coffee shop",
+   "search": "Starbucks nutrition",
+   "picks": [
+    {
+     "name": "Egg White & Roasted Red Pepper Egg Bites",
+     "about": "about 170 cal, 12 g protein",
+     "has": [
+      "EGG",
+      "DAIRY"
+     ]
+    },
+    {
+     "name": "Spinach, Feta & Egg White Wrap",
+     "about": "about 290 cal, 20 g protein",
+     "has": [
+      "EGG",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Turkey Bacon, Cheddar & Egg White Sandwich",
+     "about": "about 230 cal, 17 g protein",
+     "has": [
+      "POULTRY",
+      "EGG",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Kale & Mushroom Egg Bites",
+     "about": "about 230 cal, 15 g protein",
+     "has": [
+      "EGG",
+      "DAIRY"
+     ]
+    },
+    {
+     "name": "Rolled & Steel-Cut Oatmeal, plain",
+     "about": "about 160 cal, 5 g protein",
+     "note": "Add the nuts for staying power; go light on the brown sugar.",
+     "has": [
+      "GLUTEN"
+     ]
+    }
+   ],
+   "tips": [
+    "The drinks are where it adds up. Ask for fewer pumps of syrup and skip the whipped cream.",
+    "Brewed coffee, an Americano, cold brew and unsweetened tea are all close to zero calories.",
+    "Pair a lighter drink with something that has protein, so breakfast lasts."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC7",
+     "like": "the Egg White & Roasted Red Pepper Egg Bites"
+    },
+    {
+     "recipe": "CC8",
+     "like": "the Spinach, Feta & Egg White Wrap"
+    }
+   ]
+  },
+  {
+   "key": "panera",
+   "name": "Panera Bread",
+   "kind": "Soups, salads and sandwiches",
+   "search": "Panera Bread nutrition",
+   "picks": [
+    {
+     "name": "Turkey Chili, cup",
+     "about": "about 210 cal, 11 to 18 g protein",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
+     "name": "Chicken Noodle Soup, cup",
+     "about": "roughly 110 to 130 cal, 10 g protein",
+     "has": [
+      "POULTRY",
+      "GLUTEN",
+      "EGG"
+     ]
+    },
+    {
+     "name": "Greek Salad with chicken, half",
+     "about": "about 250 cal, 17 g protein",
+     "has": [
+      "POULTRY",
+      "DAIRY"
+     ]
+    }
+   ],
+   "tips": [
+    "Use \"You Pick 2\": a cup of broth-based soup with half a salad.",
+    "Choose the apple instead of chips or the baguette as your side.",
+    "The creamy soups and the bread bowls carry far more calories than the broth-based soups."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC9",
+     "like": "the Broccoli Cheddar Soup"
+    },
+    {
+     "recipe": "S7",
+     "like": "a vegetable soup"
+    },
+    {
+     "recipe": "L10",
+     "like": "a Mediterranean grain bowl"
+    }
+   ]
+  },
+  {
+   "key": "panda-express",
+   "name": "Panda Express",
+   "kind": "Chinese-American",
+   "search": "Panda Express nutrition",
+   "picks": [
+    {
+     "name": "String Bean Chicken Breast",
+     "about": "roughly 160 to 210 cal, 12 g protein",
+     "has": [
+      "POULTRY",
+      "SOY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Grilled Teriyaki Chicken",
+     "about": "roughly 300 to 340 cal, 36 to 41 g protein",
+     "note": "Ask for the sauce on the side.",
+     "has": [
+      "POULTRY",
+      "SOY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Broccoli Beef",
+     "about": "about 150 cal, 9 g protein or more",
+     "has": [
+      "BEEF",
+      "SOY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Mushroom Chicken",
+     "about": "about 220 cal, 13 g protein",
+     "has": [
+      "POULTRY",
+      "SOY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Super Greens, as your side",
+     "about": "roughly 90 to 130 cal, 6 to 9 g protein",
+     "note": "Instead of chow mein or fried rice.",
+     "has": [
+      "SOY",
+      "GLUTEN"
+     ]
+    }
+   ],
+   "tips": [
+    "Make the side Super Greens, or half greens and half rice. It saves a few hundred calories over chow mein or fried rice.",
+    "The breaded, sweet-sauced entrees (orange chicken, Beijing beef) are about double the grilled and stir-fried ones.",
+    "A bowl (one entree, one side) is usually plenty."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC10",
+     "like": "the String Bean Chicken Breast"
+    },
+    {
+     "recipe": "CC11",
+     "like": "the Orange Chicken, but baked and not fried"
+    },
+    {
+     "recipe": "D10",
+     "like": "the Broccoli Beef"
+    },
+    {
+     "recipe": "L2",
+     "like": "the Grilled Teriyaki Chicken"
+    }
+   ]
+  },
+  {
+   "key": "kfc",
+   "name": "KFC",
+   "kind": "Fried chicken",
+   "search": "KFC nutrition",
+   "picks": [
+    {
+     "name": "Original Recipe drumstick",
+     "about": "about 130 cal, 12 g protein",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Original Recipe chicken breast",
+     "about": "about 390 cal, 39 g protein",
+     "note": "Take the skin off to cut the fat a lot.",
+     "has": [
+      "POULTRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Kentucky Grilled Chicken breast",
+     "about": "about 210 cal, 38 g protein",
+     "note": "Not sold at every location.",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
+     "name": "Green beans, as your side",
+     "note": "The lightest side on the menu.",
+     "has": []
+    }
+   ],
+   "tips": [
+    "Original Recipe has fewer calories than Extra Crispy.",
+    "Pick green beans or corn over mac and cheese, the biscuit or the fries.",
+    "The bowls and pot pies are the heaviest things on the menu."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC12",
+     "like": "crispy chicken tenders, but baked and not fried"
+    }
+   ]
+  },
+  {
+   "key": "popeyes",
+   "name": "Popeyes",
+   "kind": "Louisiana-style chicken",
+   "search": "Popeyes nutrition",
+   "picks": [
+    {
+     "name": "Blackened Tenders, 3 piece",
+     "about": "about 170 cal, 26 g protein",
+     "note": "No breading: the leanest thing on the menu.",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
+     "name": "Blackened Tenders, 5 piece",
+     "about": "about 280 cal, 43 g protein",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
+     "name": "Red Beans & Rice, regular",
+     "about": "roughly 230 to 260 cal, 7 g protein",
+     "has": [
+      "PORK"
+     ],
+     "note": "Cooked with pork for flavor."
+    },
+    {
+     "name": "Green Beans, regular",
+     "about": "roughly 40 to 60 cal",
+     "has": [
+      "PORK",
+      "POULTRY"
+     ],
+     "note": "Cooked with meat for flavor."
+    }
+   ],
+   "tips": [
+    "Blackened means seasoned and not breaded. Ask for it by name.",
+    "Dipping sauces add up: some are over 100 calories each.",
+    "A biscuit has about as many calories as three blackened tenders, with almost no protein."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC13",
+     "like": "the Blackened Tenders with Red Beans & Rice"
+    }
+   ]
+  },
+  {
+   "key": "dunkin",
+   "name": "Dunkin'",
+   "kind": "Coffee and breakfast",
+   "search": "Dunkin' nutrition",
+   "picks": [
+    {
+     "name": "Wake-Up Wrap",
+     "about": "roughly 150 to 340 cal, depending on the filling",
+     "note": "Egg and cheese is the lightest; sausage is the heaviest.",
+     "has": [
+      "EGG",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    },
+    {
+     "name": "Turkey Sausage, Egg & Cheese",
+     "about": "about 470 cal, 23 g protein",
+     "note": "A lot of protein, and a full breakfast's calories.",
+     "has": [
+      "POULTRY",
+      "EGG",
+      "DAIRY",
+      "GLUTEN"
+     ]
+    }
+   ],
+   "tips": [
+    "In coffee, flavor shots are unsweetened and flavor swirls are sweetened. Ask for shots, or fewer swirls.",
+    "Skim or almond milk instead of cream trims an iced coffee a lot.",
+    "A donut is a treat, not a breakfast: pair it with something that has protein, or save it."
+   ],
+   "copycats": [
+    {
+     "recipe": "CC14",
+     "like": "an egg and cheese Wake-Up Wrap"
+    },
+    {
+     "recipe": "CC1",
+     "like": "an egg and cheese muffin sandwich"
+    }
+   ]
+  }
+ ]
+}

@@ -29,6 +29,11 @@ class CupboardTest {
         assertEquals("white bean", Cupboard.key("white beans"))
         assertEquals("diced tomato", Cupboard.key("diced tomatoes"))
         assertEquals("rice noodle", Cupboard.key("rice noodles"))
+        assertEquals("sun-dried tomato", Cupboard.key("sun-dried tomatoes"))
+        assertEquals("quick grits", Cupboard.key("quick grits"))
+        assertEquals("rice", Cupboard.key("basmati rice"))
+        assertEquals("sour cream", Cupboard.key("light sour cream"))
+        assertEquals("oregano", Cupboard.key("dried oregano"))
     }
 
     @Test

@@ -1,187 +1,20 @@
 #!/usr/bin/env python3
 """Adds the version 3 recipes (breakfasts, lunches, dinners, soups, snacks) to the personal seed.
 
-Each recipe's "approx." nutrition line is worked out here from its ingredients with the table
-below (typical values per unit, raw weights), so the numbers come from the food rather than a
-guess. Every ingredient must be in MACROS or NEGLIGIBLE, or the script stops.
-
-Safe to run again: recipes already in the seed (by key) are replaced with this version.
+Nutrition comes from tools/recipe_lib.py. Safe to run again: recipes already in the seed (by
+key) are replaced with this version.
 
     python3 tools/recipes_v3.py && python3 tools/store_seed.py
 """
 import json
 import pathlib
-from fractions import Fraction
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from recipe_lib import C, P, T, V, ing, nutrition, recipe, swap  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SEED = ROOT / "app/src/personal/assets/seed.json"
-
-P, V, C, T = "PROTEIN", "PRODUCE_FROZEN", "CARBS", "PANTRY"
-
-# name -> unit -> (calories, protein g, carbs g, fat g) for ONE of that unit. "" = each.
-MACROS = {
-    "chicken breast": {"lb": (545, 102, 0, 12)},
-    "chicken thighs": {"lb": (600, 88, 0, 26)},
-    "93% lean ground turkey": {"lb": (680, 85, 0, 36)},
-    "90% lean ground beef": {"lb": (800, 91, 0, 45)},
-    "salmon portions": {"": (354, 34, 0, 22)},
-    "cod fillets": {"lb": (372, 81, 0, 3)},
-    "shrimp": {"lb": (386, 91, 0, 2)},
-    "tuna in water": {"can": (120, 26, 0, 1)},
-    "smoked salmon": {"oz": (33, 5.2, 0, 1.2)},
-    "chicken sausage": {"link": (140, 13, 2, 8)},
-    "eggs": {"": (72, 6.3, 0.4, 4.8)},
-    "egg": {"": (72, 6.3, 0.4, 4.8)},
-    "liquid egg whites": {"cup": (126, 26, 2, 0)},
-    "nonfat Greek yogurt": {"cup": (145, 25, 9, 1)},
-    "cottage cheese": {"cup": (185, 25, 10, 5)},
-    "firm tofu": {"block": (420, 42, 9, 23)},
-    "edamame": {"cup": (188, 18, 14, 8)},
-    "vanilla whey protein": {"scoop": (120, 24, 3, 1.5)},
-    "black beans": {"can": (385, 25, 66, 2)},
-    "kidney beans": {"can": (385, 25, 66, 2)},
-    "white beans": {"can": (385, 24, 70, 1)},
-    "chickpeas": {"can": (420, 21, 70, 7)},
-    "red lentils": {"cup": (678, 48, 115, 2)},
-    "rice": {"cup": (675, 13, 148, 1)},
-    "cooked rice": {"cup": (205, 4, 45, 0.4)},
-    "cooked jasmine rice": {"cup": (205, 4, 45, 0.4)},
-    "quinoa": {"cup": (626, 24, 109, 10)},
-    "rolled oats": {"cup": (307, 11, 55, 5)},
-    "whole-wheat spaghetti": {"oz": (99, 4.1, 21, 0.4)},
-    "whole-wheat tortillas": {"": (130, 4, 22, 3.5)},
-    "corn tortillas": {"": (52, 1.4, 11, 0.7)},
-    "whole-grain bread": {"slice": (80, 4, 14, 1)},
-    "potatoes": {"lb": (350, 9, 79, 0.4)},
-    "sweet potatoes": {"lb": (390, 7, 91, 0.2)},
-    "granola": {"cup": (520, 12, 80, 20)},
-    "olive oil": {"tbsp": (119, 0, 0, 13.5), "tsp": (40, 0, 0, 4.5)},
-    "oil": {"tbsp": (120, 0, 0, 14)},
-    "sesame oil": {"tsp": (40, 0, 0, 4.5)},
-    "butter": {"tbsp": (102, 0, 0, 11.5)},
-    "peanut butter": {"tbsp": (95, 3.5, 3.5, 8)},
-    "hummus": {"cup": (410, 19, 35, 24)},
-    "feta": {"cup": (400, 20, 6, 32)},
-    "shredded cheese": {"cup": (440, 28, 4, 36)},
-    "parmesan": {"cup": (340, 32, 3, 22), "tbsp": (21, 2, 0.2, 1.4)},
-    "milk": {"cup": (102, 8, 12, 2.4)},
-    "light coconut milk": {"can": (250, 2, 5, 22)},
-    "crushed tomatoes": {"can": (210, 10, 45, 0)},
-    "diced tomatoes": {"can": (90, 4, 18, 0)},
-    "marinara sauce": {"jar": (400, 10, 55, 13)},
-    "salsa": {"cup": (70, 3, 15, 0)},
-    "olives": {"cup": (160, 1, 8, 15)},
-    "honey": {"tbsp": (64, 0, 17, 0), "tsp": (21, 0, 6, 0)},
-    "cornstarch": {"tsp": (10, 0, 2.5, 0)},
-    "low-sodium soy sauce": {"tbsp": (9, 1.3, 0.8, 0), "cup": (144, 21, 13, 0)},
-    "low-sodium chicken broth": {"cup": (15, 2.5, 1, 0.5)},
-    "low-sodium beef broth": {"cup": (15, 3, 1, 0)},
-    "low-sodium broth": {"cup": (15, 1, 2, 0)},
-    "chia seeds": {"tbsp": (58, 2, 5, 3.7)},
-    "avocado": {"": (240, 3, 13, 22)},
-    "banana": {"": (105, 1.3, 27, 0.4)},
-    "apple": {"": (95, 0.5, 25, 0.3)},
-    "mixed berries": {"cup": (70, 1, 17, 0.5)},
-    "pineapple chunks": {"cup": (82, 1, 22, 0)},
-    "onion": {"": (44, 1.2, 10, 0)},
-    "red onion": {"": (44, 1.2, 10, 0)},
-    "bell pepper": {"": (33, 1, 7, 0)},
-    "bell peppers": {"": (33, 1, 7, 0)},
-    "carrots": {"": (25, 0.6, 6, 0)},
-    "celery stalks": {"": (6, 0.3, 1.2, 0)},
-    "zucchini": {"": (33, 2.4, 6, 0.6)},
-    "tomatoes": {"": (22, 1, 5, 0.2)},
-    "cucumber": {"": (30, 2, 7, 0)},
-    "cucumbers": {"": (30, 2, 7, 0)},
-    "broccoli": {"head": (136, 11, 27, 1.5)},
-    "mushrooms": {"oz": (6.2, 0.9, 0.9, 0.1)},
-    "asparagus": {"lb": (90, 10, 18, 0.5)},
-    "frozen green beans": {"bag": (105, 6, 24, 0.4)},
-    "frozen peas": {"cup": (115, 8, 21, 0.6)},
-    "corn": {"cup": (135, 5, 31, 1)},
-    "cabbage": {"head": (225, 12, 52, 1)},
-    "romaine lettuce": {"head": (54, 4, 10, 1)},
-    "butter lettuce": {"head": (20, 2, 4, 0)},
-    "baby spinach": {"handful": (7, 1, 1, 0), "bag": (33, 4, 5, 0.5)},
-}
-
-# Too little to change a serving's numbers: herbs, spices, citrus, aromatics, condiments by the dash.
-NEGLIGIBLE = {
-    "salt", "black pepper", "cumin", "chili powder", "paprika", "garlic powder", "oregano", "Italian seasoning",
-    "curry powder", "turmeric", "cinnamon", "baking powder", "garlic cloves", "ginger", "lemon", "lime", "limes",
-    "cilantro", "basil", "scallions", "jalapeño", "hot sauce", "mustard", "rice vinegar", "sesame seeds", "capers",
-}
-
-
-def qty(text):
-    if text is None:
-        return None
-    return float(sum(Fraction(part) for part in str(text).split()))
-
-
-def unit_key(unit):
-    if not unit:
-        return ""
-    u = unit.lower().removesuffix(" of").strip()
-    u = " ".join(w for w in u.split() if w not in ("large", "big", "small", "medium"))
-    for plural, single in (("cups", "cup"), ("cans", "can"), ("heads", "head"), ("handfuls", "handful"), ("slices", "slice"),
-                           ("links", "link"), ("blocks", "block"), ("bags", "bag"), ("scoops", "scoop")):
-        if u == plural:
-            return single
-    return u
-
-
-def nutrition(recipe):
-    total = [0.0, 0.0, 0.0, 0.0]
-    for i in recipe["ingredients"]:
-        name = i["name"]
-        if name in NEGLIGIBLE:
-            continue
-        assert name in MACROS, f"{recipe['key']}: no nutrition data for '{name}'"
-        q = qty(i.get("quantity"))
-        assert q is not None, f"{recipe['key']}: '{name}' needs a quantity"
-        per = MACROS[name].get(unit_key(i.get("unit")))
-        assert per is not None, f"{recipe['key']}: '{name}' has no data per '{i.get('unit')}'"
-        for k in range(4):
-            total[k] += per[k] * q
-    cal, protein, carbs, fat = (t / recipe["servings"] for t in total)
-    return f"~{round(cal / 10) * 10} cal, {round(protein)} g protein, {round(carbs)} g carbs, {round(fat)} g fat"
-
-
-def ing(quantity, unit, name, section, note=None):
-    d = {}
-    if quantity is not None:
-        d["quantity"] = str(quantity)
-    if unit:
-        d["unit"] = unit
-    d["name"] = name
-    if note:
-        d["note"] = note
-    d["section"] = section
-    return d
-
-
-def recipe(key, name, meal, cuisines, servings, size, protein, ingredients, steps, prep=False, tip=None, swaps=None, only=None):
-    r = {"key": key, "name": name, "mealType": meal, "cuisineTags": cuisines, "servings": servings, "servingSize": size}
-    r["ingredients"] = ingredients
-    r["nutrition"] = None
-    if prep:
-        r["mealPrep"] = True
-    r["steps"] = steps
-    if tip:
-        r["volumeTip"] = tip
-    r["protein"] = protein
-    if swaps:
-        r["swaps"] = swaps
-    if only:
-        r["onlyFor"] = only
-    r["since"] = 3
-    return r
-
-
-def swap(label, protein, replace, with_, note):
-    return {"label": label, "protein": protein, "replace": replace, "with": with_, "note": note}
-
 
 RECIPES = [
     # ---------- Breakfasts ----------
@@ -284,7 +117,7 @@ RECIPES = [
         "Dice the cucumber, tomatoes and onion. Toss with the rest of the oil and lemon.",
         "Build the bowls: quinoa, chicken, salad, feta, olives and a spoon of yogurt.",
     ], prep=True, swaps=[
-        swap("Chickpeas", "VEGETARIAN", "chicken breast", "chickpeas, 2 cans, drained", "Warm the chickpeas with the oregano and garlic instead of cooking chicken."),
+        swap("Chickpeas", "VEGETARIAN", "chicken breast", "chickpeas, drained", "Warm the chickpeas with the oregano and garlic instead of cooking chicken.", 2, "cans"),
     ]),
     recipe("L11", "Tuna and white bean salad", "LUNCH", ["Mediterranean"], 2, "1 big bowl with toast", "FISH", [
         ing(2, "cans", "tuna in water", P, "drained"), ing(1, "can", "white beans", C, "drained and rinsed"),
@@ -358,7 +191,7 @@ RECIPES = [
         "Add the rice, peas and edamame. Stir-fry for 3 to 4 minutes until hot.",
         "Return the eggs. Add the soy sauce, sesame oil and scallions and toss for 1 minute.",
     ], swaps=[
-        swap("Shrimp", "FISH", "edamame", "shrimp, 1/2 lb, peeled", "Stir-fry the shrimp first until pink, 2 to 3 minutes."),
+        swap("Shrimp", "FISH", "edamame", "shrimp, peeled", "Stir-fry the shrimp first until pink, 2 to 3 minutes.", 0.5, "lb"),
     ]),
     recipe("L18", "Shrimp and vegetable stir-fry", "LUNCH", ["Asian"], 4, "1 bowl with 3/4 cup rice", "FISH", [
         ing("1 1/2", "lb", "shrimp", P, "peeled and deveined"), ing(1, "head", "broccoli", V), ing(2, None, "bell peppers", V),
@@ -601,6 +434,7 @@ def main():
     seed = json.loads(SEED.read_text())
     for r in RECIPES:
         r["nutrition"] = nutrition(r)
+        r["since"] = 3
     keys = {r["key"] for r in RECIPES}
     assert len(keys) == len(RECIPES), "duplicate keys"
     kept = [r for r in seed["recipes"] if r["key"] not in keys]

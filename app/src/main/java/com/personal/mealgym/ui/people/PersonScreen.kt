@@ -153,7 +153,7 @@ class PersonViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
 
     /** Cuisines to choose favourites from: the library's own, minus labels that aren't cuisines. */
     val cuisines: List<String> = c.seed.seed.recipes.flatMap { it.cuisineTags }.distinct()
-        .filter { it !in setOf("Snack", "Starbucks") }
+        .filter { it !in setOf("Snack", "Starbucks", "Copycat") }
         .sorted()
 
     private var original: Profile? = null

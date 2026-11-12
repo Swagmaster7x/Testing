@@ -3,6 +3,7 @@ package com.personal.mealgym.domain
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.Recipe
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Things a person can ask the app to keep off their plan: the nine major allergens, plus kinds
@@ -50,7 +51,7 @@ object Foods {
             Avoid.DAIRY,
             "milk|cheeses?|yogurts?|yoghurts?|butter|buttermilk|cream|whey|casein|ghee|feta|parmesan|mozzarella|cheddar|" +
                 "ricotta|queso|cotija|paneer|gruy[eè]re|lattes?|kefir|half-and-half|custard|protein shakes?|protein powder|" +
-                "cold foam|egg bites",
+                "cold foam|egg bites|halloumi|labneh|tzatziki|mascarpone|crema|burrata|provolone|gouda|brie",
             "(?:coconut|almond|oat|soy|rice|cashew|light coconut) milk|(?:peanut|almond|cashew|nut|seed|sunflower|cocoa) butter|" +
                 "butter beans?|butter lettuce|coconut cream|cream of tartar",
         ),
@@ -58,7 +59,7 @@ object Foods {
         Rule(
             Avoid.FISH,
             "fish|salmon|tuna|cod|tilapia|anchov(?:y|ies)|sardines?|halibut|trout|mackerel|worcestershire|bonito|dashi|" +
-                "caesar dressing|kimchi",
+                "caesar dressing|kimchi|haddock|snapper|mahi-mahi|mahi|catfish|pollock|herring|swordfish|flounder",
         ),
         Rule(
             Avoid.SHELLFISH,
@@ -75,11 +76,12 @@ object Foods {
             "wheat|whole-wheat|flour|bread|breadcrumbs?|toast|buns?|bagels?|pitas?|naan|wraps?|pasta|spaghetti|penne|" +
                 "noodles?|macaroni|couscous|bulgur|barley|rye|farro|semolina|seitan|crackers?|panko|croutons?|tortillas?|" +
                 "soy sauce|teriyaki|gochujang|oyster sauce|hoisin|beer|malt|oats?|oatmeal|granola|udon|ramen|soba|wontons?|" +
-                "dumplings?|pizza|muffins?|biscuits?|pancake mix",
+                "dumplings?|pizza|muffins?|biscuits?|pancake mix|baguettes?|rolls?|ciabatta|focaccia|orzo|gnocchi|" +
+                "lasagn[ae]|linguine|fettuccine|rigatoni",
             "(?:corn|almond|rice|coconut|chickpea) flour|corn tortillas?|(?:rice|glass|zucchini|shirataki) noodles?|rice vermicelli",
         ),
-        Rule(Avoid.SOY, "soy|soya|soybeans?|tofu|edamame|tempeh|miso|tamari|teriyaki|gochujang|hoisin|oyster sauce"),
-        Rule(Avoid.SESAME, "sesame|tahini|hummus|furikake"),
+        Rule(Avoid.SOY, "soy|soya|soybeans?|tofu|edamame|tempeh|miso|tamari|teriyaki|gochujang|doenjang|hoisin|oyster sauce"),
+        Rule(Avoid.SESAME, "sesame|tahini|hummus|furikake|za'atar|zaatar"),
         Rule(
             Avoid.BEEF,
             "beef|steaks?|sirloin|top round|brisket|stew meat|jerky|veal|ground chuck",
@@ -93,14 +95,23 @@ object Foods {
         Rule(Avoid.POULTRY, "chicken|turkey|duck|poultry"),
     )
 
+    /** Answers already worked out. The same few hundred names come up across the whole library. */
+    private val known = ConcurrentHashMap<String, Set<Avoid>>()
+
     /** What one ingredient (or dish) name contains. */
     fun inName(name: String): Set<Avoid> {
         val text = name.lowercase()
-        return rules.filter { rule ->
+        known[text]?.let { return it }
+        val found = rules.filter { rule ->
             val cleaned = rule.skip?.replace(text, " ") ?: text
             rule.match.containsMatchIn(cleaned)
         }.map { it.flag }.toSet()
+        if (known.size >= MAX_KNOWN) known.clear()
+        known[text] = found
+        return found
     }
+
+    private const val MAX_KNOWN = 4000
 
     private fun fromTag(tag: ProteinTag?): Set<Avoid> = when (tag) {
         ProteinTag.BEEF -> setOf(Avoid.BEEF)

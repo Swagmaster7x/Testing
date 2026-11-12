@@ -33,10 +33,9 @@ class SeedFileTest {
 
     @Test
     fun versionThreeAddsThirtySixRecipes() {
-        assertEquals(3, seed.version)
         val added = seed.recipes.filter { it.since == 3 }
         assertEquals(36, added.size)
-        assertEquals(72, seed.recipes.size)
+        assertEquals(72, seed.recipes.count { it.since <= 3 })
         val byType = added.groupingBy { it.mealType }.eachCount()
         assertEquals(7, byType[MealType.BREAKFAST])
         assertEquals(9, byType[MealType.LUNCH])
@@ -47,6 +46,40 @@ class SeedFileTest {
         val meat = added.filter { it.protein!!.name in setOf("CHICKEN", "TURKEY", "BEEF") && it.mealType != MealType.SNACK }
         assertTrue(meat.all { r -> r.steps.any { "°F" in it } })
         assertTrue(added.all { it.steps.isNotEmpty() && it.ingredients.isNotEmpty() && it.nutrition!!.startsWith("~") })
+    }
+
+    @Test
+    fun versionFourAddsTheWorldAndTheRestaurantFavorites() {
+        assertEquals(4, seed.version)
+        val added = seed.recipes.filter { it.since == 4 }
+        assertEquals(186, seed.recipes.size)
+        assertEquals(114, added.size)
+        assertEquals(100, added.count { it.key.startsWith("W") })
+        assertEquals(14, added.count { it.key.startsWith("CC") })
+        val byType = added.groupingBy { it.mealType }.eachCount()
+        assertEquals(22, byType[MealType.BREAKFAST])
+        assertEquals(30, byType[MealType.LUNCH])
+        assertEquals(42, byType[MealType.DINNER])
+        assertEquals(13, byType[MealType.SOUP])
+        assertEquals(7, byType[MealType.SNACK])
+        // Every part of the world is there, under tags the filters already use.
+        val tags = added.flatMap { it.cuisineTags }.groupingBy { it }.eachCount()
+        for (tag in listOf("Asian", "Indian", "Mediterranean", "Middle Eastern", "African", "European", "Italian", "Hispanic", "Latin American", "Caribbean", "American")) {
+            assertTrue(tag, (tags[tag] ?: 0) >= 2)
+        }
+        // Each has one cuisine, or one cuisine and the Copycat tag.
+        assertTrue(added.all { r -> r.cuisineTags.filter { it != RestaurantRepository.COPYCAT_TAG }.size == 1 })
+        // Snacks stay on Ashley's side, like the earlier ones.
+        assertTrue(added.filter { it.mealType == MealType.SNACK }.all { it.onlyFor == "ashley" })
+        assertTrue(added.filter { it.mealType != MealType.SNACK }.all { it.onlyFor == null })
+        assertTrue(added.all { it.steps.isNotEmpty() && it.ingredients.isNotEmpty() && it.nutrition!!.startsWith("~") && it.protein != null })
+        // Raw meat and poultry say how hot they have to get.
+        val meat = added.filter { it.protein!!.name in setOf("CHICKEN", "TURKEY", "BEEF", "PORK") && it.key != "CC5" }
+        assertTrue(meat.all { r -> r.steps.any { "°F" in it } })
+        // A swap never shows two amounts: its own, or the original's.
+        for (r in seed.recipes) for (s in r.swaps) {
+            assertTrue("${r.key} ${s.label}", s.with == null || s.with!!.none { it.isDigit() } || s.with!![0].isDigit())
+        }
     }
 
     @Test
@@ -122,7 +155,7 @@ class SeedFileTest {
     fun ashleysBreakfastsSnacksAndTips() {
         val hers = seed.recipes.filter { it.onlyFor == "ashley" }
         assertEquals(5, hers.count { it.mealType == MealType.BREAKFAST })
-        assertEquals(4 + 5, hers.count { it.mealType == MealType.SNACK })
+        assertEquals(4 + 5 + 7, hers.count { it.mealType == MealType.SNACK })
         assertTrue(hers.filter { it.mealType == MealType.BREAKFAST }.all { it.steps.isEmpty() && it.ingredients.isEmpty() })
         assertEquals(4, seed.easierToFinishTips.size)
         assertEquals(listOf("Protein", "Calories", "Carbs", "Fats", "Water"), seed.dailyGuide.map { it.label })
@@ -160,11 +193,25 @@ class SeedFileTest {
             seed.extraPantryStaples.take(5),
         )
         // Version 3 adds everyday spices.
-        assertEquals(listOf("black pepper", "chili powder", "paprika", "garlic powder", "Italian seasoning", "cinnamon"), seed.extraPantryStaples.drop(5))
+        assertEquals(listOf("black pepper", "chili powder", "paprika", "garlic powder", "Italian seasoning", "cinnamon"), seed.extraPantryStaples.drop(5).take(6))
+        // Version 4 adds kitchen basics; spices for one cuisine stay on the shopping list.
+        assertEquals(listOf("oil", "sugar", "thyme", "red pepper flakes", "cayenne", "cooking spray"), seed.extraPantryStaples.drop(11))
         // New staples match the recipe ingredients they are meant to cover.
         val all = seed.recipes.flatMap { it.ingredients }.map { it.name }
         for (staple in seed.extraPantryStaples) {
             assertTrue(staple, all.any { com.personal.mealgym.domain.ShoppingList.isAlwaysHave(it, setOf(staple)) })
         }
+    }
+
+    @Test
+    fun everyHomeVersionOnTheRestaurantListIsInTheLibrary() {
+        val recipes = seed.recipes.associateBy { it.key }
+        val places = RestaurantRepository.parse(File("src/main/assets/restaurants.json").readText()).restaurants
+        val linked = places.flatMap { p -> p.copycats.map { it.recipe } }.toSet()
+        for (key in linked) assertTrue(key, key in recipes)
+        // Recipes written as home versions are tagged, and every tagged one says what it is like.
+        val tagged = seed.recipes.filter { RestaurantRepository.COPYCAT_TAG in it.cuisineTags }.map { it.key }.toSet()
+        assertEquals(tagged, linked.filter { it.startsWith("CC") }.toSet())
+        assertEquals(14, tagged.size)
     }
 }

@@ -39,6 +39,8 @@ import com.personal.mealgym.ui.cook.CupboardScreen
 import com.personal.mealgym.ui.cook.RecipeEditScreen
 import com.personal.mealgym.ui.cook.RecipeScreen
 import com.personal.mealgym.ui.cook.ShoppingListScreen
+import com.personal.mealgym.ui.cravings.CravingsScreen
+import com.personal.mealgym.ui.cravings.RestaurantScreen
 import com.personal.mealgym.ui.gym.DemoScreen
 import com.personal.mealgym.ui.gym.GymScreen
 import com.personal.mealgym.ui.gym.WorkoutEditScreen
@@ -72,15 +74,18 @@ object Routes {
     const val LOOK = "look"
     const val CUPBOARD = "cupboard"
     const val SETUP = "setup"
+    const val CRAVINGS = "cravings"
+    const val RESTAURANT = "restaurant/{key}"
 
     /** Screens that may show a banner ad in the store edition. */
-    val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY, CUPBOARD)
+    val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY, CUPBOARD, CRAVINGS, RESTAURANT)
 
     fun recipe(id: Long) = "recipe/$id"
     fun cooking(id: Long) = "cooking/$id"
     fun recipeEdit(id: Long = 0) = "recipe-edit/$id"
     fun demo(exerciseName: String) = "demo/" + android.net.Uri.encode(exerciseName)
     fun person(id: Long = 0) = "person/$id"
+    fun restaurant(key: String) = "restaurant/" + android.net.Uri.encode(key)
 }
 
 /** Every way one screen can open another. */
@@ -110,6 +115,8 @@ class AppNavigator(private val nav: NavHostController) {
     fun look() = nav.navigate(Routes.LOOK) { launchSingleTop = true }
     fun cupboard() = nav.navigate(Routes.CUPBOARD) { launchSingleTop = true }
     fun setup() = nav.navigate(Routes.SETUP) { launchSingleTop = true }
+    fun cravings() = nav.navigate(Routes.CRAVINGS) { launchSingleTop = true }
+    fun restaurant(key: String) = nav.navigate(Routes.restaurant(key))
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -209,6 +216,10 @@ fun MealGymNavHost(
             composable(Routes.LOOK) { LookScreen(navigator) }
             composable(Routes.CUPBOARD) { CupboardScreen(navigator) }
             composable(Routes.SETUP) { SetupScreen(navigator) }
+            composable(Routes.CRAVINGS) { CravingsScreen(navigator) }
+            composable(Routes.RESTAURANT, arguments = listOf(navArgument("key") { type = NavType.StringType })) {
+                RestaurantScreen(navigator)
+            }
         }
     }
     }

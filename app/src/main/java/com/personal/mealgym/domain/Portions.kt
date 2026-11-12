@@ -41,7 +41,14 @@ object RecipeSwaps {
         val key = ShoppingList.ingredientKey(replace)
         return ingredients.map { ing ->
             if (ShoppingList.ingredientKey(ing.name) == key) {
-                ing.copy(name = with, note = null, storeSection = StoreSection.PROTEIN)
+                // The swap's own amount when it has one; otherwise the same weight as the original.
+                ing.copy(
+                    name = with,
+                    note = null,
+                    storeSection = StoreSection.PROTEIN,
+                    quantity = swap.quantity ?: ing.quantity,
+                    unit = if (swap.quantity != null) swap.unit else ing.unit,
+                )
             } else {
                 ing
             }
