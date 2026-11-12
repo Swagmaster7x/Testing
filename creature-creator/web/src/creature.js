@@ -94,7 +94,7 @@ export function placement(part) {
   return { a, mirrored: true };
 }
 
-export function buildPartGroup(data, part, frames, M) {
+export function buildPartGroup(data, part, frames, M, anchors) {
   const def = PARTS[part.kind], sm = sexMods(data), group = new THREE.Group();
   group.userData.partId = part.id;
   if (part.sexOnly && part.sexOnly !== data.sex) return group;
@@ -102,7 +102,8 @@ export function buildPartGroup(data, part, frames, M) {
   const f = surfaceFrame(frames, part.u, a);
   const seed = [...part.id].reduce((s, c) => s * 31 + c.charCodeAt(0) | 0, 7);
   const ctx = { M, look: data.look, female: data.sex === 'f', k: sm.k, limbMul: sm.limb, rnd: rng(seed), seed: (seed % 100) / 16, part, frames, a, r: f.r, normal: f.normal };
-  const orn = def.orn ? sm.orn : 1;
+  const orn = def.orn ? sm.orn : 1, mine = anchors ? [] : null;
+  ctx.anchors = mine;
   const inner = new THREE.Group();
   group.userData.anchor = f.pos.clone();
   if (def.kind === 'surface') {
@@ -126,6 +127,7 @@ export function buildPartGroup(data, part, frames, M) {
     for (const m of toMeshes(def.build(part.p, ctx), M)) inner.add(m);
   }
   group.add(inner);
+  if (mine) for (const a of mine) { anchors.push(a); if (mirrored) anchors.push({ p: a.p.clone().setX(-a.p.x), t: a.t.clone().setX(-a.t.x), r: a.r }); }
   if (mirrored) {
     const mir = new THREE.Group(); mir.scale.x = -1;
     mir.add(inner.clone());
@@ -134,7 +136,7 @@ export function buildPartGroup(data, part, frames, M) {
   return group;
 }
 
-export function buildCreature(data, M) {
+export function buildCreature(data, M, opt = {}) {
   const group = new THREE.Group();
   const bodyGeo = bodyGeometry(data), frames = bodyGeo.userData.frames;
   const body = new THREE.Mesh(bodyGeo, M.skin);
@@ -143,7 +145,7 @@ export function buildCreature(data, M) {
   const cr = { group, body, frames, parts: new Map(), shells: new THREE.Group(), data, M };
   for (const part of data.parts) {
     let g;
-    try { g = buildPartGroup(data, part, frames, M); } catch (e) { console.error('part failed', part.kind, e); g = new THREE.Group(); g.userData.partId = part.id; }
+    try { g = buildPartGroup(data, part, frames, M, opt.anchors); } catch (e) { console.error('part failed', part.kind, e); g = new THREE.Group(); g.userData.partId = part.id; }
     cr.parts.set(part.id, g); group.add(g);
   }
   group.add(cr.shells);

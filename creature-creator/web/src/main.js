@@ -6,6 +6,7 @@ import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
+import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe } from './items.js';
 import { randomCreature } from './random.js';
 import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp } from './creature.js';
 
@@ -395,7 +396,8 @@ function renderLeft() {
   el.append(h('h3', null, CATS.find((c) => c[0] === tab)[1]), h('p', { class: 'note' }, 'Tap to add. Then tap the part on your creature and drag it where you want it.'));
   const grid = h('div', { class: 'grid' });
   for (const [kind, def] of Object.entries(PARTS)) if (def.cat === tab) {
-    grid.append(h('button', { class: 'tile', onclick: () => { const p = addPart(data, kind, cr.frames); rebuild(); commit(); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
+    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { const p = addPart(data, kind, cr.frames); rebuild(); commit(); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
+    else grid.append(h('button', { class: 'tile locked', onclick: () => buy('part:' + kind, PART_COST[kind], def.n, renderLeft) }, h('img', { src: partThumb(kind), alt: '' }), def.n, h('small', null, 'Locked · ' + PART_COST[kind])));
   }
   el.append(grid);
 }
@@ -461,7 +463,21 @@ function save(quiet) {
 }
 
 // ------------------------------------------------------------------ colosseum
-const arena = createArena({ scene, camera, M, h, store, onDone: battleDone });
+// Meta progress: points, unlocks, boosts and revives. Kept across creatures.
+let meta = store.get('cc.meta', null);
+if (!meta) {
+  meta = Object.assign(newMeta(), store.get('cc.record', {}));
+  // Anything already built before the shop existed stays usable.
+  for (const c of [...store.get('cc.saved', []).map((x) => x.data), store.get('cc.current', null)]) if (c && !FREE_TYPES.includes(c.type)) meta.unlocked['type:' + c.type] = true;
+}
+meta = Object.assign(newMeta(), meta);
+const saveMeta = () => store.set('cc.meta', meta);
+function buy(key, cost, label, then) {
+  if (meta.points < cost) { toast('Not enough points: ' + label + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
+  if (!confirm('Unlock ' + label + ' for ' + cost + ' points?')) return;
+  meta.points -= cost; meta.unlocked[key] = true; saveMeta(); toast('Unlocked ' + label); then && then();
+}
+const arena = createArena({ scene, camera, M, h, store, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
   save(true);
   sel = null; controls.orbit.enabled = false;
@@ -475,9 +491,9 @@ function battleDone(res) {
   stage.visible = overlay.visible = true; controls.orbit.enabled = true;
   M.U.uInv.value.identity();
   for (const m of [M.skin, ...M.shells]) m.emissive.setRGB(0, 0, 0);
-  const rec = store.get('cc.record', { points: 0, champions: 0, fallen: 0 });
+  const rec = meta;
   if (res.type === 'dead') {
-    rec.fallen++; store.set('cc.record', rec);
+    rec.fallen++; saveMeta();
     store.set('cc.saved', store.get('cc.saved', []).filter((c) => c.id !== data.id));
     store.set('cc.current', null);
     if (cr) { stage.remove(cr.group); disposeTree(cr.group); cr = null; }
@@ -486,7 +502,7 @@ function battleDone(res) {
     return;
   }
   if (res.type === 'champion') {
-    rec.points += res.points; rec.champions++; store.set('cc.record', rec);
+    rec.points += res.points; rec.champions++; saveMeta();
     data.champion = (data.champion || 0) + 1;
   }
   inEditor = true; $('editor').classList.remove('hidden');
@@ -508,7 +524,7 @@ function photo() {
 }
 window.ccToast = toast;
 // Android back button: close the part panel, then leave the editor, then let the app close.
-window.ccBack = () => { if (arena.active) return arena.back(); if (!inEditor) return false; if (sel) select(null); else goHome(); return true; };
+window.ccBack = () => { if (arena.active) return arena.back(); if (!inEditor && shopTab) { shopTab = null; renderStart(); return true; } if (!inEditor) return false; if (sel) select(null); else goHome(); return true; };
 function open(d) {
   const run = store.get('cc.run', null);
   if (run && d.id && run.id === d.id) { store.set('cc.run', null); toast('Gauntlet abandoned. It starts again from fight one.'); }
@@ -523,17 +539,46 @@ function goHome() {
   renderStart();
 }
 const typeThumbs = {};
+let shopTab = null;
+function renderShop() {
+  const el = $('start');
+  const row = (icon, name, text, cost, owned, onbuy, extra) => h('div', { class: 'shoprow' + (owned ? ' owned' : '') }, h('div', { class: 'ico' }, icon), h('div', { class: 'what' }, h('b', null, name), extra && h('small', { class: 'req' }, extra), h('small', null, text)),
+    owned ? h('span', { class: 'have' }, typeof owned === 'string' ? owned : 'Owned') : h('button', { class: meta.points >= cost ? 'go' : '', onclick: onbuy }, cost + ' pts'));
+  const itemRows = (cat) => ITEMS.filter((it) => it.cat === cat).sort((a, b) => a.cost - b.cost).map((it) =>
+    row(it.icon, it.name, describe({ id: it.id, cat, q: 1, rar: 0, lvl: 1 }), it.cost, itemOpen(meta, it) && (it.cost ? 'Owned' : 'Free'), () => buy('item:' + cat + ':' + it.id, it.cost, it.name, renderStart), it.reqText ? 'Needs ' + it.reqText : (it.hands === 2 ? 'Needs two free hands' : '')));
+  const tabs = {
+    Bodies: () => Object.entries(TEMPLATES).map(([id, t]) => row('🧬', t.name, t.blurb, TYPE_COST[id], typeOpen(meta, id) && (TYPE_COST[id] ? 'Owned' : 'Free'), () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart))),
+    Parts: () => Object.entries(PART_COST).map(([k, cost]) => row(h('img', { src: partThumb(k), alt: '' }), PARTS[k].n, 'Body part for the workshop (' + CATS.find((c) => c[0] === PARTS[k].cat)[1] + ').', cost, partOpen(meta, k), () => buy('part:' + k, cost, PARTS[k].n, renderStart))),
+    Weapons: () => itemRows('weapon'), Abilities: () => itemRows('ability'), Relics: () => itemRows('relic'),
+    Boosts: () => BOOSTS.map((b) => {
+      const lvl = b.consumable ? meta.revives : (meta.boosts[b.id] || 0), full = lvl >= b.max, cost = b.cost(lvl);
+      return row(b.icon, b.name + (b.consumable ? ' (holding ' + lvl + ')' : b.max > 1 ? ' (level ' + lvl + ' of ' + b.max + ')' : ''), b.text, cost, full && (b.consumable ? 'Full' : 'Maxed'), () => {
+        if (meta.points < cost) { toast('Not enough points: ' + b.name + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
+        meta.points -= cost; if (b.consumable) meta.revives++; else meta.boosts[b.id] = lvl + 1; saveMeta(); renderStart();
+      });
+    }),
+  };
+  const notes = { Weapons: 'Weapons you own can turn up as rewards after a fight. A creature holds one per hand.', Abilities: 'Abilities you own can turn up as rewards, if the creature has the right body for them.', Relics: 'Relics are passive rewards that stack. Many only work, or work better, with the right body.', Parts: 'Extra parts for building creatures. Starter creatures may already carry some of these.', Bodies: 'New body types to start from.', Boosts: 'Permanent upgrades, and revives.' };
+  el.replaceChildren(h('h1', null, 'The ', h('span', null, 'Shop'), h('small', { class: 'record' }, h('b', null, meta.points + ' points'), ' ', h('button', { class: 'shopbtn', onclick: () => { shopTab = null; renderStart(); } }, 'Back'))),
+    h('div', { class: 'chips', style: 'margin-top:10px' }, Object.keys(tabs).map((t) => h('button', { class: t === shopTab ? 'on' : '', onclick: () => { shopTab = t; renderStart(); } }, t))),
+    h('p', { class: 'note' }, notes[shopTab] + ' Points come from every fight won (more for later fights) and a big bonus for the title.'),
+    h('div', { class: 'shop' }, tabs[shopTab]()));
+  el.scrollTop = 0;
+}
 function renderStart() {
   const el = $('start'), saved = store.get('cc.saved', []), cur = store.get('cc.current', null);
-  const rec = store.get('cc.record', { points: 0, champions: 0, fallen: 0 }), run = store.get('cc.run', null);
+  if (shopTab) { renderShop(); return; }
+  const rec = meta, run = store.get('cc.run', null);
   const runOk = run && cur && cur.id === run.id;
   el.replaceChildren(...[h('h1', null, 'Creature ', h('span', null, 'Workshop'),
-      h('small', { class: 'record' }, rec.points + ' points · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
+      h('small', { class: 'record' }, h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
     runOk && h('div', { class: 'card resume', onclick: () => { data = cur; enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, cur.name + ' is waiting for fight ' + (run.round + 1) + ' of 10. Tap to return to the Colosseum.')),
     h('h2', null, 'Start from a body type'),
-    h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => open(randomCreature(Math.random)) }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
+    h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => { const open_ = Object.keys(TEMPLATES).filter((t) => typeOpen(meta, t)); open(randomCreature(Math.random, { type: open_[Math.floor(Math.random() * open_.length)] })); } }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
       Object.entries(TEMPLATES).map(([id, t]) =>
-      h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, t.blurb))))].filter(Boolean));
+      typeOpen(meta, id)
+        ? h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, t.blurb))
+        : h('div', { class: 'card locked', onclick: () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, 'Locked · ' + TYPE_COST[id] + ' points'))))].filter(Boolean));
   if (cur || saved.length) el.append(h('h2', null, 'Your creatures'),
     h('div', { class: 'cards' },
       cur && h('div', { class: 'card', onclick: () => open(cur) }, h('img', { src: creatureThumb(cur), alt: '' }), h('b', null, 'Continue'), h('small', null, cur.name)),
@@ -547,4 +592,4 @@ controls.orbit.addEventListener('change', touch);
 layout();
 renderStart();
 requestAnimationFrame(frame);
-window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
+window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, get meta() { return meta; }, saveMeta, renderStart, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };

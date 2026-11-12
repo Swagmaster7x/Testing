@@ -361,6 +361,7 @@ function limb(style, ends, defEnd) {
     const g = tube(nodes, { radial: 12, sub: 6, ridges: insect ? 5 : 0, ridgeAmp: 0.1 });
     const it = [{ g, m: 'skin', fur: insect ? 0.5 : 0.75 }];
     const end = g.userData.end, es = end.r * p.end, kind = p.endType ?? defEnd;
+    if (c.anchors && ends === HANDS) c.anchors.push({ p: end.p.clone(), t: end.t.clone(), r: end.r * p.end });   // where a held weapon goes
     let mtx;
     if (ends === FEET) mtx = basis(c.out.clone().multiplyScalar(es), Y.clone().multiplyScalar(es), c.fwd.clone().multiplyScalar(es), end.p);
     else {
@@ -381,6 +382,7 @@ function tentacle(p, c) {
   }
   const g = tube(nodes, { radial: 12, sub: 5 });
   const it = [{ g, m: 'skin' }];
+  if (c.anchors) c.anchors.push({ p: g.userData.end.p.clone(), t: g.userData.end.t.clone(), r: r0 * 0.5 });
   if (p.suckers > 0.5) {
     const crv = new THREE.CatmullRomCurve3(nodes.map((n) => n.p)), gs = [];
     for (let i = 3; i < 22; i++) {

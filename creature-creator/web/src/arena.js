@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { buildCreature, disposeTree, bounds } from './creature.js';
 import { makeMaterials, applyLook } from './materials.js';
 import { TEMPLATES } from './templates.js';
-import { statsOf, traits, makeFighter, step, usePower, useGuard, ai, oppMul, championPoints, ROUNDS, HEAL } from './battle.js';
+import { statsOf, traits, makeFighter, step, usePower, useGuard, useAbility, ai, oppMul, championPoints, ABILITY_CD, ROUNDS, HEAL } from './battle.js';
+import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY } from './items.js';
 import { randomCreature } from './random.js';
 import { rng } from './geom.js';
 
@@ -59,6 +60,28 @@ function buildScenery() {
   return { g, crowd, seats, m4, sky };
 }
 
+/** A simple model for a held weapon, about one unit long, pointing along +Y. */
+function weaponMesh(id) {
+  const g = new THREE.Group();
+  const mat = (c, r = 0.5, e) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: c === 0x9aa4ad ? 0.7 : 0, emissive: e || 0 });
+  const add = (geo, m, x, y, z, rz) => { const k = new THREE.Mesh(geo, m); k.position.set(x || 0, y || 0, z || 0); if (rz) k.rotation.z = rz; g.add(k); return k; };
+  const wood = mat(0x6b4a2e, 0.8), iron = mat(0x9aa4ad, 0.35), bone = mat(0xe8e0cc, 0.6);
+  const shaft = (len = 1) => add(new THREE.CylinderGeometry(0.035, 0.045, len, 8), wood, 0, len / 2);
+  if (id === 'club') { add(new THREE.CylinderGeometry(0.13, 0.04, 1, 10), bone, 0, 0.5); add(new THREE.SphereGeometry(0.14, 10, 8), bone, 0, 1); }
+  else if (id === 'cleaver') { shaft(0.6); add(new THREE.BoxGeometry(0.34, 0.5, 0.03), iron, 0.14, 0.78); }
+  else if (id === 'fang') { shaft(0.3); add(new THREE.ConeGeometry(0.07, 0.6, 8), bone, 0, 0.6); }
+  else if (id === 'mace') { shaft(0.85); add(new THREE.IcosahedronGeometry(0.17, 0), iron, 0, 0.95); for (let i = 0; i < 6; i++) add(new THREE.ConeGeometry(0.04, 0.16, 5), iron, Math.cos(i) * 0.2, 0.95 + Math.sin(i * 2) * 0.12, Math.sin(i) * 0.2, -Math.cos(i) * 1.57); }
+  else if (id === 'buckler') { const d = add(new THREE.CylinderGeometry(0.42, 0.42, 0.06, 20), iron, 0, 0.3, 0.1); d.rotation.x = Math.PI / 2; const sp = add(new THREE.ConeGeometry(0.08, 0.25, 8), bone, 0, 0.3, 0.25); sp.rotation.x = Math.PI / 2; }
+  else if (id === 'sling') { add(new THREE.TorusGeometry(0.2, 0.02, 5, 14), wood, 0, 0.3); add(new THREE.SphereGeometry(0.09, 8, 6), mat(0x8a8a86, 0.9), 0, 0.1); }
+  else if (id === 'brand') { shaft(0.8); add(new THREE.ConeGeometry(0.13, 0.42, 8), mat(0xff8a20, 0.4, 0xff5a00), 0, 1.0); }
+  else if (id === 'pick') { shaft(0.95); const h = add(new THREE.ConeGeometry(0.06, 0.6, 6), iron, 0, 0.9); h.rotation.z = Math.PI / 2; }
+  else if (id === 'hooks') { shaft(0.6); add(new THREE.TorusGeometry(0.16, 0.03, 6, 12, Math.PI * 1.2), iron, 0.16, 0.62); }
+  else if (id === 'whip') { shaft(0.3); add(new THREE.TorusGeometry(0.3, 0.022, 5, 16, Math.PI * 1.4), mat(0x7a1c1c, 0.7), 0.3, 0.35); }
+  else if (id === 'maul') { add(new THREE.CylinderGeometry(0.045, 0.055, 1.4, 8), wood, 0, 0.7); add(new THREE.BoxGeometry(0.5, 0.32, 0.32), iron, 0, 1.4); }
+  else { shaft(1.2); for (const x of [-0.13, 0, 0.13]) add(new THREE.ConeGeometry(0.035, 0.4, 6), iron, x, 1.35 - Math.abs(x) * 0.6); add(new THREE.BoxGeometry(0.3, 0.04, 0.04), iron, 0, 1.15); }
+  return g;
+}
+
 let audio = null;
 function sfx(kind) {
   try {
@@ -81,13 +104,25 @@ export function createArena(env) {
   const A = { active: false, phase: 'off', run: null, data: null, views: [null, null], F: null, t: 0, phaseT: 0, enemy: null, shake: 0, cheer: 0, rand: Math.random, confetti: null };
   let keepBg = null;
 
-  function makeView(data, mats, side) {
+  function makeView(data, mats, side, load) {
     applyLook(mats, data.look, TEMPLATES[data.type].bellyDir);
-    const cr = buildCreature(data, mats), box = bounds(cr), size = box.getSize(new THREE.Vector3());
+    const anchors = [];
+    const cr = buildCreature(data, mats, { anchors }), box = bounds(cr), size = box.getSize(new THREE.Vector3());
     const s = clamp(1.9 / Math.max(size.y, size.z * 0.85, size.x * 0.55, 0.6), 0.5, 2.4) * (0.85 + 0.35 * clamp(Math.cbrt(statsOf(data).hp / 200), 0.6, 1.4));
     const hover = data.type === 'aquatic' ? 0.45 : 0;
     cr.group.scale.setScalar(s);
     cr.group.position.set(-(box.min.x + box.max.x) / 2 * s, -box.min.y * s + hover, -box.max.z * s);
+    // Put each weapon in a hand (two-handed ones take the next hand too).
+    let hand = 0;
+    for (const w of (load ? load.weapons : [])) {
+      const a = anchors[hand]; hand += item(w.id, 'weapon').hands;
+      if (!a) continue;
+      const wm = weaponMesh(w.id), len = clamp(size.y * 0.3, 0.22, 0.6);
+      wm.scale.setScalar(len);
+      wm.position.copy(a.p).addScaledVector(a.t, a.r * 2.2);
+      wm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), a.t.clone().multiplyScalar(0.2).add(new THREE.Vector3(Math.sign(a.p.x) * 0.25, 0.75, 0.6)).normalize());
+      cr.group.add(wm);
+    }
     const pose = new THREE.Group(), holder = new THREE.Group();
     pose.add(cr.group); holder.add(pose);
     const blob = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false }));
@@ -97,6 +132,7 @@ export function createArena(env) {
     return { cr, mats, pose, holder, side, baseY: cr.group.position.y, half: size.x * s / 2, head: new THREE.Vector3(0, size.y * s + hover + 0.15, -size.z * s * 0.3), mid: new THREE.Vector3(0, size.y * s * 0.55 + hover, -size.z * s * 0.2), strike: -1, recoil: 0, flash: 0, dead: -1, ph: Math.random() * 6 };
   }
   function dropView(i) { const v = A.views[i]; if (!v) return; S.g.remove(v.holder); disposeTree(v.cr.group); A.views[i] = null; }
+  const icons = (load) => [...load.weapons, ...load.abilities, ...load.relics].map((e) => item(e.id, e.cat).icon).join('');
   function screenPos(v, local) {
     const p = local.clone(); v.holder.localToWorld(p); p.project(camera);
     return [(p.x * 0.5 + 0.5) * innerWidth, (-p.y * 0.5 + 0.5) * innerHeight];
@@ -111,16 +147,20 @@ export function createArena(env) {
   // ---------------------------------------------------------------- screens
   function hud() {
     const names = [A.data.name, A.enemy ? A.enemy.name : ''];
+    const press = (fnc) => (e) => { e.preventDefault(); if (A.phase === 'fight') fnc(); };
     el.replaceChildren(
       h('div', { class: 'hud' },
-        h('div', { class: 'who l' }, h('b', null, names[0]), h('div', { class: 'hp' }, h('i', { id: 'hp0' })), h('small', { id: 'st0' })),
+        h('div', { class: 'who l' }, h('b', null, names[0]), h('div', { class: 'hp' }, h('i', { id: 'hp0' })), h('small', { id: 'st0' }), h('div', { class: 'kit' }, icons(A.run.load))),
         h('div', { class: 'round' }, h('small', null, 'Fight'), h('b', null, (A.run.round + 1) + ' / ' + ROUNDS)),
-        h('div', { class: 'who r' }, h('b', null, names[1]), h('div', { class: 'hp' }, h('i', { id: 'hp1' })), h('small', { id: 'st1' }))),
+        h('div', { class: 'who r' }, h('b', null, names[1]), h('div', { class: 'hp' }, h('i', { id: 'hp1' })), h('small', { id: 'st1' }), h('div', { class: 'kit' }, A.eLoad ? icons(A.eLoad) : ''))),
       h('div', { class: 'msg', id: 'bmsg' }),
       h('div', { class: 'floaters' }),
       h('div', { class: 'acts' },
-        h('button', { id: 'bpow', onpointerdown: (e) => { e.preventDefault(); if (A.phase === 'fight' && usePower(A.F[0])) sfx('miss'); } }, h('i'), h('span', null, 'Power strike')),
-        h('button', { id: 'bgrd', onpointerdown: (e) => { e.preventDefault(); if (A.phase === 'fight' && useGuard(A.F[0])) sfx('block'); } }, h('i'), h('span', null, 'Guard'))));
+        h('div', null,
+          h('button', { id: 'bpow', onpointerdown: press(() => usePower(A.F[0]) && sfx('miss')) }, h('i'), h('span', null, 'Power strike')),
+          h('button', { id: 'bgrd', onpointerdown: press(() => useGuard(A.F[0]) && sfx('block')) }, h('i'), h('span', null, 'Guard'))),
+        h('div', null, A.run.load.abilities.map((a, k) =>
+          h('button', { class: 'abil', id: 'bab' + k, onpointerdown: press(() => { if (useAbility(A.F, 0, k, A.rand, A.queue)) sfx('power'); }) }, h('i'), h('span', null, item(a.id, 'ability').icon + ' ' + item(a.id, 'ability').name))))));
   }
   function panel(...kids) { const p = h('div', { class: 'panel' }, kids); el.append(p); return p; }
   function statGrid(s) {
@@ -129,27 +169,54 @@ export function createArena(env) {
   }
   function gate() {
     A.phase = 'gate'; el.replaceChildren();
-    const s = statsOf(A.data), tr = traits(s);
+    const s = statsOf(A.data), tr = traits(s), meta = env.meta();
     panel(h('h2', null, 'The Colosseum'),
-      h('p', null, h('b', null, A.data.name), ' faces ten fights in a row against creatures from the pits. Each one is tougher than the last, and the tenth is the reigning champion.'),
+      h('p', null, h('b', null, A.data.name), ' faces ten fights in a row. Each opponent is tougher and better armed than the last, and the tenth is the reigning champion. After every win you choose one of three rewards.'),
       statGrid(s),
-      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.join(', ') + '. ' : '', 'Size gives health. Teeth, claws, horns and clubs give attack. Scales, shell and plates give armour. Legs and wings give speed. Eyes help it land hits.'),
-      h('p', { class: 'warn' }, 'Fights are to the death. If ' + A.data.name + ' dies, it is gone for good.'),
-      h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'), h('button', { class: 'go', onclick: () => { sfx('block'); nextFight(); } }, 'Enter the arena')));
+      h('div', { class: 'stats' }, h('div', null, h('small', null, 'Weapon hands'), h('b', null, String(s.slots))), h('div', null, h('small', null, 'Ability slots'), h('b', null, String(s.abilitySlots))), h('div', null, h('small', null, 'Revives'), h('b', null, String(meta.revives || 0)))),
+      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle can hold one weapon.' : 'With no hands it can carry a single weapon in its jaws. Add arms or tentacles to wield more.', ' Wings, tails, horns, venom and the rest decide which abilities and relics can turn up.'),
+      h('p', { class: 'warn' }, 'Fights are to the death. If ' + A.data.name + ' dies with no revive, it is gone for good.'),
+      h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
+        h('button', { class: 'go', onclick: () => { sfx('block'); if ((meta.boosts.head || 0) > 0) reward('A gift from the crowd', 'Choose a reward before the first fight.'); else nextFight(); } }, 'Enter the arena')));
+  }
+  /** The three-card reward screen. */
+  function reward(title, sub) {
+    A.phase = 'won';
+    const s = statsOf(A.data), load = A.run.load;
+    if (!A.run.draft) { A.run.draft = draft(Math.random, s, load, env.meta(), A.run.round); store.set('cc.run', A.run); }
+    el.replaceChildren(h('div', { class: 'floaters' }));
+    const pick = (o) => { take(load, o); A.run.draft = null; store.set('cc.run', A.run); sfx('block'); nextFight(); };
+    const card = (o) => {
+      const it = item(o.id, o.cat), owned = o.cat === 'ability' && load.abilities.find((a) => a.id === o.id);
+      const shown = o.cat === 'ability' ? { ...o, lvl: (owned ? owned.lvl + 1 + (o.rar > 0 ? 1 : 0) : 1 + o.rar) } : o;
+      return h('button', { class: 'reward r' + o.rar + ' c-' + o.cat, onclick: () => pick(o) },
+        h('small', null, RARITY[o.rar] + ' ' + (o.cat === 'relic' ? 'relic' : o.cat) + (owned ? ' · level up' : '')),
+        h('div', { class: 'ico' }, it.icon), h('b', null, it.name), h('p', null, describe(shown)),
+        o.syn && h('em', null, 'Synergy: ' + it.tags.filter((g) => [...load.weapons, ...load.relics, ...load.abilities].some((e) => item(e.id, e.cat).tags.includes(g))).join(', ')));
+    };
+    const p = panel(h('h2', null, title), h('p', null, sub),
+      h('div', { class: 'rewards' }, A.run.draft.length ? A.run.draft.map(card) : h('p', { class: 'dim' }, 'Nothing more fits this body.')),
+      h('p', { class: 'dim' }, 'Hands ' + handsUsed(load) + '/' + s.slots + ' · Abilities ' + load.abilities.length + '/' + s.abilitySlots + ' · Relics ' + load.relics.length + (icons(load) ? '   ' + icons(load) : '')),
+      h('div', { class: 'row' },
+        A.run.rerolls > 0 && h('button', { onclick: () => { A.run.rerolls--; A.run.draft = null; reward(title, sub); } }, 'Reroll (' + A.run.rerolls + ' left)'),
+        !A.run.draft.length && h('button', { class: 'go', onclick: () => { A.run.draft = null; nextFight(); } }, 'Next fight')));
+    p.classList.add('wide');
   }
   function nextFight() {
-    dropView(1);
-    const boss = A.run.round === ROUNDS - 1;
+    dropView(1); dropView(0);
+    const boss = A.run.round === ROUNDS - 1, meta = env.meta(), b = meta.boosts;
+    A.views[0] = makeView(A.data, env.M, -1, A.run.load);
     A.enemy = randomCreature(rng(A.run.seed + A.run.round * 7919), { titled: true });
     if (boss) A.enemy.name = A.enemy.name.split(' ')[0] + ', Champion of the Sands';
-    A.views[1] = makeView(A.enemy, ME, 1);
+    const ps = statsOf(A.data), es = statsOf(A.enemy);
+    A.eLoad = enemyLoad(rng(A.run.seed + A.run.round), es, A.run.round);
+    A.views[1] = makeView(A.enemy, ME, 1, A.eLoad);
     if (boss) A.views[1].holder.scale.setScalar(1.18);
-    A.F = [makeFighter(statsOf(A.data)), makeFighter(statsOf(A.enemy), oppMul(A.run.round))];
+    A.F = [makeFighter(ps, { mods: loadMods(A.run.load), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
+      makeFighter(es, { mul: oppMul(A.run.round), mods: loadMods(A.eLoad) })];
     if (A.run.hp != null) A.F[0].hp = Math.min(A.F[0].max, A.run.hp);
-    A.rand = Math.random;
+    A.rand = Math.random; A.queue = [];
     hud(); bars();
-    document.getElementById('st1').textContent = traits(A.F[1].s).join(' · ');
-    document.getElementById('st0').textContent = traits(A.F[0].s).join(' · ');
     A.phase = 'intro'; A.phaseT = 0;
     message(boss ? 'Final fight' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name);
   }
@@ -157,27 +224,31 @@ export function createArena(env) {
   function bars() {
     for (let i = 0; i < 2; i++) {
       const f = A.F[i], b = document.getElementById('hp' + i); if (!b) continue;
-      const k = clamp(f.hp / f.max, 0, 1);
-      b.style.width = (k * 100) + '%'; b.style.background = f.poison > 0 ? '#8fd14f' : k > 0.5 ? '#3fd0a4' : k > 0.25 ? '#ffb347' : '#ff5a4a';
+      const k = clamp(f.hp / f.max, 0, 1), st = f.st;
+      b.style.width = (k * 100) + '%'; b.style.background = st.poison > 0 ? '#8fd14f' : k > 0.5 ? '#3fd0a4' : k > 0.25 ? '#ffb347' : '#ff5a4a';
+      b.parentNode.classList.toggle('shield', f.shield > 0);
+      const txt = Math.max(0, Math.ceil(f.hp)) + ' / ' + f.max + (f.shield > 0 ? ' +' + Math.ceil(f.shield) : '') + (st.bleed > 0 ? ' 🩸' + st.bleed : '') + (st.poison > 0 ? ' ☣️' : '') + (st.burn > 0 ? ' 🔥' : '') + (st.stun > 0 ? ' 💫' : '') + (st.weak > 0 ? ' ⬇️' : '') + (st.slow > 0 ? ' 🕸️' : '') + (st.blind > 0 ? ' 🌫️' : '') + (f.buff.shell > 0 ? ' 🐢' : '') + (f.buff.evade > 0 ? ' 🦅' : '') + (f.buff.frenzy > 0 ? ' 😤' : '');
+      const sEl = document.getElementById('st' + i); if (sEl.textContent !== txt) sEl.textContent = txt;
     }
     const cd = (id, left, total, on) => { const b = document.getElementById(id); if (!b) return; b.firstChild.style.height = (clamp(left / total, 0, 1) * 100) + '%'; b.classList.toggle('armed', !!on); };
-    cd('bpow', A.F[0].powerCd, 7, A.F[0].power); cd('bgrd', A.F[0].guardCd, 4.5, A.F[0].guard > 0);
+    cd('bpow', A.F[0].powerCd, 7, A.F[0].power); cd('bgrd', A.F[0].guardCd, A.F[0].guardEvery, A.F[0].guard > 0);
+    A.F[0].abil.forEach((a, k) => cd('bab' + k, a.cd, ABILITY_CD[a.id], false));
   }
   function wonFight() {
-    const f = A.F[0];
-    A.run.round++; A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * HEAL);
+    const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round);
+    meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; env.saveMeta();
+    A.run.bonusHp = (A.run.bonusHp || 0) + f.m.killHp;
+    A.run.round++;
+    A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * (HEAL + 0.04 * (meta.boosts.recov || 0) + f.m.killHeal));
+    A.run.draft = null;
     if (A.run.round >= ROUNDS) { champion(); return; }
     store.set('cc.run', A.run);
-    A.phase = 'won';
-    el.querySelector('.acts').classList.add('hidden'); message('', '');
-    panel(h('h2', null, A.enemy.name.split(',')[0] + ' is dead'),
-      h('p', null, A.data.name + ' rests and recovers some strength: ', h('b', null, Math.round(A.run.hp) + ' / ' + f.max), ' health.'),
-      h('p', { class: 'dim' }, (ROUNDS - A.run.round) + (ROUNDS - A.run.round === 1 ? ' fight' : ' fights') + ' to go.' + (A.run.round === ROUNDS - 1 ? ' Only the champion remains.' : '')),
-      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => { el.querySelector('.panel').remove(); nextFight(); } }, A.run.round === ROUNDS - 1 ? 'Face the champion' : 'Next fight'))).classList.add('low');
+    reward(A.enemy.name.split(',')[0] + ' is dead', '+' + pts + ' points. ' + A.data.name + ' recovers to ' + Math.round(A.run.hp) + ' / ' + f.max + ' health. ' + (A.run.round === ROUNDS - 1 ? 'Only the champion remains. ' : '') + 'Choose a reward:');
   }
   function champion() {
     A.phase = 'champion'; store.set('cc.run', null); sfx('win'); A.cheer = 6;
-    const pts = championPoints(A.F[0].hp, A.F[0].max);
+    dropView(0); A.views[0] = makeView(A.data, env.M, -1, A.run.load);
+    const pts = championPoints(A.F[0].hp, A.F[0].max), earned = A.run.earned || 0;
     dropView(1); A.views[0].holder.position.x = 0; A.views[0].holder.rotation.y = 0.35;
     // Confetti.
     const n = 260, geo = new THREE.PlaneGeometry(0.09, 0.14), cm = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), n), c = new THREE.Color();
@@ -187,16 +258,19 @@ export function createArena(env) {
     el.replaceChildren(h('div', { class: 'floaters' }));
     panel(h('h2', { class: 'gold' }, 'Champion!'),
       h('p', null, h('b', null, A.data.name), ' won all ten fights and rules the Colosseum.'),
-      h('div', { class: 'stats' }, h('div', null, h('small', null, 'Title'), h('b', null, '1000')), h('div', null, h('small', null, 'Health left'), h('b', null, '+' + (pts - 1000))), h('div', null, h('small', null, 'Points won'), h('b', { class: 'gold' }, String(pts)))),
+      h('div', { class: 'stats' }, h('div', null, h('small', null, 'Fights'), h('b', null, String(earned))), h('div', null, h('small', null, 'Title'), h('b', null, '+1000')), h('div', null, h('small', null, 'Health left'), h('b', null, '+' + (pts - 1000))), h('div', null, h('small', null, 'Total'), h('b', { class: 'gold' }, String(pts + earned)))),
       h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'champion', points: pts }) }, 'Take the crown'))).classList.add('low');
   }
   function died() {
-    A.phase = 'dead'; store.set('cc.run', null); sfx('lose');
+    A.phase = 'dead'; sfx('lose');
     el.querySelector('.acts').classList.add('hidden'); message('', '');
+    const meta = env.meta(), earned = A.run.earned || 0;
     panel(h('h2', { class: 'red' }, A.data.name + ' has fallen'),
-      h('p', null, 'Killed by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ' of ' + ROUNDS + ', after ' + A.run.round + (A.run.round === 1 ? ' win.' : ' wins.')),
-      h('p', { class: 'dim' }, 'The dead do not return. Build a new creature and try again.'),
-      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'dead', round: A.run.round, by: A.enemy.name }) }, 'Create a new creature'))).classList.add('low');
+      h('p', null, 'Killed by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ' of ' + ROUNDS + ', after ' + A.run.round + (A.run.round === 1 ? ' win' : ' wins') + ' and ' + earned + ' points earned.'),
+      meta.revives > 0 ? h('p', null, 'You hold ' + meta.revives + (meta.revives === 1 ? ' revive.' : ' revives.') + ' Using one brings it back at half health to fight ' + A.enemy.name.split(',')[0] + ' again.') : h('p', { class: 'dim' }, 'The dead do not return. Build a new creature and try again. Revives are sold in the shop.'),
+      h('div', { class: 'row' },
+        meta.revives > 0 && h('button', { class: 'go', onclick: () => { meta.revives--; env.saveMeta(); A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); sfx('win'); nextFight(); } }, 'Use a revive'),
+        h('button', { class: meta.revives > 0 ? '' : 'go', onclick: () => { store.set('cc.run', null); finish({ type: 'dead', round: A.run.round, by: A.enemy.name }); } }, meta.revives > 0 ? 'Let it die' : 'Create a new creature'))).classList.add('low');
   }
   function finish(result) {
     dropView(0); dropView(1);
@@ -228,24 +302,30 @@ export function createArena(env) {
     v.mats.U.uInv.value.copy(v.cr.group.matrixWorld).invert();
   }
   function onEvent(ev) {
-    if (ev.type === 'poison') { floater(ev.on, '-' + ev.dmg, 'venom'); return; }
+    if (ev.type === 'dot') { floater(ev.on, '-' + ev.dmg, ev.kind === 'venom' ? 'venom' : ev.kind === 'burn' ? 'burn' : 'bleed'); return; }
+    if (ev.type === 'cast') { floater(ev.by, ev.name, 'cast'); sfx('miss'); return; }
+    if (ev.type === 'heal') { floater(ev.on, ev.name, 'venom'); sfx('win'); return; }
     const a = A.views[ev.by], d = A.views[1 - ev.by];
     a.strike = 0;
+    if (ev.name) floater(ev.by, ev.name, 'cast');
     if (ev.miss) { floater(1 - ev.by, 'Miss', 'dim'); sfx('miss'); return; }
-    d.recoil = ev.blocked ? 0.3 : ev.power || ev.crit ? 1 : 0.6; if (!ev.blocked) d.flash = 1;
-    A.shake = ev.blocked ? 0.05 : ev.power ? 0.3 : ev.crit ? 0.2 : 0.1; A.cheer = Math.max(A.cheer, ev.power || ev.crit ? 1 : 0.4);
-    floater(1 - ev.by, (ev.blocked ? 'Blocked ' : '') + '-' + ev.dmg + (ev.crit ? '!' : ''), ev.blocked ? 'dim' : ev.power || ev.crit ? 'big' : '');
+    const hard = ev.power || ev.crit || ev.ability;
+    d.recoil = ev.blocked ? 0.3 : hard ? 1 : 0.6; if (!ev.blocked) d.flash = 1;
+    A.shake = ev.blocked ? 0.05 : ev.power ? 0.3 : hard ? 0.2 : 0.1; A.cheer = Math.max(A.cheer, hard ? 1 : 0.4);
+    floater(1 - ev.by, (ev.blocked ? 'Blocked ' : '') + '-' + ev.dmg + (ev.crit ? '!' : ''), ev.blocked ? 'dim' : hard ? 'big' : '');
     if (ev.thorns) floater(ev.by, '-' + ev.thorns, 'dim');
-    if (ev.venom) floater(1 - ev.by, 'Poisoned', 'venom');
-    sfx(ev.blocked ? 'block' : ev.power ? 'power' : 'hit');
+    if (ev.riposte) floater(ev.by, 'Riposte -' + ev.riposte, 'dim');
+    const tag = ev.stun ? 'Stunned' : ev.venom ? 'Poisoned' : ev.burn ? 'Burning' : ev.bleed ? 'Bleeding' : '';
+    if (tag) floater(1 - ev.by, tag, ev.venom ? 'venom' : ev.burn ? 'burn' : 'bleed');
+    sfx(ev.blocked ? 'block' : hard ? 'power' : 'hit');
   }
   A.update = (dt, t) => {
     A.t += dt; A.phaseT += dt;
     if (A.phase === 'intro' && A.phaseT > 1.7) { A.phase = 'fight'; A.phaseT = 0; message('Fight!', ''); setTimeout(() => A.phase === 'fight' && message('', ''), 700); }
     if (A.phase === 'fight') {
-      const evs = [], skill = 0.15 + 0.035 * A.run.round;
+      const evs = A.queue.splice(0), skill = 0.15 + 0.035 * A.run.round;
       let w = -1;
-      for (let k = 0; k < 2 && w < 0; k++) { ai(A.F[1], A.F[0], dt / 2, A.rand, skill); w = step(A.F, dt / 2, A.rand, evs); }
+      for (let k = 0; k < 2 && w < 0; k++) { ai(A.F, 1, dt / 2, A.rand, skill, evs); if (A.auto) ai(A.F, 0, dt / 2, A.rand, 0.5, evs); w = step(A.F, dt / 2, A.rand, evs); }
       evs.forEach(onEvent); bars();
       if (w >= 0) { A.phase = 'ending'; A.phaseT = 0; A.winner = w; A.views[1 - w].dead = 0; A.cheer = 3; if (w === 0) sfx('win'); }
     }
@@ -263,17 +343,20 @@ export function createArena(env) {
     A.shake = Math.max(0, A.shake - dt * 1.2);
     const narrow = clamp(1.9 / camera.aspect, 1, 1.6);
     const win = A.phase === 'champion';
-    camera.position.set(Math.sin(A.t * 0.25) * 0.8 + (Math.random() - 0.5) * A.shake, (win ? 1.7 : 2.1) + (Math.random() - 0.5) * A.shake, (win ? 6.2 : 8.2) * narrow);
-    camera.lookAt(0, win ? 1.5 : 0.95, 0);
+    camera.position.set(Math.sin(A.t * 0.25) * 0.8 + (Math.random() - 0.5) * A.shake, (win ? 1.5 : 2.1) + (Math.random() - 0.5) * A.shake, (win ? 7.2 : 8.2) * narrow);
+    camera.lookAt(0, win ? -0.25 : 0.95, 0);          // on the champion screen the panel sits low, so frame the creature high
   };
   /** Start (or resume) a gauntlet with this creature. */
   A.start = (data, run) => {
     A.data = data; A.active = true; A.t = 0; A.enemy = null; A.F = null;
-    A.run = run || { id: data.id, round: 0, hp: null, seed: Math.floor(Math.random() * 1e9) };
+    A.run = run || { id: data.id, round: 0, hp: null, seed: Math.floor(Math.random() * 1e9), load: newLoad(), bonusHp: 0, earned: 0, rerolls: env.meta().boosts.reroll || 0, draft: null };
+    if (!A.run.load) A.run.load = newLoad();
+    A.eLoad = null; A.queue = [];
     keepBg = scene.background; scene.background = S.sky; S.g.visible = true;
     el.classList.remove('hidden');
-    A.views[0] = makeView(data, env.M, -1);
-    if (A.run.round > 0) {
+    A.views[0] = makeView(data, env.M, -1, A.run.load);
+    if (A.run.draft) reward('Back to the sands', 'Choose your reward:');
+    else if (A.run.round > 0) {
       A.phase = 'won'; el.replaceChildren();
       panel(h('h2', null, 'Back to the sands'), h('p', null, A.data.name + ' has won ' + A.run.round + ' of ' + ROUNDS + ' fights and has ' + Math.round(A.run.hp) + ' health.'),
         h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => nextFight() }, 'Next fight')));

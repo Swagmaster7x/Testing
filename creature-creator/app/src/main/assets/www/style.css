@@ -125,3 +125,47 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 
 .stats div { flex: 1; background: #0006; border-radius: 10px; padding: 5px 2px; }
 .stats small { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: #c9b99f; }
 .stats b { font-size: 19px; }
+
+/* shop and locks */
+.shopbtn { background: #9a1c1c; border-color: #d9502a; color: #fff; font-weight: 600; min-height: 30px; padding: 4px 14px; }
+#start h1 .record b { color: var(--hot); }
+.card.locked img { filter: grayscale(1) brightness(0.45); }
+.card.locked small { color: var(--hot); }
+.tile.locked img { filter: grayscale(1) brightness(0.5); }
+.tile.locked small { display: block; color: var(--hot); font-size: 10.5px; }
+.shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+.shoprow { display: flex; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 7px 10px; }
+.shoprow.owned { opacity: 0.6; }
+.shoprow .ico { width: 40px; height: 40px; font-size: 27px; text-align: center; flex: none; line-height: 40px; }
+.shoprow .ico img { width: 40px; height: 40px; border-radius: 8px; display: block; }
+.shoprow .what { flex: 1; min-width: 0; }
+.shoprow .what b, .shoprow .what small { display: block; }
+.shoprow .what small { color: var(--dim); font-size: 11.5px; }
+.shoprow .what small.req { color: var(--hot); }
+.shoprow button { flex: none; white-space: nowrap; }
+.shoprow button.go { background: var(--go); color: #06231b; border-color: var(--go); font-weight: 600; }
+.shoprow .have { color: var(--go); font-size: 12px; flex: none; }
+
+/* rewards, abilities, kit */
+.kit { font-size: 15px; letter-spacing: 1px; line-height: 1.2; max-height: 38px; overflow: hidden; }
+.hp.shield { border-color: #7fd0ff; box-shadow: 0 0 8px #7fd0ff; }
+.acts > div { display: flex; gap: 8px; align-items: flex-end; }
+.acts button { width: 112px; height: 56px; font-size: 13.5px; line-height: 1.15; padding: 2px 4px; }
+.acts button.abil { background: #5a2a8add; }
+.float.cast { color: #d8b4ff; font-size: 18px; }
+.float.burn { color: #ffa040; font-size: 17px; }
+.float.bleed { color: #ff7a7a; font-size: 17px; }
+.panel.wide { width: min(760px, 96vw); padding: 8px 14px 10px; }
+.panel.wide h2 { font-size: 19px; margin-bottom: 2px; }
+.panel.wide > p { margin: 3px 0; font-size: 12.5px; }
+.rewards { display: flex; gap: 10px; margin: 6px 0; }
+.reward { flex: 1; min-width: 0; display: block; text-align: center; background: #2a2018; border: 2px solid #8a7a66; border-radius: 14px; padding: 6px 8px 8px; color: #fff; }
+.reward:active { transform: scale(0.97); }
+.reward.r1 { border-color: #5aa9ff; background: #16243a; }
+.reward.r2 { border-color: #d08aff; background: #2a1840; box-shadow: 0 0 12px #d08aff66; }
+.reward small { display: block; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #c9b99f; }
+.reward.c-weapon small { color: #ff9a8a; } .reward.c-ability small { color: #d8b4ff; } .reward.c-relic small { color: #9fe0b0; }
+.reward .ico { font-size: 34px; line-height: 1.25; }
+.reward b { display: block; font-size: 15px; }
+.reward p { margin: 3px 0 0; font-size: 12px; color: #e6dccb; font-weight: 400; }
+.reward em { display: block; margin-top: 4px; font-style: normal; font-size: 11px; color: #ffd76a; }
