@@ -78,6 +78,7 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
     val ui by vm.ui.collectAsStateWithLifecycle()
     val filter by vm.filter.collectAsStateWithLifecycle()
     val others by vm.others.collectAsStateWithLifecycle()
+    val blocked by vm.blocked.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var picking by remember { mutableStateOf<SlotRef?>(null) }
@@ -137,7 +138,7 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
             RecipePickerSheet(
                 slot = target.slot,
                 dateLabel = Dates.longLabel(target.date),
-                recipes = state.recipes,
+                recipes = state.recipes.filter { it.id !in blocked },
                 filter = filter,
                 onFilterChange = vm::setFilter,
                 onPick = { vm.setSlot(target.date, target.slot, it); picking = null },

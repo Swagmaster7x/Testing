@@ -15,7 +15,7 @@ enum class Avoid(val label: String, val isAllergen: Boolean) {
     SHELLFISH("Shellfish", true),
     TREE_NUT("Tree nuts", true),
     PEANUT("Peanuts", true),
-    GLUTEN("Wheat and gluten", true),
+    GLUTEN("Wheat/gluten", true),
     SOY("Soy", true),
     SESAME("Sesame", true),
     BEEF("Beef", false),

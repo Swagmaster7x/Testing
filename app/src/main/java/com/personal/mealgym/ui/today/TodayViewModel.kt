@@ -68,6 +68,9 @@ class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
 
     val filter: StateFlow<LibraryFilter> = c.settings.settings(profileId).map { it.filter }.stateInVm(LibraryFilter())
 
+    /** Recipes this person asked to avoid: left out of the picker. */
+    val blocked: StateFlow<Set<Long>> = c.meals.conflictsFor(profileId).map { it.keys }.stateInVm(emptySet())
+
     fun setFilter(filter: LibraryFilter) {
         viewModelScope.launch { c.settings.setFilter(profileId, filter) }
     }

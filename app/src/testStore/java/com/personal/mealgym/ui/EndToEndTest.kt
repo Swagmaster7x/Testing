@@ -78,6 +78,9 @@ class EndToEndTest {
         compose.onAllNodesWithText("Always dark").onFirst().performClick()
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/e2e-01-setup-own-look.png")
+        scrollTo(hasText("Skip the questions and set things up myself"))
+        compose.onAllNodesWithText("Skip the questions and set things up myself").onFirst().performClick()
+        waitForText("Workout plan")
         scrollTo(hasText("Start"))
         compose.onAllNodesWithText("Start").onFirst().performClick()
 

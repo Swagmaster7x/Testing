@@ -2,40 +2,35 @@
 
 package com.personal.mealgym.ui.people
 
-import androidx.compose.foundation.BorderStroke
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,8 +38,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
@@ -52,40 +45,46 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.AppContainer
-import com.personal.mealgym.R
+import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.data.db.Profile
+import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.seed.WorkoutTemplate
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.MealSetup
+import com.personal.mealgym.domain.PlanAnswers
+import com.personal.mealgym.domain.PlanBuilder
 import com.personal.mealgym.domain.Portions
+import com.personal.mealgym.domain.TargetResult
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.ShowMessages
 import com.personal.mealgym.ui.SystemBars
-import androidx.compose.foundation.isSystemInDarkTheme
 import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.components.ConfirmDialog
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.SectionHeader
-import com.personal.mealgym.ui.settings.SwitchRow
-import com.personal.mealgym.ui.theme.MealGymTheme
-import com.personal.mealgym.ui.theme.ThemedBackground
-import com.personal.mealgym.ui.theme.CustomLook
-import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.ui.looks.CustomLookEditor
 import com.personal.mealgym.ui.looks.LookGrid
 import com.personal.mealgym.ui.looks.LookPreview
+import com.personal.mealgym.ui.plan.WeekPlanner
+import com.personal.mealgym.ui.settings.SwitchRow
+import com.personal.mealgym.ui.theme.CustomLook
+import com.personal.mealgym.ui.theme.Looks
+import com.personal.mealgym.ui.theme.MealGymTheme
+import com.personal.mealgym.ui.theme.ThemedBackground
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 
-/** A person being set up or edited. Starter plan and training days only apply when adding. */
+/** A person being set up or edited. */
 data class PersonDraft(
     val name: String = "",
     val themeKey: String = Profile.THEME_IRON,
@@ -97,8 +96,19 @@ data class PersonDraft(
     val weekBadges: Boolean = true,
     /** The look creator's choices, kept even while a ready-made look is picked. */
     val customLook: String? = null,
+    /** The setup questions (new people only). */
+    val form: SetupForm = SetupForm(),
+    /** "Skip the questions" was chosen: no answers are saved and nothing is suggested. */
+    val skipped: Boolean = false,
+    /** Plan the first week of meals when the person is added. */
+    val fillWeek: Boolean = true,
+    /** Answers already on the profile being edited; kept as they are. */
+    val savedAnswers: String? = null,
 ) {
-    fun toProfile(id: Long, templateKey: String?) = Profile(
+    /** What gets saved from the questions: nothing when they were skipped. */
+    val answers: PlanAnswers? get() = if (skipped) null else form.resolved()
+
+    fun toProfile(id: Long, templateKey: String?, planAnswers: String?) = Profile(
         id = id,
         name = name.trim(),
         themeKey = themeKey,
@@ -108,6 +118,7 @@ data class PersonDraft(
         weekBadges = weekBadges,
         templateKey = templateKey,
         customLook = customLook,
+        planAnswers = planAnswers,
     )
 
     companion object {
@@ -120,8 +131,18 @@ data class PersonDraft(
             tipsStyle = p.tipsStyle,
             weekBadges = p.weekBadges,
             customLook = p.customLook,
+            savedAnswers = p.planAnswers,
         )
     }
+}
+
+/** The pages of setup for a new person. */
+enum class SetupStep(val title: String) {
+    YOU("About you"),
+    GOAL("Your goal"),
+    FOOD("Food"),
+    TRAINING("Training"),
+    PLAN("Your plan"),
 }
 
 class PersonViewModel(private val c: AppContainer, handle: SavedStateHandle) : MessageViewModel() {
@@ -129,17 +150,28 @@ class PersonViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
     val id: Long = handle.get<Long>("id") ?: 0L
     val isNew: Boolean get() = id == 0L
     val templates: List<WorkoutTemplate> = c.seed.seed.workoutTemplates
+
+    /** Cuisines to choose favourites from: the library's own, minus labels that aren't cuisines. */
+    val cuisines: List<String> = c.seed.seed.recipes.flatMap { it.cuisineTags }.distinct()
+        .filter { it !in setOf("Snack", "Starbucks") }
+        .sorted()
+
     private var original: Profile? = null
+    private var library: List<Recipe> = emptyList()
 
     private val _draft = MutableStateFlow(if (isNew) starterDraft() else null)
     val draft: StateFlow<PersonDraft?> = _draft.asStateFlow()
+
+    private val _step = MutableStateFlow(SetupStep.YOU)
+    val step: StateFlow<SetupStep> = _step.asStateFlow()
 
     /** Someone can only be removed while there's somebody else. */
     val canDelete: Boolean get() = !isNew && c.profiles.value.size > 1
 
     init {
-        if (!isNew) {
-            viewModelScope.launch {
+        viewModelScope.launch {
+            library = c.meals.recipes.first()
+            if (!isNew) {
                 val p = c.people.list().firstOrNull { it.id == id }
                 original = p
                 _draft.value = p?.let(PersonDraft::of)
@@ -158,31 +190,95 @@ class PersonViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
 
     fun change(edit: (PersonDraft) -> PersonDraft) = _draft.update { it?.let(edit) }
 
-    /** Picking a starter plan also picks its suggested training days. */
+    /** Picking a starter plan by hand also picks its suggested training days. */
     fun chooseTemplate(key: String?) = change { d ->
         val t = c.seed.seed.template(key)
-        d.copy(templateKey = key, trainingDays = if (t != null) daysOf(t) else d.trainingDays)
+        d.copy(templateKey = key, trainingDays = if (t != null && d.skipped) daysOf(t) else d.trainingDays)
     }
 
     fun toggleDay(day: DayOfWeek) = change { d ->
         d.copy(trainingDays = if (day in d.trainingDays) d.trainingDays - day else d.trainingDays + day)
     }
 
+    /** The starter plan the answers point to, to mark as suggested. */
+    fun suggestedTemplate(d: PersonDraft): WorkoutTemplate? = d.answers?.let { PlanBuilder.suggestTemplate(it, templates) }
+
+    /** What a typical day comes to with the portion and snack currently chosen. */
+    fun typicalDay(d: PersonDraft): MealSetup? =
+        if (library.isEmpty()) null else PlanBuilder.mealSetups(library).firstOrNull { it.portion == d.portion && it.snack == d.snackSlot }
+
+    fun next() {
+        val d = _draft.value ?: return
+        if (_step.value == SetupStep.YOU) {
+            if (d.name.isBlank()) {
+                say("Add a name first.")
+                return
+            }
+            if (nameTaken(d)) return
+        }
+        val following = SetupStep.entries.getOrNull(_step.value.ordinal + 1) ?: return
+        if (following == SetupStep.PLAN) suggest()
+        _step.value = following
+    }
+
+    /** Steps back a page. False on the first page, when there's nowhere to go. */
+    fun back(): Boolean {
+        val d = _draft.value
+        val previous = when {
+            _step.value == SetupStep.PLAN && d?.skipped == true -> SetupStep.YOU
+            else -> SetupStep.entries.getOrNull(_step.value.ordinal - 1)
+        } ?: return false
+        if (d?.skipped == true) change { it.copy(skipped = false) }
+        _step.value = previous
+        return true
+    }
+
+    /** Straight to the plan page with the standard setup and no answers saved. */
+    fun skipQuestions() {
+        change { it.copy(skipped = true) }
+        _step.value = SetupStep.PLAN
+    }
+
+    /** Sets the plan page up from the answers: workout plan, training days, portions, snack, tips. */
+    private fun suggest() = change { d ->
+        val a = d.answers ?: return@change d
+        val target = (PlanBuilder.targets(a) as? TargetResult.Ready)?.targets?.calories
+        val meals = PlanBuilder.mealSetup(target, library)
+        d.copy(
+            templateKey = PlanBuilder.suggestTemplate(a, templates)?.key,
+            trainingDays = PlanBuilder.trainingDays(a.daysPerWeek),
+            portion = meals.portion,
+            snackSlot = meals.snack,
+            tipsStyle = PlanBuilder.tipsStyle(a.goalValue),
+        )
+    }
+
+    private fun nameTaken(d: PersonDraft): Boolean {
+        val clash = c.profiles.value.any { it.id != id && it.name.trim().equals(d.name.trim(), ignoreCase = true) }
+        if (clash) say("Someone here is already called ${d.name.trim()}.")
+        return clash
+    }
+
     /** Saves and calls [onSaved] with the person's id. */
     fun save(onSaved: (Long) -> Unit) {
         val d = _draft.value ?: return
-        if (d.name.isBlank()) return
-        val clash = c.profiles.value.any { it.id != id && it.name.trim().equals(d.name.trim(), ignoreCase = true) }
-        if (clash) {
-            say("Someone here is already called ${d.name.trim()}.")
-            return
-        }
+        if (d.name.isBlank() || nameTaken(d)) return
         // On the app's scope: adding the first person replaces this screen before the save returns.
         c.appScope.launch {
             val saved = if (isNew) {
-                c.people.create(d.toProfile(0, null), c.seed.seed.template(d.templateKey), d.trainingDays)
+                val answers = d.answers
+                val newId = c.people.create(
+                    d.toProfile(0, null, answers?.encode()),
+                    c.seed.seed.template(d.templateKey),
+                    d.trainingDays,
+                )
+                if (answers != null) c.settings.setWeightUnit(newId, if (answers.metric) WeightUnit.KG else WeightUnit.LB)
+                if (d.fillWeek) {
+                    c.people.list().firstOrNull { it.id == newId }?.let { WeekPlanner.firstWeek(c, it, c.today.value) }
+                }
+                newId
             } else {
-                c.people.update(d.toProfile(id, original?.templateKey))
+                c.people.update(d.toProfile(id, original?.templateKey, d.savedAnswers))
                 id
             }
             onSaved(saved)
@@ -208,10 +304,14 @@ class PersonViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
 @Composable
 fun FirstPersonScreen(vm: PersonViewModel = viewModel(factory = AppViewModels.Factory)) {
     val draft by vm.draft.collectAsStateWithLifecycle()
+    val step by vm.step.collectAsStateWithLifecycle()
     val d = draft ?: return
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     val look = Looks.forKey(d.themeKey, d.customLook)
+    val scroll = rememberScrollState()
+    LaunchedEffect(step) { scroll.scrollTo(0) }
+    BackHandler(enabled = step != SetupStep.YOU) { vm.back() }
     SystemBars(look.isDark(isSystemInDarkTheme()))
     MealGymTheme(look = look) {
         ThemedBackground {
@@ -219,43 +319,52 @@ fun FirstPersonScreen(vm: PersonViewModel = viewModel(factory = AppViewModels.Fa
                 Modifier
                     .fillMaxSize()
                     .safeDrawingPadding()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scroll)
                     .padding(horizontal = 16.dp, vertical = 24.dp),
             ) {
-                Text("Welcome to Meal & Gym", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "A meal planner, shopping list and gym log in one. Set yourself up; you can add other people later in Settings.",
+                    if (step == SetupStep.YOU) "Welcome to Meal & Gym" else step.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    if (step == SetupStep.YOU) {
+                        "A meal planner, shopping list and gym log in one. A few questions and the app builds your plan. You can add other people later."
+                    } else {
+                        "Step ${step.ordinal + 1} of ${SetupStep.entries.size}"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp),
                 )
-                PersonForm(d, vm)
-                Text(
-                    NOT_ADVICE,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 20.dp),
-                )
-                AppButton(
-                    onClick = vm::start,
-                    enabled = d.name.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                ) { Text("Start") }
+                SetupPages(step, d, vm, finishLabel = "Start", onFinish = vm::start)
             }
             SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).safeDrawingPadding())
         }
     }
 }
 
-/** Settings → People: add someone (id 0) or edit them. */
+/** Settings → People: add someone (id 0, the same steps as first launch) or edit them. */
 @Composable
 fun PersonScreen(nav: AppNavigator, vm: PersonViewModel = viewModel(factory = AppViewModels.Factory)) {
     val draft by vm.draft.collectAsStateWithLifecycle()
+    val step by vm.step.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    val scroll = rememberScrollState()
+    LaunchedEffect(step) { scroll.scrollTo(0) }
+    BackHandler(enabled = vm.isNew && step != SetupStep.YOU) { vm.back() }
     AppScaffold(
-        topBar = { DetailTopBar(title = if (vm.isNew) "Add a person" else "Edit ${draft?.name?.trim().orEmpty()}", onBack = nav::back) },
+        topBar = {
+            DetailTopBar(
+                title = when {
+                    !vm.isNew -> "Edit ${draft?.name?.trim().orEmpty()}"
+                    step == SetupStep.YOU -> "Add a person"
+                    else -> "${step.title} (${step.ordinal + 1} of ${SetupStep.entries.size})"
+                },
+                onBack = { if (!vm.isNew || !vm.back()) nav.back() },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         val d = draft ?: return@AppScaffold
@@ -263,18 +372,23 @@ fun PersonScreen(nav: AppNavigator, vm: PersonViewModel = viewModel(factory = Ap
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            PersonForm(d, vm)
-            AppButton(
-                onClick = { vm.save { nav.backOnMain() } },
-                enabled = d.name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
-            ) { Text(if (vm.isNew) "Add" else "Save") }
-            if (vm.canDelete) {
-                OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    Text("Remove ${d.name.trim()}")
+            if (vm.isNew) {
+                SetupPages(step, d, vm, finishLabel = "Add", onFinish = { vm.save { nav.backOnMain() } })
+            } else {
+                NameAndLook(d, vm)
+                MealChoices(d, vm, typical = null)
+                AppButton(
+                    onClick = { vm.save { nav.backOnMain() } },
+                    enabled = d.name.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
+                ) { Text("Save") }
+                if (vm.canDelete) {
+                    OutlinedButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                        Text("Remove ${d.name.trim()}")
+                    }
                 }
             }
         }
@@ -297,8 +411,37 @@ private fun AppNavigator.backOnMain() {
 const val NOT_ADVICE =
     "Meal & Gym is a planner, not medical, nutrition or fitness advice. Check with a doctor before starting a new eating or training plan."
 
+/** One page of setup, with Back and Next (or the finishing button) underneath. */
 @Composable
-private fun PersonForm(d: PersonDraft, vm: PersonViewModel) {
+private fun SetupPages(step: SetupStep, d: PersonDraft, vm: PersonViewModel, finishLabel: String, onFinish: () -> Unit) {
+    when (step) {
+        SetupStep.YOU -> NameAndLook(d, vm)
+        SetupStep.GOAL -> GoalStep(d.form) { f -> vm.change { it.copy(form = f) } }
+        SetupStep.FOOD -> FoodStep(d.form, vm.cuisines) { f -> vm.change { it.copy(form = f) } }
+        SetupStep.TRAINING -> TrainingStep(d.form) { f -> vm.change { it.copy(form = f) } }
+        SetupStep.PLAN -> PlanPage(d, vm)
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+    ) {
+        if (step != SetupStep.YOU) OutlinedButton(onClick = { vm.back() }) { Text("Back") }
+        if (step == SetupStep.PLAN) {
+            AppButton(onClick = onFinish, enabled = d.name.isNotBlank(), modifier = Modifier.weight(1f)) { Text(finishLabel) }
+        } else {
+            AppButton(onClick = vm::next, enabled = d.name.isNotBlank(), modifier = Modifier.weight(1f)) { Text("Next") }
+        }
+    }
+    if (step == SetupStep.YOU) {
+        TextButton(onClick = vm::skipQuestions, enabled = d.name.isNotBlank(), modifier = Modifier.padding(top = 4.dp)) {
+            Text("Skip the questions and set things up myself")
+        }
+    }
+}
+
+@Composable
+private fun NameAndLook(d: PersonDraft, vm: PersonViewModel) {
     SectionHeader("Name")
     OutlinedTextField(
         value = d.name,
@@ -336,42 +479,91 @@ private fun PersonForm(d: PersonDraft, vm: PersonViewModel) {
         LookPreview(Looks.custom(editing))
         CustomLookEditor(editing, onChange = { c -> vm.change { it.copy(customLook = c.encode()) } })
     }
+}
 
-    if (vm.isNew) {
-        SectionHeader("Starter workout plan")
-        vm.templates.forEach { t ->
-            ChoiceRow(
-                selected = d.templateKey == t.key,
-                title = t.name,
-                body = t.description,
-                onClick = { vm.chooseTemplate(t.key) },
+/** The last page: what the answers came to, with everything still adjustable. */
+@Composable
+private fun PlanPage(d: PersonDraft, vm: PersonViewModel) {
+    val answers = d.answers
+    if (answers != null) {
+        SectionHeader("Your daily guide")
+        val guide = PlanBuilder.guide(answers)
+        if (guide.isEmpty()) {
+            Text(
+                "Add your age, height and weight on the goal page for an estimated calorie and protein guide. The plan below works without it.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        } else {
+            GuideCard(guide)
         }
-        ChoiceRow(
-            selected = d.templateKey == null,
-            title = "Start empty",
-            body = "Add your own workout days in Settings, under Edit workouts.",
-            onClick = { vm.chooseTemplate(null) },
-        )
-
-        SectionHeader("Training days")
-        Text(
-            "Workouts cycle in order across these days. A missed day just moves on to the next session.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-            DayOfWeek.entries.forEach { day ->
-                FilterChip(
-                    selected = day in d.trainingDays,
-                    onClick = { vm.toggleDay(day) },
-                    label = { Text(Dates.shortDayName(day)) },
-                )
-            }
+        if (answers.avoids.isNotEmpty()) {
+            Text(
+                "Kept off your plan: ${com.personal.mealgym.domain.Foods.describe(answers.avoids)}.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 
+    SectionHeader("Workout plan")
+    val suggested = vm.suggestedTemplate(d)?.key
+    vm.templates.forEach { t ->
+        ChoiceRow(
+            selected = d.templateKey == t.key,
+            title = if (t.key == suggested) "${t.name} (suggested)" else t.name,
+            body = t.description,
+            onClick = { vm.chooseTemplate(t.key) },
+        )
+    }
+    ChoiceRow(
+        selected = d.templateKey == null,
+        title = "Start empty",
+        body = "Add your own workout days in Settings, under Edit workouts.",
+        onClick = { vm.chooseTemplate(null) },
+    )
+
+    SectionHeader("Training days")
+    Text(
+        "Workouts cycle in order across these days. A missed day just moves on to the next session.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+        DayOfWeek.entries.forEach { day ->
+            FilterChip(
+                selected = day in d.trainingDays,
+                onClick = { vm.toggleDay(day) },
+                label = { Text(Dates.shortDayName(day)) },
+            )
+        }
+    }
+
+    MealChoices(d, vm, typical = vm.typicalDay(d))
+    SwitchRow(
+        title = "Plan my first week of meals",
+        body = "Fills the empty slots with recipes that fit. Change any of them whenever you like.",
+        checked = d.fillWeek,
+        onChange = { on -> vm.change { it.copy(fillWeek = on) } },
+    )
+    Text(
+        NOT_ADVICE,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+}
+
+@Composable
+private fun MealChoices(d: PersonDraft, vm: PersonViewModel, typical: MealSetup?) {
     SectionHeader("Meals")
+    if (typical != null) {
+        Text(
+            "Set up like this, a typical day comes to about ${"%,d".format(typical.typicalCalories)} calories and ${typical.typicalProtein} g of protein.",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+    }
     SwitchRow(
         title = "Snack slot",
         body = "Adds a fourth meal, Snack, to Today and the week plan.",
@@ -414,23 +606,4 @@ private fun PersonForm(d: PersonDraft, vm: PersonViewModel) {
         checked = d.weekBadges,
         onChange = { on -> vm.change { it.copy(weekBadges = on) } },
     )
-}
-
-@Composable
-private fun ChoiceRow(selected: Boolean, title: String, body: String, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(vertical = 6.dp),
-    ) {
-        RadioButton(selected = selected, onClick = null, modifier = Modifier.padding(end = 12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (body.isNotBlank()) {
-                Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
 }

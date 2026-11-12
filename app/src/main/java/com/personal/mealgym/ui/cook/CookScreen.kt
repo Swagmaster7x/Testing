@@ -24,6 +24,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,6 +56,8 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
     var query by rememberSaveable { mutableStateOf("") }
     var type by rememberSaveable { mutableStateOf<MealType?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
+    var showAvoided by rememberSaveable { mutableStateOf(false) }
+    val conflicts by vm.conflicts.collectAsStateWithLifecycle()
 
     AppScaffold(
         topBar = {
@@ -71,6 +76,7 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
         val hiddenCount = state.all.count { it.isHidden }
         val filtered = state.all
             .filter { showHidden == it.isHidden }
+            .filter { showAvoided == (it.id in conflicts) }
             .filter { type == null || it.mealType == type }
             .filter { WeekFiller.matches(it, filter) }
             .filter { r -> q.isEmpty() || r.name.contains(q, true) || r.cuisineTags.any { it.contains(q, true) } }
@@ -129,6 +135,27 @@ fun CookScreen(nav: AppNavigator, vm: CookViewModel = viewModel(factory = AppVie
                         item {
                             FilterChip(selected = showHidden, onClick = { showHidden = !showHidden }, label = { Text("Show hidden ($hiddenCount)") })
                         }
+                    }
+                }
+            }
+            // Recipes with something this person avoids are kept out of the list, and said so plainly.
+            if (conflicts.isNotEmpty()) {
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+                    ) {
+                        Text(
+                            if (showAvoided) {
+                                "Showing the ${conflicts.size} recipes with something you avoid."
+                            } else {
+                                "${conflicts.size} recipes with something you avoid are left out."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { showAvoided = !showAvoided }) { Text(if (showAvoided) "Back to mine" else "Show them") }
                     }
                 }
             }

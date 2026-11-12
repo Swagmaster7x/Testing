@@ -57,6 +57,10 @@ class StoreFlowTest {
 
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Sam")
         compose.onAllNodesWithText("Y2K glam").onFirst().performClick()
+        // Skipping the questions goes straight to the plan page, to set things up by hand.
+        scrollTo("Skip the questions and set things up myself")
+        compose.onAllNodesWithText("Skip the questions and set things up myself").onFirst().performClick()
+        waitForText("Workout plan")
         scrollTo("Glute focus, 3 days")
         compose.onAllNodesWithText("Glute focus, 3 days").onFirst().performClick()
         scrollTo("Snack slot")
@@ -71,6 +75,7 @@ class StoreFlowTest {
         assertEquals(Profile.THEME_GLAM, sam.themeKey)
         assertEquals("glute-3", sam.templateKey)
         assertTrue(sam.snackSlot)
+        assertEquals("no answers are saved when the questions are skipped", null, sam.planAnswers)
         runBlocking {
             assertEquals(3, container.db.workoutDao().getDays(sam.id).size)
             assertEquals(
@@ -106,7 +111,7 @@ class StoreFlowTest {
         shot("store-03-people")
 
         compose.onAllNodesWithText("Add a person").onFirst().performClick()
-        waitForText("Starter workout plan")
+        waitForText("What should the app call you?")
         shot("store-04-add-person")
         compose.onAllNodesWithText("Add a person").onFirst().assertExists()
     }

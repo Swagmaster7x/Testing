@@ -48,6 +48,9 @@ import com.personal.mealgym.R
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.PlanBuilder
+import com.personal.mealgym.domain.answers
+import com.personal.mealgym.ui.people.GUIDE_NOTE
 import com.personal.mealgym.domain.GymToday
 import com.personal.mealgym.sauna.SaunaState
 import com.personal.mealgym.ui.AppNavigator
@@ -74,6 +77,7 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
     val ui by vm.ui.collectAsStateWithLifecycle()
     val filter by vm.filter.collectAsStateWithLifecycle()
     val profile by vm.profile.collectAsStateWithLifecycle()
+    val blocked by vm.blocked.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var picking by rememberSaveable { mutableStateOf<MealSlot?>(null) }
@@ -114,8 +118,18 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
             }
             item { GymCard(state, onOpenGym = { nav.tab(Routes.GYM) }) }
             item { SaunaCard(state, onOpenSauna = nav::sauna) }
-            if (profile.easierToFinish && vm.dailyGuide.isNotEmpty()) {
-                item { DailyGuideCard(vm.dailyGuide) }
+            // The guide worked out from the setup questions, or (personal edition) the one written for Ashley.
+            val planGuide = profile.answers?.let(PlanBuilder::guide).orEmpty()
+            // Only when there are numbers to show; "ask your doctor" isn't repeated here every day.
+            if (planGuide.any { it.label == "Calories" }) {
+                item { DailyGuideCard(planGuide, GUIDE_NOTE) }
+            } else if (profile.easierToFinish && vm.dailyGuide.isNotEmpty()) {
+                item {
+                    DailyGuideCard(
+                        vm.dailyGuide,
+                        "Estimates only, never totals or targets. If appetite or weight ever worries you, that's a chat for a doctor or dietitian, not this app.",
+                    )
+                }
             }
             if (Looks.of(profile).motifs.isNotEmpty()) item { MotifStrip(Modifier.padding(top = 8.dp)) }
         }
@@ -125,7 +139,7 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
             RecipePickerSheet(
                 slot = slot,
                 dateLabel = "Today, ${Dates.longLabel(state.date)}",
-                recipes = state.recipes,
+                recipes = state.recipes.filter { it.id !in blocked },
                 filter = filter,
                 onFilterChange = vm::setFilter,
                 onPick = { vm.pick(state.date, slot, it); picking = null },
@@ -262,9 +276,9 @@ private fun CreatineCard(taken: Boolean, onChange: (Boolean) -> Unit) {
     }
 }
 
-/** Ashley's daily guide: reference text only, never totals or targets. */
+/** The daily guide: reference text only. The app never adds up what was eaten. */
 @Composable
-private fun DailyGuideCard(lines: List<GuideLine>) {
+private fun DailyGuideCard(lines: List<GuideLine>, note: String) {
     var open by rememberSaveable { mutableStateOf(false) }
     OutlinedCard(Modifier.fillMaxWidth()) {
         Row(
@@ -287,11 +301,7 @@ private fun DailyGuideCard(lines: List<GuideLine>) {
                         Text(line.text, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-                Text(
-                    "Estimates only, never totals or targets. If appetite or weight ever worries you, that's a chat for a doctor or dietitian, not this app.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

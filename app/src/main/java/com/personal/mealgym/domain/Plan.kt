@@ -203,7 +203,8 @@ object PlanBuilder {
         is TargetResult.Ready -> buildList {
             val t = result.targets
             add(GuideLine("Calories", "about ${"%,d".format(t.calories)} a day"))
-            add(GuideLine("Protein", "about ${t.proteinGrams} g a day, roughly ${perMeal(t.proteinGrams)} g a meal"))
+            // A floor rather than a ceiling: the recipes are protein-rich, so a planned day often has more.
+            add(GuideLine("Protein", "about ${t.proteinGrams} g a day or more, roughly ${perMeal(t.proteinGrams)} g a meal"))
             when (a.goalValue) {
                 Goal.LOSE -> add(GuideLine("Pace", "slow and steady: up to about 1 lb (0.5 kg) a week"))
                 Goal.BUILD -> add(GuideLine("Pace", "a small surplus; add a little weight or a rep each week"))
@@ -258,11 +259,10 @@ object PlanBuilder {
         if (values.isEmpty()) fallback else values.sorted()[values.size / 2]
 
     /**
-     * Picks the lunch-and-dinner portion and whether to add a snack so that a typical day of
-     * the library's recipes lands nearest the calorie guide. Without a guide: full portions,
-     * no snack.
+     * Every way the meals can be set up (each portion size, with and without a snack) and what a
+     * typical day of the library's recipes then comes to.
      */
-    fun mealSetup(targetCalories: Int?, recipes: List<Recipe>): MealSetup {
+    fun mealSetups(recipes: List<Recipe>): List<MealSetup> {
         fun typical(types: Set<MealType>, read: (String?) -> Int?, fallback: Int) =
             median(recipes.filter { it.mealType in types && !it.isHidden }.mapNotNull { read(it.nutritionText) }, fallback)
         val mains = setOf(MealType.LUNCH, MealType.DINNER, MealType.SOUP)
@@ -279,8 +279,18 @@ object PlanBuilder {
             typicalCalories = (breakfastCal + 2 * mainCal * portion + if (snack) snackCal else 0).roundToInt(),
             typicalProtein = (breakfastProtein + 2 * mainProtein * portion + if (snack) snackProtein else 0).roundToInt(),
         )
-        if (targetCalories == null) return setup(1.0, false)
-        return listOf(0.75, 1.0, 1.5).flatMap { p -> listOf(setup(p, false), setup(p, true)) }
+        return Portions.choices.flatMap { p -> listOf(setup(p, false), setup(p, true)) }
+    }
+
+    /**
+     * Picks the lunch-and-dinner portion and whether to add a snack so that a typical day lands
+     * nearest the calorie guide. Half portions are never suggested. Without a guide: full
+     * portions, no snack.
+     */
+    fun mealSetup(targetCalories: Int?, recipes: List<Recipe>): MealSetup {
+        val all = mealSetups(recipes)
+        if (targetCalories == null) return all.first { it.portion == 1.0 && !it.snack }
+        return all.filter { it.portion >= 0.75 }
             .minWith(compareBy<MealSetup> { abs(it.typicalCalories - targetCalories) }.thenBy { it.snack })
     }
 

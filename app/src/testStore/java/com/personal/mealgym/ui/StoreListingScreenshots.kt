@@ -141,9 +141,8 @@ class StoreListingScreenshots {
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()
         waitForText("Add a person")
         compose.onAllNodesWithText("Add a person").onFirst().performClick()
-        waitForText("Starter workout plan")
+        waitForText("What should the app call you?")
         compose.onAllNodesWithText("Y2K glam").onFirst().performClick()
-        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Starter workout plan"))
         compose.waitForIdle()
         shot("listing-8-setup")
     }

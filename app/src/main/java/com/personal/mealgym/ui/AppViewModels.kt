@@ -18,6 +18,7 @@ import com.personal.mealgym.ui.gym.WorkoutEditViewModel
 import com.personal.mealgym.ui.history.HistoryViewModel
 import com.personal.mealgym.ui.looks.LookViewModel
 import com.personal.mealgym.ui.people.PersonViewModel
+import com.personal.mealgym.ui.people.SetupViewModel
 import com.personal.mealgym.ui.plan.PlanViewModel
 import com.personal.mealgym.ui.sauna.SaunaViewModel
 import com.personal.mealgym.ui.settings.SettingsViewModel
@@ -40,6 +41,7 @@ object AppViewModels {
         initializer { PersonViewModel(container(), createSavedStateHandle()) }
         initializer { LookViewModel(container()) }
         initializer { CupboardViewModel(container()) }
+        initializer { SetupViewModel(container()) }
     }
 
     private fun CreationExtras.container(): AppContainer =

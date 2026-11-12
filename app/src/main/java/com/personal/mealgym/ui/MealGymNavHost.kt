@@ -45,6 +45,7 @@ import com.personal.mealgym.ui.gym.WorkoutEditScreen
 import com.personal.mealgym.ui.history.HistoryScreen
 import com.personal.mealgym.ui.looks.LookScreen
 import com.personal.mealgym.ui.people.PersonScreen
+import com.personal.mealgym.ui.people.SetupScreen
 import com.personal.mealgym.ui.plan.PlanScreen
 import com.personal.mealgym.ui.sauna.SaunaScreen
 import com.personal.mealgym.ui.settings.SettingsScreen
@@ -70,6 +71,7 @@ object Routes {
     const val PERSON = "person/{id}"
     const val LOOK = "look"
     const val CUPBOARD = "cupboard"
+    const val SETUP = "setup"
 
     /** Screens that may show a banner ad in the store edition. */
     val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY, CUPBOARD)
@@ -107,6 +109,7 @@ class AppNavigator(private val nav: NavHostController) {
     fun person(id: Long = 0) = nav.navigate(Routes.person(id))
     fun look() = nav.navigate(Routes.LOOK) { launchSingleTop = true }
     fun cupboard() = nav.navigate(Routes.CUPBOARD) { launchSingleTop = true }
+    fun setup() = nav.navigate(Routes.SETUP) { launchSingleTop = true }
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -205,6 +208,7 @@ fun MealGymNavHost(
             }
             composable(Routes.LOOK) { LookScreen(navigator) }
             composable(Routes.CUPBOARD) { CupboardScreen(navigator) }
+            composable(Routes.SETUP) { SetupScreen(navigator) }
         }
     }
     }

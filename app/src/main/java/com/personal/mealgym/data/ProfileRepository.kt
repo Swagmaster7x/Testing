@@ -48,6 +48,22 @@ class ProfileRepository(
     /** Saves a look made in the creator and switches to it. */
     suspend fun setCustomLook(id: Long, customLook: String) = dao.setLook(id, "CUSTOM", customLook)
 
+    /** Saves the setup answers (or clears them), touching nothing else. */
+    suspend fun setPlanAnswers(id: Long, answers: String?) = dao.setPlanAnswers(id, answers)
+
+    /**
+     * Swaps a person's workout days for a starter plan's. Their workout history stays, since
+     * each session keeps the day's name.
+     */
+    suspend fun replaceWorkoutPlan(id: Long, template: WorkoutTemplate) = db.withTransaction {
+        dao.deleteWorkoutDays(id)
+        template.days.forEach { d ->
+            val dayId = db.workoutDao().insertDay(SeedParser.dayOf(d, id))
+            db.workoutDao().insertExercises(SeedParser.exercisesOf(d, dayId))
+        }
+        dao.all().firstOrNull { it.id == id }?.let { dao.upsert(it.copy(templateKey = template.key)) }
+    }
+
     /** Removes a person and everything that was only theirs. Shared recipes stay. */
     suspend fun delete(id: Long) {
         db.withTransaction {

@@ -7,12 +7,8 @@ import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.LibraryFilter
-import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.domain.Dates
-import com.personal.mealgym.domain.SlotKey
-import com.personal.mealgym.domain.WeekFiller
-import com.personal.mealgym.ui.accepts
 import com.personal.mealgym.domain.DayBadge
 import com.personal.mealgym.domain.SessionRef
 import com.personal.mealgym.domain.WorkoutCycle
@@ -98,32 +94,28 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
 
     val filter: StateFlow<LibraryFilter> = c.settings.settings(profileId).map { it.filter }.stateInVm(LibraryFilter())
 
+    /** Recipes this person asked to avoid: left out of the picker. */
+    val blocked: StateFlow<Set<Long>> = c.meals.conflictsFor(profileId).map { it.keys }.stateInVm(emptySet())
+
     fun setFilter(filter: LibraryFilter) {
         viewModelScope.launch { c.settings.setFilter(profileId, filter) }
     }
 
-    /** Fills this week's empty slots (from today on) at random from the current filters. */
+    /**
+     * Fills this week's empty slots (from today on) at random from the current filters, leaving
+     * out anything the person asked to avoid.
+     */
     fun fillMyWeek() {
         val state = ui.value ?: return
         val f = filter.value
         viewModelScope.launch {
-            val byId = state.recipes.associateBy { it.id }
-            val existing = c.meals.weekEntries(profileId, state.weekStart)
-                .mapNotNull { e -> byId[e.recipeId]?.let { SlotKey(Dates.parse(e.date), e.slot) to it } }
-                .toMap()
-            val empty = Dates.weekDays(state.weekStart)
-                .filter { !it.isBefore(state.today) }
-                .flatMap { d -> state.slots.map { SlotKey(d, it) } }
-                .filter { it !in existing }
-            val filled = WeekFiller.fill(empty, existing, { slot ->
-                state.recipes.filter { !it.isHidden && slot.accepts(it.mealType) && WeekFiller.matches(it, f) }
-            })
-            c.meals.putEntries(filled.map { (k, r) -> MealPlanEntry(date = Dates.iso(k.date), slot = k.slot, recipeId = r.id, profileId = profileId) })
+            val person = c.profiles.value.firstOrNull { it.id == profileId } ?: return@launch
+            val result = WeekPlanner.fill(c, person, state.weekStart, state.today, f)
             say(
                 when {
-                    empty.isEmpty() -> "Every slot is already planned."
-                    filled.isEmpty() -> "Nothing matches the current filters."
-                    else -> "Filled ${filled.size} of ${empty.size} empty slots."
+                    result.empty == 0 -> "Every slot is already planned."
+                    result.filled == 0 -> "Nothing matches the current filters."
+                    else -> "Filled ${result.filled} of ${result.empty} empty slots."
                 },
             )
         }

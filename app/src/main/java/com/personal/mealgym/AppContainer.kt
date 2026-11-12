@@ -16,6 +16,8 @@ import com.personal.mealgym.data.SideState
 import com.personal.mealgym.data.db.AppDatabase
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.seed.SeedRepository
+import com.personal.mealgym.domain.PlanBuilder
+import com.personal.mealgym.domain.answers
 import com.personal.mealgym.data.settingsDataStore
 import com.personal.mealgym.gym.RestTimerController
 import com.personal.mealgym.gym.WorkoutDraftStore
@@ -109,9 +111,10 @@ class AppContainer(context: Context) {
 
     val freeVolumeFoods: List<String> get() = seed.seed.freeVolumeFoods
 
-    /** The person's starter plan's tips, or the general ones. */
+    /** A line for the person's goal (if they answered the setup questions), then their starter plan's tips or the general ones. */
     fun gymTips(profile: Profile): List<String> =
-        seed.seed.template(profile.templateKey)?.tips?.takeIf { it.isNotEmpty() } ?: seed.seed.gymTips
+        profile.answers?.let { PlanBuilder.goalTips(it.goalValue) }.orEmpty() +
+            (seed.seed.template(profile.templateKey)?.tips?.takeIf { it.isNotEmpty() } ?: seed.seed.gymTips)
 }
 
 sealed interface Opening {

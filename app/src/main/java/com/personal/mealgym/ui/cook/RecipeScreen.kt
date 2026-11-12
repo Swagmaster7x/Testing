@@ -56,6 +56,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.R
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.BuildConfig
+import com.personal.mealgym.domain.Foods
 import com.personal.mealgym.domain.Portions
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
@@ -161,6 +163,22 @@ private fun RecipeContent(
         modifier = Modifier.fillMaxSize().padding(padding),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
     ) {
+        if (ui.conflicts.isNotEmpty()) {
+            item {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                ) {
+                    Text(
+                        "Contains ${Foods.describe(ui.conflicts)}, which you asked to avoid.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+            }
+        }
         if (ui.showHalfPlateTip && !ui.easierToFinish) {
             item {
                 Surface(
@@ -188,6 +206,14 @@ private fun RecipeContent(
                 if (ui.showNutrition && !recipe.nutritionText.isNullOrBlank()) {
                     Text(
                         if (ui.isOrderOnly) recipe.nutritionText else "Per serving, approx.: ${recipe.nutritionText}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val allergens = ui.contains.filter { it.isAllergen }
+                if (BuildConfig.STORE && allergens.isNotEmpty()) {
+                    Text(
+                        "Contains ${Foods.describe(allergens)}, going by the ingredient names. Always check labels.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

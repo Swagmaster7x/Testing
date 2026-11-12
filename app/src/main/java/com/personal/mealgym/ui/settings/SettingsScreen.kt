@@ -53,6 +53,10 @@ import com.personal.mealgym.data.AppSettings
 import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.Foods
+import com.personal.mealgym.domain.PlanBuilder
+import com.personal.mealgym.domain.TargetResult
+import com.personal.mealgym.domain.answers
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppButton
@@ -263,6 +267,35 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                         state.others.firstOrNull()?.let { other ->
                             OutlinedButton(onClick = { vm.switchTo(other.id) }) { Text("Switch to ${other.name}") }
                         }
+                    }
+                }
+            }
+            if (BuildConfig.STORE) {
+                item { SectionHeader("My plan") }
+                item {
+                    val answers = profile.answers
+                    val targets = answers?.let { PlanBuilder.targets(it) as? TargetResult.Ready }?.targets
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                when {
+                                    targets != null -> "About ${"%,d".format(targets.calories)} calories and ${targets.proteinGrams} g protein a day"
+                                    answers != null -> "${answers.goalValue.label}, no calorie guide"
+                                    else -> "Not set up yet"
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                            Text(
+                                when {
+                                    answers == null -> "Answer a few questions for a daily guide, a workout plan and meals that fit."
+                                    answers.avoids.isNotEmpty() -> "${answers.goalValue.label}. Avoiding ${Foods.describe(answers.avoids)}."
+                                    else -> "${answers.goalValue.label}. A guide, not a rule."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        OutlinedButton(onClick = nav::setup) { Text(if (answers == null) "Set up" else "Redo") }
                     }
                 }
             }

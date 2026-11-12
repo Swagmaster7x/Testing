@@ -17,7 +17,10 @@ import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.StoreSection
+import com.personal.mealgym.domain.Avoid
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.Foods
+import com.personal.mealgym.domain.answers
 import com.personal.mealgym.domain.Quantities
 import com.personal.mealgym.domain.RecipeSwaps
 import com.personal.mealgym.ui.MessageViewModel
@@ -49,6 +52,9 @@ class CookViewModel(private val c: AppContainer) : MessageViewModel() {
         viewModelScope.launch { c.meals.setFavorite(recipe.id, favorite) }
     }
 
+    /** Recipes this person asked to avoid, with why. */
+    val conflicts: StateFlow<Map<Long, Set<Avoid>>> = c.meals.conflictsFor(profileId).stateInVm(emptyMap())
+
     val ui: StateFlow<CookUi?> = c.today.flatMapLatest { today ->
         combine(c.meals.planForWeek(profileId, Dates.weekStart(today)), c.meals.recipesFor(profileId)) { plan, recipes ->
             val byId = recipes.associateBy { it.id }
@@ -69,6 +75,10 @@ data class RecipeUi(
     val showNutrition: Boolean,
     val showHalfPlateTip: Boolean,
     val freeVolumeFoods: List<String>,
+    /** What the recipe contains, from its ingredient names (allergens and kinds of meat). */
+    val contains: Set<Avoid> = emptySet(),
+    /** The part of [contains] this person asked to avoid. */
+    val conflicts: Set<Avoid> = emptySet(),
     /** "Make it easier to finish" instead of the half-plate and volume tips. */
     val easierToFinish: Boolean = false,
     val easierTips: List<String> = emptyList(),
@@ -103,6 +113,8 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
                     easierToFinish = person.easierToFinish,
                     easierTips = c.seed.seed.easierToFinishTips,
                     portion = person.portion,
+                    contains = Foods.inRecipe(r.recipe, r.ingredients),
+                    conflicts = Foods.inRecipe(r.recipe, r.ingredients) intersect person.answers?.avoids.orEmpty(),
                 ),
             )
         }

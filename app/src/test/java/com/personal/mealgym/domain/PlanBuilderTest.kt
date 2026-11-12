@@ -91,7 +91,7 @@ class PlanBuilderTest {
         val lines = PlanBuilder.guide(man.copy(goal = "LOSE"))
         assertEquals(listOf("Calories", "Protein", "Pace"), lines.map { it.label })
         assertEquals("about 2,250 a day", lines[0].text)
-        assertEquals("about 145 g a day, roughly 40 g a meal", lines[1].text)
+        assertEquals("about 145 g a day or more, roughly 40 g a meal", lines[1].text)
     }
 
     @Test
