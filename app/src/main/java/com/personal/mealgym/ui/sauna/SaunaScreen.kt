@@ -61,7 +61,8 @@ import com.personal.mealgym.ui.ShowMessages
 import com.personal.mealgym.R
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.GlamColors
-import com.personal.mealgym.ui.components.isGlam
+import com.personal.mealgym.ui.components.accentColor
+import com.personal.mealgym.ui.theme.LocalLook
 import com.personal.mealgym.ui.components.MinutesDialog
 import com.personal.mealgym.ui.components.formatClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -187,10 +188,11 @@ fun SaunaScreen(nav: AppNavigator, vm: SaunaViewModel = viewModel(factory = AppV
 
 @Composable
 private fun PickTime(onStart: (Int) -> Unit, onCustom: () -> Unit) {
+    val look = LocalLook.current
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (isGlam()) Icon(painterResource(R.drawable.ic_sparkle), null, tint = GlamColors.Lilac, modifier = Modifier.size(18.dp))
+        if (look.sparkles) Icon(painterResource(R.drawable.ic_sparkle), null, tint = look.accentColor(), modifier = Modifier.size(18.dp))
         Text("How long?", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 8.dp))
-        if (isGlam()) Icon(painterResource(R.drawable.ic_sparkle), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+        if (look.sparkles) Icon(painterResource(R.drawable.ic_sparkle), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
     }
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         SaunaTimer.presets.forEach { minutes ->

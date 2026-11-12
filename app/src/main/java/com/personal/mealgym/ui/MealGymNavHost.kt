@@ -42,10 +42,12 @@ import com.personal.mealgym.ui.gym.DemoScreen
 import com.personal.mealgym.ui.gym.GymScreen
 import com.personal.mealgym.ui.gym.WorkoutEditScreen
 import com.personal.mealgym.ui.history.HistoryScreen
+import com.personal.mealgym.ui.looks.LookScreen
 import com.personal.mealgym.ui.people.PersonScreen
 import com.personal.mealgym.ui.plan.PlanScreen
 import com.personal.mealgym.ui.sauna.SaunaScreen
 import com.personal.mealgym.ui.settings.SettingsScreen
+import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.ui.theme.ThemedBackground
 import com.personal.mealgym.ui.today.TodayScreen
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +67,7 @@ object Routes {
     const val WORKOUT_EDIT = "workout-edit"
     const val DEMO = "demo/{name}"
     const val PERSON = "person/{id}"
+    const val LOOK = "look"
 
     /** Screens that may show a banner ad in the store edition. */
     val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY)
@@ -100,6 +103,7 @@ class AppNavigator(private val nav: NavHostController) {
     fun editWorkouts() = nav.navigate(Routes.WORKOUT_EDIT) { launchSingleTop = true }
     fun demo(exerciseName: String) = nav.navigate(Routes.demo(exerciseName))
     fun person(id: Long = 0) = nav.navigate(Routes.person(id))
+    fun look() = nav.navigate(Routes.LOOK) { launchSingleTop = true }
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -132,7 +136,7 @@ fun MealGymNavHost(
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val open by pendingOpen.collectAsState()
-    val tabs = if (profile.isGlam) glamTabs else ironTabs
+    val tabs = if (Looks.of(profile).cuteTabs) glamTabs else ironTabs
 
     LaunchedEffect(open) {
         if (open == MainActivity.OPEN_SAUNA) {
@@ -196,6 +200,7 @@ fun MealGymNavHost(
             composable(Routes.PERSON, arguments = listOf(navArgument("id") { type = NavType.LongType })) {
                 PersonScreen(navigator)
             }
+            composable(Routes.LOOK) { LookScreen(navigator) }
         }
     }
     }

@@ -91,7 +91,7 @@ class MigrationTest {
 
     private fun openWithRoom(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .allowMainThreadQueries()
             .build()
 
@@ -101,7 +101,7 @@ class MigrationTest {
         val room = openWithRoom()
         // Opening runs the migration and then Room's schema check; it throws if anything differs.
         val db = room.openHelper.writableDatabase
-        assertEquals(3, db.version)
+        assertEquals(4, db.version)
 
         fun single(sql: String): String = db.query(sql).use { c ->
             c.moveToFirst()
@@ -137,6 +137,27 @@ class MigrationTest {
             Profile(2, "Ashley", "GLAM", snackSlot = true, portion = 0.75, tipsStyle = "EASIER", weekBadges = true, templateKey = "glute-3"),
             ashley,
         )
+        db.close()
+    }
+
+    @Test
+    fun version4KeepsEveryoneAndTheirLook() = runBlocking {
+        // A phone on version 3: Swag, Ashley and someone with another look.
+        createFromSchema(3).apply {
+            execSQL(
+                "INSERT INTO Profile (id, name, themeKey, snackSlot, portion, tipsStyle, weekBadges, templateKey) VALUES " +
+                    "(1, 'Swag', 'IRON', 0, 1.0, 'FILL_UP', 0, 'upper-lower-4'), " +
+                    "(2, 'Ashley', 'GLAM', 1, 0.75, 'EASIER', 1, 'glute-3')",
+            )
+            close()
+        }
+        val db = openWithRoom()
+        val (swag, ashley) = db.profileDao().all()
+        assertEquals(Profile(1, "Swag", "IRON", templateKey = "upper-lower-4"), swag)
+        assertEquals("GLAM", ashley.themeKey)
+        assertEquals(null, ashley.customLook)
+        db.profileDao().upsert(ashley.copy(themeKey = "CUSTOM", customLook = "{\"primary\":4281545523}"))
+        assertEquals("CUSTOM", db.profileDao().all()[1].themeKey)
         db.close()
     }
 

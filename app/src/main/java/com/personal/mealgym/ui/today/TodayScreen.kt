@@ -66,6 +66,7 @@ import com.personal.mealgym.ui.gym.title
 import com.personal.mealgym.ui.label
 import com.personal.mealgym.ui.plan.RecipePickerSheet
 import com.personal.mealgym.ui.sauna.rememberSecondsLeft
+import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 
 @Composable
@@ -116,7 +117,7 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
             if (profile.easierToFinish && vm.dailyGuide.isNotEmpty()) {
                 item { DailyGuideCard(vm.dailyGuide) }
             }
-            if (profile.isGlam) item { MotifStrip(Modifier.padding(top = 8.dp)) }
+            if (Looks.of(profile).motifs.isNotEmpty()) item { MotifStrip(Modifier.padding(top = 8.dp)) }
         }
 
         val slot = picking

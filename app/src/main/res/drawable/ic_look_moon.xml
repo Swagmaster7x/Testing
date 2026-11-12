@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original artwork for the "Starlight" look. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M14.5,2.5 A9.5,9.5 0 1,0 21.5,16 A7.6,7.6 0 0,1 14.5,2.5 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M18,4 L18.6,5.4 L20,6 L18.6,6.6 L18,8 L17.4,6.6 L16,6 L17.4,5.4 Z" />
+</vector>

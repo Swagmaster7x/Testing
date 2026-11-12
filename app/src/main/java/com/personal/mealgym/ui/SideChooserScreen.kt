@@ -33,13 +33,12 @@ import androidx.compose.ui.unit.dp
 import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.R
 import com.personal.mealgym.data.db.Profile
+import com.personal.mealgym.ui.theme.Look
+import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.ui.theme.MealGymTheme
-import com.personal.mealgym.ui.theme.SideTheme
 import com.personal.mealgym.ui.theme.ThemedBackground
 
-fun themeFor(profile: Profile): SideTheme = themeFor(profile.themeKey)
-
-fun themeFor(themeKey: String): SideTheme = if (themeKey == Profile.THEME_GLAM) SideTheme.GLAM else SideTheme.IRON
+fun themeFor(profile: Profile): Look = Looks.of(profile)
 
 /** One door per person, each in their own look. The choice is remembered on this phone. */
 @Composable
@@ -86,13 +85,24 @@ fun SideChooserScreen(people: List<Profile>, onChoose: (Long) -> Unit) {
 
 @Composable
 private fun Door(profile: Profile, onChoose: (Long) -> Unit, modifier: Modifier = Modifier) {
-    MealGymTheme(side = themeFor(profile)) {
+    val look = themeFor(profile)
+    MealGymTheme(look = look) {
         val shape = RoundedCornerShape(topStart = 200.dp, topEnd = 200.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
-        val glam = profile.isGlam
-        val icon = if (glam) R.drawable.ic_star else R.drawable.ic_launcher_monochrome
+        val glam = look.key == Looks.Glam.key
+        val iron = look.key == Looks.Iron.key
+        val trim = when {
+            glam -> Color(0xFFC9CED6)
+            iron -> Color(0xFF5A4F48)
+            else -> MaterialTheme.colorScheme.outline
+        }
+        val knob = when {
+            glam -> Color(0xFFC9CED6)
+            iron -> Color(0xFF8F877C)
+            else -> MaterialTheme.colorScheme.secondary
+        }
         Surface(
             shape = shape,
-            border = BorderStroke(3.dp, if (glam) Color(0xFFC9CED6) else Color(0xFF5A4F48)),
+            border = BorderStroke(3.dp, trim),
             modifier = modifier
                 .fillMaxHeight()
                 .clip(shape)
@@ -105,10 +115,10 @@ private fun Door(profile: Profile, onChoose: (Long) -> Unit, modifier: Modifier 
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        painterResource(icon),
+                        painterResource(look.icon),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(if (glam) 64.dp else 96.dp),
+                        modifier = Modifier.size(if (glam) 64.dp else if (iron) 96.dp else 72.dp),
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
@@ -125,7 +135,7 @@ private fun Door(profile: Profile, onChoose: (Long) -> Unit, modifier: Modifier 
                         .padding(end = 12.dp)
                         .size(12.dp)
                         .clip(CircleShape)
-                        .background(if (glam) Color(0xFFC9CED6) else Color(0xFF8F877C)),
+                        .background(knob),
                 )
             }
         }

@@ -35,7 +35,7 @@ enum class Feeling { GREAT, FINE, ROUGH }
 data class Profile(
     @PrimaryKey val id: Long,
     val name: String,
-    /** "IRON" (dark fantasy) or "GLAM" (Y2K glam). */
+    /** The look: a built-in key such as "IRON" (dark fantasy) or "GLAM" (Y2K glam), or "CUSTOM". */
     val themeKey: String,
     /** Adds a fourth meal slot, Snack. */
     @ColumnInfo(defaultValue = "0") val snackSlot: Boolean = false,
@@ -47,8 +47,9 @@ data class Profile(
     @ColumnInfo(defaultValue = "0") val weekBadges: Boolean = false,
     /** The starter workout plan this person began with, for its gym tips. */
     val templateKey: String? = null,
+    /** The look made in the look creator, as JSON; kept when switching to a built-in look. */
+    val customLook: String? = null,
 ) {
-    val isGlam: Boolean get() = themeKey == THEME_GLAM
     val easierToFinish: Boolean get() = tipsStyle == TIPS_EASIER
 
     companion object {

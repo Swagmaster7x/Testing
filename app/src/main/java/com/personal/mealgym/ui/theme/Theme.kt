@@ -50,8 +50,15 @@ val Fredoka = FontFamily(
 /** Script face for Ashley's side titles and flourishes only (SIL OFL, see licenses/Pacifico-OFL.txt). */
 val Pacifico = FontFamily(Font(R.font.pacifico_400, FontWeight.Normal))
 
+// Display faces for the other looks, all bundled so the app stays offline (licences in licenses/).
+val DmSerifDisplay = FontFamily(Font(R.font.dm_serif_display_400, FontWeight.Normal))
+val BebasNeue = FontFamily(Font(R.font.bebas_neue_400, FontWeight.Normal))
+val SpaceMono = FontFamily(Font(R.font.space_mono_400, FontWeight.Normal), Font(R.font.space_mono_700, FontWeight.Bold))
+val SpecialElite = FontFamily(Font(R.font.special_elite_400, FontWeight.Normal))
+val Righteous = FontFamily(Font(R.font.righteous_400, FontWeight.Normal))
+
 /** Iron and blood: the night theme. */
-private val IronColors = darkColorScheme(
+internal val IronColors = darkColorScheme(
     primary = Color(0xFFD23A30),
     onPrimary = Color(0xFFFFF3EE),
     primaryContainer = Color(0xFF5C100C),
@@ -91,7 +98,7 @@ private val IronColors = darkColorScheme(
 )
 
 /** Parchment and ink: the day theme. */
-private val ParchmentColors = lightColorScheme(
+internal val ParchmentColors = lightColorScheme(
     primary = Color(0xFF8E1B16),
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFF0C8C0),
@@ -131,7 +138,7 @@ private val ParchmentColors = lightColorScheme(
 )
 
 /** Ashley's Side by day: soft pink to lilac, hot pink, chrome. Pink text uses a deeper shade for 4.5:1 contrast. */
-private val GlamColors = lightColorScheme(
+internal val GlamDayColors = lightColorScheme(
     primary = Color(0xFFC8106E),
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFFFFD1E8),
@@ -171,7 +178,7 @@ private val GlamColors = lightColorScheme(
 )
 
 /** Ashley's Side at night: deep plum with the same pink and lilac. */
-private val GlamNightColors = darkColorScheme(
+internal val GlamNightColors = darkColorScheme(
     primary = Color(0xFFFF7AB8),
     onPrimary = Color(0xFF4A0028),
     primaryContainer = Color(0xFF7A0E4A),
@@ -273,66 +280,147 @@ private val GlamTypography = Typography(
     labelSmall = base.labelSmall.rounded(FontWeight.Medium),
 )
 
-/** Small heading for section titles and card labels: carved on Swag's Side, bold on Ashley's. */
-val MaterialThemeCarvedLabel: TextStyle
-    @Composable get() = if (LocalSideTheme.current == SideTheme.GLAM) {
-        MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-    } else {
-        MaterialTheme.typography.titleSmall.carved(spacing = 1f)
-    }
+/** Rounded corners for the extra-round looks. */
+private val PillShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(28.dp),
+    large = RoundedCornerShape(32.dp),
+    extraLarge = RoundedCornerShape(36.dp),
+)
 
-/** Which side's look to use. */
-enum class SideTheme { IRON, GLAM }
+/** Nearly square, for the crisp looks. */
+private val SquareShapes = Shapes(
+    extraSmall = RoundedCornerShape(2.dp),
+    small = RoundedCornerShape(2.dp),
+    medium = RoundedCornerShape(4.dp),
+    large = RoundedCornerShape(4.dp),
+    extraLarge = RoundedCornerShape(6.dp),
+)
+
+private fun shapesFor(corners: Corners) = when (corners) {
+    Corners.CUT -> AppShapes
+    Corners.ROUNDED -> GlamShapes
+    Corners.PILL -> PillShapes
+    Corners.SQUARE -> SquareShapes
+}
+
+/** The heading face of a type style, e.g. for the look creator's font choices. */
+fun headingFamily(type: TypeStyle): FontFamily = headingFace(type).first
+
+/** The heading face and weight for a type style that keeps the system face for body text. */
+private fun headingFace(type: TypeStyle): Pair<FontFamily, FontWeight> = when (type) {
+    TypeStyle.CARVED -> Cinzel to FontWeight.Bold
+    TypeStyle.GLAM, TypeStyle.ROUNDED -> Fredoka to FontWeight.SemiBold
+    TypeStyle.SERIF -> DmSerifDisplay to FontWeight.Normal
+    TypeStyle.CLEAN -> FontFamily.Default to FontWeight.SemiBold
+    TypeStyle.MONO -> SpaceMono to FontWeight.Bold
+    TypeStyle.SPORT -> BebasNeue to FontWeight.Normal
+    TypeStyle.TYPEWRITER -> SpecialElite to FontWeight.Normal
+    TypeStyle.RETRO -> Righteous to FontWeight.Normal
+}
+
+/** Display faces with one weight; Bebas Neue is tall and narrow, so it is set larger. */
+private fun TextStyle.heading(type: TypeStyle): TextStyle {
+    val (family, weight) = headingFace(type)
+    val scaled = if (type == TypeStyle.SPORT) copy(fontSize = fontSize * 1.2f, lineHeight = lineHeight * 1.1f, letterSpacing = 1.sp) else this
+    return scaled.copy(fontFamily = family, fontWeight = weight)
+}
+
+private fun typographyFor(type: TypeStyle): Typography = when (type) {
+    TypeStyle.CARVED -> AppTypography
+    TypeStyle.GLAM -> GlamTypography
+    TypeStyle.ROUNDED -> GlamTypography.copy(
+        titleLarge = base.titleLarge.rounded(FontWeight.SemiBold),
+    )
+    else -> Typography(
+        displayLarge = base.displayLarge.heading(type),
+        displayMedium = base.displayMedium.heading(type),
+        displaySmall = base.displaySmall.heading(type),
+        headlineLarge = base.headlineLarge.heading(type),
+        headlineMedium = base.headlineMedium.heading(type),
+        headlineSmall = base.headlineSmall.heading(type),
+        titleLarge = base.titleLarge.heading(type),
+        titleMedium = base.titleMedium,
+        titleSmall = base.titleSmall,
+        bodyLarge = base.bodyLarge,
+        bodyMedium = base.bodyMedium,
+        bodySmall = base.bodySmall,
+        labelLarge = base.labelLarge,
+        labelMedium = base.labelMedium,
+        labelSmall = base.labelSmall,
+    )
+}
+
+/** Small heading for section titles and card labels, in the look's heading face. */
+val MaterialThemeCarvedLabel: TextStyle
+    @Composable get() {
+        val type = LocalLook.current.type
+        return when (type) {
+            TypeStyle.CARVED -> MaterialTheme.typography.titleSmall.carved(spacing = 1f)
+            TypeStyle.GLAM, TypeStyle.ROUNDED, TypeStyle.CLEAN ->
+                MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            TypeStyle.SPORT -> MaterialTheme.typography.titleSmall.copy(fontFamily = BebasNeue, fontWeight = FontWeight.Normal, fontSize = 20.sp, letterSpacing = 1.2.sp)
+            else -> MaterialTheme.typography.titleSmall.copy(fontSize = 16.sp).heading(type)
+        }
+    }
 
 private val LocalIsDark = staticCompositionLocalOf { false }
 
-/** The look currently in use, for the few components that draw differently per side. */
-val LocalSideTheme = staticCompositionLocalOf { SideTheme.IRON }
+/** The look in use, for the components that draw differently per look. */
+val LocalLook = staticCompositionLocalOf { Looks.Iron }
 
-/** False when the side's "Motion" setting is off: no sparkles or shimmer. */
+/** False when the person's "Motion" setting is off: no sparkles or shimmer. */
 val LocalMotion = staticCompositionLocalOf { true }
 
-/** Light and dark follow the system setting. */
+/** Light and dark follow the system setting, unless the look is always one or the other. */
 @Composable
 fun MealGymTheme(
-    side: SideTheme = SideTheme.IRON,
+    look: Look = Looks.Iron,
     darkTheme: Boolean = isSystemInDarkTheme(),
     motion: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val colors = when (side) {
-        SideTheme.IRON -> if (darkTheme) IronColors else ParchmentColors
-        SideTheme.GLAM -> if (darkTheme) GlamNightColors else GlamColors
-    }
-    CompositionLocalProvider(LocalIsDark provides darkTheme, LocalSideTheme provides side, LocalMotion provides motion) {
+    val dark = look.isDark(darkTheme)
+    CompositionLocalProvider(LocalIsDark provides dark, LocalLook provides look, LocalMotion provides motion) {
         MaterialTheme(
-            colorScheme = colors,
-            typography = if (side == SideTheme.GLAM) GlamTypography else AppTypography,
-            shapes = if (side == SideTheme.GLAM) GlamShapes else AppShapes,
+            colorScheme = look.scheme(dark),
+            typography = typographyFor(look.type),
+            shapes = shapesFor(look.corners),
             content = content,
         )
     }
 }
 
 /**
- * The backdrop behind every screen: a faint red glow from the top fading into the dark
- * (or into the edges of the parchment by day).
+ * The backdrop behind every screen: for dark fantasy, a faint red glow from the top fading into
+ * the dark (or into the edges of the parchment by day); other looks have their own.
  */
 @Composable
 fun ThemedBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val colors = MaterialTheme.colorScheme
     val dark = LocalIsDark.current
-    val glam = LocalSideTheme.current == SideTheme.GLAM
-    val glowColor = if (glam) {
-        Color(0xFFFFFFFF).copy(alpha = if (dark) 0.06f else 0.55f)
-    } else {
-        colors.primary.copy(alpha = if (dark) 0.16f else 0.07f)
+    val backdrop = LocalLook.current.backdrop
+    val glowColor = when (backdrop) {
+        Backdrop.GLAM -> Color(0xFFFFFFFF).copy(alpha = if (dark) 0.06f else 0.55f)
+        Backdrop.WASH -> if (dark) colors.primary.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.45f)
+        Backdrop.FLAT -> Color.Transparent
+        Backdrop.EMBER -> colors.primary.copy(alpha = if (dark) 0.16f else 0.07f)
     }
-    val fade = when {
+    val fade = when (backdrop) {
         // Soft pink fading to lilac, or deep plum to violet at night.
-        glam && dark -> listOf(Color(0xFF2A0A22), Color(0xFF241030), Color(0xFF1E0A2E))
-        glam -> listOf(Color(0xFFFFE4F1), Color(0xFFF6DEF8), Color(0xFFEBD9FF))
-        else -> listOf(
+        Backdrop.GLAM -> if (dark) {
+            listOf(Color(0xFF2A0A22), Color(0xFF241030), Color(0xFF1E0A2E))
+        } else {
+            listOf(Color(0xFFFFE4F1), Color(0xFFF6DEF8), Color(0xFFEBD9FF))
+        }
+        Backdrop.WASH -> listOf(
+            Tones.mix(colors.background, colors.primaryContainer, if (dark) 0.35f else 0.45f),
+            colors.background,
+            Tones.mix(colors.background, colors.secondaryContainer, if (dark) 0.35f else 0.45f),
+        )
+        Backdrop.FLAT -> listOf(colors.background, colors.background)
+        Backdrop.EMBER -> listOf(
             colors.surfaceContainerLow,
             colors.background,
             colors.surfaceContainerLowest.copy(alpha = if (dark) 1f else 0.6f),
@@ -343,13 +431,15 @@ fun ThemedBackground(modifier: Modifier = Modifier, content: @Composable BoxScop
             .fillMaxSize()
             .drawBehind {
                 drawRect(Brush.verticalGradient(fade))
-                drawRect(
-                    Brush.radialGradient(
-                        colors = listOf(glowColor, Color.Transparent),
-                        center = Offset(size.width / 2f, -size.height * 0.1f),
-                        radius = size.maxDimension * 0.75f,
-                    ),
-                )
+                if (backdrop != Backdrop.FLAT) {
+                    drawRect(
+                        Brush.radialGradient(
+                            colors = listOf(glowColor, Color.Transparent),
+                            center = Offset(size.width / 2f, -size.height * 0.1f),
+                            radius = size.maxDimension * 0.75f,
+                        ),
+                    )
+                }
             },
         content = content,
     )

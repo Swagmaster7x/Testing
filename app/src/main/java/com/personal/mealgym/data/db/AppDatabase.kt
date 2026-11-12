@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Meta::class,
         SupplementLog::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -42,7 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** [onCreated] runs once, when the database file is first created (first launch). */
         fun build(context: Context, onCreated: () -> Unit = {}): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "mealgym.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(
                     object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) = onCreated()
@@ -131,6 +131,13 @@ abstract class AppDatabase : RoomDatabase() {
                     "UPDATE `Profile` SET `snackSlot` = 1, `portion` = 0.75, `tipsStyle` = 'EASIER', " +
                         "`weekBadges` = 1, `templateKey` = 'glute-3' WHERE `id` = 2",
                 )
+            }
+        }
+
+        /** Version 4 adds a look of your own, made in the look creator. Nothing else changes. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `customLook` TEXT")
             }
         }
     }

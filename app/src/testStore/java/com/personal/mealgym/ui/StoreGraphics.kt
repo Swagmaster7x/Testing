@@ -32,7 +32,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.personal.mealgym.R
 import com.personal.mealgym.ui.theme.MealGymTheme
-import com.personal.mealgym.ui.theme.SideTheme
+import com.personal.mealgym.ui.theme.Look
+import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.ui.theme.ThemedBackground
 import org.junit.Rule
 import org.junit.Test
@@ -68,7 +69,7 @@ class StoreGraphics {
     @Config(sdk = [35], qualifiers = "w1024dp-h500dp-night-mdpi")
     fun featureGraphic() {
         compose.setContent {
-            MealGymTheme(side = SideTheme.IRON, darkTheme = true) {
+            MealGymTheme(look = Looks.Iron, darkTheme = true) {
                 Box(Modifier.size(1024.dp, 500.dp).testTag("art")) {
                     ThemedBackground {
                         Row(
@@ -97,8 +98,8 @@ class StoreGraphics {
                                 )
                                 Spacer(Modifier.height(28.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                    LookChip(SideTheme.IRON, "Dark fantasy", R.drawable.ic_launcher_monochrome)
-                                    LookChip(SideTheme.GLAM, "Y2K glam", R.drawable.ic_star)
+                                    LookChip(Looks.Iron, "Dark fantasy", R.drawable.ic_launcher_monochrome)
+                                    LookChip(Looks.Glam, "Y2K glam", R.drawable.ic_star)
                                 }
                             }
                         }
@@ -110,8 +111,8 @@ class StoreGraphics {
     }
 
     @Composable
-    private fun LookChip(look: SideTheme, label: String, icon: Int) {
-        MealGymTheme(side = look, darkTheme = look == SideTheme.IRON) {
+    private fun LookChip(look: Look, label: String, icon: Int) {
+        MealGymTheme(look = look, darkTheme = look == Looks.Iron) {
             Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                 Row(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))

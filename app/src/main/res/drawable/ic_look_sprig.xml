@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original artwork for the "Lavender fields" look. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10.65,3.2a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z M9.25,5.4a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z M12.05,5.4a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z M9.25,8a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z M12.05,8a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z M9.55,10.6a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z M11.75,10.6a1.35,1.35 0 1,0 2.7,0a1.35,1.35 0 1,0 -2.7,0z" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,12 L12,22 M12,18 C10,17 8.5,15.5 8,13.5 M12,16 C14,15 15.5,13.5 16,11.5" />
+</vector>

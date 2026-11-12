@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -66,7 +69,11 @@ import com.personal.mealgym.ui.components.SectionHeader
 import com.personal.mealgym.ui.settings.SwitchRow
 import com.personal.mealgym.ui.theme.MealGymTheme
 import com.personal.mealgym.ui.theme.ThemedBackground
-import com.personal.mealgym.ui.themeFor
+import com.personal.mealgym.ui.theme.CustomLook
+import com.personal.mealgym.ui.theme.Looks
+import com.personal.mealgym.ui.looks.CustomLookEditor
+import com.personal.mealgym.ui.looks.LookGrid
+import com.personal.mealgym.ui.looks.LookPreview
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,6 +93,8 @@ data class PersonDraft(
     val portion: Double = 1.0,
     val tipsStyle: String = Profile.TIPS_FILL_UP,
     val weekBadges: Boolean = true,
+    /** The look creator's choices, kept even while a ready-made look is picked. */
+    val customLook: String? = null,
 ) {
     fun toProfile(id: Long, templateKey: String?) = Profile(
         id = id,
@@ -96,6 +105,7 @@ data class PersonDraft(
         tipsStyle = tipsStyle,
         weekBadges = weekBadges,
         templateKey = templateKey,
+        customLook = customLook,
     )
 
     companion object {
@@ -107,6 +117,7 @@ data class PersonDraft(
             portion = p.portion,
             tipsStyle = p.tipsStyle,
             weekBadges = p.weekBadges,
+            customLook = p.customLook,
         )
     }
 }
@@ -198,7 +209,7 @@ fun FirstPersonScreen(vm: PersonViewModel = viewModel(factory = AppViewModels.Fa
     val d = draft ?: return
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
-    MealGymTheme(side = themeFor(d.themeKey)) {
+    MealGymTheme(look = Looks.forKey(d.themeKey, d.customLook)) {
         ThemedBackground {
             Column(
                 Modifier
@@ -295,13 +306,23 @@ private fun PersonForm(d: PersonDraft, vm: PersonViewModel) {
     )
 
     SectionHeader("Look")
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        LookCard(Profile.THEME_IRON, "Dark fantasy", "Iron, ember and old parchment", d.themeKey, Modifier.weight(1f)) { key ->
-            vm.change { it.copy(themeKey = key) }
-        }
-        LookCard(Profile.THEME_GLAM, "Y2K glam", "Chrome, pink and sparkle", d.themeKey, Modifier.weight(1f)) { key ->
-            vm.change { it.copy(themeKey = key) }
-        }
+    val custom = CustomLook.decode(d.customLook)
+    LookGrid(
+        selectedKey = d.themeKey,
+        custom = custom,
+        onPick = { key ->
+            vm.change {
+                if (key == Looks.CUSTOM) it.copy(themeKey = key, customLook = it.customLook ?: CustomLook().encode()) else it.copy(themeKey = key)
+            }
+        },
+    )
+    if (d.themeKey == Looks.CUSTOM) {
+        val editing = custom ?: CustomLook()
+        val creator = remember { BringIntoViewRequester() }
+        LaunchedEffect(Unit) { creator.bringIntoView() }
+        SectionHeader("Make your own", Modifier.bringIntoViewRequester(creator))
+        LookPreview(Looks.custom(editing))
+        CustomLookEditor(editing, onChange = { c -> vm.change { it.copy(customLook = c.encode()) } })
     }
 
     if (vm.isNew) {
@@ -397,48 +418,6 @@ private fun ChoiceRow(selected: Boolean, title: String, body: String, onClick: (
             Text(title, style = MaterialTheme.typography.bodyLarge)
             if (body.isNotBlank()) {
                 Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-/** A small preview of a look, drawn in that look. */
-@Composable
-private fun LookCard(
-    key: String,
-    title: String,
-    body: String,
-    selectedKey: String,
-    modifier: Modifier = Modifier,
-    onPick: (String) -> Unit,
-) {
-    val selected = key == selectedKey
-    val outline = MaterialTheme.colorScheme.primary
-    MealGymTheme(side = themeFor(key)) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            border = BorderStroke(if (selected) 3.dp else 1.dp, if (selected) outline else MaterialTheme.colorScheme.outlineVariant),
-            modifier = modifier.selectable(selected = selected, role = Role.RadioButton) { onPick(key) },
-        ) {
-            ThemedBackground {
-                Column(
-                    Modifier.fillMaxWidth().padding(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        painterResource(if (key == Profile.THEME_GLAM) R.drawable.ic_star else R.drawable.ic_launcher_monochrome),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(48.dp),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-                    Text(
-                        body,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
     }

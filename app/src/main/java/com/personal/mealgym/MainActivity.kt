@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     val profile = o.profile
                     val motion by remember(profile.id) { container.settings.settings(profile.id).map { it.motion } }
                         .collectAsStateWithLifecycle(initialValue = true)
-                    MealGymTheme(side = themeFor(profile), motion = motion) {
+                    MealGymTheme(look = themeFor(profile), motion = motion) {
                         CompositionLocalProvider(LocalCopy provides SideCopy.forProfile(profile)) {
                             MealGymNavHost(
                                 profile = profile,

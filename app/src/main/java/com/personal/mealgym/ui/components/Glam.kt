@@ -33,9 +33,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import com.personal.mealgym.ui.theme.LocalLook
 import com.personal.mealgym.ui.theme.LocalMotion
-import com.personal.mealgym.ui.theme.LocalSideTheme
-import com.personal.mealgym.ui.theme.SideTheme
+import com.personal.mealgym.ui.theme.Look
+import com.personal.mealgym.ui.theme.Looks
+import com.personal.mealgym.ui.theme.Tones
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -49,12 +51,13 @@ object GlamColors {
     val Lime = Color(0xFFC6F432)
 }
 
+/** The look's decoration colour: lilac for Y2K glam, otherwise the scheme's tertiary. */
 @Composable
-fun isGlam(): Boolean = LocalSideTheme.current == SideTheme.GLAM
+fun Look.accentColor(): Color = accent ?: MaterialTheme.colorScheme.tertiary
 
 /**
- * The main filled button. On Swag's Side it is the standard button; on Ashley's it is a glossy
- * hot-pink pill with a white shine across the top third.
+ * The main filled button: the standard button, or for glossy looks a pill with a white shine
+ * across the top third (hot pink on Y2K glam, the look's own colour elsewhere).
  */
 @Composable
 fun AppButton(
@@ -64,33 +67,43 @@ fun AppButton(
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable RowScope.() -> Unit,
 ) {
-    if (!isGlam()) {
+    val look = LocalLook.current
+    if (!look.glossyButtons) {
         Button(onClick = onClick, modifier = modifier, enabled = enabled, contentPadding = contentPadding, content = content)
         return
     }
     val pill = RoundedCornerShape(50)
+    val glam = look.key == Looks.Glam.key
+    val scheme = MaterialTheme.colorScheme
+    val glow = if (glam) GlamColors.HotPink else scheme.primary
+    val gloss = when {
+        glam && enabled -> listOf(GlamColors.HotPink, Color(0xFFD7197A), GlamColors.DeepPink)
+        glam -> listOf(Color(0xFFD9A3C0), Color(0xFFC995B2))
+        enabled -> listOf(Tones.mix(scheme.primary, Color.White, 0.12f), scheme.primary, Tones.mix(scheme.primary, Color.Black, 0.12f))
+        else -> listOf(scheme.onSurface.copy(alpha = 0.18f), scheme.onSurface.copy(alpha = 0.12f))
+    }
+    val textColor = if (glam) Color.White else scheme.onPrimary
     Button(
         onClick = onClick,
         modifier = modifier
-            .shadow(if (enabled) 6.dp else 0.dp, pill, ambientColor = GlamColors.HotPink, spotColor = GlamColors.HotPink)
+            .shadow(if (enabled) 6.dp else 0.dp, pill, ambientColor = glow, spotColor = glow)
             .clip(pill)
-            .drawBehind { drawGloss(enabled) },
+            .drawBehind { drawGloss(gloss) },
         enabled = enabled,
         shape = pill,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
-            contentColor = Color.White,
+            contentColor = textColor,
             disabledContainerColor = Color.Transparent,
-            disabledContentColor = Color.White.copy(alpha = 0.8f),
+            disabledContentColor = if (glam) Color.White.copy(alpha = 0.8f) else scheme.onSurface.copy(alpha = 0.6f),
         ),
         contentPadding = contentPadding,
         content = content,
     )
 }
 
-private fun DrawScope.drawGloss(enabled: Boolean) {
-    // Deep enough at the middle that white text stays above 4.5:1.
-    val colors = if (enabled) listOf(GlamColors.HotPink, Color(0xFFD7197A), GlamColors.DeepPink) else listOf(Color(0xFFD9A3C0), Color(0xFFC995B2))
+/** Y2K glam's gradient is deep enough at the middle that white text stays above 4.5:1. */
+private fun DrawScope.drawGloss(colors: List<Color>) {
     drawRect(Brush.verticalGradient(colors))
     val shineHeight = size.height / 3f
     drawRoundRect(
@@ -99,6 +112,20 @@ private fun DrawScope.drawGloss(enabled: Boolean) {
         size = Size(size.width - size.height / 2f, shineHeight),
         cornerRadius = CornerRadius(shineHeight / 2f),
     )
+}
+
+/** A row of small dots in the look's colour, under section titles. */
+@Composable
+fun DotRule(modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+    Canvas(modifier.fillMaxWidth().height(6.dp)) {
+        val step = 9.dp.toPx()
+        var x = 2.dp.toPx()
+        while (x < size.width) {
+            drawCircle(color, 1.4.dp.toPx(), Offset(x, size.height / 2f))
+            x += step
+        }
+    }
 }
 
 /** A line of little chrome and pink rhinestones, used under section titles on Ashley's Side. */
@@ -125,7 +152,8 @@ fun Rhinestones(modifier: Modifier = Modifier) {
  * Only on Ashley's Side with Motion on; it plays once and stops.
  */
 fun Modifier.sparkleOn(key: Any?): Modifier = composed {
-    if (!isGlam() || !LocalMotion.current) return@composed this
+    val look = LocalLook.current
+    if (!look.sparkles || !LocalMotion.current) return@composed this
     val progress = remember { Animatable(1f) }
     val first = remember { booleanArrayOf(true) }
     LaunchedEffect(key) {
@@ -136,7 +164,12 @@ fun Modifier.sparkleOn(key: Any?): Modifier = composed {
             progress.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
         }
     }
-    val colors = listOf(GlamColors.HotPink, GlamColors.Lilac, GlamColors.BabyBlue, GlamColors.Lime)
+    val scheme = MaterialTheme.colorScheme
+    val colors = if (look.key == Looks.Glam.key) {
+        listOf(GlamColors.HotPink, GlamColors.Lilac, GlamColors.BabyBlue, GlamColors.Lime)
+    } else {
+        listOf(scheme.primary, scheme.secondary, scheme.tertiary, look.accentColor())
+    }
     drawWithContent {
         drawContent()
         val p = progress.value
@@ -171,8 +204,9 @@ fun DrawScope.drawSparkle(center: Offset, radius: Float, color: Color) {
 @Composable
 fun ShimmerTitle(text: String, style: TextStyle, modifier: Modifier = Modifier) {
     val base = MaterialTheme.colorScheme.primary
-    if (!isGlam() || !LocalMotion.current) {
-        Text(text, style = style, color = if (isGlam()) base else Color.Unspecified, modifier = modifier)
+    val sparkly = LocalLook.current.sparkles
+    if (!sparkly || !LocalMotion.current) {
+        Text(text, style = style, color = if (sparkly) base else Color.Unspecified, modifier = modifier)
         return
     }
     val sweep = remember { Animatable(-0.4f) }
@@ -191,16 +225,13 @@ fun ShimmerTitle(text: String, style: TextStyle, modifier: Modifier = Modifier) 
     Text(text, style = style.copy(brush = brush), modifier = modifier)
 }
 
-/** A small row of Ashley's motifs, used as a footer flourish. */
+/** A small row of the look's motifs, used as a footer flourish. */
 @Composable
 fun MotifStrip(modifier: Modifier = Modifier) {
-    val icons = listOf(
-        com.personal.mealgym.R.drawable.ic_heart,
-        com.personal.mealgym.R.drawable.ic_lip_gloss,
-        com.personal.mealgym.R.drawable.ic_star,
-        com.personal.mealgym.R.drawable.ic_flip_phone,
-        com.personal.mealgym.R.drawable.ic_butterfly,
-    )
+    val look = LocalLook.current
+    val icons = look.motifs
+    if (icons.isEmpty()) return
+    val accent = look.accentColor()
     androidx.compose.foundation.layout.Row(
         modifier.fillMaxWidth(),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp, androidx.compose.ui.Alignment.CenterHorizontally),
@@ -209,7 +240,7 @@ fun MotifStrip(modifier: Modifier = Modifier) {
             androidx.compose.material3.Icon(
                 androidx.compose.ui.res.painterResource(icon),
                 contentDescription = null,
-                tint = if (i % 2 == 0) GlamColors.Lilac else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                tint = if (i % 2 == 0) accent else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                 modifier = androidx.compose.ui.Modifier.size(18.dp),
             )
         }

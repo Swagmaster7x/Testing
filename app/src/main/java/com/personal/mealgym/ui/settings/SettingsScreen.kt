@@ -66,6 +66,7 @@ import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.SectionHeader
 import com.personal.mealgym.ui.cook.HALF_PLATE_TIP
 import com.personal.mealgym.ui.people.NOT_ADVICE
+import com.personal.mealgym.ui.theme.Looks
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -265,6 +266,20 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                     }
                 }
             }
+            item { SectionHeader("Look") }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.weight(1f)) {
+                        Text(Looks.of(profile).name, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "15 ready-made looks, or make your own.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(onClick = nav::look) { Text("Change look") }
+                }
+            }
             if (vm.ads.available) {
                 item { SectionHeader("Ads") }
                 item {
@@ -348,10 +363,11 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                 )
             }
 
-            // The personal app keeps these on the glam look only, as before; the store app offers them to everyone.
-            if (profile.isGlam || BuildConfig.STORE) {
-                item { SectionHeader(if (profile.isGlam) "Sparkle and sound" else "Sound and reminders") }
-                if (profile.isGlam) item {
+            // Timer sound and the creatine checkbox, for everyone; Motion only matters for sparkly looks.
+            val look = Looks.of(profile)
+            item { SectionHeader(if (look.sparkles) "Sparkle and sound" else "Sound and reminders") }
+            run {
+                if (look.sparkles) item {
                     SwitchRow(
                         title = "Motion",
                         body = "Sparkles when a set is ticked or a meal is picked, and a shimmer on titles.",
@@ -525,7 +541,7 @@ private fun PersonRow(person: Profile, isOpen: Boolean, onSwitch: () -> Unit, on
             Text(
                 listOfNotNull(
                     if (isOpen) "Open now" else "Tap to switch",
-                    if (person.isGlam) "Y2K glam" else "Dark fantasy",
+                    Looks.of(person).name,
                 ).joinToString(" · "),
             )
         },

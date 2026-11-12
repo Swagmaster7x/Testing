@@ -3,6 +3,8 @@ package com.personal.mealgym.ui
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Profile
+import com.personal.mealgym.ui.theme.Look
+import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.data.db.WorkoutDay
 
 /**
@@ -45,7 +47,9 @@ data class SideCopy(
             },
         )
 
-        fun forProfile(profile: Profile) = if (profile.isGlam) Glam else Iron
+        fun forLook(look: Look) = if (look.playful) Glam else Iron
+
+        fun forProfile(profile: Profile) = forLook(Looks.of(profile))
     }
 }
 

@@ -103,7 +103,7 @@ class RepositoryTest {
         assertFalse(swag.snackSlot || swag.weekBadges || swag.easierToFinish)
         assertEquals(1.0, swag.portion, 0.0)
         assertEquals("Ashley", ashley.name)
-        assertTrue(ashley.isGlam && ashley.snackSlot && ashley.weekBadges && ashley.easierToFinish)
+        assertTrue(ashley.themeKey == "GLAM" && ashley.snackSlot && ashley.weekBadges && ashley.easierToFinish)
         assertEquals(0.75, ashley.portion, 0.0)
         assertEquals(
             setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),

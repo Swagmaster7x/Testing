@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original artwork for the "Paper and ink" look. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M12,2 L18.5,10.5 L14.5,21 L9.5,21 L5.5,10.5 Z M10.4,11.5a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0z M11.4,13 L12.6,13 L12.6,20 L11.4,20 Z" />
+</vector>

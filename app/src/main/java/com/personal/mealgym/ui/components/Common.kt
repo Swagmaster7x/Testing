@@ -19,6 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -42,6 +43,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.personal.mealgym.R
+import com.personal.mealgym.ui.theme.Divider
+import com.personal.mealgym.ui.theme.LocalLook
 import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 
 /** Top bar for the four main tabs: title, then History and Settings. */
@@ -79,15 +82,19 @@ fun TabTopBar(
     TopAppBar(
         title = {
             Column {
-                if (isGlam()) {
+                val look = LocalLook.current
+                val titleIcon = look.titleIcon
+                if (look.sparkles || titleIcon != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ShimmerTitle(title, MaterialTheme.typography.titleLarge)
-                        Icon(
-                            painterResource(R.drawable.ic_butterfly),
-                            contentDescription = null,
-                            tint = GlamColors.Lilac,
-                            modifier = Modifier.padding(start = 8.dp).size(20.dp),
-                        )
+                        if (titleIcon != null) {
+                            Icon(
+                                painterResource(titleIcon),
+                                contentDescription = null,
+                                tint = look.accentColor(),
+                                modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                            )
+                        }
                     }
                 } else {
                     Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -135,10 +142,15 @@ fun DetailTopBar(
 
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
-    if (isGlam()) {
+    val divider = LocalLook.current.divider
+    if (divider != Divider.NONE) {
         Column(modifier.padding(top = 16.dp, bottom = 8.dp)) {
             Text(text, style = MaterialThemeCarvedLabel, color = MaterialTheme.colorScheme.primary)
-            Rhinestones(Modifier.padding(top = 4.dp))
+            when (divider) {
+                Divider.RHINESTONES -> Rhinestones(Modifier.padding(top = 4.dp))
+                Divider.DOTS -> DotRule(Modifier.padding(top = 4.dp))
+                else -> HorizontalDivider(Modifier.padding(top = 6.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            }
         }
     } else {
         Text(
@@ -157,11 +169,12 @@ fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, actio
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (isGlam()) {
+            val look = LocalLook.current
+            look.emptyIcon?.let { icon ->
                 Icon(
-                    painterResource(R.drawable.ic_flip_phone),
+                    painterResource(icon),
                     contentDescription = null,
-                    tint = GlamColors.Lilac,
+                    tint = look.accentColor(),
                     modifier = Modifier.size(40.dp).align(Alignment.CenterHorizontally),
                 )
             }
