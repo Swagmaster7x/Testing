@@ -8,7 +8,10 @@ import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.RecipeWithIngredients
 import com.personal.mealgym.data.db.ShoppingCheck
+import com.personal.mealgym.domain.Avoid
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.Foods
+import com.personal.mealgym.domain.answers
 import com.personal.mealgym.domain.PlannedRecipe
 import com.personal.mealgym.domain.Portions
 import com.personal.mealgym.domain.RecipeSwaps
@@ -41,6 +44,28 @@ class MealRepository(
     /** The library as one side sees it: shared recipes plus that side's own entries. */
     fun recipesFor(profileId: Long): Flow<List<Recipe>> =
         recipes.map { list -> list.filter { it.onlyForProfileId == null || it.onlyForProfileId == profileId } }
+
+    /** Every recipe with its ingredients, for cupboard matching. */
+    val recipesWithIngredients: Flow<List<RecipeWithIngredients>> = recipeDao.observeAllWithIngredients()
+
+    /** What each recipe contains (allergens and kinds of meat), worked out from its ingredients. */
+    val contents: Flow<Map<Long, Set<Avoid>>> = recipesWithIngredients.map { list ->
+        list.associate { it.recipe.id to Foods.inRecipe(it.recipe, it.ingredients) }
+    }
+
+    /**
+     * The recipes one person asked to avoid, with the reasons. Empty for anyone who hasn't
+     * said they avoid anything.
+     */
+    fun conflictsFor(profileId: Long): Flow<Map<Long, Set<Avoid>>> =
+        combine(contents, db.profileDao().observeAll()) { contents, people ->
+            val avoids = people.firstOrNull { it.id == profileId }?.answers?.avoids.orEmpty()
+            if (avoids.isEmpty()) {
+                emptyMap()
+            } else {
+                contents.mapValues { (_, has) -> has intersect avoids }.filterValues { it.isNotEmpty() }
+            }
+        }
 
     fun recipe(id: Long): Flow<RecipeWithIngredients?> = recipeDao.observeWithIngredients(id)
 

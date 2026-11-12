@@ -24,12 +24,12 @@ class StoreSeedTest {
     fun hasNothingPersonal() {
         for (word in listOf("Ashley", "Swag", "Starbucks")) assertFalse(word, text.contains(word))
         assertTrue(seed.recipes.none { it.onlyFor != null })
-        assertTrue(seed.recipes.size >= 30)
+        assertEquals(67, seed.recipes.size)
     }
 
     @Test
     fun everyStarterPlanIsComplete() {
-        assertEquals(listOf("full-body-3", "upper-lower-4", "glute-3"), seed.workoutTemplates.map { it.key })
+        assertEquals(listOf("full-body-3", "upper-lower-4", "glute-3", "home-3"), seed.workoutTemplates.map { it.key })
         for (t in seed.workoutTemplates) {
             assertTrue(t.name, t.days.isNotEmpty() && t.tips.isNotEmpty() && t.description.isNotBlank())
             assertEquals(t.name, t.days.map { it.order }, (1..t.days.size).toList())

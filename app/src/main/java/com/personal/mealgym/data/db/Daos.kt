@@ -30,6 +30,9 @@ interface ProfileDao {
     @Query("UPDATE Profile SET themeKey = :themeKey, customLook = :customLook WHERE id = :id")
     suspend fun setLook(id: Long, themeKey: String, customLook: String)
 
+    @Query("UPDATE Profile SET planAnswers = :answers WHERE id = :id")
+    suspend fun setPlanAnswers(id: Long, answers: String?)
+
     @Query("SELECT COALESCE(MAX(id), 0) FROM Profile")
     suspend fun maxId(): Long
 

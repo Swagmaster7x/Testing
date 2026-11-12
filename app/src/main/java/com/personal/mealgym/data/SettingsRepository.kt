@@ -84,6 +84,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val pantryStaples = stringSetPreferencesKey("pantry_staples")
         val activeProfile = longPreferencesKey("active_profile")
         val adsRemoved = booleanPreferencesKey("ads_removed")
+        val cupboard = stringSetPreferencesKey("cupboard")
     }
 
     private fun name(base: String, profileId: Long) = if (profileId == Profiles.FIRST) base else "p${profileId}_$base"
@@ -166,6 +167,16 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         p.setOrRemove(string("filter_cuisine", profileId), filter.cuisine)
         p[bool("filter_not_chicken", profileId)] = filter.notChicken
     }
+
+    /** What's ticked in "My cupboard" (plain food names). One cupboard for the household. */
+    val cupboard: Flow<Set<String>> = store.data.map { it[Shared.cupboard] ?: emptySet() }
+
+    suspend fun setInCupboard(key: String, have: Boolean) = store.edit { p ->
+        val current = p[Shared.cupboard] ?: emptySet()
+        p[Shared.cupboard] = if (have) current + key else current - key
+    }
+
+    suspend fun setCupboard(keys: Set<String>) = store.edit { it[Shared.cupboard] = keys }
 
     suspend fun setPantryStaples(items: Set<String>) = store.edit { it[Shared.pantryStaples] = items }
 

@@ -81,14 +81,14 @@ class RepositoryTest {
 
     @Test
     fun seedingLoadsRecipesWorkoutsAndStaples() = runBlocking {
-        assertEquals(19 + 8, recipes.values.count { it.onlyForProfileId == null })
-        assertEquals(9, recipes.values.count { it.onlyForProfileId == TestPeople.ASHLEY })
+        assertEquals(19 + 8 + 31, recipes.values.count { it.onlyForProfileId == null })
+        assertEquals(9 + 5, recipes.values.count { it.onlyForProfileId == TestPeople.ASHLEY })
         assertEquals(listOf("Glutes and hamstrings", "Upper body plus glutes", "Glutes and quads"), db.workoutDao().getDays(TestPeople.ASHLEY).map { it.name })
         val days = db.workoutDao().getDays(TestPeople.SWAG)
         assertEquals(listOf(1, 2, 3, 4), days.map { it.dayOrder }.sorted())
         assertEquals(31 + 16, db.workoutDao().allExercises().size)
         val s = settings.current(TestPeople.SWAG)
-        assertEquals(20 + 5, s.pantryStaples.size)
+        assertEquals(20 + 5 + 6, s.pantryStaples.size)
         assertEquals(setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), s.trainingWeekdays)
 
         val guisado = meals.getRecipe(recipes.getValue("L1").id)!!

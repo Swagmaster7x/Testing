@@ -49,6 +49,8 @@ data class Profile(
     val templateKey: String? = null,
     /** The look made in the look creator, as JSON; kept when switching to a built-in look. */
     val customLook: String? = null,
+    /** The setup questions as answered (goal, body, foods to avoid, training), as JSON. Never leaves the phone. */
+    val planAnswers: String? = null,
 ) {
     val easierToFinish: Boolean get() = tipsStyle == TIPS_EASIER
 
@@ -83,7 +85,8 @@ data class ProteinSwap(
 )
 
 /**
- * A recipe. [nutritionText] is display-only reference text: it is never parsed or added up.
+ * A recipe. [nutritionText] is reference text. The plan builder reads its calorie figure to
+ * choose portion sizes, but the app never adds up what someone ate.
  */
 @Serializable
 @Entity

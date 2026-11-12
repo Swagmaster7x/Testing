@@ -91,7 +91,7 @@ class MigrationTest {
 
     private fun openWithRoom(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5)
             .allowMainThreadQueries()
             .build()
 
@@ -101,7 +101,7 @@ class MigrationTest {
         val room = openWithRoom()
         // Opening runs the migration and then Room's schema check; it throws if anything differs.
         val db = room.openHelper.writableDatabase
-        assertEquals(4, db.version)
+        assertEquals(5, db.version)
 
         fun single(sql: String): String = db.query(sql).use { c ->
             c.moveToFirst()
@@ -158,6 +158,28 @@ class MigrationTest {
         assertEquals(null, ashley.customLook)
         db.profileDao().upsert(ashley.copy(themeKey = "CUSTOM", customLook = "{\"primary\":4281545523}"))
         assertEquals("CUSTOM", db.profileDao().all()[1].themeKey)
+        db.close()
+    }
+
+    @Test
+    fun version5KeepsLooksAndAddsRoomForPlanAnswers() = runBlocking {
+        // A phone on version 4: Ashley made her own look.
+        createFromSchema(4).apply {
+            execSQL(
+                "INSERT INTO Profile (id, name, themeKey, snackSlot, portion, tipsStyle, weekBadges, templateKey, customLook) VALUES " +
+                    "(1, 'Swag', 'ARCTIC', 0, 1.0, 'FILL_UP', 0, 'upper-lower-4', NULL), " +
+                    "(2, 'Ashley', 'CUSTOM', 1, 0.75, 'EASIER', 1, 'glute-3', '{\"primary\":4285416649}')",
+            )
+            close()
+        }
+        val db = openWithRoom()
+        val (swag, ashley) = db.profileDao().all()
+        assertEquals("ARCTIC", swag.themeKey)
+        assertEquals("{\"primary\":4285416649}", ashley.customLook)
+        assertEquals(null, ashley.planAnswers)
+        db.profileDao().setPlanAnswers(2, "{\"goal\":\"BUILD\"}")
+        assertEquals("{\"goal\":\"BUILD\"}", db.profileDao().all()[1].planAnswers)
+        assertTrue(db.profileDao().all()[1].snackSlot)
         db.close()
     }
 

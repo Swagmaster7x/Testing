@@ -32,6 +32,11 @@
    "Lower your upper body with a flat back until your hamstrings stretch.",
    "Rise until your body is in a straight line, squeezing your glutes; don't arch past it."
   ],
+  "Backpack row": [
+   "Load a backpack with books and hold it by the top handle or both straps.",
+   "Bend forward at the hips with a flat back, arms hanging straight down.",
+   "Pull the pack to your lower ribs, squeeze, and lower it slowly."
+  ],
   "Band pull-aparts": [
    "Hold a light band at shoulder height, arms straight, hands shoulder-width.",
    "Pull the band apart until it touches your chest, squeezing your shoulder blades.",
@@ -152,6 +157,11 @@
    "Raise your straight legs to hip height or higher, without leaning back.",
    "Lower slowly. Bend your knees to make it easier."
   ],
+  "Chair dips": [
+   "Sit on the edge of a sturdy chair pushed against a wall, hands gripping the edge by your hips.",
+   "Slide forward off the seat and bend your elbows to lower yourself, keeping your back close to the chair.",
+   "Press back up. Bend your knees more to make it easier."
+  ],
   "Chest flies": [
    "Lie on a flat bench with dumbbells over your chest, palms facing each other.",
    "With a slight bend in the elbows, open your arms in a wide arc until your chest stretches.",
@@ -232,6 +242,11 @@
    "Stand tall with your shoulders down and back, and walk with short, steady steps.",
    "Set the weights down with control when your grip or posture fades."
   ],
+  "Glute bridge": [
+   "Lie on your back with your knees bent and feet flat, hip-width apart.",
+   "Press through your heels and lift your hips until your body is straight from knees to shoulders.",
+   "Squeeze your glutes for a second at the top, then lower slowly."
+  ],
   "Glute bridge machine": [
    "Sit in the machine with the pad or belt over your hips and your upper back on the pad.",
    "Drive your hips up with your chin tucked and ribs down.",
@@ -297,10 +312,20 @@
    "Keep your shoulder blades back on the pad and press up and out.",
    "Return slowly until you feel a light stretch."
   ],
+  "Incline push-ups": [
+   "Hands on a sturdy bench, table or counter, body in a straight line.",
+   "Lower your chest to the edge with your elbows angled back.",
+   "Push back up. The higher the surface, the easier it is."
+  ],
   "Kickback machine": [
    "Set the pad on the back of your working leg and hold the handles.",
    "Push back and up with that leg, squeezing your glute at the top.",
    "Return slowly and keep your hips square."
+  ],
+  "Knee push-ups": [
+   "Hands just wider than your shoulders, knees on the floor, body straight from head to knees.",
+   "Lower your chest toward the floor with your elbows angled back.",
+   "Push the floor away without letting your hips sag."
   ],
   "Lat pulldown": [
    "Tuck your knees under the pad and grip the bar a little wider than your shoulders.",
@@ -372,6 +397,11 @@
    "Curl the handles up smoothly without lifting off the pad.",
    "Lower slowly until your arms are almost straight."
   ],
+  "Mountain climbers": [
+   "Start in a push-up position with your hands under your shoulders.",
+   "Drive one knee toward your chest, then switch legs quickly, as if running on the spot.",
+   "Keep your hips level with your shoulders and breathe steadily."
+  ],
   "Overhead cable extension": [
    "Face away from a cable with a rope held behind your head.",
    "Keep your elbows pointing forward and straighten your arms overhead.",
@@ -386,6 +416,11 @@
    "Set the seat so the handles are at chest height.",
    "With a slight bend in the elbows, bring the handles together in front of you.",
    "Open back up slowly until you feel a stretch across your chest."
+  ],
+  "Pike push-ups": [
+   "From a push-up position, walk your feet in and lift your hips so your body makes an upside-down V.",
+   "Bend your elbows and lower the top of your head toward the floor between your hands.",
+   "Press back up. Bend your knees a little if your hamstrings are tight."
   ],
   "Plank": [
    "Forearms under your shoulders, body straight from head to heels.",
@@ -472,10 +507,20 @@
    "Keep your back against the pad and press up until your arms are nearly straight.",
    "Lower slowly without letting the stack bang."
   ],
+  "Side plank": [
+   "Lie on your side with your elbow under your shoulder and your feet stacked.",
+   "Lift your hips until your body is in a straight line.",
+   "Hold and breathe. Drop the bottom knee to the floor to make it easier."
+  ],
   "Side raises": [
    "Stand tall with dumbbells at your sides and a slight bend in your elbows.",
    "Raise your arms out to the sides up to shoulder height, leading with the elbows.",
    "Lower slowly, without swinging."
+  ],
+  "Single-leg calf raises": [
+   "Stand on one foot on the edge of a step, holding a wall or rail for balance.",
+   "Rise as high as you can onto your toes and pause.",
+   "Lower slowly until your heel drops below the step. Finish one side, then switch."
   ],
   "Single-leg glute bridge": [
    "Lie on your back with one knee bent and the other leg straight out.",
@@ -502,6 +547,11 @@
    "Sit down until your thighs are about level with the floor, chest up.",
    "Drive up through your heels. Set the safety stops before you start."
   ],
+  "Split squat": [
+   "Stand in a long stride, one foot forward and one back, both pointing ahead.",
+   "Lower straight down until the back knee nearly touches the floor.",
+   "Push through the front foot to rise. Finish one side, then switch."
+  ],
   "Standing calf machine": [
    "Shoulders under the pads, balls of your feet on the step.",
    "Rise onto your toes as high as you can and pause.",
@@ -517,6 +567,11 @@
    "Push through the top foot to stand up, without bouncing off the back foot.",
    "Step down slowly with control."
   ],
+  "Superman": [
+   "Lie face down with your arms stretched out in front of you.",
+   "Lift your arms, chest and legs a few inches off the floor by squeezing your back and glutes.",
+   "Hold for a second, then lower slowly. Keep your neck long and look at the floor."
+  ],
   "Triceps extensions": [
    "Hold a dumbbell or bar overhead, or lie on a bench with it above your forehead.",
    "Bend only at the elbows to lower the weight behind your head.",
@@ -526,6 +581,11 @@
    "Hold a dumbbell in each hand at your sides.",
    "Step into a lunge, then bring the back foot through into the next step.",
    "Take long, steady steps and keep your chest up the whole way."
+  ],
+  "Wall sit": [
+   "Lean your back flat against a wall and slide down until your thighs are level with the floor.",
+   "Knees over your ankles, feet flat, hands off your legs.",
+   "Hold and breathe steadily. Stand up when your legs start to shake."
   ],
   "Weighted chin-ups": [
    "Add weight with a dip belt or a dumbbell held between your feet.",

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "recipes": [
     {
       "key": "B1",
@@ -2493,6 +2493,2888 @@
       "protein": "BEEF",
       "onlyFor": "ashley",
       "since": 2
+    },
+    {
+      "key": "B5",
+      "name": "Veggie scramble on toast",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 1,
+      "servingSize": "2 eggs and whites on 2 slices of toast",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "liquid egg whites",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "handful of",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "slices",
+          "name": "whole-grain bread",
+          "section": "CARBS"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        },
+        {
+          "name": "hot sauce",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~440 cal, 35 g protein, 37 g carbs, 16 g fat",
+      "steps": [
+        "Heat the oil in a nonstick pan over medium heat. Cook the diced pepper and onion for 3 minutes.",
+        "Add the spinach and stir until wilted.",
+        "Beat the eggs with the egg whites, pour in, and stir gently until just set, about 2 minutes.",
+        "Season, pile onto toast and add hot sauce."
+      ],
+      "protein": "EGG",
+      "since": 3
+    },
+    {
+      "key": "B6",
+      "name": "Cottage cheese berry bowl",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 1,
+      "servingSize": "1 bowl",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "cottage cheese",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "mixed berries",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "granola",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "chia seeds",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "honey",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~460 cal, 31 g protein, 58 g carbs, 14 g fat",
+      "steps": [
+        "Spoon the cottage cheese into a bowl.",
+        "Top with the berries, granola and chia seeds.",
+        "Drizzle with honey."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "B7",
+      "name": "Peanut butter banana oats",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 1,
+      "servingSize": "1 bowl",
+      "ingredients": [
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "rolled oats",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "milk",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "scoop",
+          "name": "vanilla whey protein",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "banana",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "peanut butter",
+          "section": "PANTRY"
+        },
+        {
+          "unit": "pinch of",
+          "name": "cinnamon",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~580 cal, 42 g protein, 73 g carbs, 15 g fat",
+      "steps": [
+        "Simmer the oats in the milk for 4 to 5 minutes, stirring (or microwave for 2 minutes).",
+        "Take off the heat and stir in the protein powder. Add a splash of milk if it's thick.",
+        "Top with sliced banana, peanut butter and cinnamon."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "B8",
+      "name": "Turkey and egg breakfast burritos",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "servingSize": "1 burrito",
+      "ingredients": [
+        {
+          "quantity": "1/2",
+          "unit": "lb",
+          "name": "93% lean ground turkey",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "6",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "4",
+          "name": "whole-wheat tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "shredded cheese",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~500 cal, 35 g protein, 44 g carbs, 20 g fat",
+      "mealPrep": true,
+      "steps": [
+        "Brown the turkey with the cumin and chili powder until no pink remains (165°F).",
+        "Add the diced pepper and onion and cook for 3 minutes.",
+        "Push everything aside and scramble the eggs in the same pan. Stir in the beans.",
+        "Divide among the tortillas with the cheese and salsa, and roll up.",
+        "Wrap extras in foil. Refrigerate for up to 4 days or freeze; reheat until hot all the way through."
+      ],
+      "protein": "TURKEY",
+      "since": 3
+    },
+    {
+      "key": "B9",
+      "name": "Banana oat protein pancakes",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 1,
+      "servingSize": "3 small pancakes",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "name": "banana",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "rolled oats",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "scoop",
+          "name": "vanilla whey protein",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "tsp",
+          "name": "baking powder",
+          "section": "PANTRY"
+        },
+        {
+          "unit": "pinch of",
+          "name": "cinnamon",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "mixed berries",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "honey",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~620 cal, 44 g protein, 73 g carbs, 19 g fat",
+      "steps": [
+        "Blend the banana, eggs, oats, protein powder, baking powder and cinnamon until smooth.",
+        "Heat a nonstick pan over medium-low heat with a little oil.",
+        "Pour 3 small pancakes. Cook for 2 minutes until bubbles form, flip, and cook 1 to 2 minutes more.",
+        "Top with the berries and honey."
+      ],
+      "protein": "EGG",
+      "since": 3
+    },
+    {
+      "key": "B10",
+      "name": "Smoked salmon avocado toast",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 1,
+      "servingSize": "2 slices",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "unit": "slices",
+          "name": "whole-grain bread",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "oz",
+          "name": "smoked salmon",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/4",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        },
+        {
+          "name": "capers",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~520 cal, 38 g protein, 35 g carbs, 26 g fat",
+      "steps": [
+        "Toast the bread.",
+        "Mash the avocado with the lemon juice, salt and pepper, and spread it on the toast.",
+        "Fry or poach the eggs.",
+        "Top the toast with the smoked salmon, then the eggs and a few capers."
+      ],
+      "protein": "FISH",
+      "since": 3
+    },
+    {
+      "key": "B11",
+      "name": "Tofu scramble with black beans",
+      "mealType": "BREAKFAST",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 2,
+      "servingSize": "1 plate with 2 tortillas",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "block",
+          "name": "firm tofu",
+          "note": "14 oz",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "tsp",
+          "name": "turmeric",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "4",
+          "name": "corn tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~620 cal, 39 g protein, 70 g carbs, 21 g fat",
+      "steps": [
+        "Pat the tofu dry with paper towels and crumble it.",
+        "Cook the diced onion and pepper in the oil for 4 minutes.",
+        "Add the tofu, cumin, turmeric and salt. Cook for 5 minutes until lightly golden.",
+        "Stir in the beans and spinach until the spinach wilts and everything is hot.",
+        "Serve with warm tortillas and salsa."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "L9",
+      "name": "Chicken burrito bowls",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "servingSize": "1 bowl with 3/4 cup rice",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "chicken breast",
+          "note": "cubed",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "garlic powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "corn",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~600 cal, 50 g protein, 65 g carbs, 14 g fat",
+      "mealPrep": true,
+      "steps": [
+        "Toss the chicken with the oil, chili powder, cumin, garlic powder and salt.",
+        "Cook in a hot pan for 6 to 8 minutes until browned and 165°F inside.",
+        "Warm the beans and corn.",
+        "Divide the rice into 4 containers. Top with the chicken, beans, corn and salsa.",
+        "Add avocado, lime and cilantro when serving."
+      ],
+      "volumeTip": "Serve over a big handful of shredded lettuce and use half the rice.",
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Ground turkey",
+          "protein": "TURKEY",
+          "replace": "chicken breast",
+          "with": "93% lean ground turkey",
+          "note": "Brown and crumble instead of cubing; cook to 165°F."
+        }
+      ],
+      "since": 3
+    },
+    {
+      "key": "L10",
+      "name": "Greek chicken and quinoa bowls",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Mediterranean"
+      ],
+      "servings": 4,
+      "servingSize": "1 bowl",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "chicken breast",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "quinoa",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "cucumber",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "tomatoes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "red onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "feta",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "olives",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "oregano",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~520 cal, 51 g protein, 35 g carbs, 19 g fat",
+      "mealPrep": true,
+      "steps": [
+        "Marinate the chicken in 1 tbsp oil, the juice of half the lemon, the oregano, minced garlic and salt for 15 minutes.",
+        "Simmer the quinoa in 2 cups of water, covered, for 15 minutes. Fluff with a fork.",
+        "Cook the chicken in a hot pan for 5 to 6 minutes a side until 165°F. Rest, then slice.",
+        "Dice the cucumber, tomatoes and onion. Toss with the rest of the oil and lemon.",
+        "Build the bowls: quinoa, chicken, salad, feta, olives and a spoon of yogurt."
+      ],
+      "protein": "CHICKEN",
+      "swaps": [
+        {
+          "label": "Chickpeas",
+          "protein": "VEGETARIAN",
+          "replace": "chicken breast",
+          "with": "chickpeas, 2 cans, drained",
+          "note": "Warm the chickpeas with the oregano and garlic instead of cooking chicken."
+        }
+      ],
+      "since": 3
+    },
+    {
+      "key": "L11",
+      "name": "Tuna and white bean salad",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Mediterranean"
+      ],
+      "servings": 2,
+      "servingSize": "1 big bowl with toast",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "unit": "cans",
+          "name": "tuna in water",
+          "note": "drained",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "white beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "tomatoes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "name": "red onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "mustard",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "slices",
+          "name": "whole-grain bread",
+          "section": "CARBS"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~550 cal, 44 g protein, 56 g carbs, 16 g fat",
+      "steps": [
+        "Whisk the oil, lemon juice, mustard, salt and pepper in a large bowl.",
+        "Add the tuna, beans, chopped tomatoes and thinly sliced onion. Toss.",
+        "Fold in the spinach.",
+        "Serve with toast."
+      ],
+      "protein": "FISH",
+      "since": 3
+    },
+    {
+      "key": "L12",
+      "name": "Turkey taco lettuce wraps",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "servingSize": "3 wraps",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "93% lean ground turkey",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "heads",
+          "name": "butter lettuce",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "shredded cheese",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~410 cal, 34 g protein, 27 g carbs, 20 g fat",
+      "steps": [
+        "Brown the turkey with the diced onion until no pink remains (165°F).",
+        "Stir in the chili powder, cumin, salt and a splash of water. Simmer for 2 minutes.",
+        "Add the beans and heat through.",
+        "Spoon into lettuce leaves and top with salsa, avocado, cheese and lime."
+      ],
+      "volumeTip": "Pile on shredded cabbage and pico de gallo. They add crunch for almost nothing.",
+      "protein": "TURKEY",
+      "since": 3
+    },
+    {
+      "key": "L13",
+      "name": "Chickpea and spinach curry",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Indian"
+      ],
+      "servings": 4,
+      "servingSize": "1 bowl with 3/4 cup rice",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "unit": "cans",
+          "name": "chickpeas",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "red lentils",
+          "note": "rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "light coconut milk",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "note": "grated",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "curry powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "bag",
+          "name": "baby spinach",
+          "note": "5 oz",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "note": "to serve; leave out for vegan",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~600 cal, 25 g protein, 94 g carbs, 13 g fat",
+      "mealPrep": true,
+      "steps": [
+        "Cook the diced onion in the oil for 5 minutes.",
+        "Add the garlic, ginger and curry powder and stir for 1 minute.",
+        "Add the tomatoes, coconut milk, lentils and 1 cup of water. Simmer for 15 minutes.",
+        "Add the chickpeas and simmer 5 to 10 minutes more, until the lentils are soft.",
+        "Stir in the spinach until wilted. Season with salt and lime juice.",
+        "Serve over rice with a spoon of yogurt and cilantro."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "L14",
+      "name": "Black bean and sweet potato bowls",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "servingSize": "1 bowl",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "sweet potatoes",
+          "note": "cubed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "unit": "cans",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "3/4",
+          "unit": "cup",
+          "name": "quinoa",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "red onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "feta",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~640 cal, 29 g protein, 100 g carbs, 14 g fat",
+      "mealPrep": true,
+      "steps": [
+        "Heat the oven to 425°F.",
+        "Toss the sweet potatoes and onion wedges with the oil, chili powder, cumin and salt. Roast for 25 to 30 minutes, turning once.",
+        "Simmer the quinoa in 1 1/2 cups of water, covered, for 15 minutes.",
+        "Warm the beans.",
+        "Build the bowls: quinoa, sweet potato, beans, salsa, avocado, feta, a spoon of yogurt and lime."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "L15",
+      "name": "Chicken Caesar wraps",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 2,
+      "servingSize": "1 wrap",
+      "ingredients": [
+        {
+          "quantity": "3/4",
+          "unit": "lb",
+          "name": "chicken breast",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "name": "whole-wheat tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "head",
+          "name": "romaine lettuce",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "parmesan",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "mustard",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~420 cal, 49 g protein, 28 g carbs, 12 g fat",
+      "steps": [
+        "Season the chicken with salt and pepper. Cook in the oil for 5 to 6 minutes a side until 165°F. Rest, then slice.",
+        "Stir the yogurt, parmesan, lemon juice, mustard, grated garlic, pepper and a splash of water into a dressing.",
+        "Toss the chopped romaine with the dressing.",
+        "Fill the tortillas with the lettuce and chicken and roll them tight."
+      ],
+      "volumeTip": "Use the whole head of romaine and eat the extra as a side salad.",
+      "protein": "CHICKEN",
+      "since": 3
+    },
+    {
+      "key": "L17",
+      "name": "Egg fried rice with vegetables",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 2,
+      "servingSize": "1 big bowl",
+      "ingredients": [
+        {
+          "quantity": "4",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "edamame",
+          "note": "shelled, frozen",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "cups",
+          "name": "cooked rice",
+          "note": "day-old is best",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "frozen peas",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "note": "diced small",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "note": "grated",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sesame oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "oil",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~610 cal, 32 g protein, 70 g carbs, 24 g fat",
+      "steps": [
+        "Heat the oil in a large pan or wok over high heat. Scramble the eggs until just set and set them aside.",
+        "Stir-fry the carrots, garlic and ginger for 2 minutes.",
+        "Add the rice, peas and edamame. Stir-fry for 3 to 4 minutes until hot.",
+        "Return the eggs. Add the soy sauce, sesame oil and scallions and toss for 1 minute."
+      ],
+      "protein": "EGG",
+      "swaps": [
+        {
+          "label": "Shrimp",
+          "protein": "FISH",
+          "replace": "edamame",
+          "with": "shrimp, 1/2 lb, peeled",
+          "note": "Stir-fry the shrimp first until pink, 2 to 3 minutes."
+        }
+      ],
+      "since": 3
+    },
+    {
+      "key": "L18",
+      "name": "Shrimp and vegetable stir-fry",
+      "mealType": "LUNCH",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 4,
+      "servingSize": "1 bowl with 3/4 cup rice",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "shrimp",
+          "note": "peeled and deveined",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "head",
+          "name": "broccoli",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "bell peppers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "8",
+          "unit": "oz",
+          "name": "mushrooms",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "note": "grated",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "tbsp",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "honey",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "rice vinegar",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "cornstarch",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sesame oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked jasmine rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        }
+      ],
+      "nutrition": "~430 cal, 43 g protein, 52 g carbs, 6 g fat",
+      "steps": [
+        "Whisk the soy sauce, honey, vinegar, cornstarch and 1/4 cup of water.",
+        "Stir-fry the broccoli, peppers and mushrooms in the oil over high heat for 4 to 5 minutes. Set aside.",
+        "Cook the shrimp for 2 to 3 minutes until pink and opaque.",
+        "Add the garlic and ginger for 30 seconds. Return the vegetables, pour in the sauce and toss for 1 minute until glossy.",
+        "Finish with the sesame oil and scallions. Serve over rice."
+      ],
+      "protein": "FISH",
+      "swaps": [
+        {
+          "label": "Chicken breast",
+          "protein": "CHICKEN",
+          "replace": "shrimp",
+          "with": "chicken breast, sliced thin",
+          "note": "Cook for 5 to 6 minutes until no pink remains."
+        },
+        {
+          "label": "Tofu",
+          "protein": "VEGETARIAN",
+          "replace": "shrimp",
+          "with": "firm tofu, cubed",
+          "note": "Brown the tofu first, 6 to 8 minutes."
+        }
+      ],
+      "since": 3
+    },
+    {
+      "key": "D12",
+      "name": "Lemon-herb chicken thighs with potatoes and green beans",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 4,
+      "servingSize": "2 small thighs with vegetables",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "unit": "lb",
+          "name": "chicken thighs",
+          "note": "boneless skinless",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "potatoes",
+          "note": "halved",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "bag",
+          "name": "frozen green beans",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "oregano",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "paprika",
+          "section": "PANTRY"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~520 cal, 49 g protein, 36 g carbs, 20 g fat",
+      "steps": [
+        "Heat the oven to 425°F.",
+        "Toss the potatoes with 1 tbsp oil and salt on a sheet pan. Roast for 15 minutes.",
+        "Toss the chicken with the rest of the oil, the lemon zest and juice, garlic, oregano, paprika, salt and pepper.",
+        "Add the chicken and green beans to the pan. Roast for 20 to 25 minutes until the chicken reaches 165°F.",
+        "Squeeze over more lemon."
+      ],
+      "protein": "CHICKEN",
+      "since": 3
+    },
+    {
+      "key": "D13",
+      "name": "Turkey meatballs with marinara and spaghetti",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Italian"
+      ],
+      "servings": 4,
+      "servingSize": "4 meatballs with 1 cup pasta",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "93% lean ground turkey",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "name": "egg",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/3",
+          "unit": "cup",
+          "name": "rolled oats",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "Italian seasoning",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "parmesan",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "jar",
+          "name": "marinara sauce",
+          "note": "24 oz",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "8",
+          "unit": "oz",
+          "name": "whole-wheat spaghetti",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "basil",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~540 cal, 37 g protein, 61 g carbs, 16 g fat",
+      "steps": [
+        "Heat the oven to 400°F and line a sheet pan.",
+        "Mix the turkey, egg, oats, minced garlic, Italian seasoning, half the parmesan and 1/2 tsp salt. Roll into 16 meatballs.",
+        "Bake for 15 to 18 minutes until 165°F inside.",
+        "Boil the spaghetti as the packet says, then drain.",
+        "Warm the marinara in a pan, wilt in the spinach and add the meatballs.",
+        "Serve over the spaghetti with the rest of the parmesan and basil."
+      ],
+      "volumeTip": "Swap half the spaghetti for roasted zucchini.",
+      "protein": "TURKEY",
+      "since": 3
+    },
+    {
+      "key": "D14",
+      "name": "Baked cod with lemon, rice and broccoli",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Mediterranean"
+      ],
+      "servings": 4,
+      "servingSize": "1 fillet with 3/4 cup rice",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "cod fillets",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "paprika",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "heads",
+          "name": "broccoli",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1 1/2",
+          "unit": "cups",
+          "name": "rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~520 cal, 41 g protein, 69 g carbs, 9 g fat",
+      "steps": [
+        "Heat the oven to 400°F. Cook the rice.",
+        "Toss the broccoli florets with 1 tbsp oil and salt on a sheet pan. Roast for 10 minutes.",
+        "Pat the cod dry. Rub with the rest of the oil, the minced garlic, paprika, salt and pepper.",
+        "Add the cod and lemon slices to the pan. Roast for 10 to 12 minutes until the fish flakes easily (145°F).",
+        "Serve over the rice with lemon."
+      ],
+      "protein": "FISH",
+      "since": 3
+    },
+    {
+      "key": "D15",
+      "name": "Shrimp tacos with cabbage slaw",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "servingSize": "3 tacos",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "shrimp",
+          "note": "peeled and deveined",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "12",
+          "name": "corn tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "head",
+          "name": "cabbage",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "name": "limes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "garlic powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "hot sauce",
+          "section": "PANTRY"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~420 cal, 43 g protein, 41 g carbs, 12 g fat",
+      "steps": [
+        "Toss the shrimp with the oil, chili powder, cumin, garlic powder and salt.",
+        "Shred the cabbage. Toss with the yogurt, the juice of 1 lime and salt.",
+        "Cook the shrimp in a hot pan for 2 to 3 minutes until pink and opaque.",
+        "Warm the tortillas in a dry pan.",
+        "Fill with slaw, shrimp, avocado, cilantro and hot sauce. Serve with lime wedges."
+      ],
+      "protein": "FISH",
+      "swaps": [
+        {
+          "label": "Chicken breast",
+          "protein": "CHICKEN",
+          "replace": "shrimp",
+          "with": "chicken breast, sliced thin",
+          "note": "Cook for 5 to 6 minutes until no pink remains."
+        }
+      ],
+      "since": 3
+    },
+    {
+      "key": "D16",
+      "name": "Beef and bean chili",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 6,
+      "servingSize": "1 1/2 cups",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "90% lean ground beef",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "cans",
+          "name": "kidney beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "crushed tomatoes",
+          "note": "28 oz",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "bell peppers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "unit": "tbsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "oregano",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "cups",
+          "name": "low-sodium beef broth",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "note": "to serve",
+          "section": "PROTEIN"
+        },
+        {
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~460 cal, 41 g protein, 46 g carbs, 12 g fat",
+      "steps": [
+        "Brown the beef in a large pot, breaking it up, until no pink remains (160°F). Drain off extra fat.",
+        "Add the diced onion and peppers and cook for 5 minutes.",
+        "Stir in the garlic, chili powder, cumin and oregano for 1 minute.",
+        "Add the tomatoes, beans and broth. Simmer for 30 minutes, stirring now and then. Salt to taste.",
+        "Serve with a spoon of yogurt and scallions. Keeps 4 days in the fridge and freezes well."
+      ],
+      "protein": "BEEF",
+      "swaps": [
+        {
+          "label": "Ground turkey",
+          "protein": "TURKEY",
+          "replace": "90% lean ground beef",
+          "with": "93% lean ground turkey",
+          "note": "Cook to 165°F."
+        }
+      ],
+      "since": 3
+    },
+    {
+      "key": "D17",
+      "name": "Curry-yogurt chicken with rice and cucumber salad",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Indian"
+      ],
+      "servings": 4,
+      "servingSize": "1 cup chicken with 3/4 cup rice",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "chicken breast",
+          "note": "cubed",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "3/4",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "curry powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "note": "grated",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "name": "cucumbers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "tomatoes",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "red onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~450 cal, 48 g protein, 43 g carbs, 8 g fat",
+      "steps": [
+        "Stir the yogurt, curry powder, ginger, minced garlic, half the lemon juice and salt. Coat the chicken and marinate for 20 minutes (or overnight).",
+        "Cook the chicken in the oil in a very hot pan (or under the broiler) for 8 to 10 minutes, turning, until charred at the edges and 165°F.",
+        "Dice the cucumbers, tomatoes and onion. Toss with the rest of the lemon, salt and cilantro.",
+        "Serve the chicken over rice with the salad."
+      ],
+      "protein": "CHICKEN",
+      "since": 3
+    },
+    {
+      "key": "D18",
+      "name": "Tofu and vegetable stir-fry",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Asian"
+      ],
+      "servings": 4,
+      "servingSize": "1 bowl with 3/4 cup rice",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "unit": "blocks",
+          "name": "firm tofu",
+          "note": "14 oz each",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "head",
+          "name": "broccoli",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "bell peppers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "ginger",
+          "note": "grated",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "low-sodium soy sauce",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "honey",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "rice vinegar",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "cornstarch",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "sesame oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3",
+          "unit": "cups",
+          "name": "cooked jasmine rice",
+          "section": "CARBS"
+        },
+        {
+          "name": "sesame seeds",
+          "section": "PANTRY"
+        },
+        {
+          "name": "scallions",
+          "section": "PRODUCE_FROZEN"
+        }
+      ],
+      "nutrition": "~530 cal, 29 g protein, 58 g carbs, 20 g fat",
+      "steps": [
+        "Press the tofu between paper towels for 10 minutes, then cube it.",
+        "Brown the tofu in 1 tbsp oil for 6 to 8 minutes until golden. Set aside.",
+        "Stir-fry the vegetables in the rest of the oil for 4 to 5 minutes. Add the garlic and ginger for 30 seconds.",
+        "Whisk the soy sauce, honey, vinegar, cornstarch and 1/4 cup of water. Pour in with the tofu and toss for 1 to 2 minutes until glossy.",
+        "Finish with the sesame oil, sesame seeds and scallions. Serve over rice."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "D19",
+      "name": "Turkey-stuffed bell peppers",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 4,
+      "servingSize": "2 halves",
+      "ingredients": [
+        {
+          "quantity": "4",
+          "name": "bell peppers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "93% lean ground turkey",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1 1/2",
+          "unit": "cups",
+          "name": "cooked rice",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1/2",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "3/4",
+          "unit": "cup",
+          "name": "shredded cheese",
+          "section": "PANTRY"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~490 cal, 36 g protein, 47 g carbs, 16 g fat",
+      "steps": [
+        "Heat the oven to 400°F. Halve the peppers lengthwise, take out the seeds and set them cut side up in a baking dish.",
+        "Brown the turkey with the diced onion until no pink remains (165°F). Add the garlic, chili powder, cumin and salt.",
+        "Stir in the rice, tomatoes and beans.",
+        "Fill the peppers, cover with foil and bake for 25 minutes.",
+        "Uncover, top with the cheese and bake for 10 minutes more."
+      ],
+      "protein": "TURKEY",
+      "since": 3
+    },
+    {
+      "key": "D20",
+      "name": "Garlic butter salmon with asparagus and potatoes",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 4,
+      "servingSize": "1 fillet with vegetables",
+      "ingredients": [
+        {
+          "quantity": "4",
+          "name": "salmon portions",
+          "note": "6 oz each",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "potatoes",
+          "note": "halved",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "asparagus",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "butter",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "4",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~590 cal, 40 g protein, 34 g carbs, 31 g fat",
+      "steps": [
+        "Heat the oven to 425°F.",
+        "Toss the potatoes with the oil and salt on a sheet pan. Roast for 20 minutes.",
+        "Melt the butter with the minced garlic and lemon juice.",
+        "Push the potatoes aside and add the salmon and asparagus. Spoon the garlic butter over them.",
+        "Roast for 10 to 12 minutes until the salmon flakes easily (145°F)."
+      ],
+      "protein": "FISH",
+      "since": 3
+    },
+    {
+      "key": "D21",
+      "name": "Bean and veggie quesadillas",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 2,
+      "servingSize": "1 quesadilla with salsa",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "name": "whole-wheat tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "3/4",
+          "unit": "cup",
+          "name": "shredded cheese",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "salsa",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "section": "PROTEIN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~600 cal, 36 g protein, 70 g carbs, 20 g fat",
+      "steps": [
+        "Cook the sliced pepper and onion in the oil for 4 minutes. Add the spinach, cumin and a pinch of salt until wilted.",
+        "Mash half the beans with a fork and stir in the rest.",
+        "Spread the beans over half of each tortilla. Top with the vegetables and cheese, and fold.",
+        "Cook in a dry pan over medium heat for 2 to 3 minutes a side until crisp and melted.",
+        "Cut into wedges and serve with the salsa and yogurt."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "D22",
+      "name": "Chicken sausage, pepper and potato skillet",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "American"
+      ],
+      "servings": 4,
+      "servingSize": "1 1/2 cups with an egg",
+      "ingredients": [
+        {
+          "quantity": "8",
+          "unit": "links",
+          "name": "chicken sausage",
+          "note": "fully cooked",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1 1/2",
+          "unit": "lb",
+          "name": "potatoes",
+          "note": "diced small",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "2",
+          "name": "bell peppers",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "paprika",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "garlic powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "4",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~540 cal, 36 g protein, 40 g carbs, 24 g fat",
+      "steps": [
+        "Cook the potatoes in the oil in a large skillet over medium-high heat for 12 to 15 minutes, stirring, until golden and tender.",
+        "Add the sliced peppers and onion, paprika, garlic powder and salt. Cook for 5 minutes.",
+        "Add the sliced sausage and cook for 3 to 4 minutes until browned and hot through (165°F).",
+        "Make 4 wells, crack in the eggs, cover and cook for 3 to 4 minutes until the whites are set."
+      ],
+      "protein": "CHICKEN",
+      "since": 3
+    },
+    {
+      "key": "D23",
+      "name": "Chickpea shakshuka",
+      "mealType": "DINNER",
+      "cuisineTags": [
+        "Mediterranean"
+      ],
+      "servings": 2,
+      "servingSize": "half the pan with toast",
+      "ingredients": [
+        {
+          "quantity": "4",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "chickpeas",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "bell pepper",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "paprika",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "feta",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "slices",
+          "name": "whole-grain bread",
+          "section": "CARBS"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~630 cal, 33 g protein, 68 g carbs, 25 g fat",
+      "steps": [
+        "Cook the diced onion and pepper in the oil for 5 minutes.",
+        "Add the garlic, cumin and paprika for 1 minute.",
+        "Add the tomatoes, chickpeas, 1/2 cup of water and salt. Simmer for 10 minutes until thick.",
+        "Make 4 wells and crack in the eggs. Cover and cook for 5 to 7 minutes until the whites are set.",
+        "Top with feta and cilantro. Serve with toast."
+      ],
+      "protein": "EGG",
+      "since": 3
+    },
+    {
+      "key": "S5",
+      "name": "Red lentil soup",
+      "mealType": "SOUP",
+      "cuisineTags": [
+        "Mediterranean"
+      ],
+      "servings": 4,
+      "servingSize": "2 cups with toast",
+      "ingredients": [
+        {
+          "quantity": "1 1/2",
+          "unit": "cups",
+          "name": "red lentils",
+          "note": "rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "celery stalks",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "6",
+          "unit": "cups",
+          "name": "low-sodium broth",
+          "note": "vegetable",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tsp",
+          "name": "paprika",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "lemon",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "nonfat Greek yogurt",
+          "note": "to serve",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "4",
+          "unit": "slices",
+          "name": "whole-grain bread",
+          "section": "CARBS"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~460 cal, 29 g protein, 72 g carbs, 5 g fat",
+      "mealPrep": true,
+      "steps": [
+        "Cook the diced onion, carrots and celery in the oil for 6 minutes.",
+        "Add the garlic, cumin and paprika for 1 minute.",
+        "Add the lentils, tomatoes and broth. Simmer for 20 minutes until the lentils fall apart.",
+        "Stir in the spinach, lemon juice and salt. Blend part of it if you like it smoother.",
+        "Serve with a spoon of yogurt and toast."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "S6",
+      "name": "Chicken tortilla soup",
+      "mealType": "SOUP",
+      "cuisineTags": [
+        "Hispanic"
+      ],
+      "servings": 4,
+      "servingSize": "2 cups",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "lb",
+          "name": "chicken breast",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "black beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "corn",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "jalapeño",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "5",
+          "unit": "cups",
+          "name": "low-sodium chicken broth",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "cumin",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "chili powder",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "4",
+          "name": "corn tortillas",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "avocado",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "lime",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "cilantro",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~430 cal, 40 g protein, 47 g carbs, 11 g fat",
+      "steps": [
+        "Simmer the chicken in the broth with the diced onion, garlic, jalapeño, cumin and chili powder for 15 minutes, until 165°F.",
+        "Lift the chicken out and shred it with two forks.",
+        "Add the tomatoes, beans and corn. Simmer for 10 minutes. Return the chicken and season with salt and lime.",
+        "Cut the tortillas into strips and toast them in a 400°F oven for 8 to 10 minutes until crisp.",
+        "Top the bowls with tortilla strips, avocado and cilantro."
+      ],
+      "protein": "CHICKEN",
+      "since": 3
+    },
+    {
+      "key": "S7",
+      "name": "Minestrone with white beans",
+      "mealType": "SOUP",
+      "cuisineTags": [
+        "Italian"
+      ],
+      "servings": 4,
+      "servingSize": "2 cups",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "unit": "cans",
+          "name": "white beans",
+          "note": "drained and rinsed",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "4",
+          "unit": "oz",
+          "name": "whole-wheat spaghetti",
+          "note": "broken into short pieces",
+          "section": "CARBS"
+        },
+        {
+          "quantity": "1",
+          "name": "onion",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "name": "celery stalks",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "zucchini",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "3",
+          "name": "garlic cloves",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "unit": "can",
+          "name": "diced tomatoes",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "6",
+          "unit": "cups",
+          "name": "low-sodium broth",
+          "note": "vegetable",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "tsp",
+          "name": "Italian seasoning",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "1",
+          "unit": "tbsp",
+          "name": "olive oil",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "unit": "handfuls",
+          "name": "baby spinach",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "parmesan",
+          "section": "PANTRY"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~430 cal, 22 g protein, 72 g carbs, 6 g fat",
+      "steps": [
+        "Cook the diced onion, carrots and celery in the oil for 6 minutes.",
+        "Add the garlic, diced zucchini and Italian seasoning for 2 minutes.",
+        "Add the tomatoes and broth and bring to a boil. Add the pasta and simmer for 8 to 10 minutes until tender.",
+        "Stir in the beans and spinach until hot. Salt to taste.",
+        "Serve with the parmesan."
+      ],
+      "protein": "VEGETARIAN",
+      "since": 3
+    },
+    {
+      "key": "SN5",
+      "name": "Hummus and veggie sticks",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1/4 cup hummus with vegetables",
+      "ingredients": [
+        {
+          "quantity": "1/4",
+          "unit": "cup",
+          "name": "hummus",
+          "section": "PANTRY"
+        },
+        {
+          "quantity": "2",
+          "name": "carrots",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "1",
+          "name": "cucumber",
+          "section": "PRODUCE_FROZEN"
+        }
+      ],
+      "nutrition": "~180 cal, 8 g protein, 28 g carbs, 6 g fat",
+      "steps": [
+        "Cut the carrots and cucumber into sticks.",
+        "Dip."
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 3
+    },
+    {
+      "key": "SN6",
+      "name": "Apple and peanut butter",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1 apple with 2 tbsp",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "name": "apple",
+          "section": "PRODUCE_FROZEN"
+        },
+        {
+          "quantity": "2",
+          "unit": "tbsp",
+          "name": "peanut butter",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~280 cal, 8 g protein, 32 g carbs, 16 g fat",
+      "steps": [
+        "Slice the apple.",
+        "Spread or dip with the peanut butter."
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 3
+    },
+    {
+      "key": "SN7",
+      "name": "Hard-boiled eggs",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "2 eggs",
+      "ingredients": [
+        {
+          "quantity": "2",
+          "name": "eggs",
+          "section": "PROTEIN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        },
+        {
+          "name": "black pepper",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~140 cal, 13 g protein, 1 g carbs, 10 g fat",
+      "steps": [
+        "Lower the eggs into boiling water and cook for 10 minutes.",
+        "Cool in cold water, then peel.",
+        "Boil a batch: they keep for a week in the fridge, unpeeled."
+      ],
+      "protein": "EGG",
+      "onlyFor": "ashley",
+      "since": 3
+    },
+    {
+      "key": "SN8",
+      "name": "Cottage cheese and pineapple",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1 small bowl",
+      "ingredients": [
+        {
+          "quantity": "3/4",
+          "unit": "cup",
+          "name": "cottage cheese",
+          "section": "PROTEIN"
+        },
+        {
+          "quantity": "1/2",
+          "unit": "cup",
+          "name": "pineapple chunks",
+          "section": "PRODUCE_FROZEN"
+        }
+      ],
+      "nutrition": "~180 cal, 19 g protein, 18 g carbs, 4 g fat",
+      "steps": [
+        "Spoon the cottage cheese into a bowl and top with the pineapple."
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 3
+    },
+    {
+      "key": "SN9",
+      "name": "Edamame with sea salt",
+      "mealType": "SNACK",
+      "cuisineTags": [
+        "Snack"
+      ],
+      "servings": 1,
+      "servingSize": "1 cup shelled",
+      "ingredients": [
+        {
+          "quantity": "1",
+          "unit": "cup",
+          "name": "edamame",
+          "note": "shelled, frozen",
+          "section": "PROTEIN"
+        },
+        {
+          "name": "salt",
+          "section": "PANTRY"
+        }
+      ],
+      "nutrition": "~190 cal, 18 g protein, 14 g carbs, 8 g fat",
+      "steps": [
+        "Microwave or boil the edamame for 3 minutes.",
+        "Drain and sprinkle with salt."
+      ],
+      "protein": "VEGETARIAN",
+      "onlyFor": "ashley",
+      "since": 3
     }
   ],
   "freeVolumeFoods": [
@@ -3108,7 +5990,13 @@
     "achiote paste",
     "lemongrass paste",
     "chipotles in adobo",
-    "canned pigeon peas"
+    "canned pigeon peas",
+    "black pepper",
+    "chili powder",
+    "paprika",
+    "garlic powder",
+    "Italian seasoning",
+    "cinnamon"
   ],
   "profiles": [
     {

@@ -441,6 +441,67 @@ CUES = {
         "Keep your elbows pointing forward and straighten your arms overhead.",
         "Return slowly for a deep stretch in the backs of your arms.",
     ],
+    # At home
+    "Wall sit": [
+        "Lean your back flat against a wall and slide down until your thighs are level with the floor.",
+        "Knees over your ankles, feet flat, hands off your legs.",
+        "Hold and breathe steadily. Stand up when your legs start to shake.",
+    ],
+    "Knee push-ups": [
+        "Hands just wider than your shoulders, knees on the floor, body straight from head to knees.",
+        "Lower your chest toward the floor with your elbows angled back.",
+        "Push the floor away without letting your hips sag.",
+    ],
+    "Incline push-ups": [
+        "Hands on a sturdy bench, table or counter, body in a straight line.",
+        "Lower your chest to the edge with your elbows angled back.",
+        "Push back up. The higher the surface, the easier it is.",
+    ],
+    "Backpack row": [
+        "Load a backpack with books and hold it by the top handle or both straps.",
+        "Bend forward at the hips with a flat back, arms hanging straight down.",
+        "Pull the pack to your lower ribs, squeeze, and lower it slowly.",
+    ],
+    "Glute bridge": [
+        "Lie on your back with your knees bent and feet flat, hip-width apart.",
+        "Press through your heels and lift your hips until your body is straight from knees to shoulders.",
+        "Squeeze your glutes for a second at the top, then lower slowly.",
+    ],
+    "Split squat": [
+        "Stand in a long stride, one foot forward and one back, both pointing ahead.",
+        "Lower straight down until the back knee nearly touches the floor.",
+        "Push through the front foot to rise. Finish one side, then switch.",
+    ],
+    "Pike push-ups": [
+        "From a push-up position, walk your feet in and lift your hips so your body makes an upside-down V.",
+        "Bend your elbows and lower the top of your head toward the floor between your hands.",
+        "Press back up. Bend your knees a little if your hamstrings are tight.",
+    ],
+    "Superman": [
+        "Lie face down with your arms stretched out in front of you.",
+        "Lift your arms, chest and legs a few inches off the floor by squeezing your back and glutes.",
+        "Hold for a second, then lower slowly. Keep your neck long and look at the floor.",
+    ],
+    "Side plank": [
+        "Lie on your side with your elbow under your shoulder and your feet stacked.",
+        "Lift your hips until your body is in a straight line.",
+        "Hold and breathe. Drop the bottom knee to the floor to make it easier.",
+    ],
+    "Single-leg calf raises": [
+        "Stand on one foot on the edge of a step, holding a wall or rail for balance.",
+        "Rise as high as you can onto your toes and pause.",
+        "Lower slowly until your heel drops below the step. Finish one side, then switch.",
+    ],
+    "Chair dips": [
+        "Sit on the edge of a sturdy chair pushed against a wall, hands gripping the edge by your hips.",
+        "Slide forward off the seat and bend your elbows to lower yourself, keeping your back close to the chair.",
+        "Press back up. Bend your knees more to make it easier.",
+    ],
+    "Mountain climbers": [
+        "Start in a push-up position with your hands under your shoulders.",
+        "Drive one knee toward your chest, then switch legs quickly, as if running on the spot.",
+        "Keep your hips level with your shoulders and breathe steadily.",
+    ],
     # Core
     "Plank": [
         "Forearms under your shoulders, body straight from head to heels.",

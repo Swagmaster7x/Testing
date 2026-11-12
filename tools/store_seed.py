@@ -58,6 +58,47 @@ FULL_BODY_3 = [
     },
 ]
 
+HOME_3 = [
+    {
+        "order": 1, "name": "Home A", "shortName": "Home A",
+        "exercises": [
+            exercise("A", "Bodyweight squat", "3", "12–15", ["Goblet squat", "Wall sit"]),
+            exercise("B", "Push-ups", "3", "8–12", ["Knee push-ups", "Incline push-ups"]),
+            exercise("C", "Dumbbell row", "3", "10 each arm", ["Backpack row"]),
+            exercise("D", "Glute bridge", "3", "12–15", ["Single-leg glute bridge"]),
+            exercise("E", "Plank", "3", "20–40 seconds", ["Dead bug"]),
+        ],
+    },
+    {
+        "order": 2, "name": "Home B", "shortName": "Home B",
+        "exercises": [
+            exercise("A", "Reverse lunge", "3", "8–10 each leg", ["Step-ups", "Split squat"]),
+            exercise("B", "Pike push-ups", "3", "6–10", ["Dumbbell shoulder press"]),
+            exercise("C", "Dumbbell Romanian deadlift", "3", "10–12", ["Superman"], "A loaded backpack works too."),
+            exercise("D", "Side plank", "3", "20–30 seconds each side", ["Plank"]),
+            exercise("E", "Calf raises", "3", "15–20", ["Single-leg calf raises"]),
+        ],
+    },
+    {
+        "order": 3, "name": "Home C", "shortName": "Home C",
+        "exercises": [
+            exercise("A", "Split squat", "3", "8–10 each leg", ["Bulgarian split squat", "Bodyweight squat"]),
+            exercise("B", "Push-ups", "3", "8–12", ["Knee push-ups", "Chair dips"]),
+            exercise("C", "Backpack row", "3", "10–12", ["Dumbbell row"]),
+            exercise("D", "Single-leg glute bridge", "3", "10 each leg", ["Glute bridge"]),
+            exercise("E", "Mountain climbers", "3", "20–30 seconds", ["Dead bug"]),
+        ],
+    },
+]
+
+HOME_TIPS = [
+    "No equipment needed. A pair of dumbbells or a loaded backpack makes the moves harder when you're ready.",
+    "Rest 60 to 90 seconds between sets.",
+    "Stop each set with one or two good reps left.",
+    "Too easy? Slow down the lowering part, then add reps, then add weight.",
+    "Clear a space about the size of a yoga mat.",
+]
+
 FULL_BODY_TIPS = [
     "New to lifting? Keep the weights light for the first two weeks while you learn each movement.",
     "Rest about 90 seconds between sets.",
@@ -128,6 +169,14 @@ def main():
                 "defaultDays": ["MONDAY", "WEDNESDAY", "FRIDAY"],
                 "tips": glute_tips,
                 "days": glute,
+            },
+            {
+                "key": "home-3",
+                "name": "At home, 3 days",
+                "description": "Three whole-body sessions with bodyweight moves. Dumbbells or a backpack are optional.",
+                "defaultDays": ["MONDAY", "WEDNESDAY", "FRIDAY"],
+                "tips": HOME_TIPS,
+                "days": HOME_3,
             },
         ],
     }

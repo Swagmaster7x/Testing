@@ -32,6 +32,24 @@ class SeedFileTest {
     }
 
     @Test
+    fun versionThreeAddsThirtySixRecipes() {
+        assertEquals(3, seed.version)
+        val added = seed.recipes.filter { it.since == 3 }
+        assertEquals(36, added.size)
+        assertEquals(72, seed.recipes.size)
+        val byType = added.groupingBy { it.mealType }.eachCount()
+        assertEquals(7, byType[MealType.BREAKFAST])
+        assertEquals(9, byType[MealType.LUNCH])
+        assertEquals(12, byType[MealType.DINNER])
+        assertEquals(3, byType[MealType.SOUP])
+        assertEquals(5, byType[MealType.SNACK])
+        // Every cooked recipe says how hot the meat or fish has to get.
+        val meat = added.filter { it.protein!!.name in setOf("CHICKEN", "TURKEY", "BEEF") && it.mealType != MealType.SNACK }
+        assertTrue(meat.all { r -> r.steps.any { "°F" in it } })
+        assertTrue(added.all { it.steps.isNotEmpty() && it.ingredients.isNotEmpty() && it.nutrition!!.startsWith("~") })
+    }
+
+    @Test
     fun everyRecipeIsComplete() {
         assertEquals(seed.recipes.size, seed.recipes.map { it.key }.toSet().size)
         seed.recipes.forEach { r ->
@@ -104,7 +122,7 @@ class SeedFileTest {
     fun ashleysBreakfastsSnacksAndTips() {
         val hers = seed.recipes.filter { it.onlyFor == "ashley" }
         assertEquals(5, hers.count { it.mealType == MealType.BREAKFAST })
-        assertEquals(4, hers.count { it.mealType == MealType.SNACK })
+        assertEquals(4 + 5, hers.count { it.mealType == MealType.SNACK })
         assertTrue(hers.filter { it.mealType == MealType.BREAKFAST }.all { it.steps.isEmpty() && it.ingredients.isEmpty() })
         assertEquals(4, seed.easierToFinishTips.size)
         assertEquals(listOf("Protein", "Calories", "Carbs", "Fats", "Water"), seed.dailyGuide.map { it.label })
@@ -114,7 +132,11 @@ class SeedFileTest {
     fun everyRecipeHasAProteinAndSwapsMakeSense() {
         assertTrue(seed.recipes.all { it.protein != null })
         val byKey = seed.recipes.associateBy { it.key }
-        assertEquals(setOf("L1", "L2", "D2", "D7", "S1", "S2", "S3"), seed.recipes.filter { it.swaps.isNotEmpty() }.map { it.key }.toSet())
+        assertEquals(
+            setOf("L1", "L2", "D2", "D7", "S1", "S2", "S3"),
+            seed.recipes.filter { it.since < 3 && it.swaps.isNotEmpty() }.map { it.key }.toSet(),
+        )
+        assertEquals(setOf("L9", "L10", "L17", "L18", "D15", "D16"), seed.recipes.filter { it.since == 3 && it.swaps.isNotEmpty() }.map { it.key }.toSet())
         for (r in seed.recipes) for (swap in r.swaps) {
             if (swap.useRecipeKey != null) {
                 assertNotNull("${r.key} points at ${swap.useRecipeKey}", byKey[swap.useRecipeKey])
@@ -133,7 +155,12 @@ class SeedFileTest {
         val added = listOf("L5", "L6", "L7", "L8", "D8", "D9", "D10", "D11").map { k -> seed.recipes.single { it.key == k } }
         assertTrue(added.all { it.protein == com.personal.mealgym.data.db.ProteinTag.BEEF || it.protein == com.personal.mealgym.data.db.ProteinTag.PORK })
         assertTrue(added.all { it.steps.size >= 5 && it.ingredients.size >= 10 && it.nutrition != null })
-        assertEquals(listOf("gochugaru", "achiote paste", "lemongrass paste", "chipotles in adobo", "canned pigeon peas"), seed.extraPantryStaples)
+        assertEquals(
+            listOf("gochugaru", "achiote paste", "lemongrass paste", "chipotles in adobo", "canned pigeon peas"),
+            seed.extraPantryStaples.take(5),
+        )
+        // Version 3 adds everyday spices.
+        assertEquals(listOf("black pepper", "chili powder", "paprika", "garlic powder", "Italian seasoning", "cinnamon"), seed.extraPantryStaples.drop(5))
         // New staples match the recipe ingredients they are meant to cover.
         val all = seed.recipes.flatMap { it.ingredients }.map { it.name }
         for (staple in seed.extraPantryStaples) {

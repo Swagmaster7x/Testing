@@ -17,6 +17,7 @@ import com.personal.mealgym.data.db.SupplementLog
 import com.personal.mealgym.data.db.WorkoutDay
 import com.personal.mealgym.data.db.WorkoutSession
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -31,6 +32,8 @@ data class BackupSettings(
     val weightUnit: WeightUnit,
     /** Shared by everyone; only read from the main [BackupFile.settings]. */
     val pantryStaples: List<String> = emptyList(),
+    /** Shared by everyone, like the pantry list. */
+    val cupboard: List<String> = emptyList(),
     val motion: Boolean = true,
     val chime: Boolean? = null,
     val creatineReminder: Boolean = false,
@@ -122,7 +125,7 @@ class BackupManager(
         val profiles = db.profileDao().all()
         return BackupFile(
             exportedAt = LocalDateTime.now().withNano(0).toString(),
-            settings = BackupSettings.of(settings.current(Profiles.FIRST)),
+            settings = BackupSettings.of(settings.current(Profiles.FIRST)).copy(cupboard = settings.cupboard.first().sorted()),
             sideSettings = profiles.filter { it.id != Profiles.FIRST }
                 .associate { it.id.toString() to BackupSettings.of(settings.current(it.id)).copy(pantryStaples = emptyList()) },
             profiles = profiles,
@@ -176,6 +179,7 @@ class BackupManager(
             db.supplementDao().insertAll(file.supplementLogs)
         }
         settings.replace(file.settings.toSettings(Profiles.FIRST), includePantry = true)
+        settings.setCupboard(file.settings.cupboard.toSet())
         file.sideSettings.forEach { (id, s) ->
             id.toLongOrNull()?.let { settings.replace(s.toSettings(it), includePantry = false) }
         }

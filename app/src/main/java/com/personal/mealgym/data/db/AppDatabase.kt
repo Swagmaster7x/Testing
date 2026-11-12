@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Meta::class,
         SupplementLog::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -42,7 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** [onCreated] runs once, when the database file is first created (first launch). */
         fun build(context: Context, onCreated: () -> Unit = {}): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "mealgym.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .addCallback(
                     object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) = onCreated()
@@ -138,6 +138,13 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `Profile` ADD COLUMN `customLook` TEXT")
+            }
+        }
+
+        /** Version 5 adds the answers to the setup questions. Nothing else changes. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `planAnswers` TEXT")
             }
         }
     }
