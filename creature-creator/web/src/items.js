@@ -13,46 +13,46 @@ const A = (id, name, icon, tags, cost, cd, text, req, reqText) => ({ id, name, i
 
 export const ITEMS = [
   // ---- weapons: one per hand
-  W('club', 'Bone Club', '🦴', ['stun', 'fury'], 0, (q) => ({ atkF: 3 * q, stunC: 0.08 * q }), (q) => `+${n1(3 * q)} attack. ${pct(0.08 * q)} chance to stun.`),
-  W('cleaver', 'Notched Cleaver', '🪓', ['bleed'], 0, (q) => ({ atkF: 2.5 * q, bleedC: 0.3 * q }), (q) => `+${n1(2.5 * q)} attack. ${pct(0.3 * q)} chance to cause bleeding.`),
-  W('fang', 'Fang Dagger', '🗡️', ['poison', 'speed'], 0, (q) => ({ atkF: 1.5 * q, poisonC: 0.3 * q, spdP: 0.05 * q }), (q) => `+${n1(1.5 * q)} attack, +${pct(0.05 * q)} speed. ${pct(0.3 * q)} chance to poison.`),
+  W('club', 'Bone Club', '🦴', ['stun', 'fury'], 0, (q) => ({ atkF: 3.5 * q, stunC: 0.07 * q }), (q) => `+${n1(3.5 * q)} attack. ${pct(0.07 * q)} chance to stun.`),
+  W('cleaver', 'Notched Cleaver', '🪓', ['bleed'], 0, (q) => ({ atkF: 3 * q, bleedC: 0.4 * q }), (q) => `+${n1(3 * q)} attack. ${pct(0.4 * q)} chance to cause bleeding.`),
+  W('fang', 'Fang Dagger', '🗡️', ['poison', 'speed'], 0, (q) => ({ atkF: 2 * q, poisonC: 0.35 * q, spdP: 0.06 * q }), (q) => `+${n1(2 * q)} attack, +${pct(0.06 * q)} speed. ${pct(0.35 * q)} chance to poison.`),
   W('mace', 'Thorn Mace', '🌵', ['thorns'], 0, (q) => ({ atkF: 2 * q, thorns: 0.08 * q }), (q) => `+${n1(2 * q)} attack. Attackers take ${pct(0.08 * q)} of their damage back.`),
-  W('buckler', 'Spiked Buckler', '🛡️', ['guard', 'thorns'], 0, (q) => ({ def: 0.06 * q, riposte: 0.5 * q, guardCdr: 0.5 }), (q) => `+${pct(0.06 * q)} armour. Guard recharges faster and a block hits back for ${pct(0.5 * q)} attack.`),
-  W('sling', 'Stone Sling', '🪨', ['crit'], 0, (q) => ({ opener: 0.7 * q, crit: 0.03 * q }), (q) => `Opens each fight with a shot for ${pct(0.7 * q)} attack. +${pct(0.03 * q)} critical chance.`),
+  W('buckler', 'Spiked Buckler', '🛡️', ['guard', 'thorns'], 0, (q) => ({ def: 0.05 * q, riposte: 0.4 * q, guardCdr: 0.5 }), (q) => `+${pct(0.05 * q)} armour. Guard recharges faster and a block hits back for ${pct(0.4 * q)} attack.`),
+  W('sling', 'Stone Sling', '🪨', ['crit'], 0, (q) => ({ opener: 0.9 * q, crit: 0.06 * q }), (q) => `Opens each fight with a shot for ${pct(0.9 * q)} attack. +${pct(0.06 * q)} critical chance.`),
   W('brand', 'Ember Brand', '🔥', ['burn'], 250, (q) => ({ atkF: 2 * q, burnC: 0.3 * q }), (q) => `+${n1(2 * q)} attack. ${pct(0.3 * q)} chance to set the enemy on fire.`),
   W('pick', 'War Pick', '⛏️', ['crit'], 250, (q) => ({ atkF: 2.5 * q, pierce: 0.2 * q }), (q) => `+${n1(2.5 * q)} attack. Ignores ${pct(0.2 * q)} armour.`),
-  W('hooks', 'Twin Hooks', '🪝', ['speed'], 300, (q) => ({ atkF: 1.5 * q, dbl: 0.1 * q }), (q) => `+${n1(1.5 * q)} attack. ${pct(0.1 * q)} chance to strike twice.`),
+  W('hooks', 'Twin Hooks', '🪝', ['speed'], 300, (q) => ({ atkF: 2 * q, dbl: 0.15 * q }), (q) => `+${n1(2 * q)} attack. ${pct(0.15 * q)} chance to strike twice.`),
   W('whip', 'Leech Whip', '🩸', ['life'], 350, (q) => ({ atkF: 1.5 * q, lifesteal: 0.08 * q }), (q) => `+${n1(1.5 * q)} attack. Heals for ${pct(0.08 * q)} of damage dealt.`),
-  W('maul', 'Great Maul', '🔨', ['stun', 'fury'], 400, (q) => ({ atkF: 8 * q, spdP: -0.08, stunC: 0.1 * q }), (q) => `Needs two hands. +${n1(8 * q)} attack, -8% speed. ${pct(0.1 * q)} chance to stun.`, 2),
-  W('trident', 'Barbed Trident', '🔱', ['bleed', 'crit'], 450, (q) => ({ atkF: 3 * q, vsBleedP: 0.15 * q, critD: 0.2 * q }), (q) => `+${n1(3 * q)} attack. +${pct(0.15 * q)} damage to bleeding enemies, +${pct(0.2 * q)} critical damage.`),
+  W('maul', 'Great Maul', '🔨', ['stun', 'fury'], 400, (q) => ({ atkF: 7 * q, spdP: -0.1, stunC: 0.08 * q }), (q) => `Needs two hands. +${n1(7 * q)} attack, -10% speed. ${pct(0.08 * q)} chance to stun.`, 2),
+  W('trident', 'Barbed Trident', '🔱', ['bleed', 'crit'], 450, (q) => ({ atkF: 3.5 * q, vsBleedP: 0.2 * q, critD: 0.3 * q, bleedC: 0.15 * q }), (q) => `+${n1(3.5 * q)} attack. ${pct(0.15 * q)} chance to cause bleeding, +${pct(0.2 * q)} damage to bleeding enemies, +${pct(0.3 * q)} critical damage.`),
 
   // ---- relics: passive, stack without limit
   R('hide', 'Thick Hide', '🐘', ['life'], 0, (q) => ({ hpP: 0.12 * q }), (q) => `+${pct(0.12 * q)} health.`),
   R('tooth', 'Whetted Tooth', '🦷', ['fury'], 0, (q) => ({ atkP: 0.12 * q }), (q) => `+${pct(0.12 * q)} attack.`),
   R('blood', 'Quick Blood', '💨', ['speed'], 0, (q) => ({ spdP: 0.1 * q }), (q) => `+${pct(0.1 * q)} speed.`),
-  R('eye', "Hunter's Eye", '👁️', ['crit'], 0, (q) => ({ crit: 0.07 * q }), (q) => `+${pct(0.07 * q)} critical chance.`),
-  R('edge', 'Cruel Edge', '✂️', ['crit'], 0, (q) => ({ critD: 0.35 * q }), (q) => `+${pct(0.35 * q)} critical damage.`),
-  R('slick', 'Slick Skin', '💧', ['speed'], 0, (q) => ({ dodge: 0.05 * q }), (q) => `+${pct(0.05 * q)} dodge.`),
+  R('eye', "Hunter's Eye", '👁️', ['crit'], 0, (q) => ({ crit: 0.12 * q }), (q) => `+${pct(0.12 * q)} critical chance.`),
+  R('edge', 'Cruel Edge', '✂️', ['crit'], 0, (q) => ({ critD: 0.5 * q, crit: 0.03 }), (q) => `+${pct(0.5 * q)} critical damage and +3% critical chance.`),
+  R('slick', 'Slick Skin', '💧', ['speed'], 0, (q) => ({ dodge: 0.08 * q }), (q) => `+${pct(0.08 * q)} dodge.`),
   R('plate', 'Iron Scales', '🔩', ['guard'], 0, (q) => ({ def: 0.06 * q }), (q) => `+${pct(0.06 * q)} armour.`),
-  R('jag', 'Jagged Claws', '🩸', ['bleed'], 0, (q) => ({ bleedC: 0.2 * q }), (q) => `${pct(0.2 * q)} chance on hit to cause bleeding.`),
-  R('rot', 'Rot Gland', '☣️', ['poison'], 0, (q) => ({ poisonC: 0.2 * q, poisonD: q }), (q) => `${pct(0.2 * q)} chance on hit to poison. Poison is stronger.`),
+  R('jag', 'Jagged Claws', '🩸', ['bleed'], 0, (q) => ({ bleedC: 0.3 * q }), (q) => `${pct(0.3 * q)} chance on hit to cause bleeding.`),
+  R('rot', 'Rot Gland', '☣️', ['poison'], 0, (q) => ({ poisonC: 0.3 * q, poisonD: 1.5 * q }), (q) => `${pct(0.3 * q)} chance on hit to poison. Poison is stronger.`),
   R('gut', 'Ember Gut', '🌋', ['burn'], 200, (q) => ({ burnC: 0.2 * q }), (q) => `${pct(0.2 * q)} chance on hit to set the enemy on fire.`),
-  R('scent', 'Blood Scent', '🐺', ['bleed', 'fury'], 0, (q) => ({ vsBleedP: 0.25 * q }), (q) => `+${pct(0.25 * q)} damage to bleeding enemies.`),
-  R('torment', 'Tormentor', '😈', ['bleed', 'poison', 'burn'], 400, (q) => ({ perStatusDmg: 0.1 * q }), (q) => `+${pct(0.1 * q)} damage for each ailment on the enemy (bleed, poison, fire, stun).`),
-  R('opp', 'Opportunist', '🎯', ['crit', 'bleed', 'poison', 'burn'], 300, (q) => ({ perStatusCrit: 0.08 * q }), (q) => `+${pct(0.08 * q)} critical chance for each ailment on the enemy.`),
-  R('fester', 'Festering', '🦠', ['poison', 'burn', 'bleed'], 0, (q) => ({ festerP: 0.4 * q }), (q) => `Bleed, poison and fire deal ${pct(0.4 * q)} more.`),
+  R('scent', 'Blood Scent', '🐺', ['bleed', 'fury'], 0, (q) => ({ vsBleedP: 0.3 * q, bleedC: 0.1 }), (q) => `+${pct(0.3 * q)} damage to bleeding enemies, and 10% chance to cause bleeding.`),
+  R('torment', 'Tormentor', '😈', ['bleed', 'poison', 'burn'], 400, (q) => ({ perStatusDmg: 0.14 * q }), (q) => `+${pct(0.14 * q)} damage for each ailment on the enemy (bleed, poison, fire, stun).`),
+  R('opp', 'Opportunist', '🎯', ['crit', 'bleed', 'poison', 'burn'], 300, (q) => ({ perStatusCrit: 0.12 * q }), (q) => `+${pct(0.12 * q)} critical chance for each ailment on the enemy.`),
+  R('fester', 'Festering', '🦠', ['poison', 'burn', 'bleed'], 0, (q) => ({ festerP: 0.5 * q }), (q) => `Bleed, poison and fire deal ${pct(0.5 * q)} more.`),
   R('hemo', 'Hemophage', '🦇', ['bleed', 'life'], 350, (q) => ({ hemo: 1.2 * q }), (q) => `Heal ${n1(1.2 * q)} for each bleed stack on the enemy, every second.`),
   R('mist', 'Red Mist', '🌫️', ['crit', 'bleed'], 350, (q) => ({ critBleed: Math.max(1, Math.round(q)) }), (q) => `Critical hits add ${Math.max(1, Math.round(q))} bleed.`),
-  R('rhythm', "Predator's Rhythm", '⏱️', ['crit', 'ability'], 0, (q) => ({ critCdr: 0.6 * q }), (q) => `Critical hits cut ability cooldowns by ${n1(0.6 * q)}s.`),
+  R('rhythm', "Predator's Rhythm", '⏱️', ['crit', 'ability'], 0, (q) => ({ critCdr: 1.0 * q, crit: 0.05 }), (q) => `+5% critical chance. Critical hits cut ability cooldowns by ${n1(1.0 * q)}s.`),
   R('finish', 'Finisher', '💀', ['crit', 'fury'], 0, (q) => ({ execP: 0.4 * q }), (q) => `+${pct(0.4 * q)} damage to enemies below 30% health.`),
-  R('flurry', 'Flurry', '🌀', ['speed'], 0, (q) => ({ dbl: 0.08 * q }), (q) => `${pct(0.08 * q)} chance to strike twice.`),
+  R('flurry', 'Flurry', '🌀', ['speed'], 0, (q) => ({ dbl: 0.13 * q }), (q) => `${pct(0.13 * q)} chance to strike twice.`),
   R('moment', 'Momentum', '📈', ['speed', 'fury'], 0, (q) => ({ ramp: 0.025 * q }), (q) => `Each hit you land adds +${n1(2.5 * q)}% damage for the rest of the fight.`),
-  R('riposte', 'Riposte', '🤺', ['guard'], 0, (q) => ({ riposte: 0.6 * q }), (q) => `A block hits back for ${pct(0.6 * q)} attack.`),
+  R('riposte', 'Riposte', '🤺', ['guard'], 0, (q) => ({ riposte: 0.5 * q }), (q) => `A block hits back for ${pct(0.5 * q)} attack.`),
   R('bulwark', 'Bulwark', '🧱', ['guard', 'life'], 0, (q) => ({ blockHeal: 0.05 * q }), (q) => `A block heals ${pct(0.05 * q)} health.`),
   R('spite', 'Spite', '🦔', ['thorns'], 0, (q) => ({ thorns: 0.08 * q }), (q) => `Attackers take ${pct(0.08 * q)} of their damage back.`),
   R('barbs', 'Barbed Hide', '🪡', ['thorns', 'bleed'], 300, (q) => ({ thornsBleed: 1, thorns: 0.04 * q }), (q) => `Attackers take ${pct(0.04 * q)} back and start bleeding.`),
   R('leech', 'Leech', '🪱', ['life'], 0, (q) => ({ lifesteal: 0.06 * q }), (q) => `Heal for ${pct(0.06 * q)} of damage dealt.`),
-  R('trophy', 'Trophy Hunter', '🏆', ['life'], 0, (q) => ({ killHp: 0.05 * q }), (q) => `Each kill adds +${pct(0.05 * q)} health for the rest of the gauntlet.`),
+  R('trophy', 'Trophy Hunter', '🏆', ['life'], 0, (q) => ({ killHp: 0.04 * q }), (q) => `Each kill adds +${pct(0.04 * q)} health for the rest of the gauntlet.`),
   R('feast', 'Feast', '🍖', ['life'], 0, (q) => ({ killHeal: 0.12 * q }), (q) => `Each kill heals an extra ${pct(0.12 * q)} health.`),
   R('wind', 'Second Wind', '🕊️', ['life'], 500, (q) => ({ secondWind: 0.15 * q }), (q) => `Once per fight, survive a killing blow and heal ${pct(0.15 * q)}.`),
   R('breath', 'Deep Breath', '🌿', ['life'], 0, (q) => ({ regen: 0.006 * q }), (q) => `Regain ${n1(0.6 * q)}% health every second.`),
@@ -62,29 +62,29 @@ export const ITEMS = [
   R('giant', 'Giant Slayer', '🪓', ['fury'], 250, (q) => ({ giantP: 0.2 * q }), (q) => `+${pct(0.2 * q)} damage to enemies with more health than you.`),
   // relics that depend on the body
   R('herd', 'Stampede', '🦬', ['fury'], 0, (q) => ({ perLegAtk: 0.03 * q }), (q) => `+${pct(0.03 * q)} attack for each leg.`, (b) => b.legs >= 4, 'four or more legs'),
-  R('eyes', 'Many Eyes', '🕷️', ['crit'], 0, (q) => ({ perEyeCrit: 0.015 * q }), (q) => `+${n1(1.5 * q)}% critical chance for each eye.`, (b) => b.eyes >= 2, 'two or more eyes'),
-  R('ambi', 'Ambidextrous', '🙌', ['speed', 'weapon'], 0, (q) => ({ perWeaponSpd: 0.04 * q }), (q) => `+${pct(0.04 * q)} speed for each weapon held.`, (b) => b.hands >= 2, 'two or more hands'),
+  R('eyes', 'Many Eyes', '🕷️', ['crit'], 0, (q) => ({ perEyeCrit: 0.03 * q }), (q) => `+${n1(3 * q)}% critical chance for each eye.`, (b) => b.eyes >= 2, 'two or more eyes'),
+  R('ambi', 'Ambidextrous', '🙌', ['speed', 'weapon'], 0, (q) => ({ perWeaponSpd: 0.06 * q }), (q) => `+${pct(0.06 * q)} speed for each weapon held.`, (b) => b.hands >= 2, 'two or more hands'),
   R('updraft', 'Updraft', '🪽', ['speed', 'crit'], 0, (q) => ({ dodge: 0.08 * q, dodgeCrit: 1 }), (q) => `+${pct(0.08 * q)} dodge. After a dodge, your next hit is critical.`, (b) => b.wings, 'wings'),
   R('heavy', 'Heavyweight', '🗿', ['guard', 'thorns'], 0, (q) => ({ def: 0.04 * q, thorns: 0.05 * q }), (q) => `+${pct(0.04 * q)} armour, and attackers take ${pct(0.05 * q)} back.`, (b) => b.big, 'a large body'),
   R('feather', 'Featherweight', '🪶', ['speed'], 0, (q) => ({ spdP: 0.08 * q, dodge: 0.04 * q }), (q) => `+${pct(0.08 * q)} speed and +${pct(0.04 * q)} dodge.`, (b) => b.small, 'a small body'),
   R('coil', 'Coiled', '➰', ['stun'], 0, (q) => ({ stunC: 0.06 * q, stunDur: 0.5 }), (q) => `${pct(0.06 * q)} chance to stun, and stuns last longer.`, (b) => b.serpent || b.tentacles >= 2, 'a serpent body or tentacles'),
-  R('virulent', 'Virulent', '🧫', ['poison'], 0, (q) => ({ poisonD: 2 * q, poisonC: 0.1 }), (q) => `Your poison deals ${n1(2 * q)} more each second.`, (b) => b.venom, 'a stinger, mandibles or feelers'),
+  R('virulent', 'Virulent', '🧫', ['poison'], 0, (q) => ({ poisonD: 3 * q, poisonC: 0.15 }), (q) => `Your poison deals ${n1(3 * q)} more each second, and lands more often.`, (b) => b.venom, 'a stinger, mandibles or feelers'),
 
   // ---- abilities: buttons with cooldowns; picking one again levels it up
-  A('pounce', 'Pounce', '🐾', ['stun', 'fury'], 0, 9, (L) => `Leap for ${pct(1.5 + 0.3 * L)} attack and stun briefly.`, (b) => b.legs >= 2, 'legs'),
+  A('pounce', 'Pounce', '🐾', ['stun', 'fury'], 0, 9, (L) => `Leap for ${pct(1.4 + 0.3 * L)} attack and stun briefly.`, (b) => b.legs >= 2, 'legs'),
   A('roar', 'Roar', '🦁', ['guard'], 0, 12, (L) => `Weaken the enemy's attacks by 30% for ${4 + L}s.`, (b) => b.mouth, 'a mouth'),
   A('lick', 'Lick Wounds', '💗', ['life'], 0, 14, (L) => `Heal ${pct(0.11 + 0.04 * L)} health.`),
-  A('spit', 'Venom Spit', '🧪', ['poison'], 0, 10, (L) => `Poison the enemy for ${4 + 2 * L} damage a second, for 6s.`, (b) => b.venom, 'a stinger, mandibles or feelers'),
+  A('spit', 'Venom Spit', '🧪', ['poison'], 0, 10, (L) => `Poison the enemy for ${pct(0.22 + 0.08 * L)} of your attack every second, for 6s.`, (b) => b.venom, 'a stinger, mandibles or feelers'),
   A('dive', 'Dive', '🦅', ['crit', 'speed'], 0, 11, (L) => `Dodge everything for ${n1(1.5 + 0.5 * L)}s; your next hit is critical.`, (b) => b.wings, 'wings'),
-  A('constrict', 'Constrict', '🐍', ['stun'], 0, 12, (L) => `Squeeze for ${pct(0.8 + 0.3 * L)} attack and stun for ${n1(1.4 + 0.3 * L)}s.`, (b) => b.serpent || b.tentacles >= 2, 'a serpent body or tentacles'),
+  A('constrict', 'Constrict', '🐍', ['stun'], 0, 12, (L) => `Squeeze for ${pct(0.8 + 0.3 * L)} attack and stun for ${n1(1.3 + 0.3 * L)}s.`, (b) => b.serpent || b.tentacles >= 2, 'a serpent body or tentacles'),
   A('web', 'Web', '🕸️', ['speed', 'stun'], 0, 12, (L) => `Slow the enemy's attacks by half for ${4 + L}s.`, (b) => b.type === 'arachnid' || b.type === 'insectoid', 'an arachnid or insectoid body'),
   A('ink', 'Ink Cloud', '🌫️', ['speed'], 0, 12, (L) => `Blind the enemy for ${3 + L}s: most of its attacks miss.`, (b) => b.type === 'cephalopod' || b.type === 'aquatic', 'a cephalopod or aquatic body'),
-  A('shellup', 'Shell Up', '🐢', ['guard', 'thorns'], 0, 13, (L) => `Take 70% less damage for ${2 + L}s and double what attackers take back.`, (b) => b.armoured, 'a shell, plates or tough hide'),
+  A('shellup', 'Shell Up', '🐢', ['guard', 'thorns'], 0, 13, (L) => `Take 70% less damage for ${3 + L}s and double what attackers take back.`, (b) => b.armoured, 'a shell, plates or tough hide'),
   A('sweep', 'Tail Sweep', '🦎', ['stun'], 0, 8, (L) => `Hit for ${pct(1 + 0.25 * L)} attack and knock the enemy's next attack back.`, (b) => b.tail, 'a tail'),
   A('gore', 'Gore', '🐂', ['bleed'], 0, 10, (L) => `Hit for ${pct(1.2 + 0.2 * L)} attack and add ${2 + L} bleed.`, (b) => b.horns, 'horns or tusks'),
   A('frenzy', 'Frenzy', '😤', ['speed', 'fury'], 300, 13, (L) => `Attack ${pct(0.5 + 0.2 * L)} faster for 4s.`),
-  A('hurl', 'Hurl Weapon', '🏹', ['weapon', 'crit'], 300, 9, (L) => `Throw for ${pct(1.8 + 0.4 * L)} attack. Cannot miss.`, (b) => b.hands >= 1, 'a hand'),
-  A('rend', 'Rend', '🐅', ['bleed'], 350, 9, (L) => `Tear open wounds: ${pct(0.35 + 0.1 * L)} attack for each bleed on the enemy.`, (b) => b.claws, 'claws, talons or paws'),
+  A('hurl', 'Hurl Weapon', '🏹', ['weapon', 'crit'], 300, 10, (L) => `Throw for ${pct(1.6 + 0.3 * L)} attack. Cannot miss.`, (b) => b.hands >= 1, 'a hand'),
+  A('rend', 'Rend', '🐅', ['bleed'], 350, 9, (L) => `Tear for ${pct(0.6)} attack, plus ${pct(0.35 + 0.1 * L)} for each bleed on the enemy.`, (b) => b.claws, 'claws, talons or paws'),
   A('breath', 'Fire Breath', '🐲', ['burn'], 400, 11, (L) => `Burn for ${pct(0.8 + 0.2 * L)} attack and set the enemy alight for 5s.`, (b) => b.mouth, 'a mouth'),
 ];
 export const ITEM = Object.fromEntries(ITEMS.map((i) => [i.id + (i.cat === 'ability' ? '!' : ''), i]));
@@ -105,7 +105,7 @@ export const BOOSTS = [
   { id: 'head', name: 'Head Start', icon: '🎁', max: 1, cost: () => 800, text: 'Choose a reward before the first fight.' },
   { id: 'revive', name: 'Revive', icon: '✨', max: 3, cost: () => 500, text: 'Brings a dead creature back once, mid-gauntlet, at half health. Used up when spent. Hold up to three.', consumable: true },
 ];
-export const newMeta = () => ({ points: 0, champions: 0, fallen: 0, unlocked: {}, boosts: {}, revives: 0, runs: null });
+export const newMeta = () => ({ points: 0, champions: 0, fallen: 0, unlocked: {}, boosts: {}, revives: 0, runs: null, rank: 0, rankSel: 0, stats: {}, seen: {}, typesWon: {}, goals: {}, hall: [], daily: null });
 
 // ------------------------------------------------------------------ runs (energy): a few gauntlets, recharging in real time
 export const RUN_MAX = 5, RUN_MS = 30 * 60 * 1000;          // one run comes back every 30 minutes
@@ -121,22 +121,24 @@ export function runsNow(meta, now = Date.now()) {
   return { n: r.n, max, next: r.n >= max ? 0 : RUN_MS - (now - r.t) };
 }
 export function spendRun(meta, now = Date.now()) { const s = runsNow(meta, now); if (s.n <= 0) return false; if (s.n >= s.max) meta.runs.t = now; meta.runs.n--; return true; }
-export function addRun(meta, now = Date.now()) { runsNow(meta, now); meta.runs.n++; }
+export function addRun(meta, now = Date.now()) { const r = runsNow(meta, now); if (r.n < r.max) meta.runs.n++; }
 export const clock = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 export const owns = (meta, key) => !!meta.unlocked[key];
 export const typeOpen = (meta, t) => FREE_TYPES.includes(t) || owns(meta, 'type:' + t);
 export const partOpen = (meta, k) => !PART_COST[k] || owns(meta, 'part:' + k);
 export const itemOpen = (meta, it) => !it.cost || owns(meta, 'item:' + it.cat + ':' + it.id);
-export const fightPoints = (round) => 15 * (round + 1);          // round is 0-based
+export const fightPoints = (round, tier = 0, elite = false) => Math.round(15 * (round + 1) * (1 + 0.25 * tier) * (elite ? 1.5 : 1));          // round is 0-based
 
 // ------------------------------------------------------------------ loadouts and drafting
 export const newLoad = () => ({ weapons: [], relics: [], abilities: [] });
 export const handsUsed = (load) => load.weapons.reduce((s, w) => s + item(w.id, 'weapon').hands, 0);
-export function loadMods(load) {
-  const m = {};
+/** body is optional: a creature with no hands carries its one weapon in its jaws, at reduced effect. */
+export const JAW = 0.65;
+export function loadMods(load, body) {
+  const m = {}, jaw = body && body.hands === 0 ? JAW : 1;
   for (const e of [...load.weapons, ...load.relics]) {
     const o = item(e.id, e.cat || 'x').mods(e.q);
-    for (const k in o) m[k] = (m[k] || 0) + o[k];
+    for (const k in o) m[k] = (m[k] || 0) + o[k] * (e.cat === 'weapon' && o[k] > 0 ? jaw : 1);
   }
   m.weapons = load.weapons.length;
   return m;
@@ -175,10 +177,11 @@ export function draft(rand, body, load, meta, round, n = 3) {
   }
   return offers;
 }
+export const MAX_LVL = 5;          // ability levels stop here, so timed effects never become permanent
 export function take(load, o) {
   if (o.cat === 'weapon') load.weapons.push({ id: o.id, cat: 'weapon', q: o.q, rar: o.rar });
   else if (o.cat === 'relic') load.relics.push({ id: o.id, cat: 'relic', q: o.q, rar: o.rar });
-  else { const a = load.abilities.find((x) => x.id === o.id); if (a) a.lvl += 1 + (o.rar > 0 ? 1 : 0); else load.abilities.push({ id: o.id, cat: 'ability', lvl: 1 + o.rar }); }
+  else { const a = load.abilities.find((x) => x.id === o.id); if (a) a.lvl = Math.min(MAX_LVL, a.lvl + 1 + (o.rar > 0 ? 1 : 0)); else load.abilities.push({ id: o.id, cat: 'ability', lvl: 1 + o.rar }); }
 }
 export function describe(o) {
   const it = item(o.id, o.cat);
@@ -196,3 +199,56 @@ export function enemyLoad(rand, body, round) {
   }
   return load;
 }
+
+// ------------------------------------------------------------------ reasons to come back: ranks, daily gift, goals, elites
+export const MAX_RANK = 10;
+export const rankPoints = (tier) => 1 + 0.25 * tier;                       // higher ranks pay more
+/** Elite opponents: a nasty twist on one fight, worth half as many points again. */
+export const ELITES = [
+  { id: 'enraged', name: 'Enraged', mods: { atkP: 0.25 } }, { id: 'armoured', name: 'Iron-hided', mods: { def: 0.15 } }, { id: 'swift', name: 'Swift', mods: { spdP: 0.2, dodge: 0.05 } },
+  { id: 'giant', name: 'Giant', mods: { hpP: 0.35 } }, { id: 'venomous', name: 'Venomous', mods: { poisonC: 0.4, poisonD: 2 } }, { id: 'thorny', name: 'Thorned', mods: { thorns: 0.15 } },
+];
+export function eliteFor(rand, round) { return round >= 2 && round < 9 && rand() < 0.28 ? ELITES[Math.floor(rand() * ELITES.length)] : null; }
+
+const dayKey = (now) => { const d = new Date(now); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+/** The daily gift: what is on offer today, or null if it was already claimed. */
+export function dailyGift(meta, now = Date.now()) {
+  const today = dayKey(now), d = meta.daily || { day: '', streak: 0 };
+  if (d.day === today) return null;
+  const streak = d.day === dayKey(now - 86400000) ? d.streak + 1 : 1;
+  return { today, streak, points: 40 + 20 * Math.min(streak - 1, 6), revive: streak % 7 === 0 };
+}
+export function claimDaily(meta, now = Date.now()) {
+  const g = dailyGift(meta, now); if (!g) return null;
+  meta.points += g.points; if (g.revive) meta.revives = Math.min(3, (meta.revives || 0) + 1);
+  meta.daily = { day: g.today, streak: g.streak };
+  return g;
+}
+
+const st = (m, k) => (m.stats && m.stats[k]) || 0, count = (o) => Object.keys(o || {}).length;
+/** Goals: one-off targets that pay points. prog(meta) -> [have, need]. */
+export const GOALS = [
+  { id: 'first', name: 'First blood', text: 'Win a fight.', pts: 50, prog: (m) => [st(m, 'fightsWon'), 1] },
+  { id: 'glad', name: 'Gladiator', text: 'Win 25 fights.', pts: 150, prog: (m) => [st(m, 'fightsWon'), 25] },
+  { id: 'vet', name: 'Veteran', text: 'Win 100 fights.', pts: 400, prog: (m) => [st(m, 'fightsWon'), 100] },
+  { id: 'legend', name: 'Legend of the sands', text: 'Win 500 fights.', pts: 1500, prog: (m) => [st(m, 'fightsWon'), 500] },
+  { id: 'half', name: 'Crowd favourite', text: 'Reach the sixth fight of a gauntlet.', pts: 100, prog: (m) => [st(m, 'bestFight'), 6] },
+  { id: 'champ', name: 'Champion', text: 'Win the title.', pts: 300, prog: (m) => [m.champions || 0, 1] },
+  { id: 'champ3', name: 'Dynasty', text: 'Win the title three times.', pts: 600, prog: (m) => [m.champions || 0, 3] },
+  { id: 'types3', name: 'Many shapes', text: 'Win the title with three different body types.', pts: 600, prog: (m) => [count(m.typesWon), 3] },
+  { id: 'types8', name: 'Master breeder', text: 'Win the title with all eight body types.', pts: 2000, prog: (m) => [count(m.typesWon), 8] },
+  { id: 'rank3', name: 'Rising star', text: 'Win the title at Rank 3.', pts: 500, prog: (m) => [st(m, 'bestRankWon'), 3] },
+  { id: 'rank6', name: 'Terror of the pits', text: 'Win the title at Rank 6.', pts: 1200, prog: (m) => [st(m, 'bestRankWon'), 6] },
+  { id: 'rank10', name: 'Undying', text: 'Win the title at Rank 10.', pts: 3000, prog: (m) => [st(m, 'bestRankWon'), 10] },
+  { id: 'elite', name: 'Giant killer', text: 'Defeat 10 elite opponents.', pts: 250, prog: (m) => [st(m, 'elites'), 10] },
+  { id: 'armed', name: 'Armed to the teeth', text: 'Hold four weapons at once.', pts: 200, prog: (m) => [st(m, 'mostWeapons'), 4] },
+  { id: 'seen20', name: 'Collector', text: 'Pick 20 different rewards.', pts: 150, prog: (m) => [count(m.seen), 20] },
+  { id: 'seen45', name: 'Curator', text: 'Pick 45 different rewards.', pts: 500, prog: (m) => [count(m.seen), 45] },
+  { id: 'flawless', name: 'Untouchable', text: 'Win a fight without losing any health.', pts: 100, prog: (m) => [st(m, 'flawless'), 1] },
+  { id: 'close', name: 'By a whisker', text: 'Win a fight with less than a tenth of your health left.', pts: 100, prog: (m) => [st(m, 'closeCalls'), 1] },
+  { id: 'mourn', name: 'Graveyard', text: 'Lose five creatures. It happens.', pts: 100, prog: (m) => [m.fallen || 0, 5] },
+  { id: 'streak7', name: 'Regular', text: 'Collect the daily gift seven days running.', pts: 300, prog: (m) => [(m.daily && m.daily.streak) || 0, 7] },
+  { id: 'shop10', name: 'Big spender', text: 'Unlock ten things in the shop.', pts: 150, prog: (m) => [count(m.unlocked), 10] },
+];
+export const goalDone = (meta, g) => { const [a, b] = g.prog(meta); return a >= b; };
+export const goalsReady = (meta) => GOALS.filter((g) => goalDone(meta, g) && !(meta.goals && meta.goals[g.id])).length;

@@ -223,3 +223,18 @@ button.ad, .panel button.ad { background: linear-gradient(#7a52e0, #4a2aa8); bor
 .adph small { text-transform: uppercase; letter-spacing: 2px; color: #a0a0b8; }
 .adph b { display: block; font-size: 60px; line-height: 1.1; }
 .adph p { margin: 0; color: #c8c8d8; font-size: 12px; }
+
+/* goals, records, ranks, daily gift */
+.goalbtn { min-height: 32px; padding: 4px 14px 3px; font-size: 14px; }
+.goalbtn.ready { background: linear-gradient(#ffd27a, var(--hot)); color: #2a1800; border-color: #ffe8b0; border-bottom-color: #8a5a10; font-weight: 600; animation: pulse 0.7s infinite alternate; }
+.card.gift { border-color: var(--go); background: linear-gradient(90deg, #14503e, #12282e); }
+.card.gift b { color: #9ff5d4; }
+.shoprow .bar { height: 6px; border-radius: 3px; background: #0a171a; margin: 4px 0 2px; overflow: hidden; }
+.shoprow .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--go2), var(--go)); }
+.ranks small { display: block; color: #d0bfa4; font-size: 11px; margin-bottom: 3px; }
+.ranks .chips { justify-content: center; }
+
+.card.intro { border-color: #4a8a94; background: linear-gradient(90deg, #1e444c, #12282e); }
+.card.intro b { color: var(--ink); }
+.card.intro small { display: block; color: #cfe6e2; margin: 2px 0; }
+.card.intro button { margin-top: 6px; }

@@ -210,6 +210,10 @@ export function eyeMaterial(M, type, irisCol, irisSize) {
   tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = THREE.RepeatWrapping; tex.anisotropy = 4;
   mat.map = tex;
   M.eyeCache.set(key, mat);
+  if (M.eyeCache.size > 24) {                    // keep the cache small: dragging the eye-colour slider makes many
+    const [k, old] = M.eyeCache.entries().next().value;
+    M.eyeCache.delete(k); old.map.dispose(); if (old.emissiveMap) old.emissiveMap.dispose(); old.dispose();
+  }
   return mat;
 }
 const clamp01 = (x) => Math.min(1, Math.max(0, x));

@@ -67,8 +67,8 @@ public class MainActivity extends Activity {
         web.setWebChromeClient(new WebChromeClient());   // lets confirm() dialogs show
         web.addJavascriptInterface(new Bridge(), "Android");
         setContentView(web);
-        if (savedInstanceState == null) web.loadUrl("file:///android_asset/www/index.html");
-        else web.restoreState(savedInstanceState);
+        // The page keeps its own state (saved creatures, runs, points), so a fresh load is always right.
+        web.loadUrl("file:///android_asset/www/index.html");
         hideSystemBars();
         askConsentThenStartAds();
     }
@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
 
     /** Tell the page how the ad went: window.ccAdDone(earned, reason). */
     private void adDone(boolean ok, String why) {
-        runOnUiThread(() -> web.evaluateJavascript("window.ccAdDone && window.ccAdDone(" + ok + "," + org.json.JSONObject.quote(why) + ")", null));
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.ccAdDone && window.ccAdDone(" + ok + "," + org.json.JSONObject.quote(why) + ")", null); });
     }
 
     private void showRewarded() {
@@ -123,8 +123,11 @@ public class MainActivity extends Activity {
             @Override
             public void onAdDismissedFullScreenContent() {
                 hideSystemBars();
-                adDone(earned, earned ? "" : "The ad was closed before the reward.");
-                loadRewarded();
+                // The reward callback can land a moment after the ad closes, so wait briefly before reporting.
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    adDone(earned, earned ? "" : "The ad was closed before the reward.");
+                    loadRewarded();
+                }, 400);
             }
 
             @Override
@@ -134,12 +137,6 @@ public class MainActivity extends Activity {
             }
         });
         ad.show(this, reward -> earned = true);
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        web.saveState(outState);
     }
 
     @Override
@@ -178,22 +175,27 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         web.onPause();
+        web.pauseTimers();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        web.resumeTimers();
         web.onResume();
     }
 
     @Override
     protected void onDestroy() {
-        web.destroy();
+        WebView w = web;
+        web = null;
+        if (w.getParent() instanceof android.view.ViewGroup) ((android.view.ViewGroup) w.getParent()).removeView(w);
+        w.destroy();
         super.onDestroy();
     }
 
     private void toast(String msg) {
-        runOnUiThread(() -> web.evaluateJavascript("window.ccToast && window.ccToast(" + org.json.JSONObject.quote(msg) + ")", null));
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.ccToast && window.ccToast(" + org.json.JSONObject.quote(msg) + ")", null); });
     }
 
     private class Bridge {

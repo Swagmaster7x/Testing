@@ -1,6 +1,6 @@
 # Meal & Gym
 
-> This repository also holds a second, separate app: **[Creature Workshop](creature-creator/README.md)**, a 3D creature creator for Android, in `creature-creator/`.
+> This repository also holds a second, separate app: **[Critter Arena](creature-creator/README.md)**, a 3D creature creator for Android, in `creature-creator/`.
 
 A personal Android app (one phone, no accounts, fully offline) that plans the week's meals, shows the recipes, builds the shopping list, says which gym day it is, and runs a sauna timer. Built from [SPEC.md](SPEC.md).
 

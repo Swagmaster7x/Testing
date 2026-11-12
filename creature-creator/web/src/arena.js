@@ -4,7 +4,7 @@ import { buildCreature, disposeTree, bounds } from './creature.js';
 import { makeMaterials, applyLook } from './materials.js';
 import { TEMPLATES } from './templates.js';
 import { statsOf, traits, makeFighter, step, usePower, useGuard, useAbility, ai, oppMul, championPoints, ABILITY_CD, ROUNDS, HEAL } from './battle.js';
-import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock } from './items.js';
+import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock, eliteFor, rankPoints, MAX_RANK } from './items.js';
 import { randomCreature } from './random.js';
 import { rng } from './geom.js';
 import { makeRig, applyRig, strikePose, zero, resetBones, STRIKE_LEN, STYLES } from './anim.js';
@@ -152,7 +152,14 @@ export function createArena(env) {
       strikeT: -1, winding: false, power: false, recoil: 0, flash: 0, dead: -1, dodge: -1, fxT: 0, thud: false, ph: Math.random() * 6 };
   }
   const world = (v, local) => v.holder.localToWorld(local.clone());
-  function dropView(i) { const v = A.views[i]; if (!v) return; S.g.remove(v.holder); disposeTree(v.cr.group); A.views[i] = null; }
+  function dropView(i) {
+    const v = A.views[i]; if (!v) return;
+    S.g.remove(v.holder);
+    // Free everything under the holder; materials that belong to a shared set (skin, horn, eyes...) are kept.
+    const shared = new Set([...Object.values(v.mats).filter((m) => m && m.isMaterial), ...v.mats.shells, ...v.mats.eyeCache.values()]);
+    v.holder.traverse((o) => { if (!o.isMesh) return; o.geometry.dispose(); if (!shared.has(o.material)) o.material.dispose(); });
+    A.views[i] = null;
+  }
   const icons = (load) => [...load.weapons, ...load.abilities, ...load.relics].map((e) => item(e.id, e.cat).icon).join('');
   function screenPos(v, local) {
     const p = local.clone(); v.holder.localToWorld(p); p.project(camera);
@@ -191,17 +198,33 @@ export function createArena(env) {
   function gate() {
     A.phase = 'gate'; el.replaceChildren();
     const s = statsOf(A.data), tr = traits(s), meta = env.meta();
+    const cell = (k, val) => h('div', null, h('small', null, k), h('b', null, String(val)));
     panel(h('h2', null, 'The Colosseum'),
-      h('p', null, h('b', null, A.data.name), ' faces ten fights in a row. Each opponent is tougher and better armed than the last, and the tenth is the reigning champion. After every win you choose one of three rewards.'),
-      statGrid(s),
-      h('div', { class: 'stats' }, h('div', null, h('small', null, 'Weapon hands'), h('b', null, String(s.slots))), h('div', null, h('small', null, 'Ability slots'), h('b', null, String(s.abilitySlots))), h('div', null, h('small', null, 'Revives'), h('b', null, String(meta.revives || 0)))),
-      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle can hold one weapon.' : 'With no hands it can carry a single weapon in its jaws. Add arms or tentacles to wield more.', ' Wings, tails, horns, venom and the rest decide which abilities and relics can turn up.'),
-      h('p', { class: 'warn' }, 'Fights are to the death. If ' + A.data.name + ' dies with no revive, it is gone for good.'),
+      h('p', null, h('b', null, A.data.name), ' faces ten fights in a row, each tougher than the last, ending with the reigning champion. Choose a reward after every win.'),
+      h('div', { class: 'stats' }, cell('Health', s.hp), cell('Attack', s.atk.toFixed(1)), cell('Armour', Math.round(s.def * 100) + '%'), cell('Speed', s.spd.toFixed(2)), cell('Hands', s.slots), cell('Abilities', s.abilitySlots), cell('Revives', meta.revives || 0)),
+      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle holds one weapon.' : 'No hands: it carries one weapon in its jaws, at reduced effect. Add arms or tentacles to wield more.', ' Its body decides which abilities and relics turn up.'),
+      h('p', { class: 'warn' }, 'Fights are to the death. If it dies with no revive, it is gone for good.'),
+      meta.rank > 0 && h('div', { class: 'ranks' }, h('small', null, 'Rank (tougher opponents, more points)'),
+        h('div', { class: 'chips' }, Array.from({ length: meta.rank + 1 }, (_, r) => h('button', { class: r === A.run.tier ? 'on' : '', onclick: () => { A.run.tier = meta.rankSel = r; env.saveMeta(); gate(); } }, r ? 'Rank ' + r + ' · x' + rankPoints(r) : 'Rank 0')))),
       h('p', { class: 'runs', id: 'gruns' }),
       h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
-        h('button', { class: 'ad', id: 'gad', onclick: async () => { const r = await env.showAd(); if (r.ok) { addRun(meta); env.saveMeta(); tickRuns(); } else if (r.why) env.toast(r.why); } }, '📺 Watch an ad: +1 run'),
-        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); sfx('block'); if ((meta.boosts.head || 0) > 0) reward('A gift from the crowd', 'Choose a reward before the first fight.'); else nextFight(); } }, 'Enter the arena')));
+        h('button', { class: 'ad', id: 'gad', onclick: async (e) => { if (await adFor(e, 'gate')) { addRun(meta); env.saveMeta(); } tickRuns(); } }, '📺 Watch an ad: +1 run'),
+        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; store.set('cc.run', A.run); sfx('block'); enter(); } }, 'Enter the arena'))).classList.add('wide');
     tickRuns();
+  }
+  /** First step after the gate: the Head Start gift (once per gauntlet), then the first fight. */
+  function enter() {
+    if ((env.meta().boosts.head || 0) > 0 && !A.run.headTaken) { A.run.headTaken = true; store.set('cc.run', A.run); reward('A gift from the crowd', 'Choose a reward before the first fight.'); }
+    else nextFight();
+  }
+  /** Run a rewarded ad from a button. True only if it was earned and the screen is still the one that offered it. */
+  async function adFor(e, phase) {
+    const row = e.target.closest('.row'), bs = row ? [...row.querySelectorAll('button')] : [e.target];
+    bs.forEach((b) => { b.disabled = true; });
+    const r = await env.showAd();
+    bs.forEach((b) => { b.disabled = false; });
+    if (!r.ok && r.why) env.toast(r.why);
+    return r.ok && A.active && A.phase === phase;
   }
   /** Keeps the "runs left" line on the gate current while the clock ticks. */
   function tickRuns() {
@@ -218,7 +241,7 @@ export function createArena(env) {
     const s = statsOf(A.data), load = A.run.load;
     if (!A.run.draft) { A.run.draft = draft(Math.random, s, load, env.meta(), A.run.round); store.set('cc.run', A.run); }
     el.replaceChildren(h('div', { class: 'floaters' }));
-    const pick = (o) => { take(load, o); A.run.draft = null; store.set('cc.run', A.run); sfx('block'); nextFight(); };
+    const pick = (o) => { take(load, o); env.meta().seen[o.cat + ':' + o.id] = 1; env.stat('mostWeapons', load.weapons.length, true); env.saveMeta(); A.run.draft = null; store.set('cc.run', A.run); sfx('block'); nextFight(); };
     const card = (o) => {
       const it = item(o.id, o.cat), owned = o.cat === 'ability' && load.abilities.find((a) => a.id === o.id);
       const shown = o.cat === 'ability' ? { ...o, lvl: (owned ? owned.lvl + 1 + (o.rar > 0 ? 1 : 0) : 1 + o.rar) } : o;
@@ -232,8 +255,7 @@ export function createArena(env) {
       h('p', { class: 'dim' }, 'Hands ' + handsUsed(load) + '/' + s.slots + ' · Abilities ' + load.abilities.length + '/' + s.abilitySlots + ' · Relics ' + load.relics.length + (icons(load) ? '   ' + icons(load) : '')),
       h('div', { class: 'row' },
         A.run.lastPts > 0 && h('button', { class: 'ad', onclick: async (e) => {
-          const r = await env.showAd();
-          if (!r.ok) { if (r.why) env.toast(r.why); return; }
+          if (!(await adFor(e, 'won')) || !(A.run.lastPts > 0)) return;
           const m = env.meta(); m.points += A.run.lastPts; A.run.earned += A.run.lastPts; env.saveMeta();
           env.toast('Doubled: +' + A.run.lastPts + ' points'); A.run.lastPts = 0; store.set('cc.run', A.run); e.target.remove();
         } }, '📺 Watch an ad: double the ' + A.run.lastPts + ' points'),
@@ -249,15 +271,20 @@ export function createArena(env) {
     if (boss) A.enemy.name = A.enemy.name.split(' ')[0] + ', Champion of the Sands';
     const ps = statsOf(A.data), es = statsOf(A.enemy);
     A.eLoad = enemyLoad(rng(A.run.seed + A.run.round), es, A.run.round);
+    A.elite = boss ? null : eliteFor(rng(A.run.seed * 3 + A.run.round), A.run.round);
+    if (A.elite) A.enemy.name = A.elite.name + ' ' + A.enemy.name.split(' ')[0];
+    A.hurt = false;
     A.views[1] = makeView(A.enemy, ME, 1, A.eLoad, 6);
     if (boss) A.views[1].holder.scale.setScalar(1.18);
-    A.F = [makeFighter(ps, { mods: loadMods(A.run.load), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
-      makeFighter(es, { mul: oppMul(A.run.round), mods: loadMods(A.eLoad) })];
+    A.F = [makeFighter(ps, { mods: loadMods(A.run.load, ps), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
+      makeFighter(es, { mul: oppMul(A.run.round, A.run.tier || 0), mods: (() => { const m = loadMods(A.eLoad, es); if (A.elite) for (const k in A.elite.mods) m[k] = (m[k] || 0) + A.elite.mods[k]; return m; })() })];
     if (A.run.hp != null) A.F[0].hp = Math.min(A.F[0].max, A.run.hp);
     A.rand = Math.random; A.queue = [];
+    A.run.fighting = true; A.run.dead = false; store.set('cc.run', A.run);
     hud(); bars();
     A.phase = 'intro'; A.phaseT = 0;
-    message(boss ? 'Final fight' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name);
+    if (A.elite) A.views[1].holder.scale.setScalar(A.elite.id === 'giant' ? 1.25 : 1.08);
+    message(boss ? 'Final fight' : A.elite ? 'Elite!' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name + (A.elite ? ' (+50% points)' : ''));
   }
   function message(big, small) { const m = document.getElementById('bmsg'); if (m) m.replaceChildren(big ? h('b', null, big) : '', small ? h('span', null, small) : ''); }
   function bars() {
@@ -275,10 +302,12 @@ export function createArena(env) {
     A.F[0].abil.forEach((a, k) => cd('bab' + k, a.cd, ABILITY_CD[a.id], false));
   }
   function wonFight() {
-    const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round);
+    const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round, A.run.tier || 0, !!A.elite);
+    env.stat('fightsWon'); env.stat('bestFight', A.run.round + 1, true); if (A.elite) env.stat('elites');
+    if (!A.hurt) env.stat('flawless'); if (f.hp < f.max * 0.1) env.stat('closeCalls');
     meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; A.run.lastPts = pts; env.saveMeta();
     A.run.bonusHp = (A.run.bonusHp || 0) + f.m.killHp;
-    A.run.round++;
+    A.run.round++; A.run.fighting = false;
     A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * (HEAL + 0.04 * (meta.boosts.recov || 0) + f.m.killHeal));
     A.run.draft = null;
     if (A.run.round >= ROUNDS) { champion(); return; }
@@ -288,7 +317,7 @@ export function createArena(env) {
   function champion() {
     A.phase = 'champion'; store.set('cc.run', null); sfx('win'); A.cheer = 6;
     dropView(0); A.views[0] = makeView(A.data, env.M, -1, A.run.load);
-    const pts = championPoints(A.F[0].hp, A.F[0].max), earned = A.run.earned || 0;
+    const pts = Math.round(championPoints(A.F[0].hp, A.F[0].max) * rankPoints(A.run.tier || 0)), earned = A.run.earned || 0;
     dropView(1); A.views[0].holder.position.x = 0; A.views[0].holder.rotation.y = 0.35;
     // Confetti.
     const n = 260, geo = new THREE.PlaneGeometry(0.09, 0.14), cm = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), n), c = new THREE.Color();
@@ -297,14 +326,16 @@ export function createArena(env) {
     S.g.add(cm);
     el.replaceChildren(h('div', { class: 'floaters' }));
     panel(h('h2', { class: 'gold' }, 'Champion!'),
-      h('p', null, h('b', null, A.data.name), ' won all ten fights and rules the Colosseum.'),
+      h('p', null, h('b', null, A.data.name), ' won all ten fights and rules the Colosseum' + (A.run.tier ? ' at Rank ' + A.run.tier : '') + '.' + ((A.run.tier || 0) >= (env.meta().rank || 0) && (A.run.tier || 0) < MAX_RANK ? ' Rank ' + ((A.run.tier || 0) + 1) + ' is now open.' : '')),
       h('div', { class: 'stats' }, h('div', null, h('small', null, 'Fights'), h('b', null, String(earned))), h('div', null, h('small', null, 'Title'), h('b', null, '+1000')), h('div', null, h('small', null, 'Health left'), h('b', null, '+' + (pts - 1000))), h('div', null, h('small', null, 'Total'), h('b', { class: 'gold' }, String(pts + earned)))),
       h('div', { class: 'row' },
-        h('button', { class: 'ad', onclick: async () => { const r = await env.showAd(); if (r.ok) finish({ type: 'champion', points: pts * 2 }); else if (r.why) env.toast(r.why); } }, '📺 Watch an ad: double the title prize (+' + pts + ')'),
+        h('button', { class: 'ad', onclick: async (e) => { if (await adFor(e, 'champion')) { env.bonus(pts); finish({ type: 'champion', points: pts * 2 }); } } }, '📺 Watch an ad: double the title prize (+' + pts + ')'),
         h('button', { class: 'go', onclick: () => finish({ type: 'champion', points: pts }) }, 'Take the crown'))).classList.add('low');
+    env.crown(pts, A.run);            // the prize is banked now, so closing the app on this screen cannot lose it
   }
   function died() {
     A.phase = 'dead'; sfx('lose');
+    A.run.dead = true; A.run.fighting = false; store.set('cc.run', A.run);      // closing the app here does not undo the death
     el.querySelector('.acts').classList.add('hidden'); message('', '');
     const meta = env.meta(), earned = A.run.earned || 0;
     panel(h('h2', { class: 'red' }, A.data.name + ' has fallen'),
@@ -312,17 +343,17 @@ export function createArena(env) {
       !A.run.adRevived && h('p', null, 'The crowd wants more: watch an ad to bring it back once, at half health.'),
       meta.revives > 0 ? h('p', null, 'You hold ' + meta.revives + (meta.revives === 1 ? ' revive.' : ' revives.') + ' Using one brings it back at half health to fight ' + A.enemy.name.split(',')[0] + ' again.') : h('p', { class: 'dim' }, 'The dead do not return. Build a new creature and try again. Revives are sold in the shop.'),
       h('div', { class: 'row' },
-        !A.run.adRevived && h('button', { class: 'ad', onclick: async () => {
-          const r = await env.showAd();
-          if (!r.ok) { if (r.why) env.toast(r.why); return; }
+        !A.run.adRevived && h('button', { class: 'ad', onclick: async (e) => {
+          if (!(await adFor(e, 'dead'))) return;
           A.run.adRevived = true; A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); sfx('win'); nextFight();
         } }, '📺 Watch an ad to revive'),
         meta.revives > 0 && h('button', { class: 'go', onclick: () => { meta.revives--; env.saveMeta(); A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); sfx('win'); nextFight(); } }, 'Use a revive'),
         h('button', { class: meta.revives > 0 || !A.run.adRevived ? '' : 'go', onclick: () => { store.set('cc.run', null); finish({ type: 'dead', round: A.run.round, by: A.enemy.name }); } }, meta.revives > 0 ? 'Let it die' : 'Create a new creature'))).classList.add('low');
   }
   function finish(result) {
+    if (!A.active) return;
     dropView(0); dropView(1);
-    if (A.confetti) { S.g.remove(A.confetti.mesh); A.confetti.mesh.geometry.dispose(); A.confetti = null; }
+    if (A.confetti) { S.g.remove(A.confetti.mesh); A.confetti.mesh.geometry.dispose(); A.confetti.mesh.material.dispose(); A.confetti.mesh.dispose(); A.confetti = null; }
     A.active = false; A.phase = 'off'; S.g.visible = false; scene.background = keepBg; fx.clear(); resetBones(env.M); camera.zoom = 1;
     el.classList.add('hidden'); el.replaceChildren();
     env.onDone(result);
@@ -388,6 +419,7 @@ export function createArena(env) {
   }
   function onEvent(ev) {
     if (ev.type === 'dot') {
+      if (ev.on === 0) A.hurt = true;
       floater(ev.on, '-' + ev.dmg, ev.kind === 'venom' ? 'venom' : ev.kind === 'burn' ? 'burn' : 'bleed');
       fx.burst(ev.kind === 'venom' ? 'venom' : ev.kind === 'burn' ? 'fire' : 'blood', world(A.views[ev.on], A.views[ev.on].mid), 6); return;
     }
@@ -403,6 +435,7 @@ export function createArena(env) {
     }
     if (ev.type === 'heal') { floater(ev.on, ev.name, 'venom'); sfx('win'); fx.burst('heal', world(A.views[ev.on], A.views[ev.on].mid), 30, { spread: 1.1 }); return; }
     const a = A.views[ev.by], d = A.views[1 - ev.by];
+    if ((ev.by === 1 && ev.dmg > 0) || (ev.by === 0 && (ev.thorns || ev.riposte))) A.hurt = true;
     if (ev.name && ABILITY_STYLE[ev.name]) { const want = ABILITY_STYLE[ev.name]; a.style = (want === 'tail' && !a.rig.kinds.has('tail')) || (want === 'slash' && !a.rig.arms) || (want === 'lash' && !a.rig.kinds.has('tentacle')) ? 'lunge' : want; a.rig.armSel = -1; }
     a.strikeT = 0; a.power = !!ev.power || !!ev.ability;
     if (ev.name) floater(ev.by, ev.name, 'cast');
@@ -466,17 +499,23 @@ export function createArena(env) {
   A.start = (data, run) => {
     A.data = data; A.active = true; A.t = 0; A.enemy = null; A.F = null; A.entered = false; A.freeze = A.slow = A.punch = 0;
     env.sun.target.position.set(0, 0, 0); env.sun.position.set(3, 7, 5);
-    A.run = run || { id: data.id, round: 0, hp: null, seed: Math.floor(Math.random() * 1e9), load: newLoad(), bonusHp: 0, earned: 0, rerolls: env.meta().boosts.reroll || 0, draft: null };
+    A.run = run || { id: data.id, round: 0, hp: null, tier: Math.min(env.meta().rankSel || 0, env.meta().rank || 0), seed: Math.floor(Math.random() * 1e9), load: newLoad(), bonusHp: 0, earned: 0, rerolls: env.meta().boosts.reroll || 0, draft: null };
     if (!A.run.load) A.run.load = newLoad();
     A.eLoad = null; A.queue = [];
     keepBg = scene.background; scene.background = S.sky; S.g.visible = true;
     el.classList.remove('hidden');
     A.views[0] = makeView(data, env.M, -1, A.run.load);
-    if (A.run.draft) reward('Back to the sands', 'Choose your reward:');
-    else if (A.run.round > 0) {
+    // Coming back after the app was closed. A death stays a death; walking out mid-fight is forgiven once.
+    const walkedOut = A.run.fighting && A.run.retried;
+    if (A.run.dead || walkedOut) { nextFight(); A.phase = 'ending'; A.F[0].hp = 0; A.views[0].dead = 5; A.views[1].walk = 0; A.views[1].holder.position.x = 0.75; message('', ''); died(); }
+    else if (A.run.draft) reward('Back to the sands', 'Choose your reward:');
+    else if (A.run.round > 0 || A.run.paid) {
+      const again = !!A.run.fighting;
+      if (again) { A.run.retried = true; store.set('cc.run', A.run); }
       A.phase = 'won'; el.replaceChildren();
-      panel(h('h2', null, 'Back to the sands'), h('p', null, A.data.name + ' has won ' + A.run.round + ' of ' + ROUNDS + ' fights and has ' + Math.round(A.run.hp) + ' health.'),
-        h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => nextFight() }, 'Next fight')));
+      panel(h('h2', null, 'Back to the sands'), h('p', null, A.data.name + ' has won ' + A.run.round + ' of ' + ROUNDS + ' fights' + (A.run.hp != null ? ' and has ' + Math.round(A.run.hp) + ' health.' : '.')),
+        again && h('p', { class: 'warn' }, 'You left in the middle of a fight, so it starts again. That is forgiven once per gauntlet: leave mid-fight again and it counts as a death.'),
+        h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => enter() }, 'Next fight')));
     } else gate();
   };
   A.back = () => { if (A.phase === 'gate') finish({ type: 'back' }); return true; };

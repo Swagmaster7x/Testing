@@ -6,10 +6,20 @@ window.ccAdDone = (earned, why) => { const w = waiting; waiting = null; if (w) w
 
 /** Resolves { ok, why }. ok is true only if the viewer earned the reward. */
 export function showAd() {
-  if (waiting) return Promise.resolve({ ok: false, why: 'busy' });
+  if (waiting) return Promise.resolve({ ok: false, why: '' });
   return new Promise((resolve) => {
     waiting = resolve;
-    if (window.Android && window.Android.showRewarded) { window.Android.showRewarded(); return; }
+    if (window.Android && window.Android.showRewarded) {
+      try { window.Android.showRewarded(); } catch (e) { window.ccAdDone(false, 'Ads are unavailable right now.'); return; }
+      // Safety net: if the app never reports back, give up once the page has been visible again for a while.
+      const mine = resolve; let seen = 0;
+      const t = setInterval(() => {
+        if (waiting !== mine) { clearInterval(t); return; }
+        if (document.visibilityState === 'visible') seen++; else seen = 0;
+        if (seen >= 20) { clearInterval(t); window.ccAdDone(false, 'The ad did not finish.'); }
+      }, 1000);
+      return;
+    }
     if (window.__ccAdInstant) { window.ccAdDone(true); return; }
     const box = document.createElement('div');
     box.className = 'adph';

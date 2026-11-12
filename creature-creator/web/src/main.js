@@ -6,7 +6,7 @@ import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
-import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock } from './items.js';
+import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, MAX_RANK } from './items.js';
 import { showAd } from './ads.js';
 import { randomCreature } from './random.js';
 import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp } from './creature.js';
@@ -23,7 +23,7 @@ function h(tag, props, ...kids) {
 }
 const store = {
   get(k, d) { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch (e) { return d; } },
-  set(k, val) { try { localStorage.setItem(k, JSON.stringify(val)); } catch (e) { /* storage full or blocked */ } },
+  set(k, val) { try { localStorage.setItem(k, JSON.stringify(val)); return true; } catch (e) { return false; /* storage full or blocked */ } },
 };
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 2200); }
 
@@ -244,7 +244,7 @@ function pickPart() {
   return null;
 }
 canvas.addEventListener('pointerdown', (e) => {
-  if (!inEditor) return;
+  if (!inEditor || arena.active) return;
   down.count++;
   if (down.count > 1) { if (down.mode) endDrag(); down.mode = null; controls.orbit.enabled = true; return; }
   Object.assign(down, { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), mode: null, moved: false });
@@ -259,13 +259,13 @@ canvas.addEventListener('pointerdown', (e) => {
   if (sel && sel !== 'body' && pickPart() === sel) { down.mode = 'part'; controls.orbit.enabled = false; rebuildShells(cr, sel); }
 }, true);
 canvas.addEventListener('pointermove', (e) => {
-  if (!inEditor || e.pointerId !== down.id) return;
+  if (!inEditor || arena.active || e.pointerId !== down.id) return;
   if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 9) down.moved = true;
   if (!down.mode || !down.moved) return;
   setRay(e);
   if (down.mode === 'node') {
     const hit = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(1, 0, 0), 0), new THREE.Vector3());
-    if (hit) { const n = data.nodes[down.node]; n.y = hit.y; n.z = hit.z; pendingRebuild = true; }
+    if (hit) { const n = data.nodes[down.node]; n.y = clamp(hit.y, -1, 5); n.z = clamp(hit.z, -4, 4); pendingRebuild = true; }
   } else if (down.mode === 'part') {
     const hit = ray.intersectObject(cr.body, false)[0];
     if (hit && hit.uv) {
@@ -281,7 +281,7 @@ function endDrag() {
   controls.orbit.enabled = true;
 }
 function pointerEnd(e) {
-  if (!inEditor) return;
+  if (!inEditor || arena.active) { down.count = 0; return; }
   down.count = Math.max(0, down.count - 1);
   if (e.pointerId !== down.id) return;
   down.id = -1;
@@ -371,6 +371,8 @@ function renderLeft() {
     }
     const scaleSpine = (f) => {
       const cy = data.nodes.reduce((s, n) => s + n.y, 0) / data.nodes.length, cz = data.nodes.reduce((s, n) => s + n.z, 0) / data.nodes.length;
+      const span = Math.max(...data.nodes.map((n) => Math.hypot(n.y - cy, n.z - cz)));
+      if ((f > 1 && span > 2.6) || (f < 1 && span < 0.25)) { toast(f > 1 ? 'That is as long as a body can get.' : 'That is as short as a body can get.'); return; }
       for (const n of data.nodes) { n.y = cy + (n.y - cy) * f; n.z = cz + (n.z - cz) * f; }
       rebuild(); commit();
     };
@@ -412,11 +414,13 @@ function renderLeft() {
   el.append(h('h3', null, CATS.find((c) => c[0] === tab)[1]), h('p', { class: 'note' }, 'Tap to add. Then tap the part on your creature and drag it where you want it.'));
   const grid = h('div', { class: 'grid' });
   for (const [kind, def] of Object.entries(PARTS)) if (def.cat === tab) {
-    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { const p = addPart(data, kind, cr.frames); rebuild(); commit(); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
+    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { if (tooMany()) return; const p = addPart(data, kind, cr.frames); rebuild(); commit(); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
     else grid.append(h('button', { class: 'tile locked', onclick: () => buy('part:' + kind, PART_COST[kind], def.n, renderLeft) }, h('img', { src: partThumb(kind), alt: '' }), def.n, h('small', null, 'Locked · ' + PART_COST[kind])));
   }
   el.append(grid);
 }
+const MAX_PARTS = 48;
+const tooMany = () => { if (data.parts.length < MAX_PARTS) return false; toast('A creature can carry ' + MAX_PARTS + ' parts at most. Remove one first.'); return true; };
 const END_NAMES = { human: 'Toes', paw: 'Paw', hoof: 'Hoof', talon: 'Talons', webbed: 'Webbed', stump: 'Stump', point: 'Spike', none: 'None', claw: 'Claws', pincer: 'Pincer', mitt: 'Mitt' };
 function renderRight() {
   const el = $('right'), part = sel && sel !== 'body' ? partOf(sel) : null;
@@ -445,7 +449,7 @@ function inspector(el, part) {
   el.append(h('h4', null, 'Pair'), chips([[true, 'Mirrored pair'], [false, 'Single']], part.mirror, (x) => { part.mirror = x; live(); done(); renderRight(); }));
   el.append(h('h4', null, 'Shown on'), chips([[null, 'Both'], ['f', 'Female only'], ['m', 'Male only']], part.sexOnly, (x) => { part.sexOnly = x; live(); done(); renderRight(); }),
     h('div', { class: 'row', style: 'margin-top:10px' },
-      h('button', { onclick: () => { const c = JSON.parse(JSON.stringify(part)); c.id = 'p' + Date.now().toString(36); c.u = clamp(c.u - 0.08, -0.9, 1.9); data.parts.push(c); rebuild(); commit(); select(c.id); } }, 'Copy'),
+      h('button', { onclick: () => { if (tooMany()) return; const c = JSON.parse(JSON.stringify(part)); c.id = 'p' + Date.now().toString(36); c.u = clamp(c.u - 0.08, -0.9, 1.9); data.parts.push(c); rebuild(); commit(); select(c.id); } }, 'Copy'),
       h('button', { class: 'warn', onclick: () => { data.parts = data.parts.filter((p) => p.id !== part.id); sel = null; rebuild(); commit(); renderUI(); } }, 'Delete')),
     h('div', { class: 'row' }, h('button', { onclick: () => select(null) }, 'Done')));
 }
@@ -474,8 +478,9 @@ function save(quiet) {
   if (!data.id) data.id = 'c' + Date.now().toString(36);
   const list = store.get('cc.saved', []).filter((c) => c.id !== data.id);
   list.unshift({ id: data.id, name: data.name, thumb: creatureThumb(data), data: JSON.parse(JSON.stringify(data)) });
-  store.set('cc.saved', list); store.set('cc.current', data);
-  if (!quiet) toast('Saved "' + data.name + '"');
+  const ok = store.set('cc.saved', list); store.set('cc.current', data);
+  if (!ok) toast('Could not save: the phone is out of storage for this app. Delete a creature or two.');
+  else if (!quiet) toast('Saved "' + data.name + '"');
 }
 
 // ------------------------------------------------------------------ colosseum
@@ -487,14 +492,32 @@ if (!meta) {
   for (const c of [...store.get('cc.saved', []).map((x) => x.data), store.get('cc.current', null)]) if (c && !FREE_TYPES.includes(c.type)) meta.unlocked['type:' + c.type] = true;
 }
 meta = Object.assign(newMeta(), meta);
+for (const k of ['stats', 'seen', 'typesWon', 'goals', 'unlocked', 'boosts']) if (!meta[k]) meta[k] = {};
+if (!Array.isArray(meta.hall)) meta.hall = [];
 const saveMeta = () => store.set('cc.meta', meta);
 function buy(key, cost, label, then) {
   if (meta.points < cost) { toast('Not enough points: ' + label + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
   if (!confirm('Unlock ' + label + ' for ' + cost + ' points?')) return;
   meta.points -= cost; meta.unlocked[key] = true; saveMeta(); toast('Unlocked ' + label); then && then();
 }
-const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, onDone: battleDone, meta: () => meta, saveMeta });
+/** Counters behind the goals: add to one, or (best = true) keep the highest value seen. */
+function stat(k, val = 1, best) { meta.stats[k] = best ? Math.max(meta.stats[k] || 0, val) : (meta.stats[k] || 0) + val; saveMeta(); }
+/** A title has been won: bank the prize and record it straight away. */
+function crown(pts, run) {
+  const tier = run.tier || 0;
+  meta.points += pts; meta.champions++;
+  meta.typesWon[data.type] = 1; meta.stats.bestRankWon = Math.max(meta.stats.bestRankWon || 0, tier);
+  if (tier >= meta.rank && meta.rank < MAX_RANK) { meta.rank = tier + 1; meta.rankSel = meta.rank; }
+  meta.hall.unshift({ name: data.name, type: data.type, rank: tier, when: Date.now() }); meta.hall.length = Math.min(meta.hall.length, 30);
+  data.champion = (data.champion || 0) + 1;
+  saveMeta(); store.set('cc.current', data);
+  const list = store.get('cc.saved', []), e = list.find((c) => c.id === data.id);
+  if (e) { e.data = JSON.parse(JSON.stringify(data)); e.name = data.name; store.set('cc.saved', list); }
+}
+const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, stat, crown, bonus: (pts) => { meta.points += pts; saveMeta(); }, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
+  const other = store.get('cc.run', null);
+  if (other && other.id !== data.id && !(run && run.id === data.id) && !confirm('Another creature is still in the middle of a gauntlet. Starting this one abandons that run. Go ahead?')) return;
   save(true);
   sel = null; controls.orbit.enabled = false;
   $('editor').classList.add('hidden'); $('start').classList.add('hidden');
@@ -516,10 +539,7 @@ function battleDone(res) {
     $('start').classList.remove('hidden'); renderStart(); layout();
     return;
   }
-  if (res.type === 'champion') {
-    rec.points += res.points; rec.champions++; saveMeta();
-    data.champion = (data.champion || 0) + 1;
-  }
+  down.count = 0;
   inEditor = true; $('editor').classList.remove('hidden');
   rebuild(); if (res.type === 'champion') save(true);
   renderUI(); fitCamera();
@@ -568,7 +588,18 @@ function renderShop() {
     owned ? h('span', { class: 'have' }, typeof owned === 'string' ? owned : 'Owned') : h('button', { class: meta.points >= cost ? 'go' : '', onclick: onbuy }, cost + ' pts'));
   const itemRows = (cat) => ITEMS.filter((it) => it.cat === cat).sort((a, b) => a.cost - b.cost).map((it) =>
     row(it.icon, it.name, describe({ id: it.id, cat, q: 1, rar: 0, lvl: 1 }), it.cost, itemOpen(meta, it) && (it.cost ? 'Owned' : 'Free'), () => buy('item:' + cat + ':' + it.id, it.cost, it.name, renderStart), it.reqText ? 'Needs ' + it.reqText : (it.hands === 2 ? 'Needs two free hands' : '')));
+  const goalRow = (g) => {
+    const [have, need] = g.prog(meta), done = have >= need, claimed = !!meta.goals[g.id];
+    return h('div', { class: 'shoprow' + (claimed ? ' owned' : '') }, h('div', { class: 'ico' }, claimed ? '✅' : done ? '🏅' : '🎯'),
+      h('div', { class: 'what' }, h('b', null, g.name), h('small', null, g.text), h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.min(100, have / need * 100) + '%' })), h('small', null, Math.min(have, need) + ' / ' + need)),
+      claimed ? h('span', { class: 'have' }, 'Claimed') : h('button', { class: done ? 'go' : '', disabled: !done, onclick: () => { meta.goals[g.id] = 1; meta.points += g.pts; saveMeta(); toast(g.name + ': +' + g.pts + ' points'); renderStart(); } }, (done ? 'Claim ' : '') + g.pts + ' pts'));
+  };
+  const rec = (k, val) => h('div', { class: 'shoprow' }, h('div', { class: 'what' }, h('small', null, k), h('b', null, String(val))));
   const tabs = {
+    Goals: () => [...GOALS].sort((a, b) => (meta.goals[a.id] ? 2 : goalDone(meta, a) ? 0 : 1) - (meta.goals[b.id] ? 2 : goalDone(meta, b) ? 0 : 1)).map(goalRow),
+    Records: () => [rec('Fights won', meta.stats.fightsWon || 0), rec('Titles won', meta.champions), rec('Creatures lost', meta.fallen), rec('Highest rank open', meta.rank), rec('Furthest fight reached', meta.stats.bestFight || 0),
+      rec('Elite opponents beaten', meta.stats.elites || 0), rec('Different rewards picked', Object.keys(meta.seen).length + ' of ' + ITEMS.length), rec('Body types crowned', Object.keys(meta.typesWon).length + ' of 8'),
+      ...meta.hall.map((c) => h('div', { class: 'shoprow' }, h('div', { class: 'ico' }, '👑'), h('div', { class: 'what' }, h('b', null, c.name), h('small', null, TEMPLATES[c.type].name + ' · Rank ' + c.rank + ' · ' + new Date(c.when).toLocaleDateString()))))],
     Bodies: () => Object.entries(TEMPLATES).map(([id, t]) => row('🧬', t.name, t.blurb, TYPE_COST[id], typeOpen(meta, id) && (TYPE_COST[id] ? 'Owned' : 'Free'), () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart))),
     Parts: () => Object.entries(PART_COST).map(([k, cost]) => row(h('img', { src: partThumb(k), alt: '' }), PARTS[k].n, 'Body part for the workshop (' + CATS.find((c) => c[0] === PARTS[k].cat)[1] + ').', cost, partOpen(meta, k), () => buy('part:' + k, cost, PARTS[k].n, renderStart))),
     Weapons: () => itemRows('weapon'), Abilities: () => itemRows('ability'), Relics: () => itemRows('relic'),
@@ -580,10 +611,10 @@ function renderShop() {
       });
     }),
   };
-  const notes = { Weapons: 'Weapons you own can turn up as rewards after a fight. A creature holds one per hand.', Abilities: 'Abilities you own can turn up as rewards, if the creature has the right body for them.', Relics: 'Relics are passive rewards that stack. Many only work, or work better, with the right body.', Parts: 'Extra parts for building creatures. Starter creatures may already carry some of these.', Bodies: 'New body types to start from.', Boosts: 'Permanent upgrades, and revives.' };
-  el.replaceChildren(h('h1', null, 'The ', h('span', null, 'Shop'), h('small', { class: 'record' }, h('b', null, meta.points + ' points'), ' ', h('button', { class: 'shopbtn', onclick: () => { shopTab = null; renderStart(); } }, 'Back'))),
+  const notes = { Goals: 'Targets that pay points when you claim them.', Records: 'Your history in the Colosseum, and the hall of champions.', Weapons: 'Weapons you own can turn up as rewards after a fight. A creature holds one per hand.', Abilities: 'Abilities you own can turn up as rewards, if the creature has the right body for them.', Relics: 'Relics are passive rewards that stack. Many only work, or work better, with the right body.', Parts: 'Extra parts for building creatures. Starter creatures may already carry some of these.', Bodies: 'New body types to start from.', Boosts: 'Permanent upgrades, and revives.' };
+  el.replaceChildren(h('h1', null, shopTab === 'Goals' || shopTab === 'Records' ? 'Your ' : 'The ', h('span', null, shopTab === 'Goals' ? 'Goals' : shopTab === 'Records' ? 'Records' : 'Shop'), h('small', { class: 'record' }, h('b', null, meta.points + ' points'), ' ', h('button', { class: 'shopbtn', onclick: () => { shopTab = null; renderStart(); } }, 'Back'))),
     h('div', { class: 'chips', style: 'margin-top:10px' }, Object.keys(tabs).map((t) => h('button', { class: t === shopTab ? 'on' : '', onclick: () => { shopTab = t; renderStart(); } }, t))),
-    h('p', { class: 'note' }, notes[shopTab] + ' Points come from every fight won (more for later fights) and a big bonus for the title.'),
+    h('p', { class: 'note' }, notes[shopTab] + (shopTab === 'Goals' || shopTab === 'Records' ? '' : ' Points come from every fight won (more for later fights) and a big bonus for the title.')),
     h('div', { class: 'shop' }, tabs[shopTab]()));
   el.scrollTop = 0;
 }
@@ -591,10 +622,18 @@ function renderStart() {
   const el = $('start'), saved = store.get('cc.saved', []), cur = store.get('cc.current', null);
   if (shopTab) { renderShop(); return; }
   const rec = meta, run = store.get('cc.run', null);
-  const runOk = run && cur && cur.id === run.id;
-  el.replaceChildren(...[h('h1', null, 'Creature ', h('span', null, 'Workshop'),
-      h('small', { class: 'record' }, h('span', { class: 'runpill', id: 'runpill', onclick: async () => { const r = runsNow(meta); if (r.n >= r.max) return; const a = await showAd(); if (a.ok) { addRun(meta); saveMeta(); tickRunPill(); toast('+1 run'); } else if (a.why) toast(a.why); } }), h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
-    runOk && h('div', { class: 'card resume', onclick: () => { data = cur; enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, cur.name + ' is waiting for fight ' + (run.round + 1) + ' of 10. Tap to return to the Colosseum.')),
+  // The creature in the gauntlet may no longer be the one last opened, so look in the saved list too.
+  const runData = run && (cur && cur.id === run.id ? cur : (saved.find((c) => c.id === run.id) || {}).data), runOk = !!runData;
+  if (run && !runOk) store.set('cc.run', null);
+  const gift = dailyGift(meta), ready = goalsReady(meta);
+  el.replaceChildren(...[h('h1', null, 'Critter ', h('span', null, 'Arena'),
+      h('small', { class: 'record' }, h('span', { class: 'runpill', id: 'runpill', onclick: async () => { const r = runsNow(meta); if (r.n >= r.max) return; const a = await showAd(); if (a.ok) { addRun(meta); saveMeta(); tickRunPill(); toast('+1 run'); } else if (a.why) toast(a.why); } }), h('button', { class: 'goalbtn' + (ready ? ' ready' : ''), onclick: () => { shopTab = 'Goals'; renderStart(); } }, 'Goals' + (ready ? ' (' + ready + ')' : '')), h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
+    runOk && h('div', { class: 'card resume', onclick: () => { data = JSON.parse(JSON.stringify(runData)); enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, runData.name + ' is waiting for fight ' + (run.round + 1) + ' of 10. Tap to return to the Colosseum.')),
+    !meta.seenIntro && h('div', { class: 'card resume intro' }, h('b', null, 'Welcome to Critter Arena'),
+      h('small', null, '1. Pick a body below and build a critter: drag the dots to shape it, add parts, colour it.'), h('small', null, '2. Hit Battle to enter the Colosseum: ten fights to the death, with a reward to choose after each win.'),
+      h('small', null, '3. How you build it matters: size is health, teeth and claws are attack, arms hold weapons. Spend the points you earn in the Shop.'),
+      h('button', { onclick: (e) => { e.stopPropagation(); meta.seenIntro = 1; saveMeta(); renderStart(); } }, 'Got it')),
+    gift && h('div', { class: 'card resume gift', onclick: () => { const g = claimDaily(meta); saveMeta(); if (g) toast('Daily gift: +' + g.points + ' points' + (g.revive ? ' and a revive' : '')); renderStart(); } }, h('b', null, '🎁 Daily gift: +' + gift.points + ' points' + (gift.revive ? ' and a revive' : '')), h('small', null, 'Day ' + gift.streak + ' in a row. Come back tomorrow for more; every seventh day adds a revive. Tap to collect.')),
     h('h2', null, 'Start from a body type'),
     h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => { const open_ = Object.keys(TEMPLATES).filter((t) => typeOpen(meta, t)); open(randomCreature(Math.random, { type: open_[Math.floor(Math.random() * open_.length)] })); } }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
       Object.entries(TEMPLATES).map(([id, t]) =>

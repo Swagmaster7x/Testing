@@ -19,7 +19,7 @@ export function statsOf(d) {
     const a = d.nodes[i], b = d.nodes[i + 1];
     vol += Math.hypot(a.y - b.y, a.z - b.z) * Math.PI * ((a.rx + b.rx) / 2) * ((a.ry + b.ry) / 2);
   }
-  const m = Math.cbrt(vol * d.bulk * d.bulk);                 // rough "how big is it": about 0.3 small, 0.6 large
+  const m = Math.min(Math.cbrt(vol * d.bulk * d.bulk), 0.9);                 // rough "how big is it": about 0.3 small, 0.6 large
   const parts = d.parts.filter((p) => !p.sexOnly || p.sexOnly === d.sex);
   const paired = (p) => (p.mirror && Math.abs(Math.sin(p.a)) > 0.1 ? 1.25 : 1);
   const hits = [];
@@ -49,8 +49,9 @@ export function statsOf(d) {
   }
   hits.sort((a, b) => b - a);
   let atk = 7;
-  hits.forEach((x, i) => { atk += x * (STACK[i] ?? 0.1); });
-  atk *= 0.75 + 0.6 * m;
+  hits.forEach((x, i) => { atk += x * (STACK[i] ?? (i < 10 ? 0.06 : 0)); });
+  hpBonus = Math.min(hpBonus, 60); venom = Math.min(venom, 6);
+  atk *= 0.82 + 0.42 * m;
   armour += { scales: 0.08, chitin: 0.12, fur: 0.02 + 0.05 * d.look.furLen, slime: 0.02, skin: 0 }[d.look.cover] ?? 0;
   let spd = legs === 0 ? 0.9 : legs === 1 ? 1 : legs === 2 ? 1.08 : 1.14;
   if (wings) spd += 0.12;
@@ -81,11 +82,12 @@ export function traits(s) {
 }
 
 /** How much tougher than its natural stats the opponent in fight `round` (0-based) is. */
-export function oppMul(round) {
+export function oppMul(round, tier = 0) {
   const boss = round === ROUNDS - 1 ? 1.3 : 1;          // the last fight is against the reigning champion
-  return { hp: (OPP.hp0 + OPP.hp1 * round) * boss, atk: (OPP.atk0 + OPP.atk1 * round) * (boss > 1 ? 1.12 : 1) };
+  // tier: the Colosseum's difficulty rank; each rank makes every opponent tougher.
+  return { hp: (OPP.hp0 + OPP.hp1 * round) * boss * (1 + 0.1 * tier), atk: (OPP.atk0 + OPP.atk1 * round) * (boss > 1 ? 1.12 : 1) * (1 + 0.07 * tier) };
 }
-export const OPP = { hp0: 0.34, hp1: 0.099, atk0: 0.4, atk1: 0.091 };   // tuned with simulated gauntlets, rewards included
+export const OPP = { hp0: 0.34, hp1: 0.093, atk0: 0.4, atk1: 0.086 };   // tuned with simulated gauntlets, rewards included
 
 const MODS = ['hpP', 'atkP', 'atkF', 'spdP', 'crit', 'critD', 'dodge', 'def', 'pierce', 'lifesteal', 'thorns', 'regen', 'bleedC', 'poisonC', 'poisonD', 'burnC', 'stunC', 'stunDur', 'dbl', 'ramp', 'lowP', 'firstX',
   'giantP', 'vsBleedP', 'perStatusCrit', 'perStatusDmg', 'critBleed', 'critCdr', 'execP', 'riposte', 'blockHeal', 'killHeal', 'killHp', 'secondWind', 'hemo', 'festerP', 'shieldP', 'opener', 'guardCdr', 'perWeaponSpd',
@@ -104,11 +106,11 @@ export function makeFighter(s, o = {}) {
     s, m, max, hp: max, shield: Math.round(max * m.shieldP),
     atk: (s.atk + m.atkF) * (1 + m.atkP + m.perLegAtk * s.legs) * mul.atk * boost.atk,
     crit: s.crit + m.crit + m.perEyeCrit * s.eyes, dodge: clamp(s.dodge + m.dodge, 0, 0.45), def: clamp(s.def + m.def, 0, 0.6), thorns: s.thorns + m.thorns,
-    poisonC: (s.venom ? 0.35 : 0) + m.poisonC, poisonD: Math.max(s.venom, m.poisonC > 0 ? 3 : 0) + m.poisonD,
+    poisonC: (s.venom ? 0.35 : 0) + m.poisonC, poisonD: Math.max(s.venom, m.poisonC > 0 ? 2 : 0) + m.poisonD,
     every: 1.75 / spd, t: 0.9 + 0.5 / spd, power: false, powerCd: 2, guard: 0, guardCd: 0, guardEvery: Math.max(2.5, 4.5 - m.guardCdr),
     st: { bleed: 0, bleedT: 0, bleedD: 1, poison: 0, poisonD: 0, burn: 0, burnD: 0, stun: 0, immune: 0, weak: 0, slow: 0, blind: 0 },
     buff: { evade: 0, shell: 0, frenzy: 0 }, tick: 0, fury: 0, first: true, wind: m.secondWind > 0, nextCrit: false, opened: !(m.opener > 0),
-    abil: (o.abilities || []).map((a) => ({ id: a.id, lvl: a.lvl, cd: 3 })),
+    abil: (o.abilities || []).map((a) => ({ id: a.id, lvl: Math.min(a.lvl, 5), cd: 3 })),
   };
 }
 export function usePower(f) { if (f.powerCd > 0 || f.hp <= 0) return false; f.power = true; f.powerCd = 7; return true; }
@@ -116,23 +118,28 @@ export function useGuard(f) { if (f.guardCd > 0 || f.hp <= 0) return false; f.gu
 
 function hurt(o, x) { if (o.shield > 0) { const a = Math.min(o.shield, x); o.shield -= a; x -= a; } o.hp -= x; }
 function heal(f, x) { f.hp = Math.min(f.max, f.hp + x); }
-function addBleed(o, n, by) { o.st.bleed = Math.min(12, o.st.bleed + n); o.st.bleedT = 5; o.st.bleedD = Math.max(1, by.atk * 0.05) * (1 + by.m.festerP); }
-function stun(o, dur) { if (o.st.immune > 0) return false; o.st.stun = dur; o.st.immune = dur + 3; o.t += dur; return true; }
+function addBleed(o, n, by) { o.st.bleed = Math.min(12, o.st.bleed + n); o.st.bleedT = 5; o.st.bleedD = Math.max(1, by.atk * 0.08) * (1 + by.m.festerP); }
+function stun(o, dur) { if (o.st.immune > 0) return false; o.st.stun = dur; o.st.immune = dur + 3; return true; }
+/** Apply a timed ailment without weakening one that is already running. */
+function afflict(st, key, dur, dps) { st[key + 'D'] = st[key] > 0 ? Math.max(st[key + 'D'], dps) : dps; st[key] = Math.max(st[key], dur); }
 const ailments = (o) => (o.st.bleed > 0) + (o.st.poison > 0) + (o.st.burn > 0) + (o.st.stun > 0);
 
 /** One blow from F[i] on the other fighter, with every on-hit effect. Returns the event. */
 function blow(F, i, mult, rand, opt = {}) {
   const f = F[i], o = F[1 - i], m = f.m, om = o.m, ev = { type: 'hit', by: i, dmg: 0, power: !!opt.power, name: opt.name };
-  if (!opt.sure && (rand() < (f.s.miss + (f.st.blind > 0 ? 0.5 : 0)) * (opt.power ? 0.5 : 1) || o.buff.evade > 0 || rand() < o.dodge)) {
-    ev.miss = true; if (om.dodgeCrit) o.nextCrit = true; return ev;
+  if (!opt.sure && rand() < (f.s.miss + (f.st.blind > 0 ? 0.6 : 0)) * (opt.power ? 0.5 : 1)) { ev.miss = true; return ev; }
+  if (!opt.sure && (o.buff.evade > 0 || rand() < o.dodge)) {
+    if (om.dodgeCrit) o.nextCrit = true;          // Updraft: a real dodge sets up a critical hit
+    ev.miss = true; return ev;
   }
   const ail = ailments(o);
-  let dmg = f.atk * mult * (0.85 + 0.3 * rand());
+  // Long fights turn frantic: after 40 seconds every blow lands harder, so nothing drags on.
+  let dmg = f.atk * mult * (0.85 + 0.3 * rand()) * (1 + Math.max(0, (F.time || 0) - 40) * 0.05);
   let bonus = 1 + f.fury * m.ramp + (f.hp < f.max * 0.4 ? m.lowP : 0) + (o.st.bleed > 0 ? m.vsBleedP : 0) + ail * m.perStatusDmg + (o.max > f.max ? m.giantP : 0) + (o.hp < o.max * 0.3 ? m.execP : 0);
-  if (f.first) { bonus += m.firstX; f.first = false; }
+  if (f.first && opt.name !== 'Sling') { bonus += m.firstX; f.first = false; }
   dmg *= bonus * (f.st.weak > 0 ? 0.7 : 1) * (f.st.burn > 0 ? 0.9 : 1);
   if (f.nextCrit || rand() < f.crit + ail * m.perStatusCrit) {
-    dmg *= 1.6 + m.critD; ev.crit = true; f.nextCrit = false;
+    dmg *= 1.8 + m.critD; ev.crit = true; f.nextCrit = false;
     if (m.critBleed) addBleed(o, m.critBleed, f);
     if (m.critCdr) for (const a of f.abil) a.cd = Math.max(0, a.cd - m.critCdr);
   }
@@ -144,8 +151,8 @@ function blow(F, i, mult, rand, opt = {}) {
   } else {
     if (o.thorns > 0 && !opt.ranged) { ev.thorns = Math.max(1, Math.round(dmg * o.thorns * (o.buff.shell > 0 ? 2 : 1))); hurt(f, ev.thorns); if (om.thornsBleed) addBleed(f, 1, o); }
     if (rand() < m.bleedC) { addBleed(o, 1, f); ev.bleed = true; }
-    if (rand() < f.poisonC) { o.st.poison = 4; o.st.poisonD = f.poisonD * (1 + m.festerP); ev.venom = true; }
-    if (rand() < m.burnC) { o.st.burn = 3; o.st.burnD = Math.max(1, dmg * 0.14) * (1 + m.festerP); ev.burn = true; }
+    if (rand() < f.poisonC) { afflict(o.st, 'poison', 5, (f.poisonD + f.atk * 0.12) * (1 + m.festerP)); ev.venom = true; }
+    if (rand() < m.burnC) { afflict(o.st, 'burn', 3, Math.max(1, dmg * 0.14) * (1 + m.festerP)); ev.burn = true; }
     if (rand() < m.stunC && stun(o, 0.7 * (1 + m.stunDur))) ev.stun = true;
     if (m.lifesteal) heal(f, dmg * m.lifesteal);
   }
@@ -160,38 +167,39 @@ export function useAbility(F, i, k, rand, events) {
   const L = a.lvl, say = (text) => events.push({ type: 'cast', by: i, name: text });
   const strike = (mult, name, opt) => { const ev = blow(F, i, mult, rand, { name, ...opt }); ev.ability = true; events.push(ev); return ev; };
   switch (a.id) {
-    case 'pounce': { const ev = strike(1.5 + 0.3 * L, 'Pounce'); if (!ev.miss && !ev.blocked) stun(o, 0.8); break; }
+    case 'pounce': { const ev = strike(1.4 + 0.3 * L, 'Pounce'); if (!ev.miss && !ev.blocked) stun(o, 0.8); break; }
     case 'roar': o.st.weak = 4 + L; say('Roar'); break;
     case 'lick': heal(f, f.max * (0.11 + 0.04 * L)); events.push({ type: 'heal', on: i, name: 'Lick Wounds' }); break;
-    case 'spit': o.st.poison = 6; o.st.poisonD = Math.max(o.st.poisonD, (4 + 2 * L + f.m.poisonD) * (1 + f.m.festerP)); say('Venom Spit'); break;
+    case 'spit': afflict(o.st, 'poison', 6, (f.atk * (0.22 + 0.08 * L) + f.m.poisonD) * (1 + f.m.festerP)); say('Venom Spit'); break;
     case 'dive': f.buff.evade = 1.5 + 0.5 * L; f.nextCrit = true; say('Dive'); break;
-    case 'constrict': { const ev = strike(0.8 + 0.3 * L, 'Constrict', { sure: true }); if (!ev.blocked) stun(o, (1.4 + 0.3 * L) * (1 + f.m.stunDur)); break; }
+    case 'constrict': { const ev = strike(0.8 + 0.3 * L, 'Constrict', { sure: true }); if (!ev.blocked) stun(o, (1.3 + 0.3 * L) * (1 + f.m.stunDur)); break; }
     case 'web': o.st.slow = 4 + L; say('Web'); break;
     case 'ink': o.st.blind = 3 + L; say('Ink Cloud'); break;
-    case 'shellup': f.buff.shell = 2 + L; say('Shell Up'); break;
+    case 'shellup': f.buff.shell = 3 + L; say('Shell Up'); break;
     case 'sweep': { const ev = strike(1 + 0.25 * L, 'Tail Sweep'); if (!ev.miss) o.t += 1.2; break; }
     case 'gore': { const ev = strike(1.2 + 0.2 * L, 'Gore'); if (!ev.miss && !ev.blocked) addBleed(o, 2 + L, f); break; }
     case 'frenzy': f.buff.frenzy = 4; f.frenzyX = 1.5 + 0.2 * L; say('Frenzy'); break;
-    case 'hurl': strike(1.8 + 0.4 * L, 'Hurl', { sure: true, ranged: true }); break;
-    case 'rend': strike(Math.max(0.3, (0.35 + 0.1 * L) * o.st.bleed), 'Rend'); break;
-    case 'breath': { const ev = strike(0.8 + 0.2 * L, 'Fire Breath', { sure: true, ranged: true }); o.st.burn = 5; o.st.burnD = Math.max(o.st.burnD, Math.max(2, ev.dmg * 0.2) * (1 + f.m.festerP)); break; }
+    case 'hurl': strike(1.6 + 0.3 * L, 'Hurl', { sure: true, ranged: true }); break;
+    case 'rend': strike(0.6 + (0.35 + 0.1 * L) * o.st.bleed, 'Rend'); break;
+    case 'breath': { const ev = strike(0.8 + 0.2 * L, 'Fire Breath', { sure: true, ranged: true }); afflict(o.st, 'burn', 5, Math.max(2, ev.dmg * 0.2) * (1 + f.m.festerP)); break; }
     default: return false;
   }
   a.cd = ABILITY_CD[a.id] || 10;
   return true;
 }
-export const ABILITY_CD = { pounce: 9, roar: 12, lick: 14, spit: 10, dive: 11, constrict: 12, web: 12, ink: 12, shellup: 13, sweep: 8, gore: 10, frenzy: 13, hurl: 9, rend: 9, breath: 11 };
+export const ABILITY_CD = { pounce: 9, roar: 12, lick: 14, spit: 10, dive: 11, constrict: 12, web: 12, ink: 12, shellup: 13, sweep: 8, gore: 10, frenzy: 13, hurl: 10, rend: 9, breath: 11 };
 
 /** Simple brain for whoever is not being played. skill 0..1 is how often it blocks in time. */
 export function ai(F, i, dt, rand, skill, events) {
   const f = F[i], o = F[1 - i];
   if (f.powerCd <= 0 && rand() < dt * 0.6) usePower(f);
   if (f.guardCd <= 0 && o.t < 0.3 && rand() < dt * 8 * skill) useGuard(f);
-  for (let k = 0; k < f.abil.length; k++) if (f.abil[k].cd <= 0 && rand() < dt * 1.2 && !(f.abil[k].id === 'lick' && f.hp > f.max * 0.75) && !(f.abil[k].id === 'rend' && o.st.bleed < 3)) useAbility(F, i, k, rand, events);
+  for (let k = 0; k < f.abil.length; k++) if (f.abil[k].cd <= 0 && rand() < dt * 1.2 && !(f.abil[k].id === 'lick' && f.hp > f.max * 0.75) && !(f.abil[k].id === 'rend' && o.st.bleed < 2)) useAbility(F, i, k, rand, events);
 }
 
 /** Advance the fight. Pushes what happened into `events`; returns the winner's index, or -1. */
 export function step(F, dt, rand, events) {
+  F.time = (F.time || 0) + dt;
   for (let i = 0; i < 2; i++) {
     const f = F[i], o = F[1 - i], st = f.st;
     if (f.hp <= 0 || o.hp <= 0) continue;
