@@ -57,4 +57,5 @@ android {
 dependencies {
     implementation("com.google.android.gms:play-services-ads:25.5.0")           // rewarded ads (AdMob)
     implementation("com.google.android.ump:user-messaging-platform:4.0.0")     // the consent prompt Google requires in Europe
+    implementation("com.google.android.play:review:2.0.2")                     // the in-app "rate this app" card
 }

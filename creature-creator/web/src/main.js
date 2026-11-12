@@ -6,7 +6,7 @@ import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
-import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, MAX_RANK } from './items.js';
+import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, LEVELS } from './items.js';
 import { showAd } from './ads.js';
 import { randomCreature } from './random.js';
 import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp } from './creature.js';
@@ -494,6 +494,10 @@ if (!meta) {
 meta = Object.assign(newMeta(), meta);
 for (const k of ['stats', 'seen', 'typesWon', 'goals', 'unlocked', 'boosts']) if (!meta[k]) meta[k] = {};
 if (!Array.isArray(meta.hall)) meta.hall = [];
+if (meta.rank !== undefined) {          // older saves used numbered ranks; map them onto the named difficulty levels
+  meta.level = Math.max(meta.level || 0, meta.rank > 0 ? Math.min(LEVELS.length - 1, meta.rank + 3) : meta.champions > 0 ? 3 : 0);
+  meta.levelSel = meta.level; delete meta.rank; delete meta.rankSel;
+}
 const saveMeta = () => store.set('cc.meta', meta);
 function buy(key, cost, label, then) {
   if (meta.points < cost) { toast('Not enough points: ' + label + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
@@ -504,11 +508,11 @@ function buy(key, cost, label, then) {
 function stat(k, val = 1, best) { meta.stats[k] = best ? Math.max(meta.stats[k] || 0, val) : (meta.stats[k] || 0) + val; saveMeta(); }
 /** A title has been won: bank the prize and record it straight away. */
 function crown(pts, run) {
-  const tier = run.tier || 0;
+  const level = run.level ?? 2;
   meta.points += pts; meta.champions++;
-  meta.typesWon[data.type] = 1; meta.stats.bestRankWon = Math.max(meta.stats.bestRankWon || 0, tier);
-  if (tier >= meta.rank && meta.rank < MAX_RANK) { meta.rank = tier + 1; meta.rankSel = meta.rank; }
-  meta.hall.unshift({ name: data.name, type: data.type, rank: tier, when: Date.now() }); meta.hall.length = Math.min(meta.hall.length, 30);
+  meta.typesWon[data.type] = 1; meta.stats.bestLevelWon = Math.max(meta.stats.bestLevelWon || 0, level + 1);
+  if (level >= meta.level && meta.level < LEVELS.length - 1) { meta.level = level + 1; meta.levelSel = meta.level; }
+  meta.hall.unshift({ name: data.name, type: data.type, level, when: Date.now() }); meta.hall.length = Math.min(meta.hall.length, 30);
   data.champion = (data.champion || 0) + 1;
   saveMeta(); store.set('cc.current', data);
   const list = store.get('cc.saved', []), e = list.find((c) => c.id === data.id);
@@ -526,6 +530,16 @@ function enterBattle(run) {
   arena.start(data, run && run.id === data.id ? run : null);
   layout();
 }
+/**
+ * Ask for a store rating at a happy moment (a title, a long pit run). Google's own card decides whether
+ * to actually appear; on our side: at most three asks, at least three weeks apart, never in the first session.
+ */
+function askForReview() {
+  const r = meta.review || { n: 0, at: 0 }, now = Date.now();
+  if (r.n >= 3 || now - r.at < 21 * 86400000 || (meta.stats.runs || 0) < 3) return;
+  meta.review = { n: r.n + 1, at: now }; saveMeta();
+  if (window.Android && window.Android.requestReview) setTimeout(() => { try { window.Android.requestReview(); } catch (e) { /* not available */ } }, 1500);
+}
 function battleDone(res) {
   stage.visible = overlay.visible = true; controls.orbit.enabled = true;
   for (const m of [M.skin, ...M.shells]) m.emissive.setRGB(0, 0, 0);
@@ -540,10 +554,12 @@ function battleDone(res) {
     return;
   }
   down.count = 0;
+  if (res.type === 'retired') stat('bestEndless', res.wins, true);
   inEditor = true; $('editor').classList.remove('hidden');
   rebuild(); if (res.type === 'champion') save(true);
   renderUI(); fitCamera();
-  if (res.type === 'champion') toast(data.name + ' is champion! +' + res.points + ' points');
+  if (res.type === 'champion') { toast(data.name + ' is champion! +' + res.points + ' points'); askForReview(); }
+  if (res.type === 'retired') { toast(data.name + ' won ' + res.wins + ' fights in the pit'); if (res.wins >= 10) askForReview(); }
 }
 function photo() {
   const W = 1920, H = 1080, pr = renderer.getPixelRatio();
@@ -597,9 +613,9 @@ function renderShop() {
   const rec = (k, val) => h('div', { class: 'shoprow' }, h('div', { class: 'what' }, h('small', null, k), h('b', null, String(val))));
   const tabs = {
     Goals: () => [...GOALS].sort((a, b) => (meta.goals[a.id] ? 2 : goalDone(meta, a) ? 0 : 1) - (meta.goals[b.id] ? 2 : goalDone(meta, b) ? 0 : 1)).map(goalRow),
-    Records: () => [rec('Fights won', meta.stats.fightsWon || 0), rec('Titles won', meta.champions), rec('Creatures lost', meta.fallen), rec('Highest rank open', meta.rank), rec('Furthest fight reached', meta.stats.bestFight || 0),
+    Records: () => [rec('Fights won', meta.stats.fightsWon || 0), rec('Titles won', meta.champions), rec('Creatures lost', meta.fallen), rec('Hardest level open', LEVELS[meta.level].name), rec('Hardest title won', meta.stats.bestLevelWon ? LEVELS[meta.stats.bestLevelWon - 1].name : 'None yet'), rec('Best Endless run', (meta.stats.bestEndless || 0) + ' wins'), rec('Gauntlets finished', meta.stats.runs || 0), rec('Total damage dealt', (meta.stats.damage || 0).toLocaleString()), rec('Biggest single hit', meta.stats.biggestHit || 0),
       rec('Elite opponents beaten', meta.stats.elites || 0), rec('Different rewards picked', Object.keys(meta.seen).length + ' of ' + ITEMS.length), rec('Body types crowned', Object.keys(meta.typesWon).length + ' of 8'),
-      ...meta.hall.map((c) => h('div', { class: 'shoprow' }, h('div', { class: 'ico' }, '👑'), h('div', { class: 'what' }, h('b', null, c.name), h('small', null, TEMPLATES[c.type].name + ' · Rank ' + c.rank + ' · ' + new Date(c.when).toLocaleDateString()))))],
+      ...meta.hall.map((c) => h('div', { class: 'shoprow' }, h('div', { class: 'ico' }, '👑'), h('div', { class: 'what' }, h('b', null, c.name), h('small', null, TEMPLATES[c.type].name + ' · ' + (c.level !== undefined ? LEVELS[c.level].name : 'Rank ' + c.rank) + ' · ' + new Date(c.when).toLocaleDateString()))))],
     Bodies: () => Object.entries(TEMPLATES).map(([id, t]) => row('🧬', t.name, t.blurb, TYPE_COST[id], typeOpen(meta, id) && (TYPE_COST[id] ? 'Owned' : 'Free'), () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart))),
     Parts: () => Object.entries(PART_COST).map(([k, cost]) => row(h('img', { src: partThumb(k), alt: '' }), PARTS[k].n, 'Body part for the workshop (' + CATS.find((c) => c[0] === PARTS[k].cat)[1] + ').', cost, partOpen(meta, k), () => buy('part:' + k, cost, PARTS[k].n, renderStart))),
     Weapons: () => itemRows('weapon'), Abilities: () => itemRows('ability'), Relics: () => itemRows('relic'),
@@ -628,7 +644,7 @@ function renderStart() {
   const gift = dailyGift(meta), ready = goalsReady(meta);
   el.replaceChildren(...[h('h1', null, 'Critter ', h('span', null, 'Arena'),
       h('small', { class: 'record' }, h('span', { class: 'runpill', id: 'runpill', onclick: async () => { const r = runsNow(meta); if (r.n >= r.max) return; const a = await showAd(); if (a.ok) { addRun(meta); saveMeta(); tickRunPill(); toast('+1 run'); } else if (a.why) toast(a.why); } }), h('button', { class: 'goalbtn' + (ready ? ' ready' : ''), onclick: () => { shopTab = 'Goals'; renderStart(); } }, 'Goals' + (ready ? ' (' + ready + ')' : '')), h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
-    runOk && h('div', { class: 'card resume', onclick: () => { data = JSON.parse(JSON.stringify(runData)); enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, runData.name + ' is waiting for fight ' + (run.round + 1) + ' of 10. Tap to return to the Colosseum.')),
+    runOk && h('div', { class: 'card resume', onclick: () => { data = JSON.parse(JSON.stringify(runData)); enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, runData.name + ' is waiting for fight ' + (run.round + 1) + (run.endless ? ' in the Endless Pit' : ' of ' + LEVELS[run.level ?? 2].fights + ' (' + LEVELS[run.level ?? 2].name + ')') + '. Tap to return.')),
     !meta.seenIntro && h('div', { class: 'card resume intro' }, h('b', null, 'Welcome to Critter Arena'),
       h('small', null, '1. Pick a body below and build a critter: drag the dots to shape it, add parts, colour it.'), h('small', null, '2. Hit Battle to enter the Colosseum: ten fights to the death, with a reward to choose after each win.'),
       h('small', null, '3. How you build it matters: size is health, teeth and claws are attack, arms hold weapons. Spend the points you earn in the Shop.'),

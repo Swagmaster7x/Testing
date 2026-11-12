@@ -1,7 +1,7 @@
 // Fight rules. Pure maths, no graphics, so the same code runs the arena and the balance tests.
 // A creature's stats come from how it is built: size gives health, teeth, claws and horns give
 // attack, hide and plating give armour, legs and wings give speed.
-export const ROUNDS = 10;
+export const ROUNDS = 10;            // the length of a standard gauntlet; each difficulty sets its own
 export const HEAL = 0.4;            // share of full health restored between fights
 
 const WEAPON = {
@@ -82,11 +82,12 @@ export function traits(s) {
 }
 
 /** How much tougher than its natural stats the opponent in fight `round` (0-based) is. */
-export function oppMul(round, tier = 0) {
-  const boss = round === ROUNDS - 1 ? 1.3 : 1;          // the last fight is against the reigning champion
-  // tier: the Colosseum's difficulty rank; each rank makes every opponent tougher.
-  return { hp: (OPP.hp0 + OPP.hp1 * round) * boss * (1 + 0.1 * tier), atk: (OPP.atk0 + OPP.atk1 * round) * (boss > 1 ? 1.12 : 1) * (1 + 0.07 * tier) };
+export function oppMul(round, tier = 0, boss = false, endless = false) {
+  // tier: how hard the chosen difficulty is; boss: the last fight of a gauntlet (every tenth in endless mode).
+  const b = boss ? 1.3 : 1, grow = endless ? Math.pow(ENDLESS.grow, Math.max(0, round - ENDLESS.from)) : 1;      // endless mode keeps accelerating
+  return { hp: (OPP.hp0 + OPP.hp1 * round) * b * (1 + 0.1 * tier) * grow, atk: (OPP.atk0 + OPP.atk1 * round) * (boss ? 1.12 : 1) * (1 + 0.07 * tier) * grow };
 }
+export const ENDLESS = { slope: 0.7, from: 14, grow: 1.03 };
 export const OPP = { hp0: 0.34, hp1: 0.093, atk0: 0.4, atk1: 0.086 };   // tuned with simulated gauntlets, rewards included
 
 const MODS = ['hpP', 'atkP', 'atkF', 'spdP', 'crit', 'critD', 'dodge', 'def', 'pierce', 'lifesteal', 'thorns', 'regen', 'bleedC', 'poisonC', 'poisonD', 'burnC', 'stunC', 'stunDur', 'dbl', 'ramp', 'lowP', 'firstX',

@@ -105,7 +105,7 @@ export const BOOSTS = [
   { id: 'head', name: 'Head Start', icon: '🎁', max: 1, cost: () => 800, text: 'Choose a reward before the first fight.' },
   { id: 'revive', name: 'Revive', icon: '✨', max: 3, cost: () => 500, text: 'Brings a dead creature back once, mid-gauntlet, at half health. Used up when spent. Hold up to three.', consumable: true },
 ];
-export const newMeta = () => ({ points: 0, champions: 0, fallen: 0, unlocked: {}, boosts: {}, revives: 0, runs: null, rank: 0, rankSel: 0, stats: {}, seen: {}, typesWon: {}, goals: {}, hall: [], daily: null });
+export const newMeta = () => ({ points: 0, champions: 0, fallen: 0, unlocked: {}, boosts: {}, revives: 0, runs: null, level: 0, levelSel: 0, stats: {}, seen: {}, typesWon: {}, goals: {}, hall: [], daily: null });
 
 // ------------------------------------------------------------------ runs (energy): a few gauntlets, recharging in real time
 export const RUN_MAX = 5, RUN_MS = 30 * 60 * 1000;          // one run comes back every 30 minutes
@@ -127,7 +127,7 @@ export const owns = (meta, key) => !!meta.unlocked[key];
 export const typeOpen = (meta, t) => FREE_TYPES.includes(t) || owns(meta, 'type:' + t);
 export const partOpen = (meta, k) => !PART_COST[k] || owns(meta, 'part:' + k);
 export const itemOpen = (meta, it) => !it.cost || owns(meta, 'item:' + it.cat + ':' + it.id);
-export const fightPoints = (round, tier = 0, elite = false) => Math.round(15 * (round + 1) * (1 + 0.25 * tier) * (elite ? 1.5 : 1));          // round is 0-based
+export const fightPoints = (round, pay = 1, elite = false) => Math.round((15 * Math.min(round + 1, 10) + 5 * Math.max(0, round - 9)) * pay * (elite ? 1.5 : 1));          // round is 0-based
 
 // ------------------------------------------------------------------ loadouts and drafting
 export const newLoad = () => ({ weapons: [], relics: [], abilities: [] });
@@ -201,14 +201,24 @@ export function enemyLoad(rand, body, round) {
 }
 
 // ------------------------------------------------------------------ reasons to come back: ranks, daily gift, goals, elites
-export const MAX_RANK = 10;
-export const rankPoints = (tier) => 1 + 0.25 * tier;                       // higher ranks pay more
+/**
+ * Difficulty levels. Harder ones are longer as well as tougher: fights is the length of the gauntlet,
+ * tier strengthens every opponent, slope is how fast opponents grow from one fight to the next
+ * (flatter for long gauntlets, or rewards could never keep up), and pay multiplies all points.
+ * Each is unlocked by winning the title on the one before.
+ */
+export const LEVELS = [
+  { name: 'Novice', fights: 6, tier: 0, slope: 1, pay: 0.8 }, { name: 'Bronze', fights: 8, tier: 0, slope: 1, pay: 1 }, { name: 'Silver', fights: 10, tier: 0, slope: 1, pay: 1.25 },
+  { name: 'Gold', fights: 12, tier: 0, slope: 0.9, pay: 1.6 }, { name: 'Platinum', fights: 14, tier: 0, slope: 0.84, pay: 2 }, { name: 'Diamond', fights: 16, tier: 1, slope: 0.78, pay: 2.5 },
+  { name: 'Master', fights: 18, tier: 1, slope: 0.74, pay: 3.2 }, { name: 'Legend', fights: 20, tier: 2, slope: 0.7, pay: 4 },
+];
+export const titlePoints = (level, hpFrac) => Math.round((100 * LEVELS[level].fights + 500 * Math.min(1, Math.max(0, hpFrac))) * LEVELS[level].pay);
 /** Elite opponents: a nasty twist on one fight, worth half as many points again. */
 export const ELITES = [
   { id: 'enraged', name: 'Enraged', mods: { atkP: 0.25 } }, { id: 'armoured', name: 'Iron-hided', mods: { def: 0.15 } }, { id: 'swift', name: 'Swift', mods: { spdP: 0.2, dodge: 0.05 } },
   { id: 'giant', name: 'Giant', mods: { hpP: 0.35 } }, { id: 'venomous', name: 'Venomous', mods: { poisonC: 0.4, poisonD: 2 } }, { id: 'thorny', name: 'Thorned', mods: { thorns: 0.15 } },
 ];
-export function eliteFor(rand, round) { return round >= 2 && round < 9 && rand() < 0.28 ? ELITES[Math.floor(rand() * ELITES.length)] : null; }
+export function eliteFor(rand, round, boss) { return round >= 2 && !boss && rand() < Math.min(0.5, 0.28 + 0.01 * Math.max(0, round - 9)) ? ELITES[Math.floor(rand() * ELITES.length)] : null; }
 
 const dayKey = (now) => { const d = new Date(now); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 /** The daily gift: what is on offer today, or null if it was already claimed. */
@@ -237,9 +247,13 @@ export const GOALS = [
   { id: 'champ3', name: 'Dynasty', text: 'Win the title three times.', pts: 600, prog: (m) => [m.champions || 0, 3] },
   { id: 'types3', name: 'Many shapes', text: 'Win the title with three different body types.', pts: 600, prog: (m) => [count(m.typesWon), 3] },
   { id: 'types8', name: 'Master breeder', text: 'Win the title with all eight body types.', pts: 2000, prog: (m) => [count(m.typesWon), 8] },
-  { id: 'rank3', name: 'Rising star', text: 'Win the title at Rank 3.', pts: 500, prog: (m) => [st(m, 'bestRankWon'), 3] },
-  { id: 'rank6', name: 'Terror of the pits', text: 'Win the title at Rank 6.', pts: 1200, prog: (m) => [st(m, 'bestRankWon'), 6] },
-  { id: 'rank10', name: 'Undying', text: 'Win the title at Rank 10.', pts: 3000, prog: (m) => [st(m, 'bestRankWon'), 10] },
+  { id: 'silver', name: 'Rising star', text: 'Win the title on Silver.', pts: 400, prog: (m) => [st(m, 'bestLevelWon'), 3] },
+  { id: 'plat', name: 'Terror of the pits', text: 'Win the title on Platinum.', pts: 1000, prog: (m) => [st(m, 'bestLevelWon'), 5] },
+  { id: 'legend2', name: 'Undying', text: 'Win the title on Legend.', pts: 3000, prog: (m) => [st(m, 'bestLevelWon'), 8] },
+  { id: 'end10', name: 'Into the pit', text: 'Win 10 fights in one Endless run.', pts: 250, prog: (m) => [st(m, 'bestEndless'), 10] },
+  { id: 'end15', name: 'Pit dweller', text: 'Win 15 fights in one Endless run.', pts: 600, prog: (m) => [st(m, 'bestEndless'), 15] },
+  { id: 'end20', name: 'Bottomless', text: 'Win 20 fights in one Endless run.', pts: 1500, prog: (m) => [st(m, 'bestEndless'), 20] },
+  { id: 'dmg', name: 'Heavy hitter', text: 'Land a single hit for 100 damage or more.', pts: 200, prog: (m) => [st(m, 'biggestHit'), 100] },
   { id: 'elite', name: 'Giant killer', text: 'Defeat 10 elite opponents.', pts: 250, prog: (m) => [st(m, 'elites'), 10] },
   { id: 'armed', name: 'Armed to the teeth', text: 'Hold four weapons at once.', pts: 200, prog: (m) => [st(m, 'mostWeapons'), 4] },
   { id: 'seen20', name: 'Collector', text: 'Pick 20 different rewards.', pts: 150, prog: (m) => [count(m.seen), 20] },

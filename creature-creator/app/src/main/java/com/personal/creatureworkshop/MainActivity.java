@@ -198,7 +198,21 @@ public class MainActivity extends Activity {
         runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.ccToast && window.ccToast(" + org.json.JSONObject.quote(msg) + ")", null); });
     }
 
+    /** Google Play's own rating card. Play decides whether it really shows (it is rate-limited), and it never shows outside a Play install. */
+    private void requestReview() {
+        com.google.android.play.core.review.ReviewManager manager = com.google.android.play.core.review.ReviewManagerFactory.create(this);
+        manager.requestReviewFlow().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && !isFinishing()) manager.launchReviewFlow(this, task.getResult());
+        });
+    }
+
     private class Bridge {
+        /** Called by the page after a happy moment (a title won, a long Endless run). */
+        @JavascriptInterface
+        public void requestReview() {
+            runOnUiThread(MainActivity.this::requestReview);
+        }
+
         /** Called by the page when the player chooses to watch an ad for a reward. */
         @JavascriptInterface
         public void showRewarded() {
