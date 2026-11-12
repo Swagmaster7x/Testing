@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -69,9 +73,12 @@ import com.personal.mealgym.ui.theme.headingFamily
 fun LookGrid(selectedKey: String, custom: CustomLook?, onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     val cards: List<Pair<String, Look>> = Looks.builtIn.map { it.key to it } +
         (Looks.CUSTOM to Looks.custom(custom ?: CustomLook()))
+    // Two to a row, or one when the phone's text size is turned up so names don't break mid-word.
+    val perRow = if (LocalDensity.current.fontScale >= 1.3f) 1 else 2
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        cards.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        cards.chunked(perRow).forEach { row ->
+            // Both cards in a row take the taller one's height, so big text never gets cut off.
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
                 row.forEach { (key, look) ->
                     LookCard(
                         look = look,
@@ -79,10 +86,10 @@ fun LookGrid(selectedKey: String, custom: CustomLook?, onPick: (String) -> Unit,
                         blurb = if (key == Looks.CUSTOM) "Pick colours, fonts and more" else look.blurb,
                         selected = key == selectedKey,
                         onClick = { onPick(key) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+                if (row.size < perRow) Spacer(Modifier.weight(1f))
             }
         }
     }
@@ -98,7 +105,7 @@ fun LookCard(look: Look, title: String, blurb: String, selected: Boolean, onClic
             shape = MaterialTheme.shapes.medium,
             border = BorderStroke(if (selected) 3.dp else 1.dp, if (selected) ring else quiet),
             modifier = modifier
-                .height(116.dp)
+                .heightIn(min = 116.dp)
                 .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .semantics { contentDescription = "$title look" },
         ) {
@@ -121,7 +128,7 @@ fun LookCard(look: Look, title: String, blurb: String, selected: Boolean, onClic
                         title,
                         style = MaterialThemeCarvedLabel,
                         color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(

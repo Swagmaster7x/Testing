@@ -124,6 +124,21 @@ class LooksFlowTest {
         assertEquals(made, CustomLook.decode(alex().customLook))
     }
 
+    /** Large system text (Settings > Display > Font size): the look cards and creator still fit. */
+    @Test
+    @Config(sdk = [35], qualifiers = "w360dp-h640dp-xhdpi", fontScale = 1.5f)
+    fun bigText() {
+        compose.onAllNodes(hasContentDescription("Settings")).onFirst().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Change look").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithText("Change look").onFirst().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Ready-made").fetchSemanticsNodes().isNotEmpty() }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/looks-10-big-text.png")
+        scrollTo(hasContentDescription("Create your own look"))
+        compose.onAllNodesWithContentDescription("Create your own look").onFirst().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Make your own").fetchSemanticsNodes().isNotEmpty() }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/looks-11-big-text-creator.png")
+    }
+
     /** "Deep sea is on." sits over the bottom of the screen for a few seconds. */
     private fun waitForMessageToClear() {
         compose.waitUntil(15_000) { compose.onAllNodesWithText(" is on.", substring = true).fetchSemanticsNodes().isEmpty() }
