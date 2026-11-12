@@ -13,7 +13,7 @@ import java.io.File
 /** Checks the bundled seed file against the spec: 19 recipes, 4 workout days. */
 class SeedFileTest {
 
-    private val seed = SeedParser.parse(File("src/main/assets/seed.json").readText())
+    private val seed = SeedParser.parse(File("src/personal/assets/seed.json").readText())
 
     private val firstRelease = seed.recipes.filter { it.since == 1 }
     private val swagDays = seed.workoutDays.filter { it.profile == "swag" }

@@ -7,14 +7,14 @@ written instructions. The app bundles what this script saves, so it stays offlin
 
   python3 tools/exercise_demos.py match
       Downloads the exercise list, matches every exercise and swap name in both workout plans
-      (app/src/main/assets/seed.json) and writes:
+      (app/src/personal/assets/seed.json) and writes:
         tools/exercise-matches.json     editable: name -> dataset id (or null for no match)
         tools/exercise-match-report.md  the report to review before bundling
       Existing choices in exercise-matches.json marked "checked": true are kept as they are.
 
   python3 tools/exercise_demos.py bundle
       Downloads the two images for every matched exercise, shrinks them to WebP and writes
-      app/src/main/assets/demos/<id>/0.webp, 1.webp and app/src/main/assets/demos/demos.json.
+      app/src/personal/assets/demos/<id>/0.webp, 1.webp and app/src/personal/assets/demos/demos.json.
       Needs Pillow (pip install pillow).
 """
 from __future__ import annotations
@@ -28,10 +28,10 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SEED = ROOT / "app/src/main/assets/seed.json"
+SEED = ROOT / "app/src/personal/assets/seed.json"
 MATCHES = ROOT / "tools/exercise-matches.json"
 REPORT = ROOT / "tools/exercise-match-report.md"
-DEMOS = ROOT / "app/src/main/assets/demos"
+DEMOS = ROOT / "app/src/personal/assets/demos"
 BASE = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main"
 
 # Names in our plans that the dataset words differently. Values are dataset names.

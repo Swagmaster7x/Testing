@@ -8,7 +8,7 @@ import java.io.File
 
 /** The bundled demos cover every exercise and swap in both plans. */
 class DemoFileTest {
-    private val assets = File("src/main/assets")
+    private val assets = File("src/personal/assets")
     private val demos = DemoRepository.parse(File(assets, "demos/demos.json").readText())
     private val seed = SeedParser.parse(File(assets, "seed.json").readText())
 

@@ -242,9 +242,19 @@ class ScreenshotTest {
         shot("5-shopping")
     }
 
+    /** The Gym tab opens on the workout on training days and on the rest card otherwise. */
+    private fun waitForGym() {
+        compose.waitUntil(15_000) {
+            listOf("Do a different day", "Train anyway", "Start another session").any {
+                compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
+        compose.waitForIdle()
+    }
+
     private fun startWorkout() {
         tab("Gym")
-        waitForText("Tips")
+        waitForGym()
         if (compose.onAllNodesWithText("Train anyway").fetchSemanticsNodes().isNotEmpty()) {
             compose.onAllNodesWithText("Train anyway").onFirst().performClick()
         }
@@ -254,7 +264,7 @@ class ScreenshotTest {
     @Test
     fun gym() {
         tab("Gym")
-        waitForText("Tips")
+        waitForGym()
         shot("6-gym")
         startWorkout()
         compose.onAllNodesWithText("1").onFirst().performClick()

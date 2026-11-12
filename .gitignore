@@ -11,3 +11,8 @@
 .cxx/
 *.apk
 *.aab
+
+# Play Store upload key (never commit)
+keystore.properties
+*.jks
+upload-keystore*
