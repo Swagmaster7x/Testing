@@ -1,6 +1,8 @@
 package com.personal.mealgym
 
 import android.content.Context
+import com.personal.mealgym.ads.Monetization
+import com.personal.mealgym.ads.createMonetization
 import com.personal.mealgym.data.BackupManager
 import com.personal.mealgym.data.DemoRepository
 import com.personal.mealgym.data.GymRepository
@@ -54,6 +56,7 @@ class AppContainer(context: Context) {
     val demos = DemoRepository(appContext)
     val workoutDraft = WorkoutDraftStore(File(appContext.filesDir, "workout-draft.json"), appScope)
     val restTimer = RestTimerController(appContext, appScope)
+    val monetization: Monetization = createMonetization(appContext, appScope, settings)
 
     private val _ready = MutableStateFlow(false)
 

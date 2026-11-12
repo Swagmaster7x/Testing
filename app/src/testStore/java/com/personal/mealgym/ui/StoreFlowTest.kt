@@ -102,12 +102,21 @@ class StoreFlowTest {
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()
         waitForText("People")
         waitForText("Open now")
+        waitForText("Remove ads")
         shot("store-03-people")
 
         compose.onAllNodesWithText("Add a person").onFirst().performClick()
         waitForText("Starter workout plan")
         shot("store-04-add-person")
         compose.onAllNodesWithText("Add a person").onFirst().assertExists()
+    }
+
+    @Test
+    fun bannersStayOffWorkoutsAndCooking() {
+        assertEquals(setOf(Routes.PLAN, Routes.COOK, Routes.RECIPE, Routes.HISTORY), Routes.withBanner)
+        // Ads wait for consent: nothing is requested in a test run.
+        assertEquals(false, container.monetization.adsRemoved.value)
+        assertTrue(container.monetization.available)
     }
 
     private fun scrollTo(text: String) {

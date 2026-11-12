@@ -62,6 +62,7 @@ android {
             resValue("string", "app_name", "Meal & Gym")
             buildConfigField("boolean", "STORE", "false")
             buildConfigField("String", "BANNER_AD_UNIT", "\"\"")
+            buildConfigField("String", "PRIVACY_POLICY_URL", "\"\"")
             manifestPlaceholders["admobAppId"] = ""
         }
         // The Google Play edition: anyone's profiles, ads with consent, a Remove ads purchase.
@@ -73,11 +74,17 @@ android {
             resValue("string", "app_name", storeProperty("store.appName", "Meal & Gym"))
             buildConfigField("boolean", "STORE", "true")
             buildConfigField("String", "BANNER_AD_UNIT", "\"${storeProperty("store.admobBannerId", testBannerUnitId)}\"")
+            buildConfigField("String", "PRIVACY_POLICY_URL", "\"${storeProperty("store.privacyPolicyUrl", "")}\"")
             manifestPlaceholders["admobAppId"] = storeProperty("store.admobAppId", testAdMobAppId)
         }
     }
 
     buildTypes {
+        // Debug builds always get Google's test ads, so tapping one on your own phone is never an invalid click.
+        debug {
+            buildConfigField("String", "BANNER_AD_UNIT", "\"$testBannerUnitId\"")
+            manifestPlaceholders["admobAppId"] = testAdMobAppId
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -122,6 +129,11 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
+
+    // Store edition only: banner ads, the consent prompt and the Remove ads purchase.
+    "storeImplementation"(libs.play.services.ads)
+    "storeImplementation"(libs.user.messaging.platform)
+    "storeImplementation"(libs.billing.ktx)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

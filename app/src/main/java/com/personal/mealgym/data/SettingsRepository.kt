@@ -83,6 +83,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
     private object Shared {
         val pantryStaples = stringSetPreferencesKey("pantry_staples")
         val activeProfile = longPreferencesKey("active_profile")
+        val adsRemoved = booleanPreferencesKey("ads_removed")
     }
 
     private fun name(base: String, profileId: Long) = if (profileId == Profiles.FIRST) base else "p${profileId}_$base"
@@ -95,6 +96,11 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
     }
 
     suspend fun setActiveProfile(profileId: Long) = store.edit { it[Shared.activeProfile] = profileId }
+
+    /** Store edition: Remove ads was bought (kept here so ads don't flash in before Google Play answers). */
+    val adsRemoved: Flow<Boolean> = store.data.map { it[Shared.adsRemoved] ?: false }
+
+    suspend fun setAdsRemoved(removed: Boolean) = store.edit { it[Shared.adsRemoved] = removed }
 
     /** Shows the door chooser again on next composition. */
     suspend fun clearActiveProfile() = store.edit { it.remove(Shared.activeProfile) }

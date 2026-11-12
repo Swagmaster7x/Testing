@@ -1,6 +1,8 @@
 package com.personal.mealgym.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -64,6 +66,9 @@ object Routes {
     const val DEMO = "demo/{name}"
     const val PERSON = "person/{id}"
 
+    /** Screens that may show a banner ad in the store edition. */
+    val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY)
+
     fun recipe(id: Long) = "recipe/$id"
     fun cooking(id: Long) = "cooking/$id"
     fun recipeEdit(id: Long = 0) = "recipe-edit/$id"
@@ -117,6 +122,8 @@ private val glamTabs = listOf(
 @Composable
 fun MealGymNavHost(
     profile: Profile,
+    /** The store edition's ad banner; nothing in the personal edition. */
+    banner: @Composable (Modifier) -> Unit = {},
     pendingOpen: StateFlow<String?>,
     onOpenHandled: () -> Unit,
     navController: NavHostController = rememberNavController(),
@@ -139,15 +146,22 @@ fun MealGymNavHost(
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onBackground,
         bottomBar = {
-            if (tabs.any { it.route == currentRoute }) {
-                NavigationBar {
-                    tabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = { navigator.tab(tab.route) },
-                            icon = { Icon(tab.icon(), contentDescription = null) },
-                            label = { Text(tab.label) },
-                        )
+            val showTabs = tabs.any { it.route == currentRoute }
+            Column {
+                // Banners only where people browse: never on Today, the gym, the sauna or while cooking.
+                if (currentRoute in Routes.withBanner) {
+                    banner(if (showTabs) Modifier else Modifier.navigationBarsPadding())
+                }
+                if (showTabs) {
+                    NavigationBar {
+                        tabs.forEach { tab ->
+                            NavigationBarItem(
+                                selected = currentRoute == tab.route,
+                                onClick = { navigator.tab(tab.route) },
+                                icon = { Icon(tab.icon(), contentDescription = null) },
+                                label = { Text(tab.label) },
+                            )
+                        }
                     }
                 }
             }

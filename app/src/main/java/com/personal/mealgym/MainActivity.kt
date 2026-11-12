@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) pendingOpen.value = intent?.getStringExtra(EXTRA_OPEN)
         val container = (application as MealGymApp).container
+        container.monetization.onActivityCreated(this)
         setContent {
             val opening by container.opening.collectAsStateWithLifecycle()
             when (val o = opening) {
@@ -50,6 +51,7 @@ class MainActivity : ComponentActivity() {
                         CompositionLocalProvider(LocalCopy provides SideCopy.forProfile(profile)) {
                             MealGymNavHost(
                                 profile = profile,
+                                banner = { container.monetization.Banner(it) },
                                 pendingOpen = pendingOpen,
                                 onOpenHandled = { pendingOpen.value = null },
                             )

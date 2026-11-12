@@ -2,7 +2,9 @@
 
 package com.personal.mealgym.ui.settings
 
+import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -39,6 +41,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -81,6 +85,13 @@ data class SettingsUi(
 
 class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
     val profileId = c.currentProfileId()
+
+    /** Store edition: ads, Remove ads and privacy choices. */
+    val ads = c.monetization
+
+    init {
+        viewModelScope.launch { ads.messages.collect { say(it) } }
+    }
 
     val ui: StateFlow<SettingsUi?> = combine(
         c.settings.settings(profileId),
@@ -201,6 +212,12 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
         uri?.let(vm::exportPack)
     }
 
+    val activity = LocalActivity.current
+    val context = LocalContext.current
+    val adsRemoved by vm.ads.adsRemoved.collectAsStateWithLifecycle()
+    val price by vm.ads.removeAdsPrice.collectAsStateWithLifecycle()
+    val privacyRequired by vm.ads.privacyOptionsRequired.collectAsStateWithLifecycle()
+
     AppScaffold(
         topBar = { DetailTopBar(title = "Settings", onBack = nav::back) },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -246,6 +263,37 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                             OutlinedButton(onClick = { vm.switchTo(other.id) }) { Text("Switch to ${other.name}") }
                         }
                     }
+                }
+            }
+            if (vm.ads.available) {
+                item { SectionHeader("Ads") }
+                item {
+                    if (adsRemoved) {
+                        Text("Ads are off on this Google account. Thank you for supporting the app!", style = MaterialTheme.typography.bodyLarge)
+                    } else {
+                        Text(
+                            "A small banner shows on the Plan, Cook, recipe and History screens. Never during a workout, the sauna timer or cooking.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) {
+                            AppButton(onClick = { activity?.let(vm.ads::buyRemoveAds) }) {
+                                Text(price?.let { "Remove ads · $it" } ?: "Remove ads")
+                            }
+                            TextButton(onClick = vm.ads::restorePurchase) { Text("Restore purchase") }
+                        }
+                    }
+                }
+                if (privacyRequired) item {
+                    ListItem(
+                        headlineContent = { Text("Privacy choices") },
+                        supportingContent = { Text("Change what you agreed to for ads.") },
+                        modifier = Modifier.clickable { activity?.let(vm.ads::showPrivacyOptions) },
+                    )
                 }
             }
             item { SectionHeader("Gym") }
@@ -428,10 +476,20 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
 
             item { SectionHeader("More") }
             item { ListItem(headlineContent = { Text("History") }, modifier = Modifier.clickable(onClick = nav::history)) }
+            if (BuildConfig.PRIVACY_POLICY_URL.isNotBlank()) item {
+                ListItem(
+                    headlineContent = { Text("Privacy policy") },
+                    modifier = Modifier.clickable {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, BuildConfig.PRIVACY_POLICY_URL.toUri()))
+                    },
+                )
+            }
             item {
                 Text(
                     if (BuildConfig.STORE) {
-                        "Your plans, workouts and history stay on this phone unless you export a backup or share a shopping list. $NOT_ADVICE"
+                        "Your plans, workouts and history stay on this phone unless you export a backup or share a shopping list. " +
+                            "The free version shows ads from Google AdMob, which can use your phone's advertising ID; where the law requires it you're asked first. " +
+                            NOT_ADVICE
                     } else {
                         "Meal & Gym works offline. Nothing leaves this phone unless you export a backup or share a shopping list. " +
                             "Exercise photos and instructions come from free-exercise-db, which is in the public domain."
