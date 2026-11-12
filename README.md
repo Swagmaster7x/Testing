@@ -14,6 +14,10 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26)
 - **Shopping across sides.** "Just mine" or "Both of us" on the shopping list (Ashley's lunches and dinners count as about three-quarters of a serving), "Add to the other side too" on a planned meal, and a meal plan can be exported on one phone and imported on the other (there is no sync).
 - **Exercise demos.** Each exercise shows a start photo; tapping it opens the start and end positions flipping like a GIF, with written steps. Photos and steps come from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain), bundled with `tools/exercise_demos.py` after reviewing `tools/exercise-match-report.md`. Three moves without a good photo get form cues instead, and every demo has a "Watch a demo" button that opens a web search in the phone's browser.
 
+## Also in this repository: Skate Escape
+
+A separate app in `skater/`: an endless runner where a skater girl outruns an angry cyclist. See [skater/README.md](skater/README.md). Build it with `./gradlew :skater:assembleDebug`.
+
 ## Put it on your phone
 
 You need `app-debug.apk`, either the one from the Claude session or one you build (below).

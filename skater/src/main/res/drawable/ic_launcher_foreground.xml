@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A skateboard, tilted mid-trick. -->
+    <group android:pivotX="54" android:pivotY="60" android:rotation="-18">
+        <path android:fillColor="#F4EBD0" android:pathData="M40,68m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+        <path android:fillColor="#F4EBD0" android:pathData="M68,68m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+        <path android:fillColor="#20232B" android:pathData="M40,68m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+        <path android:fillColor="#20232B" android:pathData="M68,68m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+        <path android:fillColor="#7B2FF7" android:pathData="M31,53h46a5,5 0,0 1,0 10h-46a5,5 0,0 1,0 -10z" />
+        <path android:fillColor="#FF4FA3" android:pathData="M48,53h12v10h-12z" />
+    </group>
+    <!-- Coin. -->
+    <path android:fillColor="#C98A00" android:pathData="M72,40m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <path android:fillColor="#FFD21F" android:pathData="M72,40m-5.4,0a5.4,5.4 0,1 1,10.8 0a5.4,5.4 0,1 1,-10.8 0" />
+</vector>

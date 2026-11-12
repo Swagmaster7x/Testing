@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MealGym"
 include(":app")
+include(":skater")
