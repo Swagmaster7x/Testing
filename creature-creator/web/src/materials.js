@@ -58,7 +58,7 @@ export function makeMaterials() {
     uBase: { value: new THREE.Color() }, uSecond: { value: new THREE.Color() }, uBellyCol: { value: new THREE.Color() },
     uBellyDir: { value: new THREE.Vector3(0, -1, 0) }, uBelly: { value: 0.8 },
     uPattern: { value: 0 }, uPatScale: { value: 1 }, uTex: { value: 0 }, uTexScale: { value: 22 },
-    uFurLen: { value: 0 }, uFurDensity: { value: 90 }, uDroop: { value: 0.3 },
+    uInv: { value: new THREE.Matrix4() }, uFurLen: { value: 0 }, uFurDensity: { value: 90 }, uDroop: { value: 0.3 },
   };
   const skinMat = (shell) => {
     const m = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0 });
@@ -66,10 +66,11 @@ export function makeMaterials() {
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U, { uShell: { value: shell } });
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float fur;\nuniform float uShell; uniform float uFurLen; uniform float uDroop;\nvarying vec3 vWPos; varying vec3 vWNrm;')
+        .replace('#include <common>', '#include <common>\nattribute float fur;\nuniform float uShell; uniform float uFurLen; uniform float uDroop; uniform mat4 uInv;\nvarying vec3 vWPos; varying vec3 vWNrm;')
         .replace('#include <begin_vertex>', `vec3 transformed = vec3(position);
-          vWPos = (modelMatrix * vec4(position, 1.0)).xyz;
-          vWNrm = normalize(mat3(modelMatrix) * normal);
+          // Patterns and fur are worked out in the creature's own space (uInv undoes how it stands in the scene).
+          vWPos = (uInv * modelMatrix * vec4(position, 1.0)).xyz;
+          vWNrm = normalize(mat3(uInv) * mat3(modelMatrix) * normal);
           #ifdef FUR_SHELL
           float fl = uShell * uFurLen * fur;
           transformed += normal * fl;

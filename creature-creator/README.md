@@ -12,6 +12,8 @@ It is an original take on the "build a creature from parts" idea: its own parts,
 - **Easy placing:** tap a part to add it where it belongs for that body type. Tap it on the creature and drag to slide it anywhere on the body. Parts off the centre line are mirrored automatically. Every part has its own sliders (size, length, curl, bend, teeth and so on).
 - **Male and female:** one tap switches between the two. Build, limb thickness and the size of horns, crests and manes change, and the "Difference" slider sets how strongly. Any part can be marked "Male only" or "Female only" (antlers, a mane, lashes).
 - **Skin:** smooth, fur (real layered fur with length and shagginess), scales, shell or slick; eight patterns; seven colour slots (main, pattern, belly, eyes, horn and claw, hair and feather, wing skin).
+- **Random creatures:** the "Random" card rolls a surprise creature (random body type, shape, colours and parts) that you can keep editing.
+- **The Colosseum:** the Battle button enters your creature in a gauntlet of ten fights to the death against random creatures, each tougher than the last, ending with the reigning champion. Its stats come from how you built it: size gives health; teeth, claws, horns and clubs give attack; scales, shell and plates give armour; legs and wings give speed; eyes help it land hits; stingers poison and spike rows hurt attackers. Fights run by themselves, and you time two buttons, Power strike and Guard. Win all ten and the creature is crowned champion and you bank points (1000 plus up to 500 for health left). If it dies it is deleted for good. Closing the app between fights keeps your place.
 - **Extras:** undo and redo, auto-spin, save and reopen creatures, and a Photo button that saves a 1920x1080 picture to `Pictures/CreatureWorkshop`.
 
 ## Put it on your phone
@@ -37,6 +39,9 @@ web/src/templates.js   the eight body types: starting spine, where new parts lan
 web/src/creature.js    turns a creature (plain JSON) into a 3D model; male/female differences
 web/src/materials.js   skin patterns and fur (one shader), eye textures
 web/src/main.js        scene, touch controls, panels, save/load, photo
+web/src/random.js      the random creature generator (also makes every opponent)
+web/src/battle.js      fight rules and how a build turns into stats (no graphics)
+web/src/arena.js       the colosseum scene, fight animation and its screens
 app/                   the Android shell: a full-screen landscape WebView, back button, photo saving
 ```
 
@@ -44,4 +49,6 @@ Everything is generated in code. There are no model or texture files. The only t
 
 ## Tested and not tested
 
-The editor was exercised in headless Chromium at a phone-sized landscape screen with simulated touches: every part on every body type, spine dragging, tap to select, drag to move, sliders, male and female, patterns, undo, save and photo. The APK was built and its signature verified. It has not been run on a physical phone or an emulator, so the Android-only pieces (hiding the system bars, the back button, saving a photo to the gallery) are untested, and speed on an older phone with long fur is unknown.
+The editor was exercised in headless Chromium at a phone-sized landscape screen with simulated touches: every part on every body type, spine dragging, tap to select, drag to move, sliders, male and female, patterns, undo, save and photo. The battle mode was run the same way with the clock driven by a script: a full gauntlet lost (creature deleted, back to the start screen), a full gauntlet won (champion screen, points banked), and quitting and resuming between fights. Balance was tuned with a few thousand simulated gauntlets: a starter creature usually wins five to seven fights, and one built for fighting takes the title about two times in three with good timing. The APK was built and its signature verified.
+
+It has not been run on a physical phone or an emulator, so the Android-only pieces (hiding the system bars, the back button, saving a photo to the gallery, sound) are untested, fights have not been watched at real speed, and speed on an older phone with long fur is unknown.

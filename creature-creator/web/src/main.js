@@ -5,6 +5,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
+import { createArena } from './arena.js';
+import { randomCreature } from './random.js';
 import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp } from './creature.js';
 
 const $ = (id) => document.getElementById(id);
@@ -189,6 +191,7 @@ let freeRect = { x: 0, y: 0, w: 1, h: 1 };
 function layout() {
   const W = window.innerWidth, H = window.innerHeight;
   renderer.setSize(W, H, false);
+  if (arena.active) { camera.clearViewOffset(); camera.aspect = W / H; camera.zoom = 1; camera.updateProjectionMatrix(); return; }
   let L = 0, R = 0, T = 0;
   if (inEditor) {
     L = $('left').getBoundingClientRect().right; T = $('topbar').getBoundingClientRect().bottom;
@@ -202,11 +205,13 @@ function layout() {
   camera.zoom = Math.min(freeRect.w, freeRect.h * 1.15) * 0.82 / H;
   camera.updateProjectionMatrix(); dirty = true;
 }
-window.addEventListener('resize', () => { if (inEditor) renderUI(); else layout(); });
+window.addEventListener('resize', () => { if (inEditor && !arena.active) renderUI(); else layout(); });
 let last = performance.now();
 function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min((t - last) / 1000, 0.1); last = t;
+  if (window.__ccPause) return;               // test hook: lets a script drive frames by hand
+  if (arena.active) { arena.update(dt, t / 1000); renderer.render(scene, camera); return; }
   if (!inEditor || !cr) return;
   controls.orbit.autoRotate = spin; controls.orbit.update(dt);
   if (pendingRebuild) { pendingRebuild = false; rebuild(); }
@@ -437,7 +442,8 @@ function renderTop() {
     h('button', { disabled: !redo.length, onclick: () => { if (redo.length) { const s = redo.pop(); undo.push(s); restore(s); } } }, 'Redo'),
     h('button', { class: spin ? 'on' : '', onclick: () => { spin = !spin; renderTop(); } }, 'Spin'),
     h('button', { onclick: photo }, 'Photo'),
-    h('button', { onclick: save }, 'Save'));
+    h('button', { onclick: () => save() }, 'Save'),
+    h('button', { class: 'battle', onclick: enterBattle }, 'Battle'));
 }
 function setSex(s) { data.sex = s; rebuild(); commit(); renderUI(); }
 function renderUI() {
@@ -446,12 +452,47 @@ function renderUI() {
 }
 
 // ------------------------------------------------------------------ save, photo, start screen
-function save() {
+function save(quiet) {
   if (!data.id) data.id = 'c' + Date.now().toString(36);
   const list = store.get('cc.saved', []).filter((c) => c.id !== data.id);
   list.unshift({ id: data.id, name: data.name, thumb: creatureThumb(data), data: JSON.parse(JSON.stringify(data)) });
   store.set('cc.saved', list); store.set('cc.current', data);
-  toast('Saved "' + data.name + '"');
+  if (!quiet) toast('Saved "' + data.name + '"');
+}
+
+// ------------------------------------------------------------------ colosseum
+const arena = createArena({ scene, camera, M, h, store, onDone: battleDone });
+function enterBattle(run) {
+  save(true);
+  sel = null; controls.orbit.enabled = false;
+  $('editor').classList.add('hidden'); $('start').classList.add('hidden');
+  stage.visible = overlay.visible = false;
+  applyLook(M, data.look, TEMPLATES[data.type].bellyDir);
+  arena.start(data, run && run.id === data.id ? run : null);
+  layout();
+}
+function battleDone(res) {
+  stage.visible = overlay.visible = true; controls.orbit.enabled = true;
+  M.U.uInv.value.identity();
+  for (const m of [M.skin, ...M.shells]) m.emissive.setRGB(0, 0, 0);
+  const rec = store.get('cc.record', { points: 0, champions: 0, fallen: 0 });
+  if (res.type === 'dead') {
+    rec.fallen++; store.set('cc.record', rec);
+    store.set('cc.saved', store.get('cc.saved', []).filter((c) => c.id !== data.id));
+    store.set('cc.current', null);
+    if (cr) { stage.remove(cr.group); disposeTree(cr.group); cr = null; }
+    data = null; inEditor = false;
+    $('start').classList.remove('hidden'); renderStart(); layout();
+    return;
+  }
+  if (res.type === 'champion') {
+    rec.points += res.points; rec.champions++; store.set('cc.record', rec);
+    data.champion = (data.champion || 0) + 1;
+  }
+  inEditor = true; $('editor').classList.remove('hidden');
+  rebuild(); if (res.type === 'champion') save(true);
+  renderUI(); fitCamera();
+  if (res.type === 'champion') toast(data.name + ' is champion! +' + res.points + ' points');
 }
 function photo() {
   const W = 1920, H = 1080, pr = renderer.getPixelRatio();
@@ -467,8 +508,10 @@ function photo() {
 }
 window.ccToast = toast;
 // Android back button: close the part panel, then leave the editor, then let the app close.
-window.ccBack = () => { if (!inEditor) return false; if (sel) select(null); else goHome(); return true; };
+window.ccBack = () => { if (arena.active) return arena.back(); if (!inEditor) return false; if (sel) select(null); else goHome(); return true; };
 function open(d) {
+  const run = store.get('cc.run', null);
+  if (run && d.id && run.id === d.id) { store.set('cc.run', null); toast('Gauntlet abandoned. It starts again from fight one.'); }
   data = d; sel = null; nodeSel = -1; tab = 'body'; undo = []; redo = []; inEditor = true;
   if (data.sex === undefined) data.sex = 'f';
   $('start').classList.add('hidden'); $('editor').classList.remove('hidden');
@@ -482,14 +525,19 @@ function goHome() {
 const typeThumbs = {};
 function renderStart() {
   const el = $('start'), saved = store.get('cc.saved', []), cur = store.get('cc.current', null);
-  el.replaceChildren(h('h1', null, 'Creature ', h('span', null, 'Workshop')),
+  const rec = store.get('cc.record', { points: 0, champions: 0, fallen: 0 }), run = store.get('cc.run', null);
+  const runOk = run && cur && cur.id === run.id;
+  el.replaceChildren(...[h('h1', null, 'Creature ', h('span', null, 'Workshop'),
+      h('small', { class: 'record' }, rec.points + ' points · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
+    runOk && h('div', { class: 'card resume', onclick: () => { data = cur; enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, cur.name + ' is waiting for fight ' + (run.round + 1) + ' of 10. Tap to return to the Colosseum.')),
     h('h2', null, 'Start from a body type'),
-    h('div', { class: 'cards' }, Object.entries(TEMPLATES).map(([id, t]) =>
-      h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, t.blurb)))));
+    h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => open(randomCreature(Math.random)) }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
+      Object.entries(TEMPLATES).map(([id, t]) =>
+      h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, t.blurb))))].filter(Boolean));
   if (cur || saved.length) el.append(h('h2', null, 'Your creatures'),
     h('div', { class: 'cards' },
       cur && h('div', { class: 'card', onclick: () => open(cur) }, h('img', { src: creatureThumb(cur), alt: '' }), h('b', null, 'Continue'), h('small', null, cur.name)),
-      saved.map((c) => h('div', { class: 'card', onclick: () => open(JSON.parse(JSON.stringify(c.data))) }, h('img', { src: c.thumb, alt: '' }), h('b', null, c.name), h('small', null, TEMPLATES[c.data.type].name),
+      saved.map((c) => h('div', { class: 'card', onclick: () => open(JSON.parse(JSON.stringify(c.data))) }, h('img', { src: c.thumb, alt: '' }), h('b', null, c.name), h('small', null, TEMPLATES[c.data.type].name + (c.data.champion ? ' · Champion' + (c.data.champion > 1 ? ' x' + c.data.champion : '') : '')),
         h('button', { class: 'del warn', onclick: (e) => { e.stopPropagation(); if (confirm('Delete "' + c.name + '"?')) { store.set('cc.saved', store.get('cc.saved', []).filter((x) => x.id !== c.id)); renderStart(); } } }, '×')))));
 }
 
@@ -499,4 +547,4 @@ controls.orbit.addEventListener('change', touch);
 layout();
 renderStart();
 requestAnimationFrame(frame);
-window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
+window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };

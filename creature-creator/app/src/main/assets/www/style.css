@@ -74,3 +74,54 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 
   h3 { font-size: 14px; margin-bottom: 5px; }
   .sl { margin-bottom: 4px; }
 }
+
+/* start screen extras */
+#start h1 .record { float: right; font-size: 13px; font-weight: 400; color: var(--dim); margin-top: 9px; letter-spacing: 0; }
+.card .dice { aspect-ratio: 1.25; border-radius: 10px; background: linear-gradient(135deg, #7a3aa0, #c8501c); display: flex; align-items: center; justify-content: center; font-size: 54px; font-weight: 700; color: #fff8; }
+.card.resume { margin-top: 10px; text-align: left; padding: 10px 14px; border-color: var(--hot); background: #3a2616; }
+.card.resume b { margin: 0; color: var(--hot); }
+#topbar button.battle { background: #9a1c1c; border-color: #d9502a; font-weight: 600; }
+
+/* colosseum */
+#battle { pointer-events: none; color: #fff; text-shadow: 0 1px 3px #000a; }
+#battle button, #battle .panel { pointer-events: auto; }
+.hud { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 14px; align-items: flex-start; padding: 8px max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left)); }
+.who { flex: 1; min-width: 0; }
+.who b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.who.r { text-align: right; }
+.who small { opacity: 0.85; }
+.hp { height: 14px; background: #0009; border: 2px solid #fff9; border-radius: 8px; overflow: hidden; margin: 3px 0; }
+.hp i { display: block; height: 100%; width: 100%; background: var(--go); transition: width 0.2s; }
+.who.r .hp i { margin-left: auto; }
+.round { text-align: center; line-height: 1.1; }
+.round small { display: block; text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px; }
+.round b { font-size: 22px; }
+.msg { position: absolute; left: 0; right: 0; top: 24%; text-align: center; }
+.msg b { display: block; font-size: 44px; letter-spacing: 1px; color: #ffd76a; text-shadow: 0 3px 0 #7a2a10, 0 5px 12px #000; }
+.msg span { font-size: 19px; }
+.acts { position: absolute; left: 0; right: 0; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; justify-content: space-between; padding: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)); }
+.acts button { position: relative; overflow: hidden; width: 132px; height: 62px; border-radius: 16px; font-size: 15px; font-weight: 700; color: #fff; text-shadow: none; border: 2px solid #fff8; background: #9a1c1cdd; }
+.acts button#bgrd { background: #1f5a9add; }
+.acts button i { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: #000a; }
+.acts button span { position: relative; }
+.acts button.armed { border-color: #ffd76a; box-shadow: 0 0 14px #ffd76a; }
+.float { position: absolute; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: #fff; animation: rise 1.05s ease-out forwards; white-space: nowrap; }
+.float.big { font-size: 32px; color: #ffd76a; }
+.float.dim { font-size: 16px; color: #d8e4e2; }
+.float.venom { color: #a6f05a; font-size: 17px; }
+@keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -70px; } }
+.panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(470px, 92vw); max-height: 94vh; overflow-y: auto; background: #1a120cf0; border: 2px solid #c9a56a; border-radius: 16px; padding: 12px 18px 14px; text-shadow: none; text-align: center; touch-action: pan-y; }
+.panel.low { top: auto; bottom: 10px; transform: translateX(-50%); }
+.panel h2 { margin: 0 0 6px; font-size: 22px; color: #f1d9a8; }
+.panel h2.gold, .panel b.gold { color: #ffd76a; }
+.panel h2.red { color: #ff7a6a; }
+.panel p { margin: 6px 0; }
+.panel p.dim { color: #c9b99f; font-size: 12px; }
+.panel p.warn { color: #ff9a8a; font-weight: 600; }
+.panel .row { margin: 10px 0 0; }
+.panel button { background: #3a2a1c; border-color: #c9a56a; color: #fff; }
+.panel button.go { background: #9a1c1c; border-color: #ffb347; font-weight: 700; }
+.stats { display: flex; gap: 8px; margin: 8px 0; }
+.stats div { flex: 1; background: #0006; border-radius: 10px; padding: 5px 2px; }
+.stats small { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: #c9b99f; }
+.stats b { font-size: 19px; }
