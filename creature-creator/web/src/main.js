@@ -42,7 +42,10 @@ const scene = new THREE.Scene();
 const pm = new THREE.PMREMGenerator(renderer);
 scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = 0.55;
-const sun = new THREE.DirectionalLight(0xfff2dd, 2.2); sun.position.set(2.5, 5, 4); scene.add(sun);
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.2); sun.position.set(2.5, 5, 4); scene.add(sun); scene.add(sun.target);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.025; sun.shadow.radius = 3;
+Object.assign(sun.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, near: 0.5, far: 22 });
 const rim = new THREE.DirectionalLight(0x9fd8ff, 0.9); rim.position.set(-3, 2.5, -4); scene.add(rim);
 scene.add(new THREE.HemisphereLight(0xcfeaff, 0x3a2f28, 0.5));
 const camera = new THREE.PerspectiveCamera(32, 1, 0.05, 100);
@@ -59,6 +62,7 @@ const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBas
   shadow.material.map = new THREE.CanvasTexture(c); shadow.material.color.set(0x000000);
   shadow.rotation.x = -Math.PI / 2;
 }
+pad.receiveShadow = true; shadow.material.opacity = 0.3;
 stage.add(pad, shadow);
 const overlay = new THREE.Group(); scene.add(overlay);       // selection marker + spine handles
 const marker = new THREE.Mesh(new THREE.TorusGeometry(1, 0.12, 8, 32), new THREE.MeshBasicMaterial({ color: 0xffb347, depthTest: false, transparent: true, opacity: 0.9 }));
@@ -88,6 +92,7 @@ function ground() {
   const b = bounds(cr), c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
   const r = Math.max(s.x, s.z) * 0.42 + 0.15;
   pad.position.set(c.x, b.min.y - 0.03, c.z); pad.scale.set(r, 1, r);
+  sun.target.position.copy(c); sun.position.copy(c).add(new THREE.Vector3(2.5, 5, 4));
   shadow.position.set(c.x, b.min.y + 0.004, c.z); shadow.scale.set(Math.max(s.x, 0.3) * 0.75, Math.max(s.z, 0.3) * 0.62, 1);
   cr.box = b;
 }
@@ -299,8 +304,10 @@ function select(id) {
 // ------------------------------------------------------------------ UI pieces
 function slider(label, min, max, val, oninput, onchange, step) {
   const out = h('span', null, '');
+  const fill = () => inp.style.setProperty('--p', ((inp.value - min) / (max - min) * 100) + '%');
   const inp = h('input', { type: 'range', min, max, step: step || (max - min) / 200, value: val,
-    oninput: () => { oninput(parseFloat(inp.value)); }, onchange: () => { (onchange || commit)(parseFloat(inp.value)); } });
+    oninput: () => { fill(); oninput(parseFloat(inp.value)); }, onchange: () => { (onchange || commit)(parseFloat(inp.value)); } });
+  fill();
   return h('div', { class: 'sl' }, h('label', null, label, out), inp);
 }
 function chips(options, current, onpick) {
@@ -320,10 +327,18 @@ function setLook(k, val, final) {
   if (final) commit();
 }
 
+const ICONS = {
+  body: '<path d="M7 5c5-3 11 1 10 7s-6 9-10 7-4-11 0-14z"/>', eyes: '<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  mouth: '<path d="M3 9c3 2 15 2 18 0-1 7-5 9-9 9s-8-2-9-9z"/><path d="M8 10l1 3 1.5-3M13.5 10l1.5 3 1-3"/>', ears: '<path d="M5 20C3 12 6 4 9 3c2 4 3 8 2 13M19 20c2-8-1-16-4-17-2 4-3 8-2 13"/>',
+  horns: '<path d="M7 20c-4-5-4-12 0-17 0 6 2 9 5 11M17 20c4-5 4-12 0-17 0 6-2 9-5 11"/>', limbs: '<circle cx="7" cy="9" r="2"/><circle cx="12" cy="6.5" r="2"/><circle cx="17" cy="9" r="2"/><path d="M7 17c0-3 2-5 5-5s5 2 5 5-2 3-5 3-5 0-5-3z"/>',
+  wings: '<path d="M3 6c7-2 14 1 18 8-4-1-6 0-8 2-1-3-4-4-6-3 0-3-2-5-4-7z"/>', tails: '<path d="M4 18c6 2 12-2 12-7s-5-6-7-3 1 5 4 4"/>',
+  back: '<path d="M2 18c4-6 16-6 20 0M7 13l1-5 2 4M12 12l1-6 1.5 6M16 13l2-4 0 5"/>', skin: '<path d="M12 3c4 5 6 8 6 11a6 6 0 01-12 0c0-3 2-6 6-11z"/>',
+};
+const icon = (id) => { const s = document.createElement('span'); s.innerHTML = '<svg class="ic" viewBox="0 0 24 24">' + ICONS[id] + '</svg>'; return s.firstChild; };
 function renderTabs() {
   const el = $('tabs'); el.replaceChildren();
   for (const [id, label] of [['body', 'Body'], ...CATS, ['skin', 'Skin']]) {
-    el.append(h('button', { class: tab === id ? 'on' : '', onclick: () => { tab = id; sel = null; renderUI(); } }, label));
+    el.append(h('button', { class: tab === id ? 'on' : '', onclick: () => { tab = id; sel = null; renderUI(); } }, icon(id), label));
   }
 }
 const compact = () => window.innerWidth < 1000;
@@ -445,7 +460,7 @@ function renderTop() {
     h('button', { class: spin ? 'on' : '', onclick: () => { spin = !spin; renderTop(); } }, 'Spin'),
     h('button', { onclick: photo }, 'Photo'),
     h('button', { onclick: () => save() }, 'Save'),
-    h('button', { class: 'battle', onclick: enterBattle }, 'Battle'));
+    h('button', { class: 'battle', onclick: enterBattle }, '⚔️ Battle'));
 }
 function setSex(s) { data.sex = s; rebuild(); commit(); renderUI(); }
 function renderUI() {
@@ -477,7 +492,7 @@ function buy(key, cost, label, then) {
   if (!confirm('Unlock ' + label + ' for ' + cost + ' points?')) return;
   meta.points -= cost; meta.unlocked[key] = true; saveMeta(); toast('Unlocked ' + label); then && then();
 }
-const arena = createArena({ scene, camera, M, h, store, onDone: battleDone, meta: () => meta, saveMeta });
+const arena = createArena({ scene, camera, M, h, store, sun, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
   save(true);
   sel = null; controls.orbit.enabled = false;
@@ -489,7 +504,6 @@ function enterBattle(run) {
 }
 function battleDone(res) {
   stage.visible = overlay.visible = true; controls.orbit.enabled = true;
-  M.U.uInv.value.identity();
   for (const m of [M.skin, ...M.shells]) m.emissive.setRGB(0, 0, 0);
   const rec = meta;
   if (res.type === 'dead') {

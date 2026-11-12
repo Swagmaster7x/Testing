@@ -3,10 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=../app/src/main/assets/www/app.js && cp index.html style.css ../app/src/main/assets/www/",
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=../app/src/main/assets/www/app.js && cp index.html style.css ../app/src/main/assets/www/ && mkdir -p ../app/src/main/assets/www/fonts && for w in 400 500 600 700; do cp node_modules/@fontsource/fredoka/files/fredoka-latin-$w-normal.woff2 ../app/src/main/assets/www/fonts/fredoka-$w.woff2; done",
     "dev": "esbuild src/main.js --bundle --format=iife --sourcemap --outfile=../app/src/main/assets/www/app.js --servedir=../app/src/main/assets/www"
   },
   "devDependencies": {
+    "@fontsource/fredoka": "^5.3.0",
     "esbuild": "^0.25.0",
     "three": "^0.170.0"
   }

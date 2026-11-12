@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { tube, surfaceFrame, v, X, Y, Z, merge, flipWinding, rng, clamp } from './geom.js';
 import { PARTS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
-import { SHELLS } from './materials.js';
+import { SHELLS, BONES } from './materials.js';
 
 let nextId = 1;
 const uid = () => 'p' + (nextId++) + Math.random().toString(36).slice(2, 6);
@@ -63,7 +63,7 @@ export function bodyGeometry(data, o = {}) {
       rx: n.rx * data.bulk * (o.sexless ? 1 : sm.all) * (1 + r[0] * sm.k), ry: n.ry * data.bulk * (o.sexless ? 1 : sm.all) * (1 + r[1] * sm.k),
     };
   });
-  return tube(nodes, { radial: 40, sub: 9, capRings: 7, side: X.clone(), frames: true, capStart: TEMPLATES[data.type].capS ?? 1 });
+  return tube(nodes, { radial: 52, sub: 10, capRings: 7, side: X.clone(), frames: true, capStart: TEMPLATES[data.type].capS ?? 1 });
 }
 
 function toMeshes(items, M, partId) {
@@ -79,6 +79,7 @@ function toMeshes(items, M, partId) {
   for (const g of groups.values()) {
     const mesh = new THREE.Mesh(merge(g.gs), g.mat);
     mesh.userData.fur = g.mat === M.skin ? (g.fur === true ? 1 : g.fur || 0) : 0;
+    mesh.castShadow = g.mat !== M.glass; mesh.receiveShadow = g.mat === M.skin;
     out.push(mesh);
   }
   return out;
@@ -94,7 +95,15 @@ export function placement(part) {
   return { a, mirrored: true };
 }
 
-export function buildPartGroup(data, part, frames, M, anchors) {
+/** Skin meshes carry their rest-pose position and normal (rp, rn): the pattern and fur are worked out there. */
+function restAttrs(mesh, mtx) {
+  const g = mesh.geometry;
+  if (!mtx) { g.setAttribute('rp', g.attributes.position); g.setAttribute('rn', g.attributes.normal); return; }
+  const rp = g.attributes.position.clone().applyMatrix4(mtx), rn = g.attributes.normal.clone().applyNormalMatrix(new THREE.Matrix3().getNormalMatrix(mtx));
+  g.setAttribute('rp', rp); g.setAttribute('rn', rn);
+}
+
+export function buildPartGroup(data, part, frames, M, anchors, bones) {
   const def = PARTS[part.kind], sm = sexMods(data), group = new THREE.Group();
   group.userData.partId = part.id;
   if (part.sexOnly && part.sexOnly !== data.sex) return group;
@@ -116,6 +125,8 @@ export function buildPartGroup(data, part, frames, M, anchors) {
     ctx.down = v(0, -1, 0).applyQuaternion(qi); ctx.up = v(0, 1, 0).applyQuaternion(qi); ctx.fwd = v(0, 0, 1).applyQuaternion(qi);
     for (const m of toMeshes(def.build(part.p, ctx), M)) inner.add(m);
     inner.quaternion.copy(q); inner.position.copy(f.pos); inner.scale.setScalar(part.size * orn);
+    inner.updateMatrix();
+    for (const m of inner.children) if (m.material === M.skin) restAttrs(m, inner.matrix);
   } else {
     ctx.size = part.size * orn;
     const yaw = part.p.yaw || 0;
@@ -124,28 +135,36 @@ export function buildPartGroup(data, part, frames, M, anchors) {
     out.applyAxisAngle(Y, -yaw);
     ctx.out = out; ctx.fwd = out.clone().cross(Y).normalize();
     ctx.root = def.ridge ? f.pos : f.pos.clone().addScaledVector(f.normal, -f.r * (def.cat === 'limbs' ? 0.4 : 0.25));
-    for (const m of toMeshes(def.build(part.p, ctx), M)) inner.add(m);
+    for (const m of toMeshes(def.build(part.p, ctx), M)) { inner.add(m); if (m.material === M.skin) restAttrs(m); }
+    // Limbs, wings and tails can swing from their root when the creature is animated.
+    if (!def.ridge) inner.userData.joint = { pivot: ctx.root.clone(), kind: def.cat === 'limbs' ? (part.kind.startsWith('leg') ? 'leg' : part.kind === 'tentacle' ? 'tentacle' : 'arm') : def.cat === 'wings' ? 'wing' : 'tail', partId: part.id, side: 1 };
   }
   group.add(inner);
-  if (mine) for (const a of mine) { anchors.push(a); if (mirrored) anchors.push({ p: a.p.clone().setX(-a.p.x), t: a.t.clone().setX(-a.t.x), r: a.r }); }
+  let twin = null;
   if (mirrored) {
     const mir = new THREE.Group(); mir.scale.x = -1;
-    mir.add(inner.clone());
+    twin = inner.clone();
+    if (inner.userData.joint) twin.userData.joint = { ...inner.userData.joint, side: -1 };
+    mir.add(twin);
     group.add(mir);
   }
+  if (bones && inner.userData.joint) for (const n of [inner, twin]) if (n && bones.n < BONES) n.userData.joint.bone = bones.n++;
+  // A held weapon is parented to the hand's own node (node), at p/t in that node's space.
+  if (mine) for (const a of mine) { anchors.push({ ...a, node: inner }); if (twin) anchors.push({ ...a, node: twin }); }
   return group;
 }
 
 export function buildCreature(data, M, opt = {}) {
   const group = new THREE.Group();
   const bodyGeo = bodyGeometry(data), frames = bodyGeo.userData.frames;
-  const body = new THREE.Mesh(bodyGeo, M.skin);
+  const body = new THREE.Mesh(bodyGeo, M.skin), bones = opt.animated ? { n: 1 } : null;
+  body.castShadow = body.receiveShadow = true; restAttrs(body);
   body.userData.fur = 1; body.userData.partId = 'body';
   group.add(body);
   const cr = { group, body, frames, parts: new Map(), shells: new THREE.Group(), data, M };
   for (const part of data.parts) {
     let g;
-    try { g = buildPartGroup(data, part, frames, M, opt.anchors); } catch (e) { console.error('part failed', part.kind, e); g = new THREE.Group(); g.userData.partId = part.id; }
+    try { g = buildPartGroup(data, part, frames, M, opt.anchors, bones); } catch (e) { console.error('part failed', part.kind, e); g = new THREE.Group(); g.userData.partId = part.id; }
     cr.parts.set(part.id, g); group.add(g);
   }
   group.add(cr.shells);
@@ -166,22 +185,27 @@ export function rebuildShells(cr, skipId) {
   if (cr.shellGeo) { cr.shellGeo.dispose(); cr.shellGeo = null; }
   if (cr.data.look.cover !== 'fur') return;
   cr.group.updateMatrixWorld(true);
-  const gs = [];
+  const gs = [], inv = cr.group.matrixWorld.clone().invert();
   cr.group.traverse((o) => {
     if (!o.isMesh || !o.userData.fur) return;
     let p = o, skip = false;
     while (p) { if (skipId && p.userData.partId === skipId) skip = true; p = p.parent; }
     if (skip) return;
-    const g = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    if (o.matrixWorld.determinant() < 0) flipWinding(g);
+    let bone = 0; for (let q = o.parent; q && q !== cr.group; q = q.parent) if (q.userData.joint && q.userData.joint.bone) bone = q.userData.joint.bone;
+    const mw = inv.clone().multiply(o.matrixWorld);
+    const g = o.geometry.clone(); g.deleteAttribute('rp'); g.deleteAttribute('rn'); g.applyMatrix4(mw);
+    if (mw.determinant() < 0) flipWinding(g);
+    g.setAttribute('bone', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(bone), 1));
     g.setAttribute('fur', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(o.userData.fur), 1));
     gs.push(g);
   });
   if (!gs.length) return;
-  cr.shellGeo = merge(gs, ['fur']);
+  cr.shellGeo = merge(gs, ['fur', 'bone']);
+  cr.shellGeo.setAttribute('rp', cr.shellGeo.attributes.position); cr.shellGeo.setAttribute('rn', cr.shellGeo.attributes.normal);
   gs.forEach((g) => g !== cr.shellGeo && g.dispose());
   for (let i = 0; i < SHELLS; i++) {
     const m = new THREE.Mesh(cr.shellGeo, cr.M.shells[i]);
+    m.frustumCulled = false;             // limbs can swing outside the rest-pose bounds
     m.raycast = () => {};
     cr.shells.add(m);
   }

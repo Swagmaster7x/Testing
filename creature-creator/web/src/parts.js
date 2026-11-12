@@ -29,6 +29,7 @@ function eye(type) {
     const s = new THREE.SphereGeometry(r, 28, 18); s.rotateX(PI / 2);
     if (type === 'compound') s.scale(0.95, 1.2, 0.85);
     it.push({ g: move(s, 0, 0, zc), m: eyeMaterial(c.M, stalk ? 'round' : type, c.look.eye, p.iris ?? 0.75) });
+    if (type !== 'compound') it.push({ g: ball(0.055, 1.5, 1, 0.5, -0.14, 0.17, zc + 0.455, 8), m: c.M.glint });    // catchlight
     if (stalk) it.push({ g: T([[0, 0, -0.3, 0.3], [0, 0.05, 0.5, 0.2], [0, 0, 1.15, 0.19], [0, 0, 1.5, 0.4]], { capEnd: 0.6 }), m: 'skin' });
     if (type !== 'compound') {
       const ring = new THREE.TorusGeometry(r * 1.02, r * 0.17, 8, 28); ring.scale(1, 1, 1.3);
@@ -240,6 +241,10 @@ function cluster(o) {
       const face = o.hug ? pts[2].clone().sub(centre).normalize() : perp(dir, c.fwd.clone().add(v(c.rnd() - 0.5, c.rnd() - 0.5, 0)));
       gs.push(blade(pts, [w * 0.75, w, w * 0.95, w * 0.65, 0.012], w * 0.2, face, { radial: 6, sub: 3 }));
     }
+    if (o.hug) {                                   // a scalp under the strands, so no skin shows through
+      const cap = new THREE.SphereGeometry(capR * 1.03, 24, 12, 0, PI * 2, 0, Math.min(sp * 0.82, PI * 0.6)); cap.rotateX(PI / 2); cap.translate(centre.x, centre.y, centre.z);
+      gs.push(cap);
+    }
     return [{ g: merge(gs), m: o.mat ?? 'hair' }];
   };
 }
@@ -358,7 +363,7 @@ function limb(style, ends, defEnd) {
     });
     const nodes = pts.map((q, i) => ({ p: q, rx: sp.r[i] * th * (sp.bulge.includes(i) ? p.muscle : 1) }));
     const insect = style === 'insect';
-    const g = tube(nodes, { radial: 12, sub: 6, ridges: insect ? 5 : 0, ridgeAmp: 0.1 });
+    const g = tube(nodes, { radial: 16, sub: 7, ridges: insect ? 5 : 0, ridgeAmp: 0.1 });
     const it = [{ g, m: 'skin', fur: insect ? 0.5 : 0.75 }];
     const end = g.userData.end, es = end.r * p.end, kind = p.endType ?? defEnd;
     if (c.anchors && ends === HANDS) c.anchors.push({ p: end.p.clone(), t: end.t.clone(), r: end.r * p.end });   // where a held weapon goes

@@ -10,10 +10,10 @@ export const TEMPLATES = {
   humanoid: {
     name: 'Humanoid', blurb: 'Upright, two arms, two legs', limbLen: 0.9, bellyDir: [0, -0.2, 1], dimorph: 'std',
     capS: 0.55,
-    nodes: [[0.93, -0.012, 0.15, 0.1, 'hips'], [1.03, -0.01, 0.16, 0.105, 'hips'], [1.17, 0, 0.118, 0.088, 'waist'], [1.33, 0.012, 0.15, 0.115, 'chest'], [1.45, 0.005, 0.17, 0.105, 'shoulders'], [1.505, 0, 0.13, 0.085, 'shoulders'], [1.55, 0, 0.06, 0.058, 'neck'], [1.615, 0.008, 0.058, 0.058, 'neck'], [1.68, 0.02, 0.098, 0.105, 'head'], [1.76, 0.025, 0.115, 0.125, 'head'], [1.83, 0.02, 0.105, 0.115, 'head']],
-    slots: { eye: [0.9, 2.8], mouth: [0.812, PI], nose: [0.862, PI], cheek: [0.83, 2.45], chin: [0.79, PI], ear: [1.35, 1.1], earSide: [0.885, 1.57], horn: [1.4, 2.1], top: [1.85, 0], leg: [-0.4, 1.57], arm: [0.43, 1.57], wing: [0.4, 0.45], tail: [0.03, 0], back: [0.3, 0], mane: [0.6, 0] },
+    nodes: [[0.93, -0.012, 0.15, 0.1, 'hips'], [1.03, -0.01, 0.16, 0.105, 'hips'], [1.17, 0, 0.118, 0.088, 'waist'], [1.33, 0.012, 0.15, 0.115, 'chest'], [1.45, 0.005, 0.17, 0.105, 'shoulders'], [1.505, 0, 0.13, 0.085, 'shoulders'], [1.55, 0, 0.06, 0.058, 'neck'], [1.615, 0.008, 0.058, 0.058, 'neck'], [1.675, 0.022, 0.102, 0.108, 'head'], [1.765, 0.03, 0.128, 0.135, 'head'], [1.85, 0.022, 0.118, 0.126, 'head']],
+    slots: { eye: [0.893, 2.74], mouth: [0.812, PI], nose: [0.858, PI], cheek: [0.83, 2.45], chin: [0.79, PI], ear: [1.35, 1.1], earSide: [0.885, 1.57], horn: [1.4, 2.1], top: [1.85, 0], leg: [-0.4, 1.57], arm: [0.43, 1.57], wing: [0.4, 0.45], tail: [0.03, 0], back: [0.3, 0], mane: [0.6, 0] },
     look: look({ base: '#c99573', second: '#8a5a3c', belly: '#d9a888', bellyAmt: 0.4, hair: '#2c1b12', eye: '#4a7fb5' }),
-    parts: [['leg_human', 'leg', { size: 0.9 }], ['arm_human', 'arm', { size: 0.74, p: { splay: 0.12 } }], ['eye_round', 'eye', { size: 0.046, p: { lid: 0.35 } }], ['nose', 'nose', { size: 0.055 }], ['lips', 'mouth', { size: 0.085 }], ['ear_elf', 'earSide', { size: 0.075, p: { len: 0.25 } }], ['hair', 'top', { size: 0.26 }]],
+    parts: [['leg_human', 'leg', { size: 0.9 }], ['arm_human', 'arm', { size: 0.74, p: { splay: 0.12 } }], ['eye_round', 'eye', { size: 0.058, p: { lid: 0.28, iris: 0.85 } }], ['nose', 'nose', { size: 0.042 }], ['lips', 'mouth', { size: 0.07 }], ['ear_elf', 'earSide', { size: 0.08, p: { len: 0.25 } }], ['hair', 'top', { size: 0.3, p: { len: 0.6 } }]],
   },
   quadruped: {
     name: 'Quadruped', blurb: 'Four legs, tail, muzzle', limbLen: 0.85, bellyDir: [0, -1, 0], dimorph: 'std',

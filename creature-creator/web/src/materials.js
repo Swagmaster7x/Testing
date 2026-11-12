@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 
 export const SHELLS = 18;
+export const BONES = 24;            // how many separately moving pieces (limbs, wings, tails) fur can follow
 
 const NOISE = /* glsl */`
 float h31(vec3 p){ p = fract(p*0.3183099+vec3(.1,.2,.3)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
@@ -46,8 +47,9 @@ const FRAG_PATTERN = /* glsl */`
   vec3 col = mix(uBase, uSecond, pat);
   float bel = smoothstep(0.25, 0.8, dot(vWNrm, uBellyDir)) * uBelly;
   col = mix(col, uBellyCol, bel);
-  if (uTex == 1) { vec3 w = vor(vWPos*uTexScale); col *= mix(0.55, 1.0, smoothstep(0.0, 0.14, w.y-w.x)) * (0.9 + 0.2*w.z); }
-  else if (uTex == 2) { col *= 0.92 + 0.16*fbm(vWPos*30.0); }
+  if (uTex == 1) { vec3 w = vor(vWPos*uTexScale); float e = smoothstep(0.0, 0.16, w.y-w.x); col *= mix(0.6, 1.0, e) * (0.9 + 0.2*w.z); ccH = e * 0.012 + w.z * 0.004; }
+  else if (uTex == 2) { float k = fbm(vWPos*30.0); col *= 0.92 + 0.16*k; ccH = k * 0.004; }
+  else if (uShell == 0.0 && uFurLen == 0.0) { float k = fbm(vWPos*60.0); col *= 0.97 + 0.06*k; ccH = k * 0.0007 + vn(vWPos*220.0) * 0.00035; }
   if (uShell > 0.0) col *= furShade; else if (uFurLen > 0.0) col *= 0.75;
   diffuseColor.rgb = col;
 }
@@ -58,7 +60,7 @@ export function makeMaterials() {
     uBase: { value: new THREE.Color() }, uSecond: { value: new THREE.Color() }, uBellyCol: { value: new THREE.Color() },
     uBellyDir: { value: new THREE.Vector3(0, -1, 0) }, uBelly: { value: 0.8 },
     uPattern: { value: 0 }, uPatScale: { value: 1 }, uTex: { value: 0 }, uTexScale: { value: 22 },
-    uInv: { value: new THREE.Matrix4() }, uFurLen: { value: 0 }, uFurDensity: { value: 90 }, uDroop: { value: 0.3 },
+    uPM: { value: Array.from({ length: BONES }, () => new THREE.Matrix4()) }, uBump: { value: 1 }, uFurLen: { value: 0 }, uFurDensity: { value: 90 }, uDroop: { value: 0.3 },
   };
   const skinMat = (shell) => {
     const m = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0 });
@@ -66,21 +68,34 @@ export function makeMaterials() {
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U, { uShell: { value: shell } });
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float fur;\nuniform float uShell; uniform float uFurLen; uniform float uDroop; uniform mat4 uInv;\nvarying vec3 vWPos; varying vec3 vWNrm;')
+        .replace('#include <common>', '#include <common>\nattribute float fur; attribute float bone; attribute vec3 rp; attribute vec3 rn;\nuniform float uShell; uniform float uFurLen; uniform float uDroop; uniform mat4 uPM[' + BONES + '];\nvarying vec3 vWPos; varying vec3 vWNrm;')
+        .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n#ifdef FUR_SHELL\nobjectNormal = mat3(uPM[int(bone + 0.5)]) * objectNormal;\n#endif')
         .replace('#include <begin_vertex>', `vec3 transformed = vec3(position);
-          // Patterns and fur are worked out in the creature's own space (uInv undoes how it stands in the scene).
-          vWPos = (uInv * modelMatrix * vec4(position, 1.0)).xyz;
-          vWNrm = normalize(mat3(uInv) * mat3(modelMatrix) * normal);
+          // Patterns and fur are worked out at the creature's rest pose (rp, rn), so they stay put when limbs move.
+          vWPos = rp;
+          vWNrm = normalize(rn);
           #ifdef FUR_SHELL
+          // Fur shells are one merged mesh; each vertex follows the limb ("bone") it grew from.
+          mat4 pm = uPM[int(bone + 0.5)];
           float fl = uShell * uFurLen * fur;
-          transformed += normal * fl;
+          transformed = (pm * vec4(transformed, 1.0)).xyz + (mat3(pm) * normal) * fl;
           transformed += vec3(0.0, -1.0, -0.6) * (uShell * fl * uDroop);
           #endif`);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <common>', `#include <common>
-          uniform vec3 uBase, uSecond, uBellyCol, uBellyDir; uniform float uBelly, uPatScale, uTexScale, uShell, uFurLen, uFurDensity;
-          uniform int uPattern, uTex; varying vec3 vWPos; varying vec3 vWNrm;` + NOISE)
-        .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_PATTERN);
+          uniform vec3 uBase, uSecond, uBellyCol, uBellyDir; uniform float uBelly, uPatScale, uTexScale, uShell, uFurLen, uFurDensity, uBump;
+          uniform int uPattern, uTex; varying vec3 vWPos; varying vec3 vWNrm; float ccH = 0.0;` + NOISE)
+        .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_PATTERN)
+        // Surface relief from the height worked out with the colour (pores, raised scales), then a soft rim light.
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          #ifndef FUR_SHELL
+          { vec3 sx = dFdx(-vViewPosition), sy = dFdy(-vViewPosition);
+            vec3 r1 = cross(sy, normal), r2 = cross(normal, sx); float det = dot(sx, r1);
+            vec3 grad = sign(det) * (dFdx(ccH) * r1 + dFdy(ccH) * r2);
+            normal = normalize(abs(det) * normal - grad * uBump); }
+          #endif`)
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          totalEmissiveRadiance += diffuseColor.rgb * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0) * 0.4;`);
     };
     return m;
   };
@@ -98,6 +113,7 @@ export function makeMaterials() {
     tongue: std({ color: 0xd96a7c, roughness: 0.4 }),
     dark: std({ color: 0x1b1718, roughness: 0.25 }),
     lip: std({ roughness: 0.35 }),
+    glint: new THREE.MeshBasicMaterial({ color: 0xffffff }),
     lash: std({ color: 0x151012, roughness: 0.6 }),
     eyeCache: new Map(),
   };
@@ -113,6 +129,7 @@ export function applyLook(M, look, bellyDir) {
   U.uBelly.value = look.bellyAmt; U.uPattern.value = look.pattern; U.uPatScale.value = look.patScale;
   U.uBellyDir.value.set(...bellyDir).normalize();
   U.uTex.value = TEX[look.cover] ?? 0;
+  U.uBump.value = look.cover === 'slime' ? 0.35 : 1;
   const fur = look.cover === 'fur';
   U.uFurLen.value = fur ? 0.012 + look.furLen * 0.13 : 0;
   U.uDroop.value = look.furDroop * 1.2;
