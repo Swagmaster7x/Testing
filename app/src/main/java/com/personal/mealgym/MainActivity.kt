@@ -17,6 +17,8 @@ import com.personal.mealgym.ui.LocalCopy
 import com.personal.mealgym.ui.MealGymNavHost
 import com.personal.mealgym.ui.SideCopy
 import com.personal.mealgym.ui.SideChooserScreen
+import com.personal.mealgym.ui.SystemBars
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.personal.mealgym.ui.people.FirstPersonScreen
 import com.personal.mealgym.ui.theme.MealGymTheme
 import com.personal.mealgym.ui.theme.ThemedBackground
@@ -38,13 +40,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             val opening by container.opening.collectAsStateWithLifecycle()
             when (val o = opening) {
-                Opening.Loading -> MealGymTheme { ThemedBackground { Box(Modifier.fillMaxSize()) } }
+                Opening.Loading -> {
+                    SystemBars(isSystemInDarkTheme())
+                    MealGymTheme { ThemedBackground { Box(Modifier.fillMaxSize()) } }
+                }
                 Opening.FirstPerson -> FirstPersonScreen()
-                is Opening.Choose -> MealGymTheme { SideChooserScreen(o.people, onChoose = container::chooseSide) }
+                is Opening.Choose -> {
+                    // The doors sit on a dark hallway whatever the phone's setting.
+                    SystemBars(dark = true)
+                    MealGymTheme { SideChooserScreen(o.people, onChoose = container::chooseSide) }
+                }
                 // Keyed by person, so switching starts every screen afresh on the other person's data.
                 // Edits to the same person (look, snack slot...) apply in place.
                 is Opening.Open -> key(o.profile.id) {
                     val profile = o.profile
+                    SystemBars(themeFor(profile).isDark(isSystemInDarkTheme()))
                     val motion by remember(profile.id) { container.settings.settings(profile.id).map { it.motion } }
                         .collectAsStateWithLifecycle(initialValue = true)
                     MealGymTheme(look = themeFor(profile), motion = motion) {

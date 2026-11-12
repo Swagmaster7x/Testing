@@ -61,6 +61,8 @@ import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.ShowMessages
+import com.personal.mealgym.ui.SystemBars
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.personal.mealgym.ui.components.AppButton
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.components.ConfirmDialog
@@ -209,7 +211,9 @@ fun FirstPersonScreen(vm: PersonViewModel = viewModel(factory = AppViewModels.Fa
     val d = draft ?: return
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
-    MealGymTheme(look = Looks.forKey(d.themeKey, d.customLook)) {
+    val look = Looks.forKey(d.themeKey, d.customLook)
+    SystemBars(look.isDark(isSystemInDarkTheme()))
+    MealGymTheme(look = look) {
         ThemedBackground {
             Column(
                 Modifier
@@ -307,10 +311,13 @@ private fun PersonForm(d: PersonDraft, vm: PersonViewModel) {
 
     SectionHeader("Look")
     val custom = CustomLook.decode(d.customLook)
+    // Scroll to the creator only when it's just been opened, not when editing someone who already has their own look.
+    var openedCreator by remember { mutableStateOf(false) }
     LookGrid(
         selectedKey = d.themeKey,
         custom = custom,
         onPick = { key ->
+            openedCreator = key == Looks.CUSTOM && d.themeKey != Looks.CUSTOM
             vm.change {
                 if (key == Looks.CUSTOM) it.copy(themeKey = key, customLook = it.customLook ?: CustomLook().encode()) else it.copy(themeKey = key)
             }
@@ -319,7 +326,12 @@ private fun PersonForm(d: PersonDraft, vm: PersonViewModel) {
     if (d.themeKey == Looks.CUSTOM) {
         val editing = custom ?: CustomLook()
         val creator = remember { BringIntoViewRequester() }
-        LaunchedEffect(Unit) { creator.bringIntoView() }
+        LaunchedEffect(openedCreator) {
+            if (openedCreator) {
+                creator.bringIntoView()
+                openedCreator = false
+            }
+        }
         SectionHeader("Make your own", Modifier.bringIntoViewRequester(creator))
         LookPreview(Looks.custom(editing))
         CustomLookEditor(editing, onChange = { c -> vm.change { it.copy(customLook = c.encode()) } })

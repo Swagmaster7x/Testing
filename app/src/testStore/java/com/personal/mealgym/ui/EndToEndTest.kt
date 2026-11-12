@@ -69,11 +69,11 @@ class EndToEndTest {
     fun firstLaunchWithALookOfYourOwn() {
         waitForText("Welcome to Meal & Gym")
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Rae")
-        scrollTo(hasContentDescription("Create your own look"))
-        compose.onAllNodesWithContentDescription("Create your own look").onFirst().performClick()
+        scrollTo(hasText("Create your own"))
+        compose.onAllNodesWithText("Create your own").onFirst().performClick()
         waitForText("Make your own")
-        scrollTo(hasContentDescription("Colour 2E8B3E"))
-        compose.onAllNodesWithContentDescription("Colour 2E8B3E").onFirst().performClick()
+        scrollTo(hasContentDescription("Green"))
+        compose.onAllNodesWithContentDescription("Green").onFirst().performClick()
         scrollTo(hasText("Always dark"))
         compose.onAllNodesWithText("Always dark").onFirst().performClick()
         compose.waitForIdle()
@@ -134,6 +134,24 @@ class EndToEndTest {
     }
 
     @Test
+    fun statusBarIconsFollowTheLookNotThePhone() {
+        // The phone is in light mode (the default here). Neon arcade is always dark.
+        val ana = runBlocking {
+            container.people.create(Profile(0, "Ana", "NEON"), null, setOf(DayOfWeek.MONDAY)).also { container.settings.setActiveProfile(it) }
+        }
+        assertEquals(ana, opened().id)
+        compose.waitUntil(15_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
+        fun lightIcons(): Boolean {
+            val window = compose.activity.window
+            return !androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars
+        }
+        assertTrue("light icons on an always-dark look", lightIcons())
+        runBlocking { container.people.setLook(ana, "ARCTIC") }
+        compose.waitUntil(10_000) { !lightIcons() }
+        assertTrue("dark icons on a light look", !lightIcons())
+    }
+
+    @Test
     fun theCreatorSurvivesTurningThePhone() {
         val ana = runBlocking {
             container.people.create(Profile(0, "Ana", "IRON"), null, setOf(DayOfWeek.MONDAY)).also { container.settings.setActiveProfile(it) }
@@ -144,8 +162,8 @@ class EndToEndTest {
         waitForText("Change look")
         compose.onAllNodesWithText("Change look").onFirst().performClick()
         waitForText("Ready-made")
-        scrollTo(hasContentDescription("Create your own look"))
-        compose.onAllNodesWithContentDescription("Create your own look").onFirst().performClick()
+        scrollTo(hasText("Create your own"))
+        compose.onAllNodesWithText("Create your own").onFirst().performClick()
         waitForText("Make your own")
         scrollTo(hasText("Retro"))
         compose.onAllNodesWithText("Retro").onFirst().performClick()

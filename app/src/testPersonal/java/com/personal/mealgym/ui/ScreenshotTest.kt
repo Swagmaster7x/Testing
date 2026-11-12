@@ -212,14 +212,14 @@ class ScreenshotTest {
         waitForText("Change look")
         compose.onAllNodesWithText("Change look").onFirst().performClick()
         waitForText("Ready-made")
-        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(androidx.compose.ui.test.hasContentDescription("Glacier look"))
-        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Glacier look")).onFirst().performClick()
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(androidx.compose.ui.test.hasText("Glacier"))
+        compose.onAllNodes(androidx.compose.ui.test.hasText("Glacier")).onFirst().performClick()
         compose.waitUntil(10_000) { swag().themeKey == "ARCTIC" }
         compose.waitForIdle()
         shot("60-swag-glacier")
         compose.waitUntil(15_000) { compose.onAllNodesWithText(" is on.", substring = true).fetchSemanticsNodes().isEmpty() }
-        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(androidx.compose.ui.test.hasContentDescription("Dark fantasy look"))
-        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Dark fantasy look")).onFirst().performClick()
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(androidx.compose.ui.test.hasText("Dark fantasy"))
+        compose.onAllNodes(androidx.compose.ui.test.hasText("Dark fantasy")).onFirst().performClick()
         compose.waitUntil(10_000) { swag().themeKey == "IRON" }
         // Ashley's door is still glam; Swag's is dark fantasy again.
         runBlocking {

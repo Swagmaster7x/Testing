@@ -107,7 +107,11 @@ data class CustomLook(
     fun encode(): String = json.encodeToString(serializer(), this)
 
     companion object {
-        private val json = Json { ignoreUnknownKeys = true }
+        // Defaults are written too, so a later change to a default never changes a saved look.
+        private val json = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
         fun decode(text: String?): CustomLook? = text?.let { runCatching { json.decodeFromString(serializer(), it) }.getOrNull() }
 
@@ -253,7 +257,10 @@ object Looks {
 
     fun byKey(key: String): Look? = byKey[key]
 
-    private val customCache = HashMap<CustomLook, Look>()
+    /** The most recent creations (a hue-slider drag makes one per frame), so memory stays bounded. */
+    private val customCache = object : LinkedHashMap<CustomLook, Look>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<CustomLook, Look>?) = size > 24
+    }
 
     /** Builds (and remembers) the look for a creator choice. */
     fun custom(c: CustomLook): Look = synchronized(customCache) {

@@ -162,6 +162,22 @@ class RepositoryTest {
     }
 
     @Test
+    fun changingALookTouchesNothingElse() = runBlocking {
+        val people = ProfileRepository(db, settings)
+        val made = """{"primary":4285416649}"""
+        people.setCustomLook(TestPeople.ASHLEY, made)
+        // A ready-made look straight after: the creation is kept, and so is everything else about Ashley.
+        people.setLook(TestPeople.ASHLEY, "OCEAN")
+        val ashley = db.profileDao().all().single { it.id == TestPeople.ASHLEY }
+        assertEquals("OCEAN", ashley.themeKey)
+        assertEquals(made, ashley.customLook)
+        assertTrue(ashley.snackSlot && ashley.weekBadges && ashley.easierToFinish)
+        assertEquals(0.75, ashley.portion, 0.0)
+        people.setLook(TestPeople.ASHLEY, "CUSTOM")
+        assertEquals("CUSTOM", db.profileDao().all().single { it.id == TestPeople.ASHLEY }.themeKey)
+    }
+
+    @Test
     fun addingAndRemovingAPerson() = runBlocking {
         val people = ProfileRepository(db, settings)
         val template = com.personal.mealgym.data.seed.WorkoutTemplate(

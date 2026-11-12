@@ -107,8 +107,8 @@ fun LookCard(look: Look, title: String, blurb: String, selected: Boolean, onClic
             border = BorderStroke(if (selected) 3.dp else 1.dp, if (selected) ring else quiet),
             modifier = modifier
                 .heightIn(min = 116.dp)
-                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-                .semantics { contentDescription = "$title look" },
+                // The card's own text (name and description) is what a screen reader says.
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
         ) {
             ThemedBackground {
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
@@ -170,7 +170,7 @@ fun LookPreview(look: Look, modifier: Modifier = Modifier) {
     }
     // A picture, not controls: screen readers hear one description, and the sample button can't be mistaken for a real one.
     Row(
-        modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = "Preview of this look" },
+        modifier.fillMaxWidth().height(IntrinsicSize.Min).clearAndSetSemantics { contentDescription = "Preview of this look" },
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         modes.forEach { dark ->
@@ -178,7 +178,7 @@ fun LookPreview(look: Look, modifier: Modifier = Modifier) {
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.weight(1f).height(250.dp),
+                    modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 250.dp),
                 ) {
                     ThemedBackground {
                         Column(Modifier.padding(12.dp)) {
@@ -209,11 +209,13 @@ fun LookPreview(look: Look, modifier: Modifier = Modifier) {
     }
 }
 
-/** Colours offered in the creator. The hue slider fine-tunes any of them. */
+/** Colours offered in the creator, with the names screen readers say. The hue slider fine-tunes any of them. */
 private val Swatches = listOf(
-    0xFFD62828, 0xFFE2621B, 0xFFE6B800, 0xFF8DB600, 0xFF2E8B3E, 0xFF0B7A8A,
-    0xFF20A4C8, 0xFF2B6CB0, 0xFF1F3A93, 0xFF6E44C9, 0xFFB5179E, 0xFFFF2E93,
-    0xFFC24D7A, 0xFF8E1B16, 0xFF7A4A2A, 0xFF5A7D2A, 0xFF23324A, 0xFF5E5E5E,
+    0xFFD62828 to "Red", 0xFFE2621B to "Orange", 0xFFE6B800 to "Yellow", 0xFF8DB600 to "Lime",
+    0xFF2E8B3E to "Green", 0xFF0B7A8A to "Teal", 0xFF20A4C8 to "Sky blue", 0xFF2B6CB0 to "Blue",
+    0xFF1F3A93 to "Navy", 0xFF6E44C9 to "Purple", 0xFFB5179E to "Magenta", 0xFFFF2E93 to "Hot pink",
+    0xFFC24D7A to "Rose", 0xFF8E1B16 to "Crimson", 0xFF7A4A2A to "Brown", 0xFF5A7D2A to "Olive",
+    0xFF23324A to "Ink", 0xFF5E5E5E to "Grey",
 )
 
 /** The look creator's controls. Every change shows at once in a [LookPreview]. */
@@ -228,15 +230,8 @@ fun CustomLookEditor(value: CustomLook, onChange: (CustomLook) -> Unit, modifier
             onChange(value.copy(background = it))
         }
         Text("Day or night", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 8.dp))
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Mode.entries.forEachIndexed { i, mode ->
-                SegmentedButton(
-                    selected = value.mode == mode.name,
-                    onClick = { onChange(value.copy(mode = mode.name)) },
-                    shape = SegmentedButtonDefaults.itemShape(i, Mode.entries.size),
-                ) { Text(mode.label, maxLines = 1) }
-            }
-        }
+        // Chips wrap onto a second line with large text, where a segmented row would cut the labels off.
+        Choices(Mode.entries.map { it.name }, value.mode, { Mode.valueOf(it).label }) { onChange(value.copy(mode = it)) }
         Text("Behind each screen", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
         Choices(listOf(Backdrop.EMBER, Backdrop.WASH, Backdrop.FLAT).map { it.name }, value.backdrop, { Backdrop.valueOf(it).label }) {
             onChange(value.copy(backdrop = it))
@@ -281,28 +276,34 @@ private fun ColourChoice(title: String, body: String, argb: Long, onPick: (Long)
     SectionHeader(title)
     Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.padding(vertical = 4.dp),
     ) {
-        Swatches.forEach { option ->
+        Swatches.forEach { (option, name) ->
             val chosen = option == argb
+            // A 48dp touch target around a 36dp swatch; screen readers hear the name and whether it's chosen.
             Box(
                 Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color(option.toInt()))
-                    .border(if (chosen) 3.dp else 1.dp, if (chosen) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    .clickable(role = Role.RadioButton, onClickLabel = "Use this colour") { onPick(option) }
-                    .semantics { contentDescription = "Colour ${"%06X".format(option and 0xFFFFFF)}" },
+                    .size(48.dp)
+                    .selectable(selected = chosen, role = Role.RadioButton) { onPick(option) }
+                    .semantics { contentDescription = name },
+                contentAlignment = Alignment.Center,
             ) {
-                if (chosen) {
-                    Icon(
-                        painterResource(R.drawable.ic_sparkle),
-                        contentDescription = null,
-                        tint = if (Tones.contrast(Color(option.toInt()), Color.White) >= 3f) Color.White else Color.Black,
-                        modifier = Modifier.align(Alignment.Center).size(16.dp),
-                    )
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(option.toInt()))
+                        .border(if (chosen) 3.dp else 1.dp, if (chosen) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                ) {
+                    if (chosen) {
+                        Icon(
+                            painterResource(R.drawable.ic_sparkle),
+                            contentDescription = null,
+                            tint = if (Tones.contrast(Color(option.toInt()), Color.White) >= 3f) Color.White else Color.Black,
+                            modifier = Modifier.align(Alignment.Center).size(16.dp),
+                        )
+                    }
                 }
             }
         }

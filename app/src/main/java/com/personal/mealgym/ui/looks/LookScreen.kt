@@ -58,11 +58,11 @@ class LookViewModel(private val c: AppContainer) : MessageViewModel() {
         if (key == Looks.CUSTOM) {
             _creating.value = true
             // Someone who already made a look gets it back straight away.
-            if (profile.value.customLook != null) save(profile.value.copy(themeKey = Looks.CUSTOM))
+            if (profile.value.customLook != null) viewModelScope.launch { c.people.setLook(profileId, Looks.CUSTOM) }
             return
         }
         _creating.value = false
-        save(profile.value.copy(themeKey = key))
+        viewModelScope.launch { c.people.setLook(profileId, key) }
         say("${Looks.forKey(key).name} is on.")
     }
 
@@ -70,13 +70,14 @@ class LookViewModel(private val c: AppContainer) : MessageViewModel() {
         _draft.value = look
     }
 
+    /**
+     * Only the look columns are written, so quick taps one after another can't put back an
+     * older copy of the profile (and lose a look saved a moment before).
+     */
     fun useCustom() {
-        save(profile.value.copy(themeKey = Looks.CUSTOM, customLook = _draft.value.encode()))
+        val made = _draft.value.encode()
+        viewModelScope.launch { c.people.setCustomLook(profileId, made) }
         say("Your own look is on.")
-    }
-
-    private fun save(p: Profile) {
-        viewModelScope.launch { c.people.update(p) }
     }
 }
 
@@ -107,15 +108,18 @@ fun LookScreen(nav: AppNavigator, vm: LookViewModel = viewModel(factory = AppVie
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SectionHeader("Ready-made")
-            LookGrid(selectedKey = selected, custom = saved, onPick = vm::pick)
+            // Opening the creator scrolls to it (it sits below the grid); coming back to the screen doesn't.
+            var openedCreator by remember { mutableStateOf(false) }
+            LookGrid(selectedKey = selected, custom = saved, onPick = { key ->
+                openedCreator = key == Looks.CUSTOM && !creating
+                vm.pick(key)
+            })
             if (creating) {
-                // Opening the creator scrolls to it; it sits below the grid.
                 val creator = remember { BringIntoViewRequester() }
-                var shown by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    if (!shown) {
-                        shown = true
-                        if (profile.themeKey != Looks.CUSTOM) creator.bringIntoView()
+                LaunchedEffect(openedCreator) {
+                    if (openedCreator) {
+                        creator.bringIntoView()
+                        openedCreator = false
                     }
                 }
                 SectionHeader("Make your own", Modifier.bringIntoViewRequester(creator))

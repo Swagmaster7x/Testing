@@ -86,19 +86,19 @@ class LooksFlowTest {
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/looks-01-picker.png")
 
         // A ready-made look applies straight away.
-        scrollTo(hasContentDescription("Deep sea look"))
-        compose.onAllNodesWithContentDescription("Deep sea look").onFirst().performClick()
+        scrollTo(hasText("Deep sea"))
+        compose.onAllNodesWithText("Deep sea").onFirst().performClick()
         waitFor { alex().themeKey == "OCEAN" }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/looks-02-deep-sea.png")
         waitForMessageToClear()
 
         // The creator: pick a colour, a typewriter font and sparkles, then use it.
-        scrollTo(hasContentDescription("Create your own look"))
-        compose.onAllNodesWithContentDescription("Create your own look").onFirst().performClick()
+        scrollTo(hasText("Create your own"))
+        compose.onAllNodesWithText("Create your own").onFirst().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Make your own").fetchSemanticsNodes().isNotEmpty() }
         assertEquals("OCEAN", alex().themeKey)
-        scrollTo(hasContentDescription("Colour 6E44C9"))
-        compose.onAllNodesWithContentDescription("Colour 6E44C9").onFirst().performClick()
+        scrollTo(hasContentDescription("Purple"))
+        compose.onAllNodesWithContentDescription("Purple").onFirst().performClick()
         scrollTo(hasText("Typewriter"))
         compose.onAllNodesWithText("Typewriter").onFirst().performClick()
         scrollTo(hasText("Sparkles"))
@@ -118,8 +118,8 @@ class LooksFlowTest {
         waitForMessageToClear()
 
         // Back to a ready-made look keeps the creation for later.
-        scrollTo(hasContentDescription("Dark fantasy look"))
-        compose.onAllNodesWithContentDescription("Dark fantasy look").onFirst().performClick()
+        scrollTo(hasText("Dark fantasy"))
+        compose.onAllNodesWithText("Dark fantasy").onFirst().performClick()
         waitFor { alex().themeKey == "IRON" }
         assertEquals(made, CustomLook.decode(alex().customLook))
     }
@@ -133,8 +133,8 @@ class LooksFlowTest {
         compose.onAllNodesWithText("Change look").onFirst().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Ready-made").fetchSemanticsNodes().isNotEmpty() }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/looks-10-big-text.png")
-        scrollTo(hasContentDescription("Create your own look"))
-        compose.onAllNodesWithContentDescription("Create your own look").onFirst().performClick()
+        scrollTo(hasText("Create your own"))
+        compose.onAllNodesWithText("Create your own").onFirst().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Make your own").fetchSemanticsNodes().isNotEmpty() }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/looks-11-big-text-creator.png")
     }

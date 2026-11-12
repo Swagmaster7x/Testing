@@ -42,6 +42,12 @@ class ProfileRepository(
 
     suspend fun update(profile: Profile) = dao.upsert(profile.copy(name = profile.name.trim()))
 
+    /** Switches to a ready-made look (or back to the saved custom one), touching nothing else. */
+    suspend fun setLook(id: Long, themeKey: String) = dao.setLook(id, themeKey)
+
+    /** Saves a look made in the creator and switches to it. */
+    suspend fun setCustomLook(id: Long, customLook: String) = dao.setLook(id, "CUSTOM", customLook)
+
     /** Removes a person and everything that was only theirs. Shared recipes stay. */
     suspend fun delete(id: Long) {
         db.withTransaction {

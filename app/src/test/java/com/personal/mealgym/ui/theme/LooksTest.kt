@@ -93,6 +93,11 @@ class LooksTest {
         assertEquals(Corners.ROUNDED, future.corners)
         assertEquals(Mode.FOLLOW, future.mode)
         assertSame(Looks.custom(c), Looks.custom(c.copy()))
+        // Every choice is written, defaults included, so changing a default later can't change saved looks.
+        val saved = CustomLook().encode()
+        for (field in listOf("primary", "accent", "background", "mode", "type", "corners", "backdrop", "glossy")) {
+            assertTrue(field, saved.contains("\"$field\""))
+        }
     }
 
     @Test
