@@ -4,7 +4,7 @@ import { buildCreature, disposeTree, bounds, applyShellStep } from './creature.j
 import { makeMaterials, applyLook } from './materials.js';
 import { TEMPLATES } from './templates.js';
 import { statsOf, traits, makeFighter, step, usePower, useGuard, useAbility, ai, oppMul, championPoints, ABILITY_CD, ENDLESS, HEAL } from './battle.js';
-import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock, eliteFor, LEVELS, titlePoints } from './items.js';
+import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock, eliteFor, LEVELS, titlePoints, ELITES, VENUES, venue, venueFor, temper, temperFor, BERSERK_ATK, weeklyFor, weekKey, weekEnds } from './items.js';
 import { randomCreature } from './random.js';
 import { rng, setDetail } from './geom.js';
 import { makeRig, applyRig, strikePose, zero, resetBones, STRIKE_LEN, STYLES } from './anim.js';
@@ -59,8 +59,22 @@ function buildScenery() {
     const b = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.0), new THREE.MeshStandardMaterial({ color: i % 2 ? 0x9a1c1c : 0xd9a020, roughness: 0.8, side: THREE.DoubleSide }));
     b.position.set(Math.cos(a) * (R - 0.03), 0.9, Math.sin(a) * (R - 0.03)); b.lookAt(0, 0.9, 0); g.add(b);
   }
-  const sky = canvasTex(4, 256, (c) => { const gr = c.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#2f5fa8'); gr.addColorStop(0.45, '#7fa6d0'); gr.addColorStop(1, '#e9c79a'); c.fillStyle = gr; c.fillRect(0, 0, 4, 256); });
-  return { g, crowd, seats, m4, sky };
+  // Each venue repaints the same bowl: sky, sand, stone, the light, and something in the air.
+  const grad = (a, b, c3) => canvasTex(4, 256, (c) => { const gr = c.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, a); gr.addColorStop(0.45, b); gr.addColorStop(1, c3); c.fillStyle = gr; c.fillRect(0, 0, 4, 256); });
+  const LOOK = {
+    sands: { sky: ['#2f5fa8', '#7fa6d0', '#e9c79a'], floor: 0xffffff, stone: 0x8f775c, sun: 0xfff2dd, power: 2.2 },
+    mire: { sky: ['#24402f', '#5d7f58', '#a9b98a'], floor: 0x7f9a62, stone: 0x66705a, sun: 0xd8f0c0, power: 1.7, air: { color: 0xb6ff7a, n: 150, vy: 0.35, size: 0.14, drift: 0.5 } },
+    frost: { sky: ['#5f7f9f', '#b9d3e6', '#f2f7fb'], floor: 0xdfeeff, stone: 0x9fb0bf, sun: 0xeaf4ff, power: 2.0, air: { color: 0xffffff, n: 260, vy: -1.1, size: 0.12, drift: 0.6 } },
+    forge: { sky: ['#1a0a08', '#5a1c10', '#e0662a'], floor: 0xc98a6a, stone: 0x5c4038, sun: 0xffb070, power: 2.4, air: { color: 0xffa040, n: 160, vy: 1.6, size: 0.11, drift: 0.9 } },
+    storm: { sky: ['#1c2330', '#48556a', '#8a93a0'], floor: 0xa9a59a, stone: 0x6f6f72, sun: 0xcdd8ee, power: 1.5, air: { color: 0xaec6e8, n: 300, vy: -9, size: 0.07, drift: 0.1 } },
+    moon: { sky: ['#070b1c', '#1b2550', '#4a4f86'], floor: 0x8f9bd0, stone: 0x5a5f80, sun: 0xaebcff, power: 1.3, air: { color: 0xfff6a0, n: 60, vy: 0.08, size: 0.14, drift: 1.2 } },
+  };
+  for (const k in LOOK) LOOK[k].tex = grad(...LOOK[k].sky);
+  const N = 300, pos = new Float32Array(N * 3), seedv = new Float32Array(N);
+  for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 22; pos[i * 3 + 1] = Math.random() * 9; pos[i * 3 + 2] = (Math.random() - 0.5) * 16 - 2; seedv[i] = Math.random() * 6.28; }
+  const ageo = new THREE.BufferGeometry(); ageo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const air = new THREE.Points(ageo, new THREE.PointsMaterial({ size: 0.08, transparent: true, opacity: 0.85, depthWrite: false })); air.visible = false; air.frustumCulled = false; g.add(air);
+  return { g, crowd, seats, m4, sky: LOOK.sands.tex, LOOK, floor, stone, dark, air, pos, seedv, N };
 }
 
 /** A simple model for a held weapon, about one unit long, pointing along +Y. */
@@ -93,6 +107,24 @@ export function createArena(env) {
   const ME = makeMaterials();                 // the opponent gets its own set so the two looks do not clash
   const blobTex = canvasTex(64, 64, (c) => { const gr = c.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(0, 0, 64, 64); });
   const el = document.getElementById('battle');
+  const calm = () => !!env.meta().calm;         // "reduce motion" in settings: no shake, flashes, slow motion or weather
+  let airNow = null;
+  function applyVenue(v) {
+    const L = S.LOOK[v.id] || S.LOOK.sands;
+    scene.background = L.tex; S.floor.material.color.setHex(L.floor); S.stone.color.setHex(L.stone); S.dark.color.setHex(L.stone).multiplyScalar(0.75);
+    env.sun.color.setHex(L.sun); env.sun.intensity = L.power;
+    airNow = calm() ? null : L.air || null; S.air.visible = !!airNow;
+    if (airNow) { S.air.material.color.setHex(airNow.color); S.air.material.size = airNow.size; S.air.geometry.setDrawRange(0, airNow.n); }
+  }
+  function blowAir(dt, t) {
+    if (!airNow) return;
+    const p = S.pos, a = airNow;
+    for (let i = 0; i < a.n; i++) {
+      p[i * 3 + 1] += a.vy * dt; p[i * 3] += Math.sin(t * 0.7 + S.seedv[i]) * a.drift * dt;
+      if (p[i * 3 + 1] > 9) p[i * 3 + 1] = 0; else if (p[i * 3 + 1] < 0) p[i * 3 + 1] = 9;
+    }
+    S.air.geometry.attributes.position.needsUpdate = true;
+  }
   const A = { active: false, phase: 'off', run: null, data: null, views: [null, null], F: null, t: 0, phaseT: 0, enemy: null, shake: 0, cheer: 0, rand: Math.random, confetti: null, queue: [], eLoad: null, auto: false, freeze: 0, slow: 0, punch: 0, entered: false };
   let keepBg = null;
 
@@ -171,7 +203,7 @@ export function createArena(env) {
     el.replaceChildren(
       h('div', { class: 'hud' },
         h('div', { class: 'who l' }, h('b', null, names[0]), h('div', { class: 'hp' }, h('u', { id: 'hg0' }), h('i', { id: 'hp0' })), h('small', { id: 'st0' }), h('div', { class: 'kit' }, icons(A.run.load))),
-        h('div', { class: 'round' }, h('small', null, endless() ? 'Endless' : lvl().name), h('b', null, (A.run.round + 1) + (endless() ? '' : ' / ' + fights()))),
+        h('div', { class: 'round' }, h('small', null, (A.venue && A.venue.id !== 'sands' ? A.venue.icon + ' ' : '') + env.tr(endless() ? 'Endless' : lvl().name)), h('b', null, (A.run.round + 1) + (endless() ? '' : ' / ' + fights()))),
         h('div', { class: 'who r' }, h('b', null, names[1]), h('div', { class: 'hp' }, h('u', { id: 'hg1' }), h('i', { id: 'hp1' })), h('small', { id: 'st1' }), h('div', { class: 'kit' }, A.eLoad ? icons(A.eLoad) : ''))),
       h('div', { class: 'msg', id: 'bmsg' }),
       h('div', { class: 'floaters' }),
@@ -183,7 +215,9 @@ export function createArena(env) {
           h('button', { class: 'abil', id: 'bab' + k, onpointerdown: press(() => { useAbility(A.F, 0, k, A.rand, A.queue); }) }, h('i'), h('em', null, item(a.id, 'ability').icon), h('span', null, item(a.id, 'ability').name))))));
   }
   // The gauntlet being run: its difficulty level, how many fights it has, and whether it is the endless pit.
-  const lvl = () => LEVELS[A.run.level ?? 2], endless = () => !!A.run.endless, fights = () => (endless() ? Infinity : lvl().fights);
+  const wk = () => (A.run.weekly ? weeklyFor(A.run.weekly) : null);          // the weekly challenge, if this run is one
+  const lvl = () => wk() || LEVELS[A.run.level ?? 2], endless = () => !!A.run.endless && !A.run.weekly, fights = () => (endless() ? Infinity : lvl().fights);
+  const safe = () => endless() || !!A.run.weekly;                            // exhibitions: the creature survives a loss
   const isBoss = (round) => (endless() ? round % 10 === 9 : round === fights() - 1);
   const ofN = () => (endless() ? '' : ' of ' + fights());
   /** What this run has done so far, shown when it ends. */
@@ -201,19 +235,22 @@ export function createArena(env) {
     A.phase = 'gate'; el.replaceChildren();
     const s = statsOf(A.data), tr = traits(s), meta = env.meta();
     const cell = (k, val) => h('div', null, h('small', null, k), h('b', null, String(val)));
-    const choose = (level, pit) => { A.run.level = level; A.run.endless = pit; meta.levelSel = level; meta.endlessSel = pit; env.saveMeta(); gate(); };
+    const choose = (level, pit, week) => { A.run.level = level; A.run.endless = pit; A.run.weekly = week || 0; if (!week) { meta.levelSel = level; meta.endlessSel = pit; env.saveMeta(); } gate(); };
+    const W = wk(), wrec = meta.weekly && meta.weekly.key === weekKey() ? meta.weekly : { best: 0, done: 0 };
     const L = lvl();
-    panel(h('h2', null, endless() ? 'The Endless Pit' : 'The Colosseum · ' + L.name),
-      endless()
+    panel(h('h2', null, W ? 'Weekly Challenge' : endless() ? 'The Endless Pit' : 'The Colosseum · ' + L.name),
+      W ? h('p', null, h('b', null, env.tr(W.rule.name)), ' · ', env.tr(W.venue.name), ': ', env.tr(W.rule.text), ' ', env.tr(W.venue.text), ' ', W.fights + ' fights, the same for every player this week. ', wrec.done ? 'Already won this week: a repeat win pays ' + W.again + ' points.' : 'The first win this week pays ' + W.prize + ' points.', ' ', 'Your best this week: ' + wrec.best + ' / ' + W.fights + '.')
+      : endless()
         ? h('p', null, h('b', null, A.data.name), ' fights on for as long as it can. Opponents never stop getting stronger, with a champion every tenth fight. How far can it go?')
         : h('p', null, h('b', null, A.data.name), ' faces ' + L.fights + ' fights in a row, each tougher than the last, ending with the reigning champion. Choose a reward after every win.'),
       h('div', { class: 'stats' }, cell('Health', s.hp), cell('Attack', s.atk.toFixed(1)), cell('Armour', Math.round(s.def * 100) + '%'), cell('Speed', s.spd.toFixed(2)), cell('Hands', s.slots), cell('Abilities', s.abilitySlots), cell('Revives', meta.revives || 0)),
       h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.map(env.tr).join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle holds one weapon.' : 'No hands: it carries one weapon in its jaws, at reduced effect. Add arms or tentacles to wield more.', ' Its body decides which abilities and relics turn up.'),
-      endless() ? h('p', { class: 'warn' }, 'The pit is an exhibition: when it falls it is carried out alive, and keeps its points.') : h('p', { class: 'warn' }, 'Fights are to the death. If it dies with no revive, it is gone for good.'),
+      W ? h('p', { class: 'warn' }, 'The challenge is an exhibition: if it falls it is carried out alive.') : endless() ? h('p', { class: 'warn' }, 'The pit is an exhibition: when it falls it is carried out alive, and keeps its points.') : h('p', { class: 'warn' }, 'Fights are to the death. If it dies with no revive, it is gone for good.'),
       h('div', { class: 'ranks' }, h('small', null, 'Difficulty: harder levels have more fights, tougher opponents and pay more. Win the title to open the next.'),
         h('div', { class: 'chips' },
-          LEVELS.map((d, i) => i <= meta.level + 1 && h('button', { class: !endless() && i === A.run.level ? 'on' : '', disabled: i > meta.level, onclick: () => choose(i, false) }, (i > meta.level ? '🔒 ' : '') + env.tr(d.name) + ' · ' + d.fights)),
+          LEVELS.map((d, i) => i <= meta.level + 1 && h('button', { class: !safe() && i === A.run.level ? 'on' : '', disabled: i > meta.level, onclick: () => choose(i, false) }, (i > meta.level ? '🔒 ' : '') + env.tr(d.name) + ' · ' + d.fights)),
           h('button', { class: endless() ? 'on' : '', disabled: !meta.champions, onclick: () => choose(A.run.level, true) }, (meta.champions ? '' : '🔒 ') + '∞ Endless'),
+          h('button', { class: W ? 'on' : '', onclick: () => choose(A.run.level, false, weekKey()) }, '📅 ', 'Weekly', wrec.done ? ' ✓' : ''),
           h('button', { onclick: async () => {
             const text = prompt('Paste a critter code from a friend. One free fight, nothing at stake.');
             if (!text) return;
@@ -224,7 +261,7 @@ export function createArena(env) {
       h('p', { class: 'runs', id: 'gruns' }),
       h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
         h('button', { class: 'ad', id: 'gad', onclick: async (e) => { if (await adFor(e, 'gate')) { addRun(meta); env.saveMeta(); } tickRuns(); } }, '📺 Watch an ad: +1 run'),
-        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; saveRun(); env.track('run_start', { level: endless() ? 'endless' : lvl().name, type: A.data.type }); play('gate'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
+        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; if (wk()) A.run.seed = wk().seed; saveRun(); env.track('run_start', { level: endless() ? 'endless' : lvl().name, type: A.data.type }); play('gate'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
     tickRuns();
   }
   // A friendly duel is never saved: it is one free fight with nothing at stake.
@@ -290,13 +327,20 @@ export function createArena(env) {
     if (boss) A.enemy.name = A.enemy.name.split(' ')[0] + ', Champion of the Sands';
     const ps = statsOf(A.data), es = statsOf(A.enemy);
     A.eLoad = A.run.duel ? newLoad() : enemyLoad(rng(A.run.seed + A.run.round), es, A.run.round);
+    const W = wk(), rule = W ? W.rule.id : '';
     A.elite = A.run.duel ? null : eliteFor(rng(A.run.seed * 3 + A.run.round), A.run.round, boss);
+    if (rule === 'elite' && !A.elite && A.run.round > 0 && !boss) A.elite = ELITES[Math.floor(rng(A.run.seed * 5 + A.run.round)() * ELITES.length)];
+    A.venue = A.run.duel ? VENUES[0] : W ? W.venue : venueFor(rng(A.run.seed * 11 + A.run.round * 31), A.run.round);
+    A.temper = A.run.duel ? temper('brawler') : temperFor(rng(A.run.seed * 13 + A.run.round * 17), A.run.round);
+    applyVenue(A.venue);
+    const both = (m) => { for (const k in (A.venue.mods || {})) m[k] = (m[k] || 0) + A.venue.mods[k]; if (rule === 'glass') m.atkP = (m.atkP || 0) + 0.4; return m; };
     if (A.elite) A.enemy.name = A.elite.name + ' ' + A.enemy.name.split(' ')[0];
     A.hurt = false;
     A.views[1] = makeView(A.enemy, ME, 1, A.eLoad, 6);
     if (boss) A.views[1].holder.scale.setScalar(1.18);
-    A.F = [makeFighter(ps, { mods: loadMods(A.run.load, ps), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
-      makeFighter(es, { mul: A.run.duel ? { hp: 1, atk: 1 } : oppMul(A.run.round * (endless() ? ENDLESS.slope : lvl().slope), endless() ? 0 : lvl().tier, boss, endless()), mods: (() => { const m = loadMods(A.eLoad, es); if (A.elite) for (const k in A.elite.mods) m[k] = (m[k] || 0) + A.elite.mods[k]; return m; })() })];
+    A.F = [makeFighter(ps, { mods: both(loadMods(A.run.load, ps)), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
+      makeFighter(es, { mul: A.run.duel ? { hp: 1, atk: 1 } : oppMul(A.run.round * (endless() ? ENDLESS.slope : lvl().slope), endless() ? 0 : lvl().tier, boss, endless()), mods: (() => { const m = both(loadMods(A.eLoad, es)); if (A.elite) for (const k in A.elite.mods) m[k] = (m[k] || 0) + A.elite.mods[k]; if (rule === 'titans') m.hpP = (m.hpP || 0) + 0.25; if (A.temper.id === 'berserker') m.atkP = (m.atkP || 0) + BERSERK_ATK; return m; })() })];
+    A.F.field = A.venue.field || null; A.F[1].temper = A.temper.id;
     if (A.run.hp != null) A.F[0].hp = Math.min(A.F[0].max, A.run.hp);
     A.rand = Math.random; A.queue = [];
     A.run.fighting = true; A.run.dead = false; saveRun();
@@ -305,6 +349,10 @@ export function createArena(env) {
     music(boss ? 'boss' : 'battle');
     if (A.elite) A.views[1].holder.scale.setScalar(A.elite.id === 'giant' ? 1.25 : 1.08);
     message(A.run.duel ? 'Friendly duel' : boss ? (endless() ? 'Champion!' : 'Final fight') : A.elite ? 'Elite!' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name + (A.elite ? ' (+50% points)' : ''));
+    const m = document.getElementById('bmsg');
+    A.introLen = 1.9 + (A.venue.id !== 'sands' ? 1.6 : 0) + (A.temper.id !== 'brawler' ? 1.4 : 0);
+    if (m && A.venue.id !== 'sands') m.append(h('span', { class: 'venue' }, A.venue.icon + ' ', env.tr(A.venue.name), ': ', env.tr(A.venue.text)));
+    if (m && A.temper.id !== 'brawler') m.append(h('span', { class: 'venue' }, env.tr(A.temper.name), ': ', env.tr(A.temper.text)));
   }
   function message(big, small) { const m = document.getElementById('bmsg'); if (m) m.replaceChildren(big ? h('b', null, big) : '', small ? h('span', null, small) : ''); }
   function bars() {
@@ -312,7 +360,7 @@ export function createArena(env) {
       const f = A.F[i], b = document.getElementById('hp' + i); if (!b) continue;
       const k = clamp(f.hp / f.max, 0, 1), st = f.st;
       document.getElementById('hg' + i).style.width = (k * 100) + '%';
-      b.style.width = (k * 100) + '%'; b.style.background = st.poison > 0 ? '#8fd14f' : k > 0.5 ? '#3fd0a4' : k > 0.25 ? '#ffb347' : '#ff5a4a';
+      b.style.width = (k * 100) + '%'; b.style.background = env.meta().cb ? (st.poison > 0 ? '#c9a0ff' : k > 0.5 ? '#4aa3ff' : k > 0.25 ? '#ffd23f' : '#ff7a1a') : st.poison > 0 ? '#8fd14f' : k > 0.5 ? '#3fd0a4' : k > 0.25 ? '#ffb347' : '#ff5a4a';
       b.parentNode.classList.toggle('shield', f.shield > 0);
       const txt = Math.max(0, Math.ceil(f.hp)) + ' / ' + f.max + (f.shield > 0 ? ' +' + Math.ceil(f.shield) : '') + (st.bleed > 0 ? ' 🩸' + st.bleed : '') + (st.poison > 0 ? ' ☣️' : '') + (st.burn > 0 ? ' 🔥' : '') + (st.stun > 0 ? ' 💫' : '') + (st.weak > 0 ? ' ⬇️' : '') + (st.slow > 0 ? ' 🕸️' : '') + (st.blind > 0 ? ' 🌫️' : '') + (f.buff.shell > 0 ? ' 🐢' : '') + (f.buff.evade > 0 ? ' 🦅' : '') + (f.buff.frenzy > 0 ? ' 😤' : '');
       const sEl = document.getElementById('st' + i); if (sEl.textContent !== txt) sEl.textContent = txt;
@@ -334,15 +382,29 @@ export function createArena(env) {
     const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round, endless() ? 1 : lvl().pay, !!A.elite);
     env.stat('fightsWon'); if (!endless()) env.stat('bestFight', A.run.round + 1, true); else env.stat('bestEndless', A.run.round + 1, true);
     if (A.elite) env.stat('elites');
+    if (!meta.venues) meta.venues = {}; meta.venues[A.venue.id] = 1;
+    const W = wk(); if (W) { const r = meta.weekly && meta.weekly.key === W.key ? meta.weekly : { key: W.key, best: 0, done: 0 }; r.best = Math.max(r.best, A.run.round + 1); meta.weekly = r; }
     if (!A.hurt) env.stat('flawless'); if (f.hp < f.max * 0.1) env.stat('closeCalls');
     meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; A.run.lastPts = pts; env.saveMeta(); play('coins');
     A.run.bonusHp = (A.run.bonusHp || 0) + f.m.killHp;
     A.run.round++; A.run.fighting = false;
-    A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * (HEAL + 0.04 * (meta.boosts.recov || 0) + f.m.killHeal));
+    A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * ((HEAL + 0.04 * (meta.boosts.recov || 0)) * (W && W.rule.id === 'lean' ? 0.5 : 1) + f.m.killHeal));
     A.run.draft = null;
-    if (A.run.round >= fights()) { champion(); return; }
+    if (A.run.round >= fights()) { if (W) weeklyWon(); else champion(); return; }
     saveRun();
     reward(A.enemy.name.split(',')[0] + ' is dead', '+' + pts + ' points. ' + A.data.name + ' recovers to ' + Math.round(A.run.hp) + ' / ' + f.max + ' health. ' + (isBoss(A.run.round) ? (endless() ? 'A champion is next. ' : 'Only the champion remains. ') : '') + 'Choose a reward:');
+  }
+  function weeklyWon() {
+    const W = wk(), meta = env.meta(), first = !meta.weekly.done, pts = first ? W.prize : W.again;
+    A.phase = 'champion'; store.set('cc.run', null); music(null); synth('win'); synth('crowd'); A.cheer = 6;
+    dropView(1); A.views[0].holder.position.x = 0; A.views[0].holder.rotation.y = 0.35;
+    meta.weekly.done = (meta.weekly.done || 0) + 1; A.run.earned = (A.run.earned || 0) + pts; env.bonus(pts); env.stat('weeklies'); endRun();
+    env.track('weekly_won', { rule: W.rule.id });
+    el.replaceChildren(h('div', { class: 'floaters' }));
+    panel(h('h2', { class: 'gold' }, 'Weekly Challenge won!'),
+      h('p', null, h('b', null, A.data.name), ' beat all ' + W.fights + ' fights: +' + pts + ' points.', ' ', first ? 'A new challenge starts on Monday.' : ''),
+      summary(),
+      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'))).classList.add('low', 'wide');
   }
   function champion() {
     A.phase = 'champion'; store.set('cc.run', null); music(null); synth('win'); synth('crowd'); A.cheer = 6;
@@ -376,12 +438,14 @@ export function createArena(env) {
     el.querySelector('.acts').classList.add('hidden'); message('', '');
     const meta = env.meta(), again = () => { A.run.hp = Math.round(A.F[0].max * 0.5); saveRun(); synth('heal'); nextFight(); };
     const adBtn = (label) => !A.run.adRevived && h('button', { class: 'ad', onclick: async (e) => { if (!(await adFor(e, 'dead'))) return; A.run.adRevived = true; again(); } }, label);
-    if (endless()) {                                  // the pit never costs a creature
-      panel(h('h2', null, A.data.name + ' is carried from the pit'),
-        h('p', null, 'Beaten by ' + A.enemy.name + ' after ' + A.run.round + (A.run.round === 1 ? ' win' : ' wins') + '. Your best in the pit is ' + Math.max(A.run.round, (meta.stats.bestEndless || 0)) + '.'),
+    if (safe()) {                                     // exhibitions never cost a creature
+      const W = wk();
+      panel(h('h2', null, A.data.name + (W ? ' is carried out' : ' is carried from the pit')),
+        W ? h('p', null, 'Beaten by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ' of ' + W.fights + '.', ' ', 'You can try the challenge again any time this week.')
+          : h('p', null, 'Beaten by ' + A.enemy.name + ' after ' + A.run.round + (A.run.round === 1 ? ' win' : ' wins') + '. Your best in the pit is ' + Math.max(A.run.round, (meta.stats.bestEndless || 0)) + '.'),
         summary(),
         h('div', { class: 'row' }, adBtn('📺 Watch an ad to fight on'),
-          h('button', { class: 'go', onclick: () => { endRun(); store.set('cc.run', null); finish({ type: 'retired', wins: A.run.round }); } }, 'Leave the pit'))).classList.add('low', 'wide');
+          h('button', { class: 'go', onclick: () => { endRun(); store.set('cc.run', null); finish(W ? { type: 'back' } : { type: 'retired', wins: A.run.round }); } }, W ? 'Back to the workshop' : 'Leave the pit'))).classList.add('low', 'wide');
       return;
     }
     panel(h('h2', { class: 'red' }, A.data.name + ' has fallen'),
@@ -396,7 +460,7 @@ export function createArena(env) {
     if (!A.active) return;
     dropView(0); dropView(1);
     if (A.confetti) { S.g.remove(A.confetti.mesh); A.confetti.mesh.geometry.dispose(); A.confetti.mesh.material.dispose(); A.confetti.mesh.dispose(); A.confetti = null; }
-    A.active = false; A.phase = 'off'; S.g.visible = false; scene.background = keepBg; fx.clear(); resetBones(env.M); camera.zoom = 1;
+    A.active = false; A.phase = 'off'; S.g.visible = false; scene.background = keepBg; env.sun.color.setHex(0xfff2dd); env.sun.intensity = 2.2; fx.clear(); resetBones(env.M); camera.zoom = 1;
     el.classList.add('hidden'); el.replaceChildren();
     env.onDone(result);
   }
@@ -460,6 +524,14 @@ export function createArena(env) {
     }
   }
   function onEvent(ev) {
+    if (ev.type === 'bolt') {
+      const v = A.views[ev.on];
+      if (ev.on === 0) A.hurt = true;
+      if (A.run.sum && ev.on === 0) A.run.sum.taken += ev.dmg;
+      floater(ev.on, '⚡ -' + ev.dmg, 'big'); fx.burst('magic', world(v, v.mid), 30, { spread: 0.8 }); fx.ring(world(v, new THREE.Vector3(0, 0.05, -v.len / 2)), 0xcfe4ff, 2.4);
+      synth('fire'); play('thud', 0.8); if (!calm()) { A.flash = 0.25; A.shake = Math.max(A.shake, 0.25); }
+      return;
+    }
     if (ev.type === 'dot') {
       if (ev.on === 0) A.hurt = true;
       if (A.run.sum) { if (ev.on === 0) A.run.sum.taken += ev.dmg; else A.run.sum.dealt += ev.dmg; }
@@ -509,10 +581,11 @@ export function createArena(env) {
   A.update = (real, t) => {
     // Heavy hits freeze the action for an instant; a kill plays out in slow motion.
     let dt = real;
+    if (calm()) A.freeze = A.slow = 0;
     if (A.freeze > 0) { A.freeze -= real; dt = real * 0.05; }
     if (A.slow > 0) { A.slow -= real; dt *= 0.3; }
     A.t += dt; A.phaseT += dt;
-    if (A.phase === 'intro' && A.phaseT > 1.9) {
+    if (A.phase === 'intro' && A.phaseT > (A.introLen || 1.9)) {
       const go = () => { A.phase = 'fight'; A.phaseT = 0; message('Fight!', ''); setTimeout(() => A.phase === 'fight' && message('', ''), 700); };
       if (!env.meta().tutFight && !window.__ccPause) {     // first fight ever: explain the two buttons before it starts
         A.phase = 'tip'; message('', '');
@@ -533,7 +606,9 @@ export function createArena(env) {
     }
     if (A.phase === 'ending' && A.phaseT > 2.1) { if (A.winner === 0) wonFight(); else died(); }
     for (let i = 0; i < 2; i++) if (A.views[i]) animate(A.views[i], i, dt, A.t);
-    fx.resize(window.innerHeight); fx.update(dt);
+    fx.resize(window.innerHeight); fx.update(dt); blowAir(dt, A.t);
+    if (A.flash > 0) { A.flash -= real; env.sun.intensity = (S.LOOK[A.venue ? A.venue.id : 'sands'] || S.LOOK.sands).power * (1 + 3 * Math.max(0, A.flash) / 0.25); }
+    if (calm()) { A.shake = 0; A.punch = 0; }
     // Crowd bounce, camera sway and shake.
     A.cheer = Math.max(0, A.cheer - dt * 0.8);
     const amp = 0.03 + 0.14 * Math.min(A.cheer, 1);
@@ -559,7 +634,7 @@ export function createArena(env) {
     A.run = run || { id: data.id, round: 0, hp: null, level: Math.min(env.meta().levelSel || 0, env.meta().level || 0), endless: !!(env.meta().endlessSel && env.meta().champions), seed: Math.floor(Math.random() * 1e9), load: newLoad(), bonusHp: 0, earned: 0, rerolls: env.meta().boosts.reroll || 0, draft: null };
     if (!A.run.load) A.run.load = newLoad();
     A.eLoad = null; A.queue = [];
-    keepBg = scene.background; scene.background = S.sky; S.g.visible = true; music('battle');
+    keepBg = scene.background; S.g.visible = true; A.venue = VENUES[0]; applyVenue(A.venue); music('battle');
     el.classList.remove('hidden');
     A.views[0] = makeView(data, env.M, -1, A.run.load);
     // Coming back after the app was closed. A death stays a death; walking out mid-fight is forgiven once.
@@ -575,6 +650,7 @@ export function createArena(env) {
         h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => enter() }, 'Next fight')));
     } else gate();
   };
+  A.setVenue = (id) => { A.venue = venue(id); applyVenue(A.venue); if (A.F) A.F.field = A.venue.field || null; };      // for tests and screenshots
   A.back = () => { if (A.phase === 'gate') finish({ type: 'back' }); return true; };
   return A;
 }

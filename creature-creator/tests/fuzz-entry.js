@@ -1,5 +1,5 @@
 import { statsOf, makeFighter, step, ai, oppMul, ROUNDS, HEAL, ABILITY_CD } from '../web/src/battle.js';
-import { draft, take, newLoad, loadMods, enemyLoad, newMeta, ITEMS, fits, handsUsed, item, describe, runsNow, spendRun, addRun } from '../web/src/items.js';
+import { draft, take, newLoad, loadMods, enemyLoad, newMeta, ITEMS, fits, handsUsed, item, describe, runsNow, spendRun, addRun, VENUES, TEMPERS, weeklyFor, weekKey, weekEnds } from '../web/src/items.js';
 import { randomCreature } from '../web/src/random.js';
 import { newCreature } from '../web/src/creature.js';
 import { TEMPLATES } from '../web/src/templates.js';
@@ -34,6 +34,7 @@ for (let seed = 1; seed <= (+process.env.N || 1500); seed++) {
     try {
       const e = randomCreature(rng(seed * 31 + round)), es = statsOf(e), el = enemyLoad(rng(seed + round), es, round);
       const F = [makeFighter(s, { mods: loadMods(load), abilities: load.abilities, bonusHp: 0.2 }), makeFighter(es, { mul: oppMul(round, 0, round === 9), mods: loadMods(el, es) })];
+      F.field = VENUES[Math.floor(Math.random() * VENUES.length)].field || null; F[1].temper = TEMPERS[Math.floor(Math.random() * TEMPERS.length)].id; F[0].temper = TEMPERS[Math.floor(Math.random() * TEMPERS.length)].id;
       finite(F[0], 'F0'); finite(F[1], 'F1');
       let w = -1, t = 0; const ev = [];
       while (w < 0 && t < 600) { ai(F, 0, 0.05, r, 0.5, ev); ai(F, 1, 0.05, r, 0.3, ev); w = step(F, 0.05, r, ev); t += 0.05; for (const x of ev) if (x.dmg !== undefined && !Number.isFinite(x.dmg)) note('event dmg nonfinite ' + x.type + ' ' + (x.name || ''), x); ev.length = 0; if (!Number.isFinite(F[0].hp) || !Number.isFinite(F[1].hp)) { note('hp nonfinite', [F[0].hp, F[1].hp]); break; } }
@@ -50,3 +51,6 @@ for (let seed = 1; seed <= (+process.env.N || 1500); seed++) {
   addRun(m, t0); addRun(m, t0); r = runsNow(m, t0); if (r.n > 7) note('addRun over', r); console.log('runs after 2 addRun at full:', JSON.stringify(r)); }
 console.log('fights', fights, 'avg secs', (total / fights).toFixed(1), 'longest', longest.toFixed(0), 'unfinished', draws);
 console.log(Object.keys(bad).length ? JSON.stringify(bad, null, 1).slice(0, 3500) : 'NO PROBLEMS FOUND');
+
+// weekly challenge: keys are stable through a week and change on Monday (UTC)
+{ const mon = Date.UTC(2026, 10, 9), k = weekKey(mon); let bad = 0; if (weekKey(mon - 1) !== k - 1 || weekKey(mon + 7 * 864e5 - 1) !== k || weekEnds(k) !== mon + 7 * 864e5) bad++; const w = weeklyFor(k); if (!w.rule || !w.venue || w.venue.id === 'sands') bad++; console.log(bad ? 'WEEKLY KEY PROBLEM' : 'weekly keys ok', new Date(weekEnds(weekKey())).toUTCString()); }

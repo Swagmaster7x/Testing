@@ -1,5 +1,6 @@
 import { statsOf, makeFighter, step, ai, oppMul, OPP, ENDLESS, ROUNDS, HEAL } from '../web/src/battle.js';
-import { draft, take, newLoad, loadMods, enemyLoad, newMeta, ITEMS, fits, fightPoints } from '../web/src/items.js';
+import { draft, take, newLoad, loadMods, enemyLoad, newMeta, ITEMS, fits, fightPoints, venueFor, temperFor, venue, temper } from '../web/src/items.js';
+const VAR = process.env.VAR;      // VAR=1: random venues and temperaments as in the game; VAR=mire / VAR=turtle: force one
 import { randomCreature } from '../web/src/random.js';
 import { newCreature, addPart, bodyGeometry } from '../web/src/creature.js';
 import { TEMPLATES } from '../web/src/templates.js';
@@ -11,6 +12,12 @@ export function gauntlet(ps, seed, skillP, meta, start, tier = 0, FIGHTS = 10, e
   for (let r = 0; r < (endless ? 999 : FIGHTS); r++) {
     const e = randomCreature(rng(seed * 31 + r * 7919)), es = statsOf(e);
     const F = [makeFighter(ps, { mods: loadMods(load, ps), abilities: load.abilities, bonusHp: bonus, boost }), makeFighter(es, { mul: oppMul(r * slope, tier, endless ? r % 10 === 9 : r === FIGHTS - 1, endless), mods: loadMods(enemyLoad(rng(seed + r), es, r), es) })];
+    if (VAR) {
+      const v = venue(VAR).id === VAR ? venue(VAR) : VAR === '1' ? venueFor(rng(seed * 11 + r * 31), r) : venue('sands'), tp = temper(VAR).id === VAR ? temper(VAR) : VAR === '1' ? temperFor(rng(seed * 13 + r * 17), r) : temper('brawler');
+      F.field = v.field || null; F[1].temper = tp.id;
+      if (tp.id === 'berserker') F[1].atk *= 1 + (+process.env.BZ || 0.14);
+      if (v.mods) for (const f of F) { f.dodge = Math.min(0.45, f.dodge + (v.mods.dodge || 0)); f.crit += v.mods.crit || 0; }
+    }
     if (hp != null) F[0].hp = Math.min(F[0].max, hp);
     let w = -1, t = 0; const ev = [];
     while (w < 0 && t < 400) { ai(F, 0, 0.05, rand, skillP, ev); ai(F, 1, 0.05, rand, Math.min(0.6, 0.15 + 0.035 * r), ev); w = step(F, 0.05, rand, ev); t += 0.05; ev.length = 0; }

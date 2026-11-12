@@ -221,6 +221,47 @@ export const ELITES = [
 ];
 export function eliteFor(rand, round, boss) { return round >= 2 && !boss && rand() < Math.min(0.5, 0.28 + 0.01 * Math.max(0, round - 9)) ? ELITES[Math.floor(rand() * ELITES.length)] : null; }
 
+// ---------------------------------------------------------------- venues, temperaments, the weekly challenge
+/** Where a fight is held. `field` changes the rules for both fighters alike; `mods` are added to both. */
+export const VENUES = [
+  { id: 'sands', name: 'The Sands', icon: '🏟️', text: 'Open sand under a clear sky. No surprises.' },
+  { id: 'mire', name: 'The Mire', icon: '🌿', text: 'Foul air: both fighters lose 1% of their health every second.', field: { rot: 0.01 } },
+  { id: 'frost', name: 'The Frozen Ring', icon: '❄️', text: 'Bitter cold: everyone attacks 12% slower and stuns last longer.', field: { slowX: 0.88, stunAdd: 0.35 } },
+  { id: 'forge', name: 'The Forge', icon: '🔥', text: 'Rising heat: after 12 seconds both fighters start to burn, worse and worse.', field: { heatFrom: 12, heat: 0.015 } },
+  { id: 'storm', name: 'Storm Court', icon: '⚡', text: 'Lightning strikes one fighter at random every few seconds.', field: { bolt: 5.5, boltP: 0.07 } },
+  { id: 'moon', name: 'Moonlit Ring', icon: '🌙', text: 'Poor light: everyone dodges more, and lands more critical hits.', mods: { dodge: 0.07, crit: 0.1 } },
+];
+export const venue = (id) => VENUES.find((v) => v.id === id) || VENUES[0];
+/** The first two fights are always on plain sand; after that about half are somewhere stranger. */
+export function venueFor(rand, round) { const a = rand(), b = rand(); return round < 2 || a < 0.5 ? VENUES[0] : VENUES[1 + Math.floor(b * (VENUES.length - 1))]; }
+
+/** How an opponent likes to fight. Behaviour only: see ai() in battle.js. */
+export const TEMPERS = [
+  { id: 'brawler', name: 'Brawler', text: 'Fights straight: no tricks.' },
+  { id: 'berserker', name: 'Berserker', text: 'Power attacks whenever it can, and never guards. Block the big ones.' },
+  { id: 'turtle', name: 'Turtle', text: 'Guards almost everything, then hits back. Bleed, poison and fire get past a guard.' },
+  { id: 'finisher', name: 'Finisher', text: 'Saves its Power attack for when you are wounded. Keep a Guard ready when your health is low.' },
+  { id: 'trickster', name: 'Trickster', text: 'Uses abilities at once, then Power attacks while you are stunned or weakened.' },
+];
+export const BERSERK_ATK = 0.2;         // a berserker never guards, so it hits harder to stay a fair fight
+export const temper = (id) => TEMPERS.find((t) => t.id === id) || TEMPERS[0];
+export function temperFor(rand, round) { const a = rand(), b = rand(); return round < 1 || a < 0.35 ? TEMPERS[0] : TEMPERS[1 + Math.floor(b * (TEMPERS.length - 1))]; }
+
+/** Weeks run Monday to Sunday (UTC). */
+export const weekKey = (now = Date.now()) => Math.floor((now / 864e5 + 3) / 7);
+export const weekEnds = (key) => ((key + 1) * 7 - 3) * 864e5;
+export const WEEK_RULES = [
+  { id: 'elite', name: 'Elite Week', text: 'Every opponent after the first is an elite.' },
+  { id: 'glass', name: 'Glass Cannons', text: 'Everyone hits 40% harder.' },
+  { id: 'lean', name: 'No Rest', text: 'Only half the usual healing between fights.' },
+  { id: 'titans', name: 'Titans', text: 'Opponents have 25% more health.' },
+];
+export const WEEKLY = { fights: 8, tier: 1, slope: 1.05, pay: 1.5, prize: 400, again: 80 };
+/** This week's challenge: the same opponents, place and rule for every player. */
+export function weeklyFor(key) {
+  return { key, seed: (key * 7919 + 104729) % 1e9, rule: WEEK_RULES[key % WEEK_RULES.length], venue: VENUES[1 + (key * 3) % (VENUES.length - 1)], name: 'Weekly', ...WEEKLY };
+}
+
 const dayKey = (now) => { const d = new Date(now); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 /** The daily gift: what is on offer today, or null if it was already claimed. */
 export function dailyGift(meta, now = Date.now()) {
@@ -239,6 +280,8 @@ export function claimDaily(meta, now = Date.now()) {
 const st = (m, k) => (m.stats && m.stats[k]) || 0, count = (o) => Object.keys(o || {}).length;
 /** Goals: one-off targets that pay points. prog(meta) -> [have, need]. */
 export const GOALS = [
+  { id: 'weekly', name: 'Regular', text: 'Win three weekly challenges.', pts: 300, prog: (m) => [st(m, 'weeklies'), 3] },
+  { id: 'tour', name: 'Well travelled', text: 'Win a fight in every arena.', pts: 200, prog: (m) => [Object.keys(m.venues || {}).length, 6] },
   { id: 'first', name: 'First blood', text: 'Win a fight.', pts: 50, prog: (m) => [st(m, 'fightsWon'), 1] },
   { id: 'glad', name: 'Gladiator', text: 'Win 25 fights.', pts: 150, prog: (m) => [st(m, 'fightsWon'), 25] },
   { id: 'vet', name: 'Veteran', text: 'Win 100 fights.', pts: 400, prog: (m) => [st(m, 'fightsWon'), 100] },

@@ -120,7 +120,8 @@ export function useGuard(f) { if (f.guardCd > 0 || f.hp <= 0) return false; f.gu
 function hurt(o, x) { if (o.shield > 0) { const a = Math.min(o.shield, x); o.shield -= a; x -= a; } o.hp -= x; }
 function heal(f, x) { f.hp = Math.min(f.max, f.hp + x); }
 function addBleed(o, n, by) { o.st.bleed = Math.min(12, o.st.bleed + n); o.st.bleedT = 5; o.st.bleedD = Math.max(1, by.atk * 0.08) * (1 + by.m.festerP); }
-function stun(o, dur) { if (o.st.immune > 0) return false; o.st.stun = dur; o.st.immune = dur + 3; return true; }
+let FIELD = {};                      // the venue's rules for the fight being stepped
+function stun(o, dur) { if (o.st.immune > 0) return false; dur += FIELD.stunAdd || 0; o.st.stun = dur; o.st.immune = dur + 3; return true; }
 /** Apply a timed ailment without weakening one that is already running. */
 function afflict(st, key, dur, dps) { st[key + 'D'] = st[key] > 0 ? Math.max(st[key + 'D'], dps) : dps; st[key] = Math.max(st[key], dur); }
 const ailments = (o) => (o.st.bleed > 0) + (o.st.poison > 0) + (o.st.burn > 0) + (o.st.stun > 0);
@@ -163,6 +164,7 @@ function blow(F, i, mult, rand, opt = {}) {
 
 /** Fire ability slot k of fighter i. Returns true if it went off. */
 export function useAbility(F, i, k, rand, events) {
+  FIELD = F.field || {};
   const f = F[i], o = F[1 - i], a = f.abil[k];
   if (!a || a.cd > 0 || f.hp <= 0 || o.hp <= 0 || f.st.stun > 0) return false;
   const L = a.lvl, say = (text) => events.push({ type: 'cast', by: i, name: text });
@@ -191,16 +193,36 @@ export function useAbility(F, i, k, rand, events) {
 export const ABILITY_CD = { pounce: 9, roar: 12, lick: 14, spit: 10, dive: 11, constrict: 12, web: 12, ink: 12, shellup: 13, sweep: 8, gore: 10, frenzy: 13, hurl: 10, rend: 9, breath: 11 };
 
 /** Simple brain for whoever is not being played. skill 0..1 is how often it blocks in time. */
+/**
+ * The opponent's brain. f.temper picks a temperament:
+ *   brawler (default) uses everything as it comes up; berserker hits Power the instant it is ready and never guards;
+ *   turtle guards nearly every hit and strikes back from behind the block; finisher saves Power for a wounded enemy;
+ *   trickster fires abilities at once and saves Power for an enemy that is stunned, weakened or blinded.
+ */
 export function ai(F, i, dt, rand, skill, events) {
-  const f = F[i], o = F[1 - i];
-  if (f.powerCd <= 0 && rand() < dt * 0.6) usePower(f);
-  if (f.guardCd <= 0 && o.t < 0.3 && rand() < dt * 8 * skill) useGuard(f);
-  for (let k = 0; k < f.abil.length; k++) if (f.abil[k].cd <= 0 && rand() < dt * 1.2 && !(f.abil[k].id === 'lick' && f.hp > f.max * 0.75) && !(f.abil[k].id === 'rend' && o.st.bleed < 2)) useAbility(F, i, k, rand, events);
+  const f = F[i], o = F[1 - i], T = f.temper || 'brawler';
+  let pow = 0.6, grd = 8 * skill, abil = 1.2;
+  if (T === 'berserker') { pow = 5; grd = 0; }
+  else if (T === 'turtle') { grd = Math.min(7.5, 8 * skill * 2.2 + 1.5); pow = f.guard > 0 ? 6 : 0.15; }
+  else if (T === 'finisher') pow = o.hp < o.max * 0.45 ? 6 : 0.04;
+  else if (T === 'trickster') { abil = 5; pow = o.st.stun > 0 || o.st.weak > 0 || o.st.blind > 0 || o.st.slow > 0 ? 6 : 0.2; }
+  if (f.powerCd <= 0 && rand() < dt * pow) usePower(f);
+  if (f.guardCd <= 0 && o.t < 0.3 && rand() < dt * grd) useGuard(f);
+  for (let k = 0; k < f.abil.length; k++) if (f.abil[k].cd <= 0 && rand() < dt * abil && !(f.abil[k].id === 'lick' && f.hp > f.max * 0.75) && !(f.abil[k].id === 'rend' && o.st.bleed < 2)) useAbility(F, i, k, rand, events);
 }
 
 /** Advance the fight. Pushes what happened into `events`; returns the winner's index, or -1. */
 export function step(F, dt, rand, events) {
   F.time = (F.time || 0) + dt;
+  const fd = FIELD = F.field || {};
+  if (fd.bolt && F[0].hp > 0 && F[1].hp > 0) {            // storm: lightning picks a fighter at random
+    F.boltT = (F.boltT === undefined ? fd.bolt : F.boltT) - dt;
+    if (F.boltT <= 0) {
+      F.boltT = fd.bolt * (0.8 + 0.4 * rand());
+      const i = rand() < 0.5 ? 0 : 1, f = F[i], d = Math.max(1, Math.round(f.max * fd.boltP));
+      hurt(f, d); stun(f, 0.35); events.push({ type: 'bolt', on: i, dmg: d });
+    }
+  }
   for (let i = 0; i < 2; i++) {
     const f = F[i], o = F[1 - i], st = f.st;
     if (f.hp <= 0 || o.hp <= 0) continue;
@@ -218,10 +240,13 @@ export function step(F, dt, rand, events) {
       if (st.bleed > 0) { d += st.bleed * st.bleedD; if (o.m.hemo) heal(o, o.m.hemo * st.bleed); }
       if (st.poison > 0) d += st.poisonD;
       if (st.burn > 0) d += st.burnD;
-      if (d > 0) { d = Math.max(1, Math.round(d)); f.hp -= d; events.push({ type: 'dot', on: i, dmg: d, kind: st.burn > 0 ? 'burn' : st.poison > 0 ? 'venom' : 'bleed' }); }
+      const own = d > 0;
+      if (fd.rot) d += f.max * fd.rot;                                                     // mire: foul air
+      if (fd.heat && F.time > fd.heatFrom) d += f.max * fd.heat * (1 + (F.time - fd.heatFrom) / 25);   // forge: it only gets hotter
+      if (d > 0) { d = Math.max(1, Math.round(d)); f.hp -= d; events.push({ type: 'dot', on: i, dmg: d, kind: !own && fd.heat ? 'burn' : !own && fd.rot ? 'venom' : st.burn > 0 ? 'burn' : st.poison > 0 ? 'venom' : 'bleed' }); }
     }
     if (st.stun > 0) continue;
-    f.t -= dt * (f.buff.frenzy > 0 ? f.frenzyX : 1) * (st.slow > 0 ? 0.5 : 1);
+    f.t -= dt * (f.buff.frenzy > 0 ? f.frenzyX : 1) * (st.slow > 0 ? 0.5 : 1) * (fd.slowX || 1);
     if (f.t > 0 || f.hp <= 0) continue;
     f.t = f.every * (0.9 + 0.2 * rand());
     const power = f.power; f.power = false;

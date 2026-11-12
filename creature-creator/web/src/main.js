@@ -6,7 +6,7 @@ import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
-import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, LEVELS, PRODUCTS, RUN_MS, runMax } from './items.js';
+import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, LEVELS, PRODUCTS, RUN_MS, runMax, weeklyFor, weekKey, weekEnds, VENUES, TEMPERS, WEEK_RULES } from './items.js';
 import { showAd as rawAd } from './ads.js';
 import { encode, decode, validCreature } from './share.js';
 import { tr, setLang, getLang, guessLang, LANGS, seen as i18nSeen } from './i18n.js';
@@ -21,7 +21,7 @@ function h(tag, props, ...kids) {
   const e = document.createElement(tag);
   for (const [k, val] of Object.entries(props || {})) {
     if (k === 'class') e.className = val; else if (k === 'style') e.style.cssText = val;
-    else if (k.startsWith('on')) e.addEventListener(k.slice(2), val); else if (val !== false && val != null) e[k] = val;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), val); else if (k.startsWith('aria-')) e.setAttribute(k, val); else if (val !== false && val != null) e[k] = val;
   }
   for (const k of kids.flat()) if (k != null && k !== false) e.append(typeof k === 'string' ? tr(k) : k);        // all visible text is translated here
   return e;
@@ -252,7 +252,12 @@ function frame(t) {
   if (arena.active) { arena.update(dt, t / 1000); renderer.render(scene, camera); watchFrame(t); return; }
   if (!inEditor || !cr) return;
   controls.orbit.autoRotate = spin; controls.orbit.update(dt);
-  if (preview) { playPreview(dt); renderer.render(scene, camera); watchFrame(t); return; }
+  if (preview) {
+    if (preview.idle && (preview.skip = !preview.skip)) return;          // idling only needs half the frames
+    playPreview(preview.idle ? dt * 2 : dt); renderer.render(scene, camera); if (!preview.idle) watchFrame(t); return;
+  }
+  // Left alone for a while, the creature comes to life: it breathes, looks about and stretches until touched.
+  if (!meta.calm && (!navigator.webdriver || window.__ccIdle) && (meta.tut || 0) >= COACH.length && !pendingRebuild && down.id < 0 && performance.now() - lastTouch > IDLE_AFTER) startPreview(true);
   if (pendingRebuild) { pendingRebuild = false; rebuild(); }
   // Only draw when something changed (saves battery).
   if (!dirty && !spin) return;
@@ -267,8 +272,10 @@ function frame(t) {
 
 // ------------------------------------------------------------------ animated preview in the workshop
 // "Play" swaps the editable model for a rigged copy and loops it through standing, walking and attacking.
-let preview = null;
-function startPreview() {
+let preview = null, lastTouch = performance.now();
+const IDLE_AFTER = 7000;
+window.addEventListener('pointerdown', () => { lastTouch = performance.now(); if (preview && preview.idle) { stopPreview(); renderTop(); } }, true);
+function startPreview(idle) {
   sel = null; refreshOverlay();
   applyLook(M, data.look, TEMPLATES[data.type].bellyDir);
   const view = buildCreature(data, M, { animated: true }), rig = makeRig(view), pose = new THREE.Group(), st = statsOf(data);
@@ -276,17 +283,23 @@ function startPreview() {
   const styles = [rig.arms ? 'slash' : st.claws && st.legs >= 4 ? 'swipe' : 'lunge', st.mouth ? 'bite' : 'lunge', st.wings ? 'swoop' : st.horns ? 'charge' : 'pounce'];
   pose.add(view.group); stage.add(pose);
   cr.group.visible = false; overlay.visible = false;
-  preview = { view, rig, pose, styles, t: 0, wings: st.wings };
+  preview = { view, rig, pose, styles, t: 0, wings: st.wings, idle: !!idle };
 }
 function stopPreview() {
   if (!preview) return;
   stage.remove(preview.pose); disposeTree(preview.view.group); resetBones(M);
-  preview = null; cr.group.visible = true; overlay.visible = true; dirty = true;
+  preview = null; cr.group.visible = true; overlay.visible = true; dirty = true; lastTouch = performance.now();
 }
 function playPreview(dt) {
   const p = preview; p.t += dt;
   const u = p.t % 10, T = zero();
   T.sy = 1 + Math.sin(p.t * 2) * 0.012; if (p.wings) T.flap = 0.05;
+  if (p.idle) {                                                                                  // quiet life: look about, shift weight, stretch now and then
+    const b = Math.max(0, Math.sin(((p.t % 9) - 6.5) / 2.5 * Math.PI)) * ((p.t % 9) > 6.5 ? 1 : 0), e = b * b * (3 - 2 * b);
+    Object.assign(T, { yaw: Math.sin(p.t * 0.45) * 0.14, roll: Math.sin(p.t * 0.8) * 0.02, tailUp: Math.sin(p.t * 1.1) * 0.12 + 0.35 * e, tailYaw: Math.sin(p.t * 0.9) * 0.2,
+      pitch: -0.16 * e, armAll: -0.9 * e, armOut: 0.4 * e, elbow: -0.5 * e, wing: 0.55 * e, tent: -0.3 * e + Math.sin(p.t * 0.7) * 0.08, kneeH: 0.25 * e, sy: T.sy + 0.04 * e });
+    applyRig(p.rig, T, dt, p.pose); return;
+  }
   if (u > 2 && u < 5) { T.gait = 1; T.y = Math.abs(Math.sin(p.rig.gaitPh)) * 0.03; }             // walk on the spot
   else if (u >= 5.5) {                                                                           // three attacks
     const k = Math.floor((u - 5.5) / 1.5), local = (u - 5.5) % 1.5, style = p.styles[Math.min(k, 2)];
@@ -313,6 +326,7 @@ function setGfx(level, remember) {
 }
 function watchFrame(t) {
   const ms = t - lastDraw; lastDraw = t;
+  if (meta.gfxMode !== undefined && meta.gfxMode !== 'auto') return;      // quality fixed in settings
   if (ms > 600 || ms <= 0) return;                  // not back-to-back frames (idle, or a one-off hitch)
   slowN = ms > 25 ? slowN + 1 : Math.max(0, slowN - 2);
   fastN = ms < 13 ? fastN + 1 : 0;
@@ -552,7 +566,7 @@ function renderTop() {
     h('button', { disabled: undo.length < 2, onclick: () => { if (undo.length > 1) { redo.push(undo.pop()); restore(undo[undo.length - 1]); } } }, 'Undo'),
     h('button', { disabled: !redo.length, onclick: () => { if (redo.length) { const s = redo.pop(); undo.push(s); restore(s); } } }, 'Redo'),
     h('button', { class: spin ? 'on' : '', onclick: () => { spin = !spin; renderTop(); } }, 'Spin'),
-    h('button', { class: preview ? 'on' : '', onclick: () => { if (preview) stopPreview(); else startPreview(); renderTop(); } }, preview ? '■ Stop' : '▶ Play'),
+    h('button', { class: preview && !preview.idle ? 'on' : '', onclick: () => { if (preview) stopPreview(); else startPreview(); renderTop(); } }, preview && !preview.idle ? '■ Stop' : '▶ Play'),
     h('button', { onclick: photo }, 'Photo'),
     h('button', { onclick: () => save() }, 'Save'),
     h('button', { class: 'battle', onclick: enterBattle }, '⚔️ Battle'));
@@ -637,10 +651,21 @@ function crown(pts, run) {
   const list = store.get('cc.saved', []), e = list.find((c) => c.id === data.id);
   if (e) { e.data = JSON.parse(JSON.stringify(data)); e.name = data.name; store.set('cc.saved', list); }
 }
+let lastReward = 0;
+/**
+ * A full-screen ad between runs. Kept rare so it does not drive players away: never for patrons, never in the
+ * first three runs, at most one every four minutes, and not right after the player chose to watch a rewarded ad.
+ */
+function maybeInterstitial() {
+  const now = Date.now(), n = native();
+  if (meta.patron || !n || !n.showInterstitial || (meta.stats.runs || 0) < 3 || now - (meta.adAt || 0) < 240000 || now - lastReward < 120000) return;
+  meta.adAt = now; saveMeta(); track('interstitial');
+  try { n.showInterstitial(); } catch (e) { /* not available */ }
+}
 /** Rewarded ad, or for patrons simply the reward. */
 async function showAd(where) {
   if (meta.patron) return { ok: true };
-  const r = await rawAd(); track('ad', { ok: r.ok ? 1 : 0 }); return r;
+  const r = await rawAd(); track('ad', { ok: r.ok ? 1 : 0 }); if (r.ok) lastReward = Date.now(); return r;
 }
 const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, track, tr, decode, valid: (d) => validCreature(d, TEMPLATES, PARTS), gfx: () => GFX[gfx], stat, crown, bonus: (pts) => { meta.points += pts; saveMeta(); }, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
@@ -675,11 +700,12 @@ function battleDone(res) {
     store.set('cc.current', null);
     if (cr) { stage.remove(cr.group); disposeTree(cr.group); cr = null; }
     data = null; inEditor = false; music('menu');
-    $('start').classList.remove('hidden'); renderStart(); layout();
+    $('start').classList.remove('hidden'); renderStart(); layout(); maybeInterstitial();
     return;
   }
   down.count = 0;
   if (res.type === 'retired') stat('bestEndless', res.wins, true);
+  lastTouch = performance.now();
   inEditor = true; $('editor').classList.remove('hidden');
   scheduleReminders();
   rebuild(); if (res.type === 'champion') save(true);
@@ -687,6 +713,7 @@ function battleDone(res) {
   music('menu');
   if (res.type === 'champion') { toast(data.name + ' is champion! +' + res.points + ' points'); askForReview(); }
   if (res.type === 'retired') { toast(data.name + ' won ' + res.wins + ' fights in the pit'); if (res.wins >= 10) askForReview(); }
+  if (res.type === 'retired') maybeInterstitial();
 }
 function photo() {
   const W = 1920, H = 1080, pr = renderer.getPixelRatio();
@@ -704,6 +731,7 @@ window.ccToast = toast;
 // Android back button: close the part panel, then leave the editor, then let the app close.
 window.ccBack = () => { if (arena.active) return arena.back(); if (!inEditor && shopTab) { shopTab = null; renderStart(); return true; } if (!inEditor) return false; if (sel) select(null); else goHome(); return true; };
 function open(d) {
+  lastTouch = performance.now();
   const run = store.get('cc.run', null);
   if (run && d.id && run.id === d.id) { store.set('cc.run', null); toast('Gauntlet abandoned. It starts again from fight one.'); }
   data = d; sel = null; nodeSel = -1; tab = 'body'; undo = []; redo = []; inEditor = true;
@@ -737,7 +765,7 @@ async function importCode() {
   if (got && got.kind === 'c' && validCreature(got.data, TEMPLATES, PARTS)) {
     const d = got.data; d.id = 'c' + Date.now().toString(36); delete d.champion;
     const list = store.get('cc.saved', []); list.unshift({ id: d.id, name: d.name, thumb: creatureThumb(d), data: d }); store.set('cc.saved', list);
-    play('confirm'); toast('Added "' + d.name + '" to your creatures'); track('import', { type: d.type }); renderStart(); return;
+    shopTab = null; play('confirm'); toast('Added "' + d.name + '" to your creatures'); track('import', { type: d.type }); renderStart(); return;
   }
   if (got && got.kind === 's' && got.data['cc.meta'] && confirm('Replace everything on this device with the save in this code?')) {
     for (const k of KEEP) if (got.data[k]) store.set(k, got.data[k]); else localStorage.removeItem(k);
@@ -796,7 +824,7 @@ function renderShop() {
   const rec = (k, val) => h('div', { class: 'shoprow' }, h('div', { class: 'what' }, h('small', null, k), h('b', null, String(val))));
   const tabs = {
     Goals: () => [...GOALS].sort((a, b) => (meta.goals[a.id] ? 2 : goalDone(meta, a) ? 0 : 1) - (meta.goals[b.id] ? 2 : goalDone(meta, b) ? 0 : 1)).map(goalRow),
-    Records: () => [rec('Fights won', meta.stats.fightsWon || 0), rec('Titles won', meta.champions), rec('Creatures lost', meta.fallen), rec('Hardest level open', LEVELS[meta.level].name), rec('Hardest title won', meta.stats.bestLevelWon ? LEVELS[meta.stats.bestLevelWon - 1].name : 'None yet'), rec('Best Endless run', (meta.stats.bestEndless || 0) + ' wins'), rec('Gauntlets finished', meta.stats.runs || 0), rec('Total damage dealt', (meta.stats.damage || 0).toLocaleString()), rec('Biggest single hit', meta.stats.biggestHit || 0),
+    Records: () => [rec('Fights won', meta.stats.fightsWon || 0), rec('Titles won', meta.champions), rec('Creatures lost', meta.fallen), rec('Hardest level open', LEVELS[meta.level].name), rec('Hardest title won', meta.stats.bestLevelWon ? LEVELS[meta.stats.bestLevelWon - 1].name : 'None yet'), rec('Best Endless run', (meta.stats.bestEndless || 0) + ' wins'), rec('Weekly challenges won', meta.stats.weeklies || 0), rec('Arenas won in', Object.keys(meta.venues || {}).length + ' of 6'), rec('Gauntlets finished', meta.stats.runs || 0), rec('Total damage dealt', (meta.stats.damage || 0).toLocaleString()), rec('Biggest single hit', meta.stats.biggestHit || 0),
       rec('Elite opponents beaten', meta.stats.elites || 0), rec('Different rewards picked', Object.keys(meta.seen).length + ' of ' + ITEMS.length), rec('Body types crowned', Object.keys(meta.typesWon).length + ' of 8'),
       ...meta.hall.map((c) => h('div', { class: 'shoprow' }, h('div', { class: 'ico' }, '👑'), h('div', { class: 'what' }, h('b', null, c.name), h('small', null, TEMPLATES[c.type].name + ' · ' + (c.level !== undefined ? LEVELS[c.level].name : 'Rank ' + c.rank) + ' · ' + new Date(c.when).toLocaleDateString()))))],
     Bodies: () => Object.entries(TEMPLATES).map(([id, t]) => row('🧬', t.name, t.blurb, TYPE_COST[id], typeOpen(meta, id) && (TYPE_COST[id] ? 'Owned' : 'Free'), () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart))),
@@ -826,20 +854,24 @@ function renderShop() {
 }
 function renderStart() {
   const el = $('start'), saved = store.get('cc.saved', []), cur = store.get('cc.current', null);
+  if (shopTab === 'Settings') { renderSettings(); return; }
   if (shopTab) { renderShop(); return; }
   const rec = meta, run = store.get('cc.run', null);
   // The creature in the gauntlet may no longer be the one last opened, so look in the saved list too.
   const runData = run && (cur && cur.id === run.id ? cur : (saved.find((c) => c.id === run.id) || {}).data), runOk = !!runData;
   if (run && !runOk) store.set('cc.run', null);
   const gift = dailyGift(meta), ready = goalsReady(meta);
+  const WK = weeklyFor(weekKey()), wrec = meta.weekly && meta.weekly.key === WK.key ? meta.weekly : { best: 0, done: 0 };
   el.replaceChildren(...[h('h1', null, 'Critter ', h('span', null, 'Arena'),
-      h('small', { class: 'record' }, h('span', { class: 'runpill', id: 'runpill', onclick: async () => { const r = runsNow(meta); if (r.n >= r.max) return; const a = await showAd(); if (a.ok) { addRun(meta); saveMeta(); tickRunPill(); toast('+1 run'); } else if (a.why) toast(a.why); } }), h('button', { class: 'goalbtn' + (ready ? ' ready' : ''), onclick: () => { shopTab = 'Goals'; renderStart(); } }, 'Goals' + (ready ? ' (' + ready + ')' : '')), h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
+      h('small', { class: 'record' }, h('span', { class: 'runpill', id: 'runpill', onclick: async () => { const r = runsNow(meta); if (r.n >= r.max) return; const a = await showAd(); if (a.ok) { addRun(meta); saveMeta(); tickRunPill(); toast('+1 run'); } else if (a.why) toast(a.why); } }), h('button', { class: 'goalbtn' + (ready ? ' ready' : ''), onclick: () => { shopTab = 'Goals'; renderStart(); } }, 'Goals' + (ready ? ' (' + ready + ')' : '')), h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), h('button', { class: 'gear', 'aria-label': 'Settings', onclick: () => { shopTab = 'Settings'; renderStart(); } }, '⚙️'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
     runOk && h('div', { class: 'card resume', onclick: () => { data = JSON.parse(JSON.stringify(runData)); enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, runData.name + ' is waiting for fight ' + (run.round + 1) + (run.endless ? ' in the Endless Pit' : ' of ' + LEVELS[run.level ?? 2].fights + ' (' + LEVELS[run.level ?? 2].name + ')') + '. Tap to return.')),
     !meta.seenIntro && h('div', { class: 'card resume intro' }, h('b', null, 'Welcome to Critter Arena'),
       h('small', null, '1. Pick a body below and build a critter: drag the dots to shape it, add parts, colour it.'), h('small', null, '2. Hit Battle to enter the Colosseum: ten fights to the death, with a reward to choose after each win.'),
       h('small', null, '3. How you build it matters: size is health, teeth and claws are attack, arms hold weapons. Spend the points you earn in the Shop.'),
       h('button', { onclick: (e) => { e.stopPropagation(); meta.seenIntro = 1; saveMeta(); renderStart(); } }, 'Got it')),
     gift && h('div', { class: 'card resume gift', onclick: () => { const g = claimDaily(meta); saveMeta(); play('coins'); if (g) toast('Daily gift: +' + g.points + ' points' + (g.revive ? ' and a revive' : '')); renderStart(); } }, h('b', null, '🎁 Daily gift: +' + gift.points + ' points' + (gift.revive ? ' and a revive' : '')), h('small', null, 'Day ' + gift.streak + ' in a row. Come back tomorrow for more; every seventh day adds a revive. Tap to collect.')),
+    h('div', { class: 'card resume weekly', onclick: () => toast('Open a creature, press Battle, then choose Weekly.') }, h('b', null, '📅 ', 'Weekly challenge', ': ', WK.rule.name, ' · ', WK.venue.icon + ' ', WK.venue.name, wrec.done ? ' ✓' : ''),
+      h('small', null, WK.rule.text, ' ', wrec.done ? 'Won this week.' : 'Your best this week: ' + wrec.best + ' / ' + WK.fights + '.', ' ', 'New challenge in ' + Math.max(1, Math.ceil((weekEnds(WK.key) - Date.now()) / 3600000)) + ' hours.')),
     h('h2', null, 'Start from a body type'),
     h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => { const open_ = Object.keys(TEMPLATES).filter((t) => typeOpen(meta, t)); open(randomCreature(Math.random, { type: open_[Math.floor(Math.random() * open_.length)] })); } }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
       Object.entries(TEMPLATES).map(([id, t]) =>
@@ -853,13 +885,40 @@ function renderStart() {
       saved.map((c) => h('div', { class: 'card', onclick: () => open(JSON.parse(JSON.stringify(c.data))) }, h('img', { src: c.thumb, alt: '' }), h('b', null, c.name), h('small', null, TEMPLATES[c.data.type].name + (c.data.champion ? ' · Champion' + (c.data.champion > 1 ? ' x' + c.data.champion : '') : '')),
         h('button', { class: 'shr', onclick: (e) => { e.stopPropagation(); shareCreature(c.data); } }, '↗'),
         h('button', { class: 'del warn', onclick: (e) => { e.stopPropagation(); if (confirm('Delete "' + c.name + '"?')) { store.set('cc.saved', store.get('cc.saved', []).filter((x) => x.id !== c.id)); renderStart(); } } }, '×')))));
-  const au = audioOn(), flip = (k) => { meta.audio = { ...audioOn(), [k]: !audioOn()[k] }; saveMeta(); setAudio(meta.audio); renderStart(); };
-  el.append(h('div', { class: 'settings' },
-    h('button', { onclick: () => { const codes = Object.keys(LANGS); meta.lang = codes[(codes.indexOf(getLang()) + 1) % codes.length]; saveMeta(); setLang(meta.lang); renderStart(); } }, '🌐 ' + LANGS[getLang()]),
-    h('button', { onclick: importCode }, '📥 Import a code'),
-    h('button', { onclick: backupCode }, '💾 Backup code'),
-    native() && native().askNotify && h('button', { class: meta.remind ? 'on' : '', onclick: () => { meta.remind = !meta.remind; saveMeta(); if (meta.remind) native().askNotify(); else native().cancelReminders(); renderStart(); } }, '🔔 Reminders ' + (meta.remind ? 'on' : 'off')),
-    h('button', { class: au.music ? 'on' : '', onclick: () => flip('music') }, '🎵 Music ' + (au.music ? 'on' : 'off')), h('button', { class: au.sfx ? 'on' : '', onclick: () => flip('sfx') }, '🔊 Sound ' + (au.sfx ? 'on' : 'off'))));
+  el.append(h('div', { class: 'settings' }, h('button', { onclick: importCode }, '📥 Import a code')));
+}
+/** Text size and colour choices live on <html> so the stylesheet can follow them. */
+function applyAccess() {
+  const c = document.documentElement.classList;
+  c.toggle('ts1', meta.textSize === 1); c.toggle('ts2', meta.textSize === 2); c.toggle('cb', !!meta.cb); c.toggle('calm', !!meta.calm);
+}
+function renderSettings() {
+  const el = $('start'), n = native(), au = audioOn();
+  const again = () => { saveMeta(); renderStart(); };
+  const row = (name, text, ...ctl) => h('div', { class: 'shoprow setrow' }, h('div', { class: 'what' }, h('b', null, name), text && h('small', null, text)), h('div', { class: 'ctl' }, ctl));
+  const pick = (opts, cur, set) => h('div', { class: 'chips' }, opts.map(([val, label]) => h('button', { class: val === cur ? 'on' : '', onclick: () => { set(val); again(); } }, label)));
+  const onoff = (cur, set) => pick([[true, 'On'], [false, 'Off']], !!cur, set);
+  const vol = (key) => h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round((au[key] ?? 1) * 100), 'aria-label': key === 'mv' ? tr('Music') : tr('Sound effects'), id: 'vol-' + key, oninput: (e) => {
+    const v = +e.target.value / 100; meta.audio = { ...audioOn(), [key]: v, [key === 'mv' ? 'music' : 'sfx']: v > 0 }; setAudio(meta.audio); saveMeta(); if (key === 'sv') play('click', 0.6);
+  } });
+  const gmode = meta.gfxMode === undefined ? 'auto' : meta.gfxMode;
+  el.replaceChildren(h('h1', null, h('span', null, 'Settings'), h('small', { class: 'record' }, h('button', { class: 'shopbtn', onclick: () => { shopTab = null; renderStart(); } }, 'Back'))),
+    h('div', { class: 'shop set' },
+      h('h2', null, 'Sound'),
+      row('Music', null, vol('mv')), row('Sound effects', null, vol('sv')),
+      h('h2', null, 'Display'),
+      row('Language', null, pick(Object.entries(LANGS), getLang(), (v) => { meta.lang = v; setLang(v); })),
+      row('Graphics quality', 'Automatic lowers the detail if the game runs slowly, and raises it again when it can.', pick([['auto', 'Automatic'], [0, 'High'], [2, 'Medium'], [4, 'Low']], gmode, (v) => { meta.gfxMode = v; if (v !== 'auto') setGfx(v, true); })),
+      row('Text size', 'Makes menus and fight panels larger.', pick([[0, 'Normal'], [1, 'Large'], [2, 'Largest']], meta.textSize || 0, (v) => { meta.textSize = v; applyAccess(); })),
+      row('Colour-blind friendly', 'Health bars use blue, yellow and orange instead of green and red.', onoff(meta.cb, (v) => { meta.cb = v; applyAccess(); })),
+      row('Reduce motion', 'No screen shake, flashes, slow motion or weather, and creatures stand still in the workshop.', onoff(meta.calm, (v) => { meta.calm = v; applyAccess(); })),
+      h('h2', null, 'Game'),
+      n && n.askNotify && row('Reminders', 'A notification when your runs have refilled and when the daily gift is ready.', onoff(meta.remind, (v) => { meta.remind = v; if (v) n.askNotify(); else n.cancelReminders(); })),
+      row('Workshop guide', 'Show the five building tips again.', h('button', { onclick: () => { meta.tut = 0; meta.tutFight = 0; again(); toast('The guide will show next time you build.'); } }, 'Replay')),
+      row('Backup code', 'Copy your whole save as text, to keep somewhere safe or move to another phone.', h('button', { onclick: backupCode }, 'Copy'), h('button', { onclick: importCode }, 'Import a code')),
+      n && n.restorePurchases && row('Purchases', 'Bought something on another phone or before reinstalling?', h('button', { onclick: () => { n.restorePurchases(); toast('Checking with Google Play…'); } }, 'Restore')),
+      n && n.privacyOptions && row('Privacy', 'Change your choice about personalised ads.', h('button', { onclick: () => n.privacyOptions() }, 'Ad choices'))));
+  el.scrollTop = 0;
 }
 
 // Every button makes a small sound; a few kinds get their own.
@@ -874,10 +933,12 @@ controls.orbit = new OrbitControls(camera, canvas);
 Object.assign(controls.orbit, { enableDamping: true, dampingFactor: 0.12, enablePan: false, autoRotateSpeed: 2.2, rotateSpeed: 0.9, maxPolarAngle: Math.PI * 0.62, minPolarAngle: 0.15 });
 controls.orbit.addEventListener('change', touch);
 setLang(meta.lang || guessLang());
+applyAccess();
 if (meta.gfx) setGfx(meta.gfx);
+if (meta.audio && meta.audio.mv === undefined) meta.audio = { ...meta.audio, mv: meta.audio.music === false ? 0 : 1, sv: meta.audio.sfx === false ? 0 : 1, music: true, sfx: true };
 if (meta.audio) setAudio(meta.audio);
 music('menu');
 layout();
 renderStart();
 requestAnimationFrame(frame);
-window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, tr, i18nSeen, setLang, ITEMS, describe, GOALS, BOOSTS, LEVELS, PRODUCTS, COACH, CATS, previewStep: (to) => { preview.t = 0; preview.rig.gaitPh = 0; for (let t = 0; t < to; t += 1 / 60) playPreview(1 / 60); }, setGfx, get gfx() { return gfx; }, get meta() { return meta; }, saveMeta, renderStart, runsNow, audioStats, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
+window.__cc = { VENUES, TEMPERS, WEEK_RULES, get preview() { return preview; }, idleNow: () => { lastTouch = -1e9; }, get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, tr, i18nSeen, setLang, ITEMS, describe, GOALS, BOOSTS, LEVELS, PRODUCTS, COACH, CATS, previewStep: (to) => { preview.t = 0; preview.rig.gaitPh = 0; for (let t = 0; t < to; t += 1 / 60) playPreview(1 / 60); }, setGfx, get gfx() { return gfx; }, get meta() { return meta; }, saveMeta, renderStart, runsNow, audioStats, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };

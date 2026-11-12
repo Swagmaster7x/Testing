@@ -22,6 +22,8 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 import com.google.android.gms.ads.rewarded.RewardedAd;
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 import com.google.android.ump.ConsentInformation;
@@ -40,6 +42,8 @@ import java.io.OutputStream;
 public class MainActivity extends Activity {
     private WebView web;
     private RewardedAd rewarded;          // the next ad, loaded ahead of time
+    private InterstitialAd interstitial;  // the next between-runs ad, loaded ahead of time
+    private boolean interLoading;
     private boolean adLoading, adsStarted, earned;
     private Billing billing;
 
@@ -94,7 +98,7 @@ public class MainActivity extends Activity {
     private void startAds() {
         if (adsStarted) return;
         adsStarted = true;
-        new Thread(() -> MobileAds.initialize(this, status -> runOnUiThread(this::loadRewarded))).start();
+        new Thread(() -> MobileAds.initialize(this, status -> runOnUiThread(() -> { loadRewarded(); loadInterstitial(); }))).start();
     }
 
     private void loadRewarded() {
@@ -107,6 +111,33 @@ public class MainActivity extends Activity {
             @Override
             public void onAdFailedToLoad(LoadAdError error) { adLoading = false; rewarded = null; }
         });
+    }
+
+    private void loadInterstitial() {
+        if (!adsStarted || interLoading || interstitial != null) return;
+        interLoading = true;
+        InterstitialAd.load(this, getString(R.string.admob_interstitial_id), new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {
+            @Override
+            public void onAdLoaded(InterstitialAd ad) { interLoading = false; interstitial = ad; }
+
+            @Override
+            public void onAdFailedToLoad(LoadAdError error) { interLoading = false; interstitial = null; }
+        });
+    }
+
+    /** A full-screen ad between runs. The page decides how often; if none is ready, nothing happens. */
+    private void showInterstitial() {
+        InterstitialAd ad = interstitial;
+        if (ad == null) { loadInterstitial(); return; }
+        interstitial = null;
+        ad.setFullScreenContentCallback(new FullScreenContentCallback() {
+            @Override
+            public void onAdDismissedFullScreenContent() { hideSystemBars(); loadInterstitial(); }
+
+            @Override
+            public void onAdFailedToShowFullScreenContent(AdError error) { loadInterstitial(); }
+        });
+        ad.show(this);
     }
 
     /** Tell the page how the ad went: window.ccAdDone(earned, reason). */
@@ -286,6 +317,24 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void requestReview() {
             runOnUiThread(MainActivity.this::requestReview);
+        }
+
+        /** Called by the page between runs, at most once every few minutes. */
+        @JavascriptInterface
+        public void showInterstitial() {
+            runOnUiThread(MainActivity.this::showInterstitial);
+        }
+
+        /** Settings > Restore: ask Google Play again for anything already bought. */
+        @JavascriptInterface
+        public void restorePurchases() {
+            runOnUiThread(() -> { if (billing != null) billing.restore(); });
+        }
+
+        /** Settings > Ad choices: reopen Google's consent form. */
+        @JavascriptInterface
+        public void privacyOptions() {
+            runOnUiThread(() -> UserMessagingPlatform.showPrivacyOptionsForm(MainActivity.this, formError -> { }));
         }
 
         /** Called by the page when the player chooses to watch an ad for a reward. */

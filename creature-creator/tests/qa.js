@@ -32,14 +32,14 @@ let fails = 0; const check = (name, ok, extra) => { if (!ok) fails++; console.lo
   check('swipes in a fight do not edit the body', before === await p.evaluate(() => JSON.stringify(window.__cc.data.nodes)));
   // quit mid-fight: forgiven once
   await load();
-  check('resume card after mid-fight quit', await p.locator('.card.resume:not(.gift):not(.intro)').count() === 1);
-  await p.locator('.card.resume:not(.gift):not(.intro)').tap(); await p.waitForTimeout(200);
+  check('resume card after mid-fight quit', await p.locator('.card.resume:not(.gift):not(.intro):not(.weekly)').count() === 1);
+  await p.locator('.card.resume:not(.gift):not(.intro):not(.weekly)').tap(); await p.waitForTimeout(200);
   check('first walk-out is forgiven with a warning', /forgiven once/.test(await p.locator('.panel').innerText()) && (await meta()).runs.n === 4);
   await p.locator('.panel button.go').tap(); await run(50);
-  await load(); await p.locator('.card.resume:not(.gift):not(.intro)').tap(); await p.waitForTimeout(200);
+  await load(); await p.locator('.card.resume:not(.gift):not(.intro):not(.weekly)').tap(); await p.waitForTimeout(200);
   check('second walk-out counts as a death', /has fallen/.test(await p.locator('.panel').innerText()), (await p.locator('.panel button').allInnerTexts()).join(' / '));
   // closing on the death screen does not undo it
-  await load(); await p.locator('.card.resume:not(.gift):not(.intro)').tap(); await p.waitForTimeout(200);
+  await load(); await p.locator('.card.resume:not(.gift):not(.intro):not(.weekly)').tap(); await p.waitForTimeout(200);
   check('death survives a restart', /has fallen/.test(await p.locator('.panel').innerText()));
   await p.locator('.panel button.ad').tap(); await p.waitForTimeout(300);
   check('ad revive works from the restored death screen', ['intro', 'fight'].includes(await run(1)), await p.evaluate(() => Math.round(window.__cc.arena.F[0].hp)));
@@ -69,7 +69,7 @@ let fails = 0; const check = (name, ok, extra) => { if (!ok) fails++; console.lo
   // rank chips on the gate
   await p.locator('.card', { hasText: 'QA Beast' }).last().tap(); await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Battle/ }).tap(); await p.waitForTimeout(300);
-  check('difficulty choice shown at the gate', await p.locator('.ranks .chips button').count() === 5 && await p.locator('.ranks .chips button', { hasText: 'Silver' }).isDisabled(), await p.locator('.ranks .chips button').allInnerTexts());
+  check('difficulty choice shown at the gate', await p.locator('.ranks .chips button').count() === 6 && await p.locator('.ranks .chips button', { hasText: 'Silver' }).isDisabled(), await p.locator('.ranks .chips button').allInnerTexts());
   await p.locator('.ranks .chips button', { hasText: 'Bronze' }).tap(); await p.waitForTimeout(150);
   check('picking Bronze sets an 8-fight gauntlet', /faces 8 fights/.test(await p.locator('.panel').innerText()));
   await p.evaluate(() => { const c = window.__cc; c.renderer.render(c.scene, c.camera); }); await p.waitForTimeout(300);
@@ -79,7 +79,7 @@ let fails = 0; const check = (name, ok, extra) => { if (!ok) fails++; console.lo
   await p.locator('#ggo').tap(); await p.waitForTimeout(200);
   check('head start gift offered', await p.locator('.reward').count() === 3);
   await p.locator('.reward').first().tap(); await run(40);
-  await load(); await p.locator('.card.resume:not(.gift):not(.intro)').tap(); await p.waitForTimeout(200); await p.locator('.panel button.go').tap(); await p.waitForTimeout(200);
+  await load(); await p.locator('.card.resume:not(.gift):not(.intro):not(.weekly)').tap(); await p.waitForTimeout(200); await p.locator('.panel button.go').tap(); await p.waitForTimeout(200);
   check('head start gift is not offered again after a restart', await p.locator('.reward').count() === 0 && ['intro', 'fight'].includes(await run(1)), await p.evaluate(() => window.__cc.arena.run.load.weapons.length + window.__cc.arena.run.load.relics.length + window.__cc.arena.run.load.abilities.length));
   // ---- endless pit: never costs the creature; review prompt after a happy moment
   await load();

@@ -10,13 +10,13 @@ const MUSIC_VOL = 0.32;
 
 let ctx = null, out = null, unlocked = false, wantTrack = null, playing = null, hidden = false;
 const buffers = {}, last = {}, players = {}, counts = {};
-const opt = { music: true, sfx: true };
+const opt = { music: true, sfx: true, mv: 1, sv: 1 };       // on/off, and volume 0..1 for each
 
 function unlock() {
   if (unlocked) return;
   try {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
-    out = ctx.createGain(); out.gain.value = 0.9; out.connect(ctx.destination);
+    out = ctx.createGain(); out.gain.value = 0.9 * opt.sv; out.connect(ctx.destination);
     unlocked = true;
     for (const k of Object.keys(SFX_DATA)) {            // decode everything up front; it is only a few hundred KB
       const bin = atob(SFX_DATA[k]), buf = new Uint8Array(bin.length);
@@ -84,12 +84,17 @@ function setMusic(track) {
   if (!want) return;
   let a = players[want];
   if (!a) { a = players[want] = new Audio(MUSIC[want]); a.loop = true; a.preload = 'auto'; }
-  a.volume = MUSIC_VOL; a.currentTime = 0;
+  a.volume = MUSIC_VOL * opt.mv; a.currentTime = 0;
   const p = a.play(); if (p && p.catch) p.catch(() => { playing = null; });
 }
 /** Switch the looping background track: 'menu', 'battle', 'boss', or null for silence. */
 export const music = setMusic;
-export function setAudio(o) { Object.assign(opt, o); setMusic(wantTrack); }
+export function setAudio(o) {
+  Object.assign(opt, o); opt.mv = Math.min(1, Math.max(0, opt.mv ?? 1)); opt.sv = Math.min(1, Math.max(0, opt.sv ?? 1));
+  if (out) out.gain.value = 0.9 * opt.sv;
+  if (playing && players[playing]) players[playing].volume = MUSIC_VOL * opt.mv;
+  setMusic(wantTrack);
+}
 export const audioOn = () => ({ ...opt });
 /** The app went to the background (or came back): stop making noise. */
 export function pauseAudio(off) {
