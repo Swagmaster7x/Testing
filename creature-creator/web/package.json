@@ -1,0 +1,13 @@
+{
+  "name": "creature-creator-web",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=../app/src/main/assets/www/app.js && cp index.html style.css ../app/src/main/assets/www/",
+    "dev": "esbuild src/main.js --bundle --format=iife --sourcemap --outfile=../app/src/main/assets/www/app.js --servedir=../app/src/main/assets/www"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "three": "^0.170.0"
+  }
+}
