@@ -296,7 +296,11 @@ private fun HomemadeRow(recipe: Recipe, like: String?, showNutrition: Boolean, o
         supportingContent = {
             Column {
                 if (like != null) Text("Like $like")
-                recipe.nutritionText?.takeIf { showNutrition && it.isNotBlank() }?.let { Text("A serving, approx.: $it") }
+                // With the serving size, since a home serving usually includes the rice or sides the menu figure leaves out.
+                recipe.nutritionText?.takeIf { showNutrition && it.isNotBlank() }?.let { figures ->
+                    val size = recipe.servingSizeText.trim()
+                    Text(if (size.isEmpty()) "A serving: $figures" else "${size.replaceFirstChar { it.uppercase() }}: $figures")
+                }
             }
         },
         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },

@@ -164,7 +164,8 @@ fun CupboardScreen(nav: AppNavigator, vm: CupboardViewModel = viewModel(factory 
         Column(Modifier.fillMaxSize().padding(padding)) {
         // Stays put above the list, so the count of matches is always in view while ticking.
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
-            listOf("What I have (${state.have.size})" to false, "What I can make (${state.matches.size})" to true)
+            // Short labels: with the whole library matching, the second count is often three digits.
+            listOf("I have (${state.have.size})" to false, "I can make (${state.matches.size})" to true)
                 .forEachIndexed { index, (label, value) ->
                     SegmentedButton(
                         selected = showRecipes == value,
@@ -277,7 +278,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recipes(
         item {
             EmptyState(
                 title = "Nothing ticked yet",
-                body = "Tick a few things under \"What I have\" and recipes that use them show up here.",
+                body = "Tick a few things under \"I have\" and recipes that use them show up here.",
             )
         }
         return

@@ -32,6 +32,15 @@ Settings > Look offers 15 ready-made looks and a creator for your own. Swag's da
 - The personal edition gets the cupboard and the new recipes. Swag's and Ashley's plans, portions and Ashley's own daily guide are unchanged; the questionnaire is store-only.
 - Database version 5 adds `Profile.planAnswers`. Nothing here needs the internet, and none of it leaves the phone.
 
+## World recipes and "What are you craving?" (version 5)
+
+- **186 recipes** (181 in the store edition). Seed version 4 adds 100 dishes from around the world (Asia 34, Europe, the Middle East and Africa 33, the Americas 33: congee, bibimbap, dal bhat, jollof rice, koshari, tagine, lomo saltado, moqueca, soup joumou and so on) and 14 home versions of restaurant favorites. Each keeps to supermarket ingredients, with the traditional item named where a stand-in is used. Phones that already have the app get the new recipes on upgrade; nothing already there changes.
+- **How they're made**: `tools/recipes_v4_a.py`, `_b.py`, `_c.py` and `_copycat.py` hold the recipes, written with `tools/recipe_lib.py` (which works out the nutrition line from the ingredients). `tools/check_recipes.py` rejects anything outside the rules (calories and protein per serving for its meal, a safe internal temperature for meat and fish, known units, one cuisine tag, no alcohol), and `python3 tools/recipes_v4.py && python3 tools/store_seed.py` merges them into both seeds.
+- **What are you craving?** (both editions): Cook > "What are you craving?" lists 12 fast-food and coffee chains. Each page has the better picks with approximate calories and protein, how to order, a button that opens a web search for the restaurant's current nutrition, and "Make it at home": the recipes here that taste like the menu favorites. A recipe's own page says what it is like ("Like the chili at Wendy's").
+- **The restaurant list** is `app/src/main/assets/restaurants.json`: plain data with an `asOf` date. The figures were gathered from published menu information in November 2026 and are worded as approximate ("about", "roughly", ranges where sources disagree). Nothing is fetched, so the personal edition stays offline. Restaurant names appear as plain text, with no logos, under a note that the app isn't affiliated with any of them. To drop or add a place, edit the file; `RestaurantFileTest` and the seed tests check it.
+- **Foods to avoid on the restaurant pages**: a pick whose main ingredients include something the person avoids is marked and moved down, home versions with something they avoid are left out, and anyone avoiding an allergen sees a note to check the restaurant's own allergen guide. The app only knows main ingredients, never a restaurant's full allergen list, and it says so.
+- **Smaller changes**: search ignores accents ("golabki" finds "Gołąbki"); a "Make it with..." swap can carry its own amount ("2 cans chickpeas" in place of 1 1/2 lb chicken); the allergen detector knows more foods (baguette, za'atar, halloumi, orzo and others); "Show nutrition info" off also hides the restaurant figures.
+
 ## Two editions
 
 The project builds two apps from the same code (Gradle product flavors):
@@ -104,4 +113,5 @@ app/src/main/
   assets/demos/               exercise photos (free-exercise-db, public domain)
   res/font/                   Cinzel, Fredoka, Pacifico (SIL Open Font License, see licenses/)
 tools/exercise_demos.py       matches and bundles the exercise demos
+tools/recipes_v4.py           checks and merges the recipe files into the seed (see above)
 ```

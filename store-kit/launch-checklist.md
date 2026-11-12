@@ -114,6 +114,22 @@ counting with the screen off. Play asks why:
 Main store listing: paste the text from `listing.md` and upload the files in `graphics/`
 (icon, feature graphic, 8 phone screenshots).
 
+**Restaurant names.** The "What are you craving?" pages name 12 chains so people can find the
+place they're going to. That is ordinary descriptive use, and the app keeps it that way: plain
+text, no logos or brand colours, a note on every page that it isn't affiliated with any
+restaurant, and home recipes named for the dish ("Pickle-brined grilled chicken sandwich")
+with the menu item mentioned only as what it is like. Three things to do yourself:
+
+- Keep the names out of the store listing and screenshots (see the note at the top of
+  `listing.md`).
+- Read through `app/src/main/assets/restaurants.json` before launch. The calories and protein
+  were gathered from published menu information in November 2026, and sources sometimes
+  disagreed, so they are worded as approximate. Check any you rely on against the restaurants'
+  own nutrition pages, and correct the file and its `asOf` date if a menu has changed.
+- If a company ever objects (Play forwards the notice by email), remove its entry from that
+  file and publish an update. Nothing else in the app depends on a particular chain. This is a
+  practical note, not legal advice; ask a lawyer if you want certainty before launch.
+
 ## 8. Internal test, then the Remove ads product
 
 1. **Testing > Internal testing**: create a release, upload the `.aab`, add yourself as a tester,
@@ -155,6 +171,8 @@ Main store listing: paste the text from `listing.md` and upload the files in `gr
 - Banner ads earn little per view; income grows with daily users. The "Remove ads" purchase is
   often a meaningful share of a small app's earnings.
 - Reply to Play policy emails quickly; most issues are form answers, not code.
+- Menus change. Once or twice a year, check the figures in `app/src/main/assets/restaurants.json`
+  against the restaurants' own nutrition pages, update `asOf`, and ship an update.
 
 ## Your personal app and Android's developer verification
 

@@ -97,6 +97,8 @@ class CravingsTest {
         scrollTo("Check current nutrition (opens a web search)")
         scrollTo("Make it at home")
         scrollTo("Like a chicken burrito bowl")
+        // The home figure comes with its serving size, which includes the rice.
+        scrollTo("1 bowl with 1/2 cup rice: ~560 cal")
         scrollTo("not affiliated with")
         shot("cravings-3-make-it-at-home")
 
@@ -161,6 +163,6 @@ class CravingsTest {
         scrollTo("Sofritas (braised tofu)")
         assertTrue(!shown("about 180 cal"))
         scrollTo("Chicken burrito bowls")
-        assertTrue(!shown("A serving, approx."))
+        assertTrue(!shown("g protein"))
     }
 }

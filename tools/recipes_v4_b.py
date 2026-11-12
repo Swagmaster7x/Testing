@@ -26,7 +26,7 @@ RECIPES = [
         ing(None, None, "salt", T),
     ], [
         "Stir the grated garlic and a pinch of salt into the yogurt and spread it in a shallow bowl. Let it lose its chill while you cook.",
-        "Bring a small pan of water to a gentle simmer and add the vinegar. Crack in the eggs and poach for 3 to 4 minutes, until the whites are set.",
+        "Bring a small pan of water to a gentle simmer and add the vinegar. Crack in the eggs and poach for 3 to 4 minutes, until the whites are set (5 minutes for firm yolks).",
         "Melt the butter in a small pan, then stir in the paprika and red pepper flakes for 20 seconds until it smells toasty.",
         "Lift the eggs onto the yogurt with a slotted spoon, spoon the spiced butter over them and scatter with dill.",
         "Serve with the toast for scooping.",

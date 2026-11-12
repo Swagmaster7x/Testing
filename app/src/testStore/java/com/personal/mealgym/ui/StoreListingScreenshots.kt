@@ -144,7 +144,7 @@ class StoreListingScreenshots {
         waitForText("What can I make from my cupboard?")
         compose.onAllNodesWithText("What can I make from my cupboard?").onFirst().performClick()
         waitForText("Search ingredients")
-        compose.onAllNodesWithText("What I can make", substring = true).onFirst().performClick()
+        compose.onAllNodesWithText("I can make", substring = true).onFirst().performClick()
         waitForText("To buy:")
         shot("listing-9-cupboard")
     }

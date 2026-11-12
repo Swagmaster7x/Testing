@@ -99,7 +99,7 @@ RECIPES = [
     ], [
         "Toss the carrot with the vinegar, sugar and a pinch of salt. Leave it for 10 minutes to pickle lightly.",
         "Warm the baguette in a 350°F oven or a toaster for 3 to 4 minutes until the crust is crisp.",
-        "Heat the oil in a small nonstick pan over medium heat. Crack in the eggs and fry for 2 to 3 minutes until the whites are set and the yolks are still soft.",
+        "Heat the oil in a small nonstick pan over medium heat. Crack in the eggs and fry for 2 to 3 minutes until the whites are set and the yolks are still soft (a minute longer for firm yolks).",
         "Sprinkle the eggs with the soy sauce and plenty of black pepper.",
         "Serve with the baguette, cucumber, tomato, jalapeño, pickled carrot and cilantro, dipping the bread in the yolks.",
     ]),

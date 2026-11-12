@@ -4,6 +4,13 @@ Paste these into Play Console > Grow users > Store presence > Main store listing
 Google's; the counts below fit them. Don't mention any manga, film or brand in the listing, and
 avoid "best", "#1", "free" in the title or icon, prices, or rankings (Play rejects them).
 
+**Keep restaurant names out of the listing.** The app names 12 chains on its "What are you
+craving?" pages, as plain text with a not-affiliated note. The listing is different: Play's
+rules on impersonation and intellectual property are applied to the title, descriptions and
+screenshots, and another company's name there can get a listing rejected or reported. So the
+text below says "popular fast-food and coffee chains" and none of the screenshots show those
+pages. Leave it that way.
+
 ## App name (30 characters max)
 
     Meal & Gym: Planner & Gym Log
@@ -29,9 +36,17 @@ COOK FROM YOUR CUPBOARD
 • Tick what's in your fridge and cupboards and see what you can make right now.
 • Recipes that are nearly there show exactly what's missing, and one tap plans them.
 
+180 RECIPES FROM AROUND THE WORLD
+• Healthy, high-protein dishes from Asia, Africa, Europe, the Middle East, the Caribbean and the Americas, made with ordinary supermarket ingredients.
+• Vegetarian, fish and egg dishes alongside chicken, beef and pork, each with approximate calories and protein per serving.
+
+WHEN YOU'RE CRAVING TAKEOUT
+• Pick from a dozen popular fast-food and coffee chains and see the better choices on the menu, with approximate calories and protein and tips for ordering.
+• Or make it at home: lighter home versions of restaurant favorites, grilled or baked.
+
 PLAN THE WEEK
 • Breakfast, lunch and dinner for each day, plus an optional snack.
-• Pick from 65+ healthy, high-protein recipes, including vegetarian and fish dishes, or add your own.
+• Pick from the recipe library or add your own.
 • "Fill my week" plans the empty slots for you from the recipes you like.
 • Meal-prep recipes fill several days in one go. "Repeat last week" copies a week you liked.
 • Filter by protein, cuisine or "Not chicken", mark favourites, and hide recipes for a while.
@@ -70,7 +85,7 @@ PRIVATE BY DESIGN
 
 The free version shows a small banner on some screens (never during a workout or while cooking). A one-time "Remove ads" purchase turns them off for good.
 
-Meal & Gym is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide is an estimate for healthy adults. Allergen information comes from ingredient names, so always check food labels. Check with a doctor before starting a new eating or training plan.
+Meal & Gym is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide is an estimate for healthy adults. Allergen information comes from ingredient names, so always check food labels. Restaurant figures are approximate and menus change, so check the restaurant's own nutrition and allergen information; the app is not affiliated with any restaurant. Check with a doctor before starting a new eating or training plan.
 ```
 
 ## Other listing fields

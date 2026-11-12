@@ -220,9 +220,9 @@ class ScreenshotTest {
             compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText(item))
             compose.onAllNodesWithText(item).onFirst().performClick()
         }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("What I have (7)").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("I have (7)").fetchSemanticsNodes().isNotEmpty() }
         shot("71-cupboard-ticked")
-        compose.onAllNodesWithText("What I can make", substring = true).onFirst().performClick()
+        compose.onAllNodesWithText("I can make", substring = true).onFirst().performClick()
         // Soy sauce, honey and the other staples already count, so the teriyaki bowl only lacks sesame seeds.
         waitForText("Almost there")
         shot("72-cupboard-recipes")
