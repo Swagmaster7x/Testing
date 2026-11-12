@@ -21,7 +21,6 @@ import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.Quantities
 import com.personal.mealgym.domain.RecipeSwaps
 import com.personal.mealgym.ui.MessageViewModel
-import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.label
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,9 +69,11 @@ data class RecipeUi(
     val showNutrition: Boolean,
     val showHalfPlateTip: Boolean,
     val freeVolumeFoods: List<String>,
-    /** Ashley's Side: "Make it easier to finish" instead of the half-plate and volume tips. */
-    val isAshley: Boolean = false,
+    /** "Make it easier to finish" instead of the half-plate and volume tips. */
+    val easierToFinish: Boolean = false,
     val easierTips: List<String> = emptyList(),
+    /** The person's lunch and dinner portion, when it isn't a whole serving. */
+    val portion: Double = 1.0,
 ) {
     /** Coffee-shop orders and the like: nothing to cook or buy. */
     val isOrderOnly: Boolean get() = recipe.steps.isEmpty() && ingredients.isEmpty()
@@ -88,7 +89,7 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
     private val id: Long = handle.get<Long>("id") ?: 0L
     val profileId = c.currentProfileId()
 
-    val state: StateFlow<RecipeState> = combine(c.meals.recipe(id), c.settings.settings(profileId)) { r, s ->
+    val state: StateFlow<RecipeState> = combine(c.meals.recipe(id), c.settings.settings(profileId), c.profile(profileId)) { r, s, person ->
         if (r == null) {
             RecipeState.Missing
         } else {
@@ -99,8 +100,9 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
                     showNutrition = s.showNutrition,
                     showHalfPlateTip = s.showHalfPlateTip,
                     freeVolumeFoods = c.freeVolumeFoods,
-                    isAshley = Sides.isAshley(profileId),
+                    easierToFinish = person.easierToFinish,
                     easierTips = c.seed.seed.easierToFinishTips,
+                    portion = person.portion,
                 ),
             )
         }
@@ -150,8 +152,12 @@ class ShoppingViewModel(private val c: AppContainer) : MessageViewModel() {
     /** 0 = this week, 1 = next week. */
     val weekOffset = MutableStateFlow(0L)
 
-    /** "Just mine" (false) or "Both of us" (true), remembered per side. */
-    val both: StateFlow<Boolean> = c.settings.settings(profileId).map { it.shoppingBoth }.stateInVm(false)
+    /** How many people are on this phone: the "Both of us" choice only shows with more than one. */
+    val peopleCount: StateFlow<Int> = c.profiles.map { it.size }.stateInVm(c.profiles.value.size)
+
+    /** "Just mine" (false) or "Both of us" / "Everyone" (true), remembered per person. */
+    val both: StateFlow<Boolean> = combine(c.settings.settings(profileId), c.profiles) { s, people -> s.shoppingBoth && people.size > 1 }
+        .stateInVm(false)
 
     val ui: StateFlow<ShoppingWeek?> = combine(c.today, weekOffset, both) { today, offset, both ->
         Dates.weekStart(today).plusWeeks(offset) to both

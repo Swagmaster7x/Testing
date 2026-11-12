@@ -20,23 +20,22 @@ import java.time.DayOfWeek
 @Serializable
 enum class WeightUnit(val label: String) { LB("lb"), KG("kg") }
 
-/** The two sides of the app. Profile ids match the Profile table. */
+/**
+ * Settings defaults from before they were stored per person. Profile 1 is the first person on
+ * the phone and keeps the version-1 key names. People added later have their training days
+ * and chime written when they're created, so these defaults only matter for the first two.
+ */
 object Profiles {
-    const val SWAG = 1L
-    const val ASHLEY = 2L
-
-    fun other(id: Long): Long = if (id == SWAG) ASHLEY else SWAG
-
-    fun name(id: Long): String = if (id == ASHLEY) "Ashley" else "Swag"
-
-    fun sideName(id: Long): String = "${name(id)}'s Side"
+    const val FIRST = 1L
 
     fun defaultTrainingDays(id: Long): Set<DayOfWeek> =
-        if (id == ASHLEY) {
+        if (id == 2L) {
             setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)
         } else {
             setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
         }
+
+    fun defaultChime(id: Long): Boolean = id == FIRST
 }
 
 /** Recipe filters that stay set until changed ("Not chicken" stays on until turned off). */
@@ -46,23 +45,23 @@ data class LibraryFilter(
     val notChicken: Boolean = false,
 )
 
-/** One side's settings, plus the shared pantry list. */
+/** One person's settings, plus the shared pantry list. */
 data class AppSettings(
-    val profileId: Long = Profiles.SWAG,
+    val profileId: Long = Profiles.FIRST,
     val trainingWeekdays: Set<DayOfWeek> = Profiles.defaultTrainingDays(profileId),
     val showNutrition: Boolean = true,
     val showHalfPlateTip: Boolean = true,
     val weightUnit: WeightUnit = WeightUnit.LB,
     /** Items ticked as "always have"; left off the shopping list. Shared by both sides. */
     val pantryStaples: Set<String> = emptySet(),
-    /** Sparkles and shimmer (Ashley's Side). */
+    /** Sparkles and shimmer (the glam look). */
     val motion: Boolean = true,
-    /** Sound when a timer ends. On by default for Swag (as before), off for Ashley. */
-    val chime: Boolean = profileId == Profiles.SWAG,
-    /** Daily creatine checkbox on Today (Ashley's Side, off by default). */
+    /** Sound when a timer ends. It always buzzes. */
+    val chime: Boolean = Profiles.defaultChime(profileId),
+    /** Daily creatine checkbox on Today (off by default). */
     val creatineReminder: Boolean = false,
     val filter: LibraryFilter = LibraryFilter(),
-    /** Shopping list shows both sides' meals. */
+    /** Shopping list shows everyone's meals on this phone. */
     val shoppingBoth: Boolean = false,
 )
 
@@ -76,8 +75,8 @@ sealed interface SideState {
 val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 /**
- * Settings live in DataStore. Swag's side keeps the key names from version 1 so nothing is
- * lost on upgrade; Ashley's keys carry a "p2_" prefix.
+ * Settings live in DataStore. Profile 1 keeps the key names from version 1 so nothing is
+ * lost on upgrade; everyone else's keys carry a "p{id}_" prefix.
  */
 class SettingsRepository(private val store: DataStore<Preferences>) {
 
@@ -86,7 +85,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val activeProfile = longPreferencesKey("active_profile")
     }
 
-    private fun name(base: String, profileId: Long) = if (profileId == Profiles.SWAG) base else "p${profileId}_$base"
+    private fun name(base: String, profileId: Long) = if (profileId == Profiles.FIRST) base else "p${profileId}_$base"
     private fun bool(base: String, p: Long) = booleanPreferencesKey(name(base, p))
     private fun string(base: String, p: Long) = stringPreferencesKey(name(base, p))
     private fun stringSet(base: String, p: Long) = stringSetPreferencesKey(name(base, p))
@@ -99,6 +98,15 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
 
     /** Shows the door chooser again on next composition. */
     suspend fun clearActiveProfile() = store.edit { it.remove(Shared.activeProfile) }
+
+    /** Forgets one person's settings, so a new person given the same id starts fresh. */
+    suspend fun forget(profileId: Long) = store.edit { p ->
+        PER_PERSON.forEach { base ->
+            p.remove(stringSetPreferencesKey(name(base, profileId)))
+            p.remove(booleanPreferencesKey(name(base, profileId)))
+            p.remove(stringPreferencesKey(name(base, profileId)))
+        }
+    }
 
     fun settings(profileId: Long): Flow<AppSettings> = store.data.map { read(it, profileId) }
 
@@ -183,5 +191,12 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
 
     private fun <T> MutablePreferences.setOrRemove(key: Preferences.Key<T>, value: T?) {
         if (value == null) remove(key) else this[key] = value
+    }
+
+    private companion object {
+        val PER_PERSON = listOf(
+            "training_weekdays", "show_nutrition", "show_half_plate_tip", "weight_unit", "motion", "chime",
+            "creatine_reminder", "filter_protein", "filter_cuisine", "filter_not_chicken", "shopping_both",
+        )
     }
 }

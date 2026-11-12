@@ -16,14 +16,14 @@ import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
 /**
- * One side's meal plan as a file, so it can go from one phone to the other (there is no sync).
+ * One person's meal plan as a file, so it can go from one phone to another (there is no sync).
  * Each meal carries its recipe, so the other phone can add any recipe it doesn't have yet.
  */
 @Serializable
 data class PlanFile(
     val app: String = BackupFile.APP_ID,
     val kind: String = KIND,
-    /** "swag" or "ashley": whose plan this is. */
+    /** Whose plan this is: the person's name in lower case. */
     val profile: String,
     val from: String,
     val to: String,
@@ -50,7 +50,7 @@ class PlanTransfer(
         encodeDefaults = false
     }
 
-    /** This week and next for one side. */
+    /** This week and next for one person. */
     suspend fun snapshot(profileId: Long, weekStart: LocalDate): PlanFile {
         val from = Dates.iso(weekStart)
         val to = Dates.iso(weekStart.plusDays(13))
@@ -73,7 +73,8 @@ class PlanTransfer(
             }
             PlannedMeal(e.date, e.slot, recipe)
         }
-        return PlanFile(profile = Profiles.name(profileId).lowercase(), from = from, to = to, meals = meals)
+        val name = db.profileDao().all().firstOrNull { it.id == profileId }?.name.orEmpty()
+        return PlanFile(profile = name.trim().lowercase(), from = from, to = to, meals = meals)
     }
 
     fun encode(file: PlanFile): String = json.encodeToString(PlanFile.serializer(), file)
@@ -84,9 +85,13 @@ class PlanTransfer(
         return file
     }
 
-    /** Puts the plan on the side it came from, adding any recipes this phone doesn't have. */
-    suspend fun apply(file: PlanFile): PlanImportResult {
-        val profileId = SeedParser.profileId(file.profile) ?: Profiles.SWAG
+    /**
+     * Puts the plan on the person with the same name on this phone (or on [fallbackProfileId]),
+     * adding any recipes this phone doesn't have.
+     */
+    suspend fun apply(file: PlanFile, fallbackProfileId: Long): PlanImportResult {
+        val profileId = db.profileDao().all().firstOrNull { it.name.trim().equals(file.profile.trim(), ignoreCase = true) }?.id
+            ?: fallbackProfileId
         val dao = db.recipeDao()
         var newRecipes = 0
         val entries = mutableListOf<MealPlanEntry>()
@@ -95,7 +100,8 @@ class PlanTransfer(
                 val existing = dao.bySeedKey(meal.recipe.key) ?: dao.byName(meal.recipe.name)
                 val recipeId = existing?.id ?: run {
                     newRecipes++
-                    val id = dao.insert(SeedParser.recipeOf(meal.recipe).copy(seedKey = null, isUserCreated = true))
+                    val onlyFor = meal.recipe.onlyFor?.let { profileId }
+                    val id = dao.insert(SeedParser.recipeOf(meal.recipe, onlyFor).copy(seedKey = null, isUserCreated = true))
                     dao.insertIngredients(SeedParser.ingredientsOf(meal.recipe, id, emptySet()))
                     id
                 }
@@ -114,8 +120,8 @@ class PlanTransfer(
         file.meals.size
     }
 
-    suspend fun importFrom(uri: Uri): PlanImportResult = withContext(Dispatchers.IO) {
+    suspend fun importFrom(uri: Uri, fallbackProfileId: Long): PlanImportResult = withContext(Dispatchers.IO) {
         val stream = contentResolver.openInputStream(uri) ?: error("Couldn't open the file.")
-        apply(decode(stream.bufferedReader().use { it.readText() }))
+        apply(decode(stream.bufferedReader().use { it.readText() }), fallbackProfileId)
     }
 }

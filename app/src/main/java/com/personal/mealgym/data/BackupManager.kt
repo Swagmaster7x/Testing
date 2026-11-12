@@ -29,7 +29,7 @@ data class BackupSettings(
     val showNutrition: Boolean,
     val showHalfPlateTip: Boolean,
     val weightUnit: WeightUnit,
-    /** Shared by both sides; only read from the main [BackupFile.settings]. */
+    /** Shared by everyone; only read from the main [BackupFile.settings]. */
     val pantryStaples: List<String> = emptyList(),
     val motion: Boolean = true,
     val chime: Boolean? = null,
@@ -47,7 +47,7 @@ data class BackupSettings(
         weightUnit = weightUnit,
         pantryStaples = pantryStaples.toSet(),
         motion = motion,
-        chime = chime ?: (profileId == Profiles.SWAG),
+        chime = chime ?: Profiles.defaultChime(profileId),
         creatineReminder = creatineReminder,
         filter = LibraryFilter(filterProtein, filterCuisine, filterNotChicken),
         shoppingBoth = shoppingBoth,
@@ -72,17 +72,18 @@ data class BackupSettings(
 }
 
 /**
- * Everything the app stores, in one JSON file. Version 1 files (before the two sides) still
- * import: everything in them becomes Swag's.
+ * Everything the app stores, in one JSON file. Version 1 files (before profiles) still import:
+ * everything in them becomes profile 1's. Version 2 files predate the per-person settings on
+ * profiles; those come from the app's built-in people when the ids match.
  */
 @Serializable
 data class BackupFile(
     val app: String = APP_ID,
     val formatVersion: Int = FORMAT_VERSION,
     val exportedAt: String,
-    /** Swag's settings and the shared pantry list. */
+    /** Profile 1's settings and the shared pantry list. */
     val settings: BackupSettings,
-    /** Other sides' settings, keyed by profile id. */
+    /** Everyone else's settings, keyed by profile id. */
     val sideSettings: Map<String, BackupSettings> = emptyMap(),
     val profiles: List<Profile> = emptyList(),
     val recipes: List<Recipe>,
@@ -98,8 +99,7 @@ data class BackupFile(
 ) {
     companion object {
         const val APP_ID = "com.personal.mealgym"
-        const val FORMAT_VERSION = 2
-        val defaultProfiles = listOf(Profile(Profiles.SWAG, "Swag", "IRON"), Profile(Profiles.ASHLEY, "Ashley", "GLAM"))
+        const val FORMAT_VERSION = 3
     }
 }
 
@@ -107,6 +107,8 @@ class BackupManager(
     private val db: AppDatabase,
     private val settings: SettingsRepository,
     private val contentResolver: ContentResolver,
+    /** The people the app ships with (from the seed file); none in the store edition. */
+    private val defaultProfiles: () -> List<Profile>,
 ) {
     private val json = Json {
         prettyPrint = true
@@ -117,11 +119,11 @@ class BackupManager(
     suspend fun snapshot(): BackupFile {
         val recipeDao = db.recipeDao()
         val workoutDao = db.workoutDao()
-        val profiles = db.profileDao().all().ifEmpty { BackupFile.defaultProfiles }
+        val profiles = db.profileDao().all()
         return BackupFile(
             exportedAt = LocalDateTime.now().withNano(0).toString(),
-            settings = BackupSettings.of(settings.current(Profiles.SWAG)),
-            sideSettings = profiles.filter { it.id != Profiles.SWAG }
+            settings = BackupSettings.of(settings.current(Profiles.FIRST)),
+            sideSettings = profiles.filter { it.id != Profiles.FIRST }
                 .associate { it.id.toString() to BackupSettings.of(settings.current(it.id)).copy(pantryStaples = emptyList()) },
             profiles = profiles,
             recipes = recipeDao.allRecipes(),
@@ -161,8 +163,7 @@ class BackupManager(
             workoutDao.deleteAllDays()
             db.profileDao().deleteAll()
 
-            db.profileDao().insertAll(file.profiles.ifEmpty { BackupFile.defaultProfiles })
-            db.profileDao().insertAll(BackupFile.defaultProfiles)
+            db.profileDao().insertAll(profilesFor(file))
             recipeDao.insertRecipes(file.recipes)
             recipeDao.insertIngredients(file.ingredients)
             db.planDao().putAll(file.mealPlan)
@@ -174,10 +175,28 @@ class BackupManager(
             db.saunaDao().insertAll(file.saunaLogs)
             db.supplementDao().insertAll(file.supplementLogs)
         }
-        settings.replace(file.settings.toSettings(Profiles.SWAG), includePantry = true)
+        settings.replace(file.settings.toSettings(Profiles.FIRST), includePantry = true)
         file.sideSettings.forEach { (id, s) ->
             id.toLongOrNull()?.let { settings.replace(s.toSettings(it), includePantry = false) }
         }
+    }
+
+    /**
+     * The people to restore. Older files lack the per-person settings, so the built-in people
+     * supply them; anyone the plans or history point to gets a profile.
+     */
+    fun profilesFor(file: BackupFile): List<Profile> {
+        val builtIn = defaultProfiles().associateBy { it.id }
+        val fromFile = file.profiles.map { p ->
+            val known = builtIn[p.id]
+            if (file.formatVersion < 3 && known != null) known.copy(name = p.name, themeKey = p.themeKey) else p
+        }
+        val ids = fromFile.map { it.id }.toSet()
+        val missing = builtIn.values.filter { it.id !in ids }
+        val all = fromFile + missing
+        val used = (file.mealPlan.map { it.profileId } + file.workoutDays.map { it.profileId } + file.workoutSessions.map { it.profileId })
+            .toSet() - all.map { it.id }.toSet()
+        return all + used.sorted().map { Profile(it, if (it == Profiles.FIRST) "Me" else "Person $it", Profile.THEME_IRON) }
     }
 
     suspend fun exportTo(uri: Uri): BackupFile = withContext(Dispatchers.IO) {

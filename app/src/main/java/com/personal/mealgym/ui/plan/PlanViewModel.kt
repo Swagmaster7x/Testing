@@ -7,8 +7,8 @@ import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.LibraryFilter
-import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.db.MealPlanEntry
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.SlotKey
 import com.personal.mealgym.domain.WeekFiller
@@ -38,8 +38,9 @@ data class PlanUi(
     val today: LocalDate,
     val days: List<PlanDay>,
     val recipes: List<Recipe>,
-    /** Ashley's schedule layer: "Glutes + hams", "Upper", "Rest"... (empty on Swag's Side). */
+    /** The schedule layer: "Glutes + hams", "Upper", "Rest"... (empty unless the person turned it on). */
     val badges: Map<LocalDate, String> = emptyMap(),
+    val slots: List<MealSlot> = Sides.slotsFor(Profile(0, "", Profile.THEME_IRON)),
 ) {
     val isThisWeek: Boolean get() = weekStart == Dates.weekStart(today)
     val weekName: String
@@ -53,13 +54,14 @@ data class PlanUi(
 
 class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
     val profileId = c.currentProfileId()
-    val slots: List<MealSlot> = Sides.slotsFor(profileId)
+    private val profile = c.profile(profileId)
 
     private val weekStart = MutableStateFlow(Dates.weekStart(c.today.value))
 
-    val ui: StateFlow<PlanUi?> = combine(weekStart, c.today) { ws, today -> ws to today }
-        .flatMapLatest { (ws, today) ->
-            combine(c.meals.planForWeek(profileId, ws), c.meals.recipesFor(profileId), scheduleBadges(ws, today)) { plan, recipes, badges ->
+    val ui: StateFlow<PlanUi?> = combine(weekStart, c.today, profile) { ws, today, p -> Triple(ws, today, p) }
+        .flatMapLatest { (ws, today, person) ->
+            val slots = Sides.slotsFor(person)
+            combine(c.meals.planForWeek(profileId, ws), c.meals.recipesFor(profileId), scheduleBadges(ws, today, person)) { plan, recipes, badges ->
                 val byId = recipes.associateBy { it.id }
                 val days = Dates.weekDays(ws).map { date ->
                     val iso = Dates.iso(date)
@@ -70,14 +72,14 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
                         },
                     )
                 }
-                PlanUi(ws, today, days, recipes, badges)
+                PlanUi(ws, today, days, recipes, badges, slots)
             }
         }
         .stateInVm(null)
 
-    /** The training layer of Ashley's week view. Swag's Side shows meals only. */
-    private fun scheduleBadges(weekStart: LocalDate, today: LocalDate): Flow<Map<LocalDate, String>> {
-        if (!Sides.isAshley(profileId)) return flowOf(emptyMap())
+    /** The training layer of the week view, for people who turned on "Show gym days". */
+    private fun scheduleBadges(weekStart: LocalDate, today: LocalDate, person: Profile): Flow<Map<LocalDate, String>> {
+        if (!person.weekBadges) return flowOf(emptyMap())
         return combine(c.gym.days(profileId), c.gym.sessions(profileId), c.settings.settings(profileId)) { days, sessions, s ->
             val refs = sessions.map { SessionRef(Dates.parse(it.date), it.dayOrder, it.id) }
             val names = days.associate { it.dayOrder to (it.shortName ?: it.name) }
@@ -111,7 +113,7 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
                 .toMap()
             val empty = Dates.weekDays(state.weekStart)
                 .filter { !it.isBefore(state.today) }
-                .flatMap { d -> slots.map { SlotKey(d, it) } }
+                .flatMap { d -> state.slots.map { SlotKey(d, it) } }
                 .filter { it !in existing }
             val filled = WeekFiller.fill(empty, existing, { slot ->
                 state.recipes.filter { !it.isHidden && slot.accepts(it.mealType) && WeekFiller.matches(it, f) }
@@ -156,14 +158,15 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
         }
     }
 
-    val otherSideName: String = Profiles.sideName(Profiles.other(profileId))
+    /** Everyone else on this phone, for "Add to the other side too". */
+    val others: StateFlow<List<Profile>> = c.profiles.map { list -> list.filter { it.id != profileId } }
+        .stateInVm(c.profiles.value.filter { it.id != profileId })
 
-    /** "Add to the other side too": the same meal in the same slot on the other side's plan. */
-    fun addToOtherSide(date: LocalDate, slot: MealSlot, recipe: Recipe) {
-        val other = Profiles.other(profileId)
+    /** "Add to the other side too": the same meal in the same slot on someone else's plan. */
+    fun addToOther(other: Profile, date: LocalDate, slot: MealSlot, recipe: Recipe) {
         viewModelScope.launch {
-            c.meals.setSlot(other, date, slot, recipe.id)
-            say("Also on $otherSideName.")
+            c.meals.setSlot(other.id, date, slot, recipe.id)
+            say("Also on ${Sides.planName(other)}.")
         }
     }
 

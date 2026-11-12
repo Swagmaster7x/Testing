@@ -30,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.personal.mealgym.MainActivity
 import com.personal.mealgym.R
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.ui.cook.CookScreen
 import com.personal.mealgym.ui.cook.CookingModeScreen
 import com.personal.mealgym.ui.cook.RecipeEditScreen
@@ -39,6 +40,7 @@ import com.personal.mealgym.ui.gym.DemoScreen
 import com.personal.mealgym.ui.gym.GymScreen
 import com.personal.mealgym.ui.gym.WorkoutEditScreen
 import com.personal.mealgym.ui.history.HistoryScreen
+import com.personal.mealgym.ui.people.PersonScreen
 import com.personal.mealgym.ui.plan.PlanScreen
 import com.personal.mealgym.ui.sauna.SaunaScreen
 import com.personal.mealgym.ui.settings.SettingsScreen
@@ -60,11 +62,13 @@ object Routes {
     const val HISTORY = "history"
     const val WORKOUT_EDIT = "workout-edit"
     const val DEMO = "demo/{name}"
+    const val PERSON = "person/{id}"
 
     fun recipe(id: Long) = "recipe/$id"
     fun cooking(id: Long) = "cooking/$id"
     fun recipeEdit(id: Long = 0) = "recipe-edit/$id"
     fun demo(exerciseName: String) = "demo/" + android.net.Uri.encode(exerciseName)
+    fun person(id: Long = 0) = "person/$id"
 }
 
 /** Every way one screen can open another. */
@@ -90,6 +94,7 @@ class AppNavigator(private val nav: NavHostController) {
     fun history() = nav.navigate(Routes.HISTORY) { launchSingleTop = true }
     fun editWorkouts() = nav.navigate(Routes.WORKOUT_EDIT) { launchSingleTop = true }
     fun demo(exerciseName: String) = nav.navigate(Routes.demo(exerciseName))
+    fun person(id: Long = 0) = nav.navigate(Routes.person(id))
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -111,7 +116,7 @@ private val glamTabs = listOf(
 
 @Composable
 fun MealGymNavHost(
-    profileId: Long,
+    profile: Profile,
     pendingOpen: StateFlow<String?>,
     onOpenHandled: () -> Unit,
     navController: NavHostController = rememberNavController(),
@@ -120,7 +125,7 @@ fun MealGymNavHost(
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val open by pendingOpen.collectAsState()
-    val tabs = if (Sides.isAshley(profileId)) glamTabs else ironTabs
+    val tabs = if (profile.isGlam) glamTabs else ironTabs
 
     LaunchedEffect(open) {
         if (open == MainActivity.OPEN_SAUNA) {
@@ -173,6 +178,9 @@ fun MealGymNavHost(
             composable(Routes.WORKOUT_EDIT) { WorkoutEditScreen(navigator) }
             composable(Routes.DEMO, arguments = listOf(navArgument("name") { type = NavType.StringType })) {
                 DemoScreen(navigator)
+            }
+            composable(Routes.PERSON, arguments = listOf(navArgument("id") { type = NavType.LongType })) {
+                PersonScreen(navigator)
             }
         }
     }

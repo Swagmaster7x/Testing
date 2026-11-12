@@ -3075,13 +3075,6 @@
     "Short on time? Skip the last group, not the first lift.",
     "Optional after lifting: 20 to 30 minutes of easy cardio, then sauna."
   ],
-  "gymTipsAshley": [
-    "Rest 2 minutes after the first two exercises, about 1 minute after the rest.",
-    "Stop each set with one or two good reps left. Push the last set a bit harder.",
-    "When every set reaches the top of the rep range, add the smallest weight jump next time.",
-    "Feel it in the glutes, not the lower back. On hip thrusts, tuck the chin and keep the ribs down.",
-    "Setup for a shorter frame: use a low bench or step for hip thrusts, and slide machine seats forward."
-  ],
   "easierToFinishTips": [
     "Small appetite today? Eat the protein first, then the rice.",
     "Drink some of it: a shake or protein latte counts.",
@@ -3116,5 +3109,43 @@
     "lemongrass paste",
     "chipotles in adobo",
     "canned pigeon peas"
+  ],
+  "profiles": [
+    {
+      "id": 1,
+      "key": "swag",
+      "name": "Swag",
+      "theme": "IRON",
+      "templateKey": "upper-lower-4"
+    },
+    {
+      "id": 2,
+      "key": "ashley",
+      "name": "Ashley",
+      "theme": "GLAM",
+      "snackSlot": true,
+      "portion": 0.75,
+      "tipsStyle": "EASIER",
+      "weekBadges": true,
+      "templateKey": "glute-3"
+    }
+  ],
+  "workoutTemplates": [
+    {
+      "key": "upper-lower-4",
+      "name": "Upper / lower, 4 days",
+      "tips": []
+    },
+    {
+      "key": "glute-3",
+      "name": "Glute focus, 3 days",
+      "tips": [
+        "Rest 2 minutes after the first two exercises, about 1 minute after the rest.",
+        "Stop each set with one or two good reps left. Push the last set a bit harder.",
+        "When every set reaches the top of the rep range, add the smallest weight jump next time.",
+        "Feel it in the glutes, not the lower back. On hip thrusts, tuck the chin and keep the ribs down.",
+        "Setup for a shorter frame: use a low bench or step for hip thrusts, and slide machine seats forward."
+      ]
+    }
   ]
 }

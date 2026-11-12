@@ -6,11 +6,13 @@ import com.personal.mealgym.data.DemoRepository
 import com.personal.mealgym.data.GymRepository
 import com.personal.mealgym.data.MealRepository
 import com.personal.mealgym.data.PlanTransfer
+import com.personal.mealgym.data.ProfileRepository
 import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.RecipePacks
 import com.personal.mealgym.data.SettingsRepository
 import com.personal.mealgym.data.SideState
 import com.personal.mealgym.data.db.AppDatabase
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.seed.SeedRepository
 import com.personal.mealgym.data.settingsDataStore
 import com.personal.mealgym.gym.RestTimerController
@@ -22,9 +24,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -42,7 +47,8 @@ class AppContainer(context: Context) {
     val seed = SeedRepository(appContext)
     val meals = MealRepository(db, settings)
     val gym = GymRepository(db)
-    val backup = BackupManager(db, settings, appContext.contentResolver)
+    val people = ProfileRepository(db, settings)
+    val backup = BackupManager(db, settings, appContext.contentResolver) { seed.seed.defaultProfiles }
     val packs = RecipePacks(db, appContext.contentResolver)
     val planTransfer = PlanTransfer(db, packs, appContext.contentResolver)
     val demos = DemoRepository(appContext)
@@ -54,12 +60,28 @@ class AppContainer(context: Context) {
     /** False until the seed data is in place. */
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
 
-    /** Which side this phone shows, or that it still needs choosing. */
-    val sideState: StateFlow<SideState> =
-        settings.sideState.stateIn(appScope, SharingStarted.Eagerly, SideState.Loading)
+    /** Everyone on this phone. */
+    val profiles: StateFlow<List<Profile>> = people.all.stateIn(appScope, SharingStarted.Eagerly, emptyList())
 
-    /** The side currently open. Screens are rebuilt when it changes, so they read it once. */
-    fun currentProfileId(): Long = (sideState.value as? SideState.Chosen)?.profileId ?: Profiles.SWAG
+    /** What the app opens to: setup, a choice of person, or one person's screens. */
+    val opening: StateFlow<Opening> = combine(_ready, settings.sideState, people.all) { ready, side, everyone ->
+        val chosen = (side as? SideState.Chosen)?.profileId?.let { id -> everyone.firstOrNull { it.id == id } }
+        when {
+            !ready || side == SideState.Loading -> Opening.Loading
+            chosen != null -> Opening.Open(chosen)
+            everyone.isEmpty() -> Opening.FirstPerson
+            everyone.size == 1 -> Opening.Open(everyone.first())
+            else -> Opening.Choose(everyone)
+        }
+    }.distinctUntilChanged().stateIn(appScope, SharingStarted.Eagerly, Opening.Loading)
+
+    /** The person whose screens are open. Screens are rebuilt when it changes. */
+    fun currentProfile(): Profile = (opening.value as? Opening.Open)?.profile ?: Profile(Profiles.FIRST, "", Profile.THEME_IRON)
+
+    fun currentProfileId(): Long = currentProfile().id
+
+    /** One person, kept up to date when they're edited in Settings. */
+    fun profile(id: Long): Flow<Profile> = profiles.mapNotNull { list -> list.firstOrNull { it.id == id } }.distinctUntilChanged()
 
     fun chooseSide(profileId: Long) {
         appScope.launch { settings.setActiveProfile(profileId) }
@@ -84,6 +106,18 @@ class AppContainer(context: Context) {
 
     val freeVolumeFoods: List<String> get() = seed.seed.freeVolumeFoods
 
-    fun gymTips(profileId: Long): List<String> =
-        if (profileId == Profiles.ASHLEY && seed.seed.gymTipsAshley.isNotEmpty()) seed.seed.gymTipsAshley else seed.seed.gymTips
+    /** The person's starter plan's tips, or the general ones. */
+    fun gymTips(profile: Profile): List<String> =
+        seed.seed.template(profile.templateKey)?.tips?.takeIf { it.isNotEmpty() } ?: seed.seed.gymTips
+}
+
+sealed interface Opening {
+    data object Loading : Opening
+
+    /** Store edition, first launch: nobody has been set up yet. */
+    data object FirstPerson : Opening
+
+    data class Choose(val people: List<Profile>) : Opening
+
+    data class Open(val profile: Profile) : Opening
 }

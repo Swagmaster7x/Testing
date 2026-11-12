@@ -78,7 +78,6 @@ import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.LocalCopy
 import com.personal.mealgym.ui.ShowMessages
-import com.personal.mealgym.ui.SideCopy
 import com.personal.mealgym.ui.components.sparkleOn
 import com.personal.mealgym.ui.components.ConfirmDialog
 import com.personal.mealgym.ui.components.TabTopBar
@@ -233,7 +232,7 @@ private fun DayHeader(active: WorkoutDay, days: List<WorkoutDay>, onChoose: (Lon
     var open by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         val copy = LocalCopy.current
-        if (copy == SideCopy.Ashley) {
+        if (copy.playful) {
             Column(Modifier.weight(1f)) {
                 Text(copy.workoutHeadline(active), style = MaterialTheme.typography.headlineSmall)
                 Text(active.title(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

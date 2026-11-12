@@ -1,15 +1,17 @@
 package com.personal.mealgym.ui
 
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.WorkoutDay
 
 /**
- * The few lines of wording that differ per side. Ashley's are playful and short; neither side
+ * The few lines of wording that differ per look. The glam look's are playful and short; neither
  * ever comments on missed days.
  */
 data class SideCopy(
+    /** Short, upbeat lines and headlines (the glam look). */
+    val playful: Boolean,
     val pickTitle: (MealSlot) -> String,
     val nothingPlanned: String,
     val doneToday: String,
@@ -18,7 +20,8 @@ data class SideCopy(
     val workoutHeadline: (WorkoutDay) -> String,
 ) {
     companion object {
-        val Swag = SideCopy(
+        val Iron = SideCopy(
+            playful = false,
             pickTitle = { "Pick your ${it.label.lowercase()}" },
             nothingPlanned = "Nothing planned",
             doneToday = "Done today",
@@ -26,7 +29,8 @@ data class SideCopy(
             workoutHeadline = { "Day ${it.dayOrder}: ${it.name}" },
         )
 
-        val Ashley = SideCopy(
+        val Glam = SideCopy(
+            playful = true,
             pickTitle = { "Pick today's ${it.label.lowercase()}" },
             nothingPlanned = "Nothing yet",
             doneToday = "Done and dusted",
@@ -41,8 +45,8 @@ data class SideCopy(
             },
         )
 
-        fun forProfile(profileId: Long) = if (profileId == Profiles.ASHLEY) Ashley else Swag
+        fun forProfile(profile: Profile) = if (profile.isGlam) Glam else Iron
     }
 }
 
-val LocalCopy = staticCompositionLocalOf { SideCopy.Swag }
+val LocalCopy = staticCompositionLocalOf { SideCopy.Iron }

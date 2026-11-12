@@ -95,7 +95,9 @@ class SeedFileTest {
         assertEquals(listOf(5, 6, 5), ashleyDays.map { it.exercises.size })
         assertEquals("Hip thrust", ashleyDays[0].exercises.first().name)
         assertEquals("Smith machine hip thrust", ashleyDays[0].exercises.first().swaps.first())
-        assertEquals(5, seed.gymTipsAshley.size)
+        assertEquals(5, seed.template("glute-3")!!.tips.size)
+        assertEquals(listOf("swag", "ashley"), seed.profiles.map { it.key })
+        assertEquals(seed.gymTips, seed.template("upper-lower-4")!!.tips.ifEmpty { seed.gymTips })
     }
 
     @Test

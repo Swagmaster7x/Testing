@@ -46,6 +46,8 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
     val week by vm.ui.collectAsStateWithLifecycle()
     val offset by vm.weekOffset.collectAsStateWithLifecycle()
     val both by vm.both.collectAsStateWithLifecycle()
+    val people by vm.peopleCount.collectAsStateWithLifecycle()
+    val allLabel = if (people > 2) "Everyone" else "Both of us"
     val context = LocalContext.current
 
     AppScaffold(
@@ -74,9 +76,9 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            item {
+            if (people > 1) item {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                    listOf("Just mine" to false, "Both of us" to true).forEachIndexed { index, (label, value) ->
+                    listOf("Just mine" to false, allLabel to true).forEachIndexed { index, (label, value) ->
                         SegmentedButton(
                             selected = both == value,
                             onClick = { vm.setBoth(value) },
@@ -99,7 +101,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
             val w = week ?: return@LazyColumn
             item {
                 Text(
-                    "Week of ${Dates.weekLabel(w.weekStart)}" + if (both) " · both meal plans on this phone" else "",
+                    "Week of ${Dates.weekLabel(w.weekStart)}" + if (!both) "" else if (people > 2) " · everyone's meal plans on this phone" else " · both meal plans on this phone",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),

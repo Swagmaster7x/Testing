@@ -80,7 +80,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
                     },
                 )
             }
-            GymUi(date, plan, groups, unit, c.gymTips(profileId), rest)
+            GymUi(date, plan, groups, unit, c.gymTips(c.currentProfile()), rest)
         }
     }.stateInVm(null)
 
@@ -149,7 +149,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
             c.gym.saveSession(profileId, state.date, day, feeling, note, logs)
             c.workoutDraft.clear()
             c.restTimer.cancel()
-            say(SideCopy.forProfile(profileId).workoutSaved)
+            say(SideCopy.forProfile(c.currentProfile()).workoutSaved)
         }
     }
 

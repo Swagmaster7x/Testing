@@ -5,6 +5,7 @@ package com.personal.mealgym.ui.today
 import androidx.lifecycle.viewModelScope
 import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.sauna.SaunaState
@@ -41,10 +42,13 @@ const val CREATINE = "creatine"
 class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
     val profileId = c.currentProfileId()
 
+    /** Kept up to date when the person is edited in Settings. */
+    val profile: StateFlow<Profile> = c.profile(profileId).stateInVm(c.currentProfile())
+
     val ui: StateFlow<TodayUi?> = c.today.flatMapLatest { date ->
-        val meals = combine(c.meals.planForRange(profileId, date, date), c.meals.recipesFor(profileId)) { plan, recipes ->
+        val meals = combine(c.meals.planForRange(profileId, date, date), c.meals.recipesFor(profileId), c.profile(profileId)) { plan, recipes, person ->
             val byId = recipes.associateBy { it.id }
-            Sides.slotsFor(profileId).map { slot -> slot to plan.firstOrNull { it.slot == slot }?.let { byId[it.recipeId] } } to recipes
+            Sides.slotsFor(person).map { slot -> slot to plan.firstOrNull { it.slot == slot }?.let { byId[it.recipeId] } } to recipes
         }
         val gym = combine(c.gym.days(profileId), c.gym.sessions(profileId), c.settings.settings(profileId), c.workoutDraft.draft, c.gym.exercises) { days, sessions, s, draft, exercises ->
             val plan = planGym(profileId, date, days, sessions, s.trainingWeekdays, draft)
@@ -68,7 +72,7 @@ class TodayViewModel(private val c: AppContainer) : MessageViewModel() {
         viewModelScope.launch { c.settings.setFilter(profileId, filter) }
     }
 
-    /** Ashley's daily guide (reference text only). */
+    /** The daily guide (reference text only), for people with the "easier to finish" tips. */
     val dailyGuide = c.seed.seed.dailyGuide
 
     fun setCreatine(date: LocalDate, taken: Boolean) {

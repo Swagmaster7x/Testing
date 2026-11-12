@@ -115,11 +115,13 @@ class MealRepository(
             recipeDao.observeAllWithIngredients(),
             settings.settings(profileId),
             shoppingDao.observeWeek(key, start),
-        ) { entries, recipes, appSettings, checks ->
+            db.profileDao().observeAll(),
+        ) { entries, recipes, appSettings, checks, people ->
+            val portions = people.associate { it.id to it.portion }
             ShoppingWeek(
                 weekStart = weekStart,
                 listKey = key,
-                result = ShoppingList.build(plannedRecipes(entries, recipes), appSettings.pantryStaples),
+                result = ShoppingList.build(plannedRecipes(entries, recipes) { portions[it] ?: 1.0 }, appSettings.pantryStaples),
                 checkedKeys = checks.filter { it.checked }.map { it.ingredientKey }.toSet(),
             )
         }
@@ -155,15 +157,19 @@ class MealRepository(
 
     companion object {
         /**
-         * Counts portions per recipe across the plan (Ashley's lunches and dinners are about
-         * three-quarters of a serving) with any "Make it with..." swap applied.
+         * Counts portions per recipe across the plan (each person's lunches and dinners use their
+         * own portion size) with any "Make it with..." swap applied.
          */
-        fun plannedRecipes(entries: List<MealPlanEntry>, recipes: List<RecipeWithIngredients>): List<PlannedRecipe> {
+        fun plannedRecipes(
+            entries: List<MealPlanEntry>,
+            recipes: List<RecipeWithIngredients>,
+            portionOf: (profileId: Long) -> Double = { 1.0 },
+        ): List<PlannedRecipe> {
             val byId = recipes.associateBy { it.recipe.id }
             val ordered = entries.sortedWith(compareBy<MealPlanEntry> { it.date }.thenBy { it.slot.ordinal }.thenBy { it.profileId })
             val portions = LinkedHashMap<Long, Double>()
             for (e in ordered) {
-                portions[e.recipeId] = (portions[e.recipeId] ?: 0.0) + Portions.forSlot(e.profileId, e.slot)
+                portions[e.recipeId] = (portions[e.recipeId] ?: 0.0) + Portions.forSlot(portionOf(e.profileId), e.slot)
             }
             return portions.mapNotNull { (id, amount) ->
                 byId[id]?.let { PlannedRecipe(it.recipe, RecipeSwaps.ingredientsFor(it.recipe, it.ingredients), amount) }

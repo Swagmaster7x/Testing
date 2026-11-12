@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.R
 import com.personal.mealgym.data.db.MealType
+import com.personal.mealgym.domain.Portions
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppButton
@@ -160,7 +161,7 @@ private fun RecipeContent(
         modifier = Modifier.fillMaxSize().padding(padding),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
     ) {
-        if (ui.showHalfPlateTip && !ui.isAshley) {
+        if (ui.showHalfPlateTip && !ui.easierToFinish) {
             item {
                 Surface(
                     color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -191,9 +192,9 @@ private fun RecipeContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (ui.isAshley && recipe.mealType in portionTypes) {
+                if (ui.portion != 1.0 && recipe.mealType in portionTypes) {
                     Text(
-                        "Your portion: about three-quarters of a serving.",
+                        "Your portion: about ${Portions.words(ui.portion)}.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -231,7 +232,7 @@ private fun RecipeContent(
                 Text(step, style = MaterialTheme.typography.bodyLarge)
             }
         }
-        if (ui.isAshley) {
+        if (ui.easierToFinish) {
             if (!ui.isOrderOnly && ui.easierTips.isNotEmpty()) item { EasierToFinishCard(recipe.id, ui.easierTips) }
         } else item {
             OutlinedCard(Modifier.fillMaxWidth().padding(top = 20.dp)) {

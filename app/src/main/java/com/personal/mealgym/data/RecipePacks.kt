@@ -45,13 +45,16 @@ class RecipePacks(private val db: AppDatabase, private val contentResolver: Cont
         var added = 0
         var skipped = 0
         db.withTransaction {
+            val people = db.profileDao().all()
             for (r in pack.recipes) {
                 if (r.name.isBlank() || dao.byName(r.name.trim()) != null) {
                     skipped++
                     continue
                 }
+                // "Only for" travels as the person's name; nobody by that name here means everyone sees it.
+                val onlyFor = r.onlyFor?.let { name -> people.firstOrNull { it.name.trim().equals(name.trim(), ignoreCase = true) }?.id }
                 // Packs are the household's own recipes: no seed key, so app updates never touch them.
-                val id = dao.insert(SeedParser.recipeOf(r).copy(seedKey = null, name = r.name.trim(), isUserCreated = true))
+                val id = dao.insert(SeedParser.recipeOf(r, onlyFor).copy(seedKey = null, name = r.name.trim(), isUserCreated = true))
                 dao.insertIngredients(SeedParser.ingredientsOf(r, id, emptySet()))
                 added++
             }

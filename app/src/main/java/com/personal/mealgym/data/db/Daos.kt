@@ -21,7 +21,24 @@ interface ProfileDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(profiles: List<Profile>)
 
+    @Upsert
+    suspend fun upsert(profile: Profile)
+
+    @Query("SELECT COALESCE(MAX(id), 0) FROM Profile")
+    suspend fun maxId(): Long
+
+    @Query("DELETE FROM Profile WHERE id = :id") suspend fun delete(id: Long)
+
     @Query("DELETE FROM Profile") suspend fun deleteAll()
+
+    /** Everything that belongs to one person (recipes and pantry are shared and stay). */
+    @Query("DELETE FROM MealPlanEntry WHERE profileId = :id") suspend fun deletePlan(id: Long)
+    @Query("DELETE FROM WorkoutDay WHERE profileId = :id") suspend fun deleteWorkoutDays(id: Long)
+    @Query("DELETE FROM WorkoutSession WHERE profileId = :id") suspend fun deleteSessions(id: Long)
+    @Query("DELETE FROM SaunaLog WHERE profileId = :id") suspend fun deleteSauna(id: Long)
+    @Query("DELETE FROM SupplementLog WHERE profileId = :id") suspend fun deleteSupplements(id: Long)
+    @Query("DELETE FROM ShoppingCheck WHERE listKey = :listKey") suspend fun deleteShoppingChecks(listKey: String)
+    @Query("UPDATE Recipe SET onlyForProfileId = NULL WHERE onlyForProfileId = :id") suspend fun releaseRecipes(id: Long)
 }
 
 @Dao

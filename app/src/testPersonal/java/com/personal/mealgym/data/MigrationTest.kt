@@ -1,5 +1,6 @@
 package com.personal.mealgym.data
 
+import com.personal.mealgym.TestPeople
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
@@ -8,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.personal.mealgym.data.db.AppDatabase
 import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.Profile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -15,15 +17,18 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Swag's phone already has version 1 data; the upgrade must keep all of it as his side.
- * The version 1 database is built from the exported schema in app/schemas, and opening it
- * through Room afterwards makes Room check the migrated schema against version 2 exactly.
+ * Swag's phone already has version 1 data; the upgrades must keep all of it as his side, and
+ * version 3 must give Swag and Ashley exactly the behaviour they had. Old databases are built
+ * from the exported schemas in app/schemas, and opening them through Room afterwards makes
+ * Room check the migrated schema against the current version exactly.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [35])
@@ -32,12 +37,12 @@ class MigrationTest {
     private val dbName = "migration-test.db"
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    /** Creates the database exactly as version 1 of the app did, from its exported schema. */
-    private fun createVersion1() {
+    /** Creates an empty database exactly as [version] of the app did, from its exported schema. */
+    private fun createFromSchema(version: Int): SQLiteDatabase {
         val file = context.getDatabasePath(dbName).also { it.parentFile?.mkdirs(); it.delete() }
-        val schema = Json.parseToJsonElement(File("schemas/com.personal.mealgym.data.db.AppDatabase/1.json").readText())
+        val schema = Json.parseToJsonElement(File("schemas/com.personal.mealgym.data.db.AppDatabase/$version.json").readText())
             .jsonObject.getValue("database").jsonObject
-        SQLiteDatabase.openOrCreateDatabase(file, null).apply {
+        return SQLiteDatabase.openOrCreateDatabase(file, null).apply {
             for (entity in schema.getValue("entities").jsonArray) {
                 val e = entity.jsonObject
                 val table = e.getValue("tableName").jsonPrimitive.content
@@ -47,7 +52,13 @@ class MigrationTest {
                 }
             }
             schema.getValue("setupQueries").jsonArray.forEach { execSQL(it.jsonPrimitive.content) }
-            version = 1
+            this.version = version
+        }
+    }
+
+    /** Version 1 data on Swag's phone. */
+    private fun createVersion1() {
+        createFromSchema(1).apply {
             execSQL(
                 "INSERT INTO Recipe (id, seedKey, name, mealType, cuisineTags, servings, servingSizeText, nutritionText, " +
                     "steps, volumeTip, isMealPrep, isUserCreated) VALUES " +
@@ -80,7 +91,7 @@ class MigrationTest {
 
     private fun openWithRoom(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
             .allowMainThreadQueries()
             .build()
 
@@ -90,7 +101,7 @@ class MigrationTest {
         val room = openWithRoom()
         // Opening runs the migration and then Room's schema check; it throws if anything differs.
         val db = room.openHelper.writableDatabase
-        assertEquals(2, db.version)
+        assertEquals(3, db.version)
 
         fun single(sql: String): String = db.query(sql).use { c ->
             c.moveToFirst()
@@ -112,22 +123,51 @@ class MigrationTest {
     }
 
     @Test
+    fun version3GivesSwagAndAshleyTheirSettings() = runBlocking {
+        // A phone on version 2: the two sides exist, with nothing per person stored yet.
+        createFromSchema(2).apply {
+            execSQL("INSERT INTO Profile (id, name, themeKey) VALUES (1, 'Swag', 'IRON'), (2, 'Ashley', 'GLAM')")
+            execSQL("INSERT INTO Meta (`key`, value) VALUES ('seedLevel', '2')")
+            close()
+        }
+        val db = openWithRoom()
+        val (swag, ashley) = db.profileDao().all()
+        assertEquals(Profile(1, "Swag", "IRON", templateKey = "upper-lower-4"), swag)
+        assertEquals(
+            Profile(2, "Ashley", "GLAM", snackSlot = true, portion = 0.75, tipsStyle = "EASIER", weekBadges = true, templateKey = "glute-3"),
+            ashley,
+        )
+        db.close()
+    }
+
+    @Test
+    fun version1PhonesGetTheSameSettingsAfterBothUpgrades() = runBlocking {
+        createVersion1()
+        val db = openWithRoom()
+        val ashley = db.profileDao().all().single { it.id == TestPeople.ASHLEY }
+        assertTrue(ashley.snackSlot && ashley.weekBadges && ashley.easierToFinish)
+        assertEquals(0.75, ashley.portion, 0.0)
+        assertFalse(db.profileDao().all().single { it.id == TestPeople.SWAG }.snackSlot)
+        db.close()
+    }
+
+    @Test
     fun migratedDatabaseWorksThroughRoom() = runBlocking {
         createVersion1()
         val db = openWithRoom()
 
-        val swagPlan = db.planDao().getRange(Profiles.SWAG, "2026-11-09", "2026-11-15")
+        val swagPlan = db.planDao().getRange(TestPeople.SWAG, "2026-11-09", "2026-11-15")
         assertEquals(listOf(1L), swagPlan.map { it.recipeId })
 
         // Ashley can now plan the same slot on the same day without clashing with Swag's.
-        db.planDao().put(MealPlanEntry(date = "2026-11-09", slot = MealSlot.LUNCH, recipeId = 1, profileId = Profiles.ASHLEY))
-        assertEquals(1, db.planDao().getRange(Profiles.SWAG, "2026-11-09", "2026-11-09").size)
-        assertEquals(1, db.planDao().getRange(Profiles.ASHLEY, "2026-11-09", "2026-11-09").size)
+        db.planDao().put(MealPlanEntry(date = "2026-11-09", slot = MealSlot.LUNCH, recipeId = 1, profileId = TestPeople.ASHLEY))
+        assertEquals(1, db.planDao().getRange(TestPeople.SWAG, "2026-11-09", "2026-11-09").size)
+        assertEquals(1, db.planDao().getRange(TestPeople.ASHLEY, "2026-11-09", "2026-11-09").size)
 
-        assertEquals("Upper Body", db.workoutDao().getDays(Profiles.SWAG).single().name)
-        assertEquals(0, db.workoutDao().getDays(Profiles.ASHLEY).size)
-        assertEquals(135.0, db.workoutDao().observeLatestLogs(Profiles.SWAG).first().single().weight!!, 0.0)
-        assertEquals(15, db.saunaDao().observeAll(Profiles.SWAG).first().single().minutes)
+        assertEquals("Upper Body", db.workoutDao().getDays(TestPeople.SWAG).single().name)
+        assertEquals(0, db.workoutDao().getDays(TestPeople.ASHLEY).size)
+        assertEquals(135.0, db.workoutDao().observeLatestLogs(TestPeople.SWAG).first().single().weight!!, 0.0)
+        assertEquals(15, db.saunaDao().observeAll(TestPeople.SWAG).first().single().minutes)
         db.close()
     }
 }

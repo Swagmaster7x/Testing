@@ -30,17 +30,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.R
-import com.personal.mealgym.data.Profiles
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.ui.theme.MealGymTheme
 import com.personal.mealgym.ui.theme.SideTheme
 import com.personal.mealgym.ui.theme.ThemedBackground
 
-fun themeFor(profileId: Long): SideTheme = if (profileId == Profiles.ASHLEY) SideTheme.GLAM else SideTheme.IRON
+fun themeFor(profile: Profile): SideTheme = themeFor(profile.themeKey)
 
-/** First launch: two doors, one per side. The choice is remembered on this phone. */
+fun themeFor(themeKey: String): SideTheme = if (themeKey == Profile.THEME_GLAM) SideTheme.GLAM else SideTheme.IRON
+
+/** One door per person, each in their own look. The choice is remembered on this phone. */
 @Composable
-fun SideChooserScreen(onChoose: (Long) -> Unit) {
+fun SideChooserScreen(people: List<Profile>, onChoose: (Long) -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -55,7 +58,7 @@ fun SideChooserScreen(onChoose: (Long) -> Unit) {
         ) {
             Spacer(Modifier.height(24.dp))
             Text(
-                "Whose phone is this?",
+                if (BuildConfig.STORE) "Who's using the app?" else "Whose phone is this?",
                 style = MaterialTheme.typography.headlineSmall,
                 color = Color(0xFFF3ECF2),
                 textAlign = TextAlign.Center,
@@ -67,12 +70,14 @@ fun SideChooserScreen(onChoose: (Long) -> Unit) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 6.dp, bottom = 28.dp),
             )
-            Row(
-                Modifier.fillMaxWidth().weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Door(Profiles.SWAG, R.drawable.ic_launcher_monochrome, onChoose, Modifier.weight(1f))
-                Door(Profiles.ASHLEY, R.drawable.ic_star, onChoose, Modifier.weight(1f))
+            // Two doors to a row; a household of more gets shorter doors.
+            Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                people.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        pair.forEach { Door(it, onChoose, Modifier.weight(1f)) }
+                        if (pair.size == 1 && people.size > 1) Spacer(Modifier.weight(1f))
+                    }
+                }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -80,17 +85,18 @@ fun SideChooserScreen(onChoose: (Long) -> Unit) {
 }
 
 @Composable
-private fun Door(profileId: Long, icon: Int, onChoose: (Long) -> Unit, modifier: Modifier = Modifier) {
-    MealGymTheme(side = themeFor(profileId)) {
+private fun Door(profile: Profile, onChoose: (Long) -> Unit, modifier: Modifier = Modifier) {
+    MealGymTheme(side = themeFor(profile)) {
         val shape = RoundedCornerShape(topStart = 200.dp, topEnd = 200.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
-        val glam = profileId == Profiles.ASHLEY
+        val glam = profile.isGlam
+        val icon = if (glam) R.drawable.ic_star else R.drawable.ic_launcher_monochrome
         Surface(
             shape = shape,
             border = BorderStroke(3.dp, if (glam) Color(0xFFC9CED6) else Color(0xFF5A4F48)),
             modifier = modifier
                 .fillMaxHeight()
                 .clip(shape)
-                .clickable(role = Role.Button) { onChoose(profileId) },
+                .clickable(role = Role.Button) { onChoose(profile.id) },
         ) {
             ThemedBackground {
                 Column(
@@ -106,7 +112,7 @@ private fun Door(profileId: Long, icon: Int, onChoose: (Long) -> Unit, modifier:
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        Profiles.sideName(profileId),
+                        Sides.planName(profile),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onBackground,
                         textAlign = TextAlign.Center,

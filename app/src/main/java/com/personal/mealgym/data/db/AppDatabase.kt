@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Meta::class,
         SupplementLog::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -42,7 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** [onCreated] runs once, when the database file is first created (first launch). */
         fun build(context: Context, onCreated: () -> Unit = {}): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "mealgym.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(
                     object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) = onCreated()
@@ -112,6 +112,25 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("INSERT OR IGNORE INTO `Profile` (`id`, `name`, `themeKey`) VALUES (1, 'Swag', 'IRON'), (2, 'Ashley', 'GLAM')")
                 // The version 1 seed is installed; the app adds the version 2 seed on next start.
                 db.execSQL("INSERT OR REPLACE INTO `Meta` (`key`, `value`) VALUES ('seedLevel', '1')")
+            }
+        }
+
+        /**
+         * Version 3 moves what was hard-wired per side onto the profile, so anyone can have it.
+         * Swag and Ashley get exactly the behaviour they had.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `snackSlot` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `portion` REAL NOT NULL DEFAULT 1.0")
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `tipsStyle` TEXT NOT NULL DEFAULT 'FILL_UP'")
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `weekBadges` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `Profile` ADD COLUMN `templateKey` TEXT")
+                db.execSQL("UPDATE `Profile` SET `templateKey` = 'upper-lower-4' WHERE `id` = 1")
+                db.execSQL(
+                    "UPDATE `Profile` SET `snackSlot` = 1, `portion` = 0.75, `tipsStyle` = 'EASIER', " +
+                        "`weekBadges` = 1, `templateKey` = 'glute-3' WHERE `id` = 2",
+                )
             }
         }
     }

@@ -2,7 +2,6 @@ package com.personal.mealgym.data.seed
 
 import android.content.Context
 import androidx.room.withTransaction
-import com.personal.mealgym.data.BackupFile
 import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.SettingsRepository
 import com.personal.mealgym.data.db.AppDatabase
@@ -10,6 +9,7 @@ import com.personal.mealgym.data.db.Exercise
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.data.db.Meta
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.ProteinSwap
 import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.Recipe
@@ -29,15 +29,62 @@ data class SeedFile(
     val pantryStaples: List<String>,
     /** Staples added after level 1, ticked on upgrade too. */
     val extraPantryStaples: List<String> = emptyList(),
-    val workoutDays: List<SeedWorkoutDay>,
-    /** Swag's gym-screen text. */
+    /** Workout days installed for the people in [profiles]. */
+    val workoutDays: List<SeedWorkoutDay> = emptyList(),
+    /** Gym-screen text, unless the person's starter plan has its own. */
     val gymTips: List<String>,
-    /** Ashley's gym-screen text. */
-    val gymTipsAshley: List<String> = emptyList(),
-    /** Ashley's "Make it easier to finish" tips. */
+    /** "Make it easier to finish" tips, for people who chose that tip style. */
     val easierToFinishTips: List<String> = emptyList(),
-    /** Ashley's daily guide, shown as reference text only. */
+    /** A daily guide, shown as reference text only to people with the "easier to finish" style. */
     val dailyGuide: List<GuideLine> = emptyList(),
+    /** People the app starts with (none in the store edition: everyone sets up their own). */
+    val profiles: List<SeedProfile> = emptyList(),
+    /** Starter workout plans offered when a person is added, and their gym tips. */
+    val workoutTemplates: List<WorkoutTemplate> = emptyList(),
+) {
+    /** Maps a seed's person key ("swag", "ashley") to its profile id. */
+    fun profileId(key: String?): Long? =
+        key?.let { k -> profiles.firstOrNull { it.key.equals(k, ignoreCase = true) }?.id ?: Profiles.FIRST }
+
+    fun template(key: String?): WorkoutTemplate? = key?.let { k -> workoutTemplates.firstOrNull { it.key == k } }
+
+    val defaultProfiles: List<Profile> get() = profiles.map { it.toProfile() }
+}
+
+@Serializable
+data class SeedProfile(
+    val id: Long,
+    val key: String,
+    val name: String,
+    val theme: String = Profile.THEME_IRON,
+    val snackSlot: Boolean = false,
+    val portion: Double = 1.0,
+    val tipsStyle: String = Profile.TIPS_FILL_UP,
+    val weekBadges: Boolean = false,
+    val templateKey: String? = null,
+) {
+    fun toProfile() = Profile(
+        id = id,
+        name = name,
+        themeKey = theme,
+        snackSlot = snackSlot,
+        portion = portion,
+        tipsStyle = tipsStyle,
+        weekBadges = weekBadges,
+        templateKey = templateKey,
+    )
+}
+
+/** A starter plan: its workout days are copied to a new person, who can then edit them. */
+@Serializable
+data class WorkoutTemplate(
+    val key: String,
+    val name: String,
+    val description: String = "",
+    /** Suggested training days, e.g. "MONDAY". */
+    val defaultDays: List<String> = emptyList(),
+    val tips: List<String> = emptyList(),
+    val days: List<SeedWorkoutDay> = emptyList(),
 )
 
 @Serializable
@@ -58,7 +105,7 @@ data class SeedRecipe(
     val volumeTip: String? = null,
     val protein: ProteinTag? = null,
     val swaps: List<ProteinSwap> = emptyList(),
-    /** "ashley" for entries only on her side (her coffee-shop breakfasts). */
+    /** A person key from [SeedFile.profiles] for entries only that person sees. */
     val onlyFor: String? = null,
     /** Seed level the recipe arrived in. */
     val since: Int = 1,
@@ -78,7 +125,7 @@ data class SeedWorkoutDay(
     val order: Int,
     val name: String,
     val exercises: List<SeedExercise>,
-    /** "swag" or "ashley". */
+    /** A person key from [SeedFile.profiles]. */
     val profile: String = "swag",
     val shortName: String? = null,
     val since: Int = 1,
@@ -99,13 +146,7 @@ object SeedParser {
 
     fun parse(text: String): SeedFile = json.decodeFromString(SeedFile.serializer(), text)
 
-    fun profileId(key: String?): Long? = when (key?.lowercase()) {
-        null -> null
-        "ashley" -> Profiles.ASHLEY
-        else -> Profiles.SWAG
-    }
-
-    fun recipeOf(seed: SeedRecipe): Recipe = Recipe(
+    fun recipeOf(seed: SeedRecipe, onlyForProfileId: Long? = null): Recipe = Recipe(
         seedKey = seed.key,
         name = seed.name,
         mealType = seed.mealType,
@@ -119,7 +160,7 @@ object SeedParser {
         isUserCreated = false,
         protein = seed.protein,
         proteinSwaps = seed.swaps,
-        onlyForProfileId = profileId(seed.onlyFor),
+        onlyForProfileId = onlyForProfileId,
     )
 
     fun ingredientsOf(seed: SeedRecipe, recipeId: Long, staples: Set<String>): List<Ingredient> =
@@ -136,10 +177,10 @@ object SeedParser {
             )
         }
 
-    fun dayOf(seed: SeedWorkoutDay): WorkoutDay = WorkoutDay(
+    fun dayOf(seed: SeedWorkoutDay, profileId: Long): WorkoutDay = WorkoutDay(
         dayOrder = seed.order,
         name = seed.name,
-        profileId = profileId(seed.profile) ?: Profiles.SWAG,
+        profileId = profileId,
         shortName = seed.shortName,
     )
 
@@ -175,7 +216,7 @@ class SeedRepository(private val context: Context) {
      * stays deleted, and an upgrade only brings what's new.
      */
     suspend fun sync(db: AppDatabase, settings: SettingsRepository, freshDatabase: Boolean) {
-        db.profileDao().insertAll(BackupFile.defaultProfiles)
+        db.profileDao().insertAll(seed.defaultProfiles)
         val meta = db.metaDao()
         val level = meta.get(SEED_LEVEL)?.toIntOrNull()
             ?: if (freshDatabase || db.recipeDao().count() == 0) 0 else 1
@@ -195,7 +236,7 @@ class SeedRepository(private val context: Context) {
                 val existing = recipeDao.bySeedKey(r.key)
                 if (r.key !in offeredRecipes) {
                     if (existing == null) {
-                        val id = recipeDao.insert(SeedParser.recipeOf(r))
+                        val id = recipeDao.insert(SeedParser.recipeOf(r, seed.profileId(r.onlyFor)))
                         recipeDao.insertIngredients(SeedParser.ingredientsOf(r, id, allStaples))
                     }
                 } else if (existing != null && existing.protein == null && r.protein != null) {
@@ -204,13 +245,13 @@ class SeedRepository(private val context: Context) {
                         existing.copy(
                             protein = r.protein,
                             proteinSwaps = existing.proteinSwaps.ifEmpty { r.swaps },
-                            onlyForProfileId = existing.onlyForProfileId ?: SeedParser.profileId(r.onlyFor),
+                            onlyForProfileId = existing.onlyForProfileId ?: seed.profileId(r.onlyFor),
                         ),
                     )
                 }
             }
             for (d in seed.workoutDays.filter { dayKey(it) !in offeredDays }) {
-                val dayId = db.workoutDao().insertDay(SeedParser.dayOf(d))
+                val dayId = db.workoutDao().insertDay(SeedParser.dayOf(d, seed.profileId(d.profile) ?: Profiles.FIRST))
                 db.workoutDao().insertExercises(SeedParser.exercisesOf(d, dayId))
             }
             meta.put(Meta(SEED_RECIPES, (offeredRecipes + seed.recipes.map { it.key }).sorted().joinToString(",")))

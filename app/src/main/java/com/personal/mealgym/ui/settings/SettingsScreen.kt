@@ -44,9 +44,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.AppContainer
+import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.data.AppSettings
-import com.personal.mealgym.data.Profiles
 import com.personal.mealgym.data.WeightUnit
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.ShoppingList
 import com.personal.mealgym.ui.AppNavigator
@@ -60,6 +61,7 @@ import com.personal.mealgym.ui.components.ConfirmDialog
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.SectionHeader
 import com.personal.mealgym.ui.cook.HALF_PLATE_TIP
+import com.personal.mealgym.ui.people.NOT_ADVICE
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -68,12 +70,24 @@ import java.time.LocalDate
 
 data class PantryItem(val name: String, val ticked: Boolean, val coveredBy: String?)
 
-data class SettingsUi(val settings: AppSettings, val pantry: List<PantryItem>)
+data class SettingsUi(
+    val settings: AppSettings,
+    val pantry: List<PantryItem>,
+    val profile: Profile,
+    val people: List<Profile>,
+) {
+    val others: List<Profile> get() = people.filter { it.id != profile.id }
+}
 
 class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
     val profileId = c.currentProfileId()
 
-    val ui: StateFlow<SettingsUi?> = combine(c.settings.settings(profileId), c.meals.pantryIngredientNames) { s, names ->
+    val ui: StateFlow<SettingsUi?> = combine(
+        c.settings.settings(profileId),
+        c.meals.pantryIngredientNames,
+        c.profile(profileId),
+        c.profiles,
+    ) { s, names, profile, people ->
         val seen = HashSet<String>()
         val candidates = (s.pantryStaples.sorted() + c.seed.seed.pantryStaples + names)
             .filter { seen.add(ShoppingList.ingredientKey(it)) }
@@ -83,7 +97,7 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
             val coveredBy = if (ticked) null else s.pantryStaples.firstOrNull { ShoppingList.isAlwaysHave(name, setOf(it)) }
             PantryItem(name, ticked, coveredBy)
         }
-        SettingsUi(s, pantry)
+        SettingsUi(s, pantry, profile, people)
     }.stateInVm(null)
 
     fun toggleWeekday(day: DayOfWeek) = launch {
@@ -98,8 +112,8 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
     fun setChime(on: Boolean) = launch { c.settings.setChime(profileId, on) }
     fun setCreatineReminder(on: Boolean) = launch { c.settings.setCreatineReminder(profileId, on) }
 
-    /** Opens the other side on this phone from now on. */
-    fun switchSide() = c.chooseSide(Profiles.other(profileId))
+    /** Opens someone else's screens on this phone from now on. */
+    fun switchTo(id: Long) = c.chooseSide(id)
     fun setStaple(name: String, alwaysHave: Boolean) = launch { c.settings.setPantryStaple(name, alwaysHave) }
 
     fun addStaple(name: String) {
@@ -120,10 +134,11 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
     }
 
     fun importPlan(uri: Uri) = launch {
-        runCatching { c.planTransfer.importFrom(uri) }
+        runCatching { c.planTransfer.importFrom(uri, profileId) }
             .onSuccess { r ->
+                val person = c.profiles.value.firstOrNull { it.id == r.profileId }
                 say(
-                    "Added ${r.meals} meals to ${Profiles.sideName(r.profileId)}" +
+                    "Added ${r.meals} meals to ${person?.let(Sides::planName) ?: "the plan"}" +
                         if (r.newRecipes > 0) " and ${r.newRecipes} new recipe${if (r.newRecipes == 1) "" else "s"} to the library." else ".",
                 )
             }
@@ -192,22 +207,45 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
     ) { padding ->
         val state = ui ?: return@AppScaffold
         val s = state.settings
+        val profile = state.profile
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         ) {
-            item { SectionHeader("Side") }
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.weight(1f)) {
-                        Text("This phone opens ${Profiles.sideName(vm.profileId)}", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            "Each side keeps its own plans, gym days and history.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+            if (BuildConfig.STORE) {
+                item { SectionHeader("People") }
+                item {
+                    Text(
+                        "Everyone keeps their own plans, gym days and history. Recipes and the pantry list are shared.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                items(state.people, key = { "person-${it.id}" }) { person ->
+                    PersonRow(
+                        person = person,
+                        isOpen = person.id == profile.id,
+                        onSwitch = { vm.switchTo(person.id) },
+                        onEdit = { nav.person(person.id) },
+                    )
+                }
+                item { TextButton(onClick = { nav.person(0) }, contentPadding = PaddingValues(0.dp)) { Text("Add a person") } }
+            } else {
+                item { SectionHeader("Side") }
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("This phone opens ${Sides.planName(profile)}", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Each side keeps its own plans, gym days and history.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        state.others.firstOrNull()?.let { other ->
+                            OutlinedButton(onClick = { vm.switchTo(other.id) }) { Text("Switch to ${other.name}") }
+                        }
                     }
-                    OutlinedButton(onClick = vm::switchSide) { Text("Switch to ${Profiles.name(Profiles.other(vm.profileId))}") }
                 }
             }
             item { SectionHeader("Gym") }
@@ -253,7 +291,7 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                     onChange = vm::setShowNutrition,
                 )
             }
-            if (!Sides.isAshley(vm.profileId)) item {
+            if (!profile.easierToFinish) item {
                 SwitchRow(
                     title = "Half-plate reminder",
                     body = "\"$HALF_PLATE_TIP\" at the top of each recipe.",
@@ -262,9 +300,10 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                 )
             }
 
-            if (Sides.isAshley(vm.profileId)) {
-                item { SectionHeader("Sparkle and sound") }
-                item {
+            // The personal app keeps these on the glam look only, as before; the store app offers them to everyone.
+            if (profile.isGlam || BuildConfig.STORE) {
+                item { SectionHeader(if (profile.isGlam) "Sparkle and sound" else "Sound and reminders") }
+                if (profile.isGlam) item {
                     SwitchRow(
                         title = "Motion",
                         body = "Sparkles when a set is ticked or a meal is picked, and a shimmer on titles.",
@@ -349,13 +388,17 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
             item { SectionHeader("Meal plan to the other phone") }
             item {
                 Text(
-                    "Each phone keeps its own data. Save this side's plan for this week and next as a file, send it over, and import it on the other phone. It lands on the same side there, so \"Both of us\" on the shopping list covers both plans.",
+                    if (BuildConfig.STORE) {
+                        "Each phone keeps its own data. Save your plan for this week and next as a file, send it over, and import it on the other phone. It lands on the person with the same name there, so the shared shopping list covers both plans."
+                    } else {
+                        "Each phone keeps its own data. Save this side's plan for this week and next as a file, send it over, and import it on the other phone. It lands on the same side there, so \"Both of us\" on the shopping list covers both plans."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedButton(
-                        onClick = { planExport.launch("${Profiles.name(vm.profileId).lowercase()}-meal-plan-${LocalDate.now()}.json") },
+                        onClick = { planExport.launch("${fileSafe(profile.name)}-meal-plan-${LocalDate.now()}.json") },
                         modifier = Modifier.weight(1f),
                     ) { Text("Export my plan") }
                     OutlinedButton(
@@ -387,8 +430,12 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
             item { ListItem(headlineContent = { Text("History") }, modifier = Modifier.clickable(onClick = nav::history)) }
             item {
                 Text(
-                    "Meal & Gym works offline. Nothing leaves this phone unless you export a backup or share a shopping list. " +
-                        "Exercise photos and instructions come from free-exercise-db, which is in the public domain.",
+                    if (BuildConfig.STORE) {
+                        "Your plans, workouts and history stay on this phone unless you export a backup or share a shopping list. $NOT_ADVICE"
+                    } else {
+                        "Meal & Gym works offline. Nothing leaves this phone unless you export a backup or share a shopping list. " +
+                            "Exercise photos and instructions come from free-exercise-db, which is in the public domain."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
@@ -408,8 +455,29 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
     }
 }
 
+/** "sam-lee" from "Sam Lee", for file names. */
+private fun fileSafe(name: String): String =
+    name.trim().lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').ifEmpty { "my" }
+
 @Composable
-private fun SwitchRow(title: String, body: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun PersonRow(person: Profile, isOpen: Boolean, onSwitch: () -> Unit, onEdit: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(person.name) },
+        supportingContent = {
+            Text(
+                listOfNotNull(
+                    if (isOpen) "Open now" else "Tap to switch",
+                    if (person.isGlam) "Y2K glam" else "Dark fantasy",
+                ).joinToString(" · "),
+            )
+        },
+        trailingContent = { TextButton(onClick = onEdit) { Text("Edit") } },
+        modifier = Modifier.clickable(enabled = !isOpen, onClick = onSwitch),
+    )
+}
+
+@Composable
+internal fun SwitchRow(title: String, body: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(vertical = 8.dp),

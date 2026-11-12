@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 1,
   "recipes": [
     {
       "key": "B1",
@@ -1539,7 +1539,6 @@
       "servingSize": "1 portion over 3/4 cup rice",
       "nutrition": "~610 cal, 50 g protein, 60 g carbs, 16 g fat",
       "protein": "BEEF",
-      "since": 2,
       "ingredients": [
         {
           "name": "lean beef stew meat",
@@ -1654,7 +1653,6 @@
       "servingSize": "1 bowl with 3/4 cup rice",
       "nutrition": "~620 cal, 50 g protein, 55 g carbs, 22 g fat",
       "protein": "BEEF",
-      "since": 2,
       "ingredients": [
         {
           "name": "90% lean ground beef",
@@ -1750,7 +1748,6 @@
       "servingSize": "1 bowl with 3/4 cup rice and 1/4 cup beans, or 3 tacos",
       "nutrition": "~590 cal, 54 g protein, 65 g carbs, 10 g fat",
       "protein": "PORK",
-      "since": 2,
       "ingredients": [
         {
           "name": "pork tenderloin",
@@ -1855,7 +1852,6 @@
       "servingSize": "1 bowl",
       "nutrition": "~560 cal, 52 g protein, 58 g carbs, 11 g fat",
       "protein": "PORK",
-      "since": 2,
       "ingredients": [
         {
           "name": "pork tenderloin",
@@ -1967,7 +1963,6 @@
       "servingSize": "about 6 oz pork + 3/4 cup rice with pigeon peas",
       "nutrition": "~640 cal, 48 g protein, 50 g carbs, 26 g fat",
       "protein": "PORK",
-      "since": 2,
       "ingredients": [
         {
           "name": "boneless pork shoulder",
@@ -2057,7 +2052,6 @@
       "servingSize": "1 portion over 3/4 cup rice",
       "nutrition": "~590 cal, 54 g protein, 58 g carbs, 14 g fat",
       "protein": "PORK",
-      "since": 2,
       "ingredients": [
         {
           "name": "pork loin or tenderloin",
@@ -2154,7 +2148,6 @@
       "servingSize": "1 portion over 3/4 cup rice",
       "nutrition": "~610 cal, 55 g protein, 55 g carbs, 18 g fat",
       "protein": "BEEF",
-      "since": 2,
       "ingredients": [
         {
           "name": "flank steak",
@@ -2257,7 +2250,6 @@
       "servingSize": "1 portion + 3/4 cup rice + 1/4 cup beans",
       "nutrition": "~600 cal, 54 g protein, 55 g carbs, 16 g fat",
       "protein": "BEEF",
-      "since": 2,
       "ingredients": [
         {
           "name": "thin-sliced top round or cube steak",
@@ -2334,76 +2326,6 @@
       ]
     },
     {
-      "key": "SB1",
-      "name": "Protein Latte, grande",
-      "mealType": "BREAKFAST",
-      "cuisineTags": [
-        "Starbucks"
-      ],
-      "servings": 1,
-      "servingSize": "Grande Protein Latte",
-      "nutrition": "Breakfast guide: about 30–45 g protein",
-      "protein": "VEGETARIAN",
-      "onlyFor": "ashley",
-      "since": 2
-    },
-    {
-      "key": "SB2",
-      "name": "Bacon & Gruyère Egg Bites + iced drink with Protein Cold Foam",
-      "mealType": "BREAKFAST",
-      "cuisineTags": [
-        "Starbucks"
-      ],
-      "servings": 1,
-      "servingSize": "Egg bites and an iced drink with Protein Cold Foam",
-      "nutrition": "Breakfast guide: about 30–45 g protein",
-      "protein": "EGG",
-      "onlyFor": "ashley",
-      "since": 2
-    },
-    {
-      "key": "SB3",
-      "name": "Spinach, Feta & Egg White Wrap + Protein Latte",
-      "mealType": "BREAKFAST",
-      "cuisineTags": [
-        "Starbucks"
-      ],
-      "servings": 1,
-      "servingSize": "The wrap and a Protein Latte",
-      "nutrition": "Breakfast guide: about 30–45 g protein",
-      "protein": "EGG",
-      "onlyFor": "ashley",
-      "since": 2
-    },
-    {
-      "key": "SB4",
-      "name": "Bacon, Sausage & Egg Wrap",
-      "mealType": "BREAKFAST",
-      "cuisineTags": [
-        "Starbucks"
-      ],
-      "servings": 1,
-      "servingSize": "The wrap (hungrier days)",
-      "nutrition": "Breakfast guide: about 30–45 g protein",
-      "protein": "EGG",
-      "onlyFor": "ashley",
-      "since": 2
-    },
-    {
-      "key": "SB5",
-      "name": "Kale & Mushroom Egg Bites + iced drink with Protein Cold Foam",
-      "mealType": "BREAKFAST",
-      "cuisineTags": [
-        "Starbucks"
-      ],
-      "servings": 1,
-      "servingSize": "Egg bites and an iced drink with Protein Cold Foam",
-      "nutrition": "Breakfast guide: about 30–45 g protein",
-      "protein": "EGG",
-      "onlyFor": "ashley",
-      "since": 2
-    },
-    {
       "key": "SN1",
       "name": "Greek yogurt cup",
       "mealType": "SNACK",
@@ -2420,9 +2342,7 @@
           "section": "PROTEIN"
         }
       ],
-      "protein": "VEGETARIAN",
-      "onlyFor": "ashley",
-      "since": 2
+      "protein": "VEGETARIAN"
     },
     {
       "key": "SN2",
@@ -2441,9 +2361,7 @@
           "section": "PROTEIN"
         }
       ],
-      "protein": "VEGETARIAN",
-      "onlyFor": "ashley",
-      "since": 2
+      "protein": "VEGETARIAN"
     },
     {
       "key": "SN3",
@@ -2468,9 +2386,7 @@
           "section": "PRODUCE_FROZEN"
         }
       ],
-      "protein": "VEGETARIAN",
-      "onlyFor": "ashley",
-      "since": 2
+      "protein": "VEGETARIAN"
     },
     {
       "key": "SN4",
@@ -2490,9 +2406,7 @@
           "section": "PROTEIN"
         }
       ],
-      "protein": "BEEF",
-      "onlyFor": "ashley",
-      "since": 2
+      "protein": "BEEF"
     }
   ],
   "freeVolumeFoods": [
@@ -2546,525 +2460,14 @@
     "cornstarch",
     "hot sauce",
     "mustard",
-    "ketchup"
+    "ketchup",
+    "gochugaru",
+    "achiote paste",
+    "lemongrass paste",
+    "chipotles in adobo",
+    "canned pigeon peas"
   ],
-  "workoutDays": [
-    {
-      "order": 1,
-      "name": "Upper Body",
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Barbell bench press",
-          "sets": "3",
-          "reps": "6–10",
-          "swaps": [
-            "Smith machine bench",
-            "Chest press machine",
-            "Dumbbell bench"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Dumbbell press",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Incline machine press"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Weighted chin-ups",
-          "sets": "4",
-          "reps": "3–6",
-          "swaps": [
-            "Lat pulldown, underhand grip",
-            "Assisted chin-up machine"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Curls",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Cable curls",
-            "Machine curls"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Hanging knee raises",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Captain's chair knee raises",
-            "Ab machine"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Face pulls",
-          "sets": "4",
-          "reps": "15–20",
-          "swaps": [
-            "Reverse pec-deck"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Push-ups",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Chest press machine, light"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Side raises",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Cable lateral raise",
-            "Machine lateral raise"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Calf raises",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Seated calf raise",
-            "Leg-press calf raise"
-          ]
-        }
-      ]
-    },
-    {
-      "order": 2,
-      "name": "Lower Body",
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Barbell squat",
-          "sets": "3",
-          "reps": "6–10",
-          "swaps": [
-            "Leg press",
-            "Hack squat",
-            "Smith machine squat"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Good mornings",
-          "sets": "3",
-          "reps": "6–12",
-          "swaps": [
-            "Romanian deadlift",
-            "Seated or lying leg curl"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Lunges",
-          "sets": "4",
-          "reps": "10–15",
-          "swaps": [
-            "Walking dumbbell lunges",
-            "Bulgarian split squats",
-            "Leg extension"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Bodyweight pull-ups",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Lat pulldown",
-            "Assisted pull-up machine"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Wrist curls",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Dead hangs",
-            "Farmer's carries"
-          ]
-        },
-        {
-          "group": "E",
-          "name": "Hanging leg raises",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Captain's chair leg raises",
-            "Cable crunches"
-          ]
-        },
-        {
-          "group": "E",
-          "name": "Calf raises",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Standing calf machine"
-          ]
-        }
-      ]
-    },
-    {
-      "order": 3,
-      "name": "Upper Body",
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Standing overhead press",
-          "sets": "4",
-          "reps": "6–10",
-          "swaps": [
-            "Seated dumbbell shoulder press",
-            "Shoulder press machine",
-            "Smith machine press"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Pause bench press",
-          "sets": "4",
-          "reps": "4–8",
-          "swaps": [
-            "Incline dumbbell press with a pause"
-          ],
-          "note": "Hold 1–2 seconds on the chest."
-        },
-        {
-          "group": "B",
-          "name": "Face pulls",
-          "sets": "4",
-          "reps": "15–20",
-          "swaps": [
-            "Reverse pec-deck",
-            "Band pull-aparts"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Preacher curls",
-          "sets": "4",
-          "reps": "6–10",
-          "swaps": [
-            "Machine preacher curl",
-            "Incline dumbbell curl"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Bent-over side raises",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Rear-delt machine",
-            "Cable rear-delt fly"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Calf raises",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Any calf machine"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Rows",
-          "sets": "3",
-          "reps": "8–12",
-          "swaps": [
-            "Chest-supported row machine",
-            "Cable row",
-            "Dumbbell row"
-          ]
-        }
-      ]
-    },
-    {
-      "order": 4,
-      "name": "Full Body",
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Reverse lunges",
-          "sets": "4",
-          "reps": "10–15",
-          "swaps": [
-            "Leg press",
-            "Hack squat"
-          ]
-        },
-        {
-          "group": "A",
-          "name": "Chest flies",
-          "sets": "4",
-          "reps": "10–15",
-          "swaps": [
-            "Pec-deck",
-            "Cable crossover"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Weighted pull-ups",
-          "sets": "4",
-          "reps": "3–6",
-          "swaps": [
-            "Lat pulldown"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Push-ups",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Machine chest press",
-            "Dips"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Romanian deadlift",
-          "sets": "3",
-          "reps": "8–12",
-          "swaps": [
-            "Leg curl machine",
-            "Back extension"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Triceps extensions",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Cable pushdowns",
-            "Overhead cable extension",
-            "Dips"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Face pulls",
-          "sets": "4",
-          "reps": "15–20",
-          "swaps": [
-            "Reverse pec-deck"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Leg raises",
-          "sets": "4",
-          "reps": "to failure",
-          "swaps": [
-            "Ab machine"
-          ]
-        }
-      ]
-    },
-    {
-      "order": 1,
-      "name": "Glutes and hamstrings",
-      "shortName": "Glutes + hams",
-      "profile": "ashley",
-      "since": 2,
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Hip thrust",
-          "sets": "4",
-          "reps": "8–12",
-          "swaps": [
-            "Smith machine hip thrust",
-            "Dumbbell glute bridge"
-          ],
-          "note": "Barbell or machine."
-        },
-        {
-          "group": "B",
-          "name": "Romanian deadlift",
-          "sets": "3",
-          "reps": "8–12",
-          "swaps": [
-            "Dumbbell Romanian deadlift",
-            "Cable pull-through"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Back extension",
-          "sets": "3",
-          "reps": "12–15",
-          "swaps": [
-            "Reverse hyper",
-            "Light hip thrust machine"
-          ],
-          "note": "Squeeze at the top."
-        },
-        {
-          "group": "D",
-          "name": "Seated leg curl",
-          "sets": "3",
-          "reps": "10–15",
-          "swaps": [
-            "Lying leg curl"
-          ]
-        },
-        {
-          "group": "E",
-          "name": "Hip abduction machine",
-          "sets": "3",
-          "reps": "15–20",
-          "swaps": [
-            "Banded side steps",
-            "Cable side kick"
-          ]
-        }
-      ]
-    },
-    {
-      "order": 2,
-      "name": "Upper body plus glutes",
-      "shortName": "Upper",
-      "profile": "ashley",
-      "since": 2,
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Lat pulldown",
-          "sets": "3",
-          "reps": "8–12",
-          "swaps": [
-            "Assisted pull-up machine"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Dumbbell shoulder press",
-          "sets": "3",
-          "reps": "8–12",
-          "swaps": [
-            "Shoulder press machine"
-          ]
-        },
-        {
-          "group": "C",
-          "name": "Seated cable row",
-          "sets": "3",
-          "reps": "10–12",
-          "swaps": [
-            "Chest-supported row machine"
-          ]
-        },
-        {
-          "group": "D",
-          "name": "Side raises",
-          "sets": "3",
-          "reps": "12–15",
-          "swaps": [
-            "Cable or machine lateral raise"
-          ]
-        },
-        {
-          "group": "E",
-          "name": "Cable glute kickback",
-          "sets": "3",
-          "reps": "12–15 each leg",
-          "swaps": [
-            "Kickback machine",
-            "Banded kickbacks"
-          ]
-        },
-        {
-          "group": "F",
-          "name": "Plank or cable crunch",
-          "sets": "3",
-          "reps": "sets",
-          "swaps": [
-            "Any ab machine"
-          ]
-        }
-      ]
-    },
-    {
-      "order": 3,
-      "name": "Glutes and quads",
-      "shortName": "Glutes + quads",
-      "profile": "ashley",
-      "since": 2,
-      "exercises": [
-        {
-          "group": "A",
-          "name": "Bulgarian split squat",
-          "sets": "3",
-          "reps": "8–12 each leg",
-          "swaps": [
-            "Reverse lunge",
-            "Step-ups"
-          ]
-        },
-        {
-          "group": "B",
-          "name": "Leg press",
-          "sets": "3",
-          "reps": "10–15",
-          "swaps": [
-            "Hack squat",
-            "Goblet squat"
-          ],
-          "note": "Feet high and wide."
-        },
-        {
-          "group": "C",
-          "name": "Hip thrust",
-          "sets": "3",
-          "reps": "12–15",
-          "swaps": [
-            "Glute bridge machine",
-            "Single-leg glute bridge"
-          ],
-          "note": "Lighter, with a 2-second squeeze."
-        },
-        {
-          "group": "D",
-          "name": "Cable glute kickback",
-          "sets": "3",
-          "reps": "12–15 each leg",
-          "swaps": [
-            "Kickback machine"
-          ]
-        },
-        {
-          "group": "E",
-          "name": "Hip abduction machine",
-          "sets": "3",
-          "reps": "15–20",
-          "swaps": [
-            "Banded side steps"
-          ]
-        }
-      ]
-    }
-  ],
+  "workoutDays": [],
   "gymTips": [
     "Exercises sharing a group letter are done back to back (a superset), then rest.",
     "\"To failure\" means stop when another clean rep isn't possible.",
@@ -3075,46 +2478,744 @@
     "Short on time? Skip the last group, not the first lift.",
     "Optional after lifting: 20 to 30 minutes of easy cardio, then sauna."
   ],
-  "gymTipsAshley": [
-    "Rest 2 minutes after the first two exercises, about 1 minute after the rest.",
-    "Stop each set with one or two good reps left. Push the last set a bit harder.",
-    "When every set reaches the top of the rep range, add the smallest weight jump next time.",
-    "Feel it in the glutes, not the lower back. On hip thrusts, tuck the chin and keep the ribs down.",
-    "Setup for a shorter frame: use a low bench or step for hip thrusts, and slide machine seats forward."
-  ],
   "easierToFinishTips": [
     "Small appetite today? Eat the protein first, then the rice.",
     "Drink some of it: a shake or protein latte counts.",
     "Split the plate: half now, half in an hour.",
     "Add, don't enlarge: a drizzle of olive oil, some avocado or cheese makes the same plate go further."
   ],
-  "dailyGuide": [
+  "profiles": [],
+  "workoutTemplates": [
     {
-      "label": "Protein",
-      "text": "100–110 g, about 30 g at each meal plus a protein snack"
+      "key": "full-body-3",
+      "name": "Full body, 3 days",
+      "description": "Three short whole-body sessions on machines and dumbbells. A good first plan.",
+      "defaultDays": [
+        "MONDAY",
+        "WEDNESDAY",
+        "FRIDAY"
+      ],
+      "tips": [
+        "New to lifting? Keep the weights light for the first two weeks while you learn each movement.",
+        "Rest about 90 seconds between sets.",
+        "Stop each set with one or two good reps left.",
+        "When every set reaches the top of the rep range, go up a little next time.",
+        "Short on time? Do the first three exercises and call it a day."
+      ],
+      "days": [
+        {
+          "order": 1,
+          "name": "Full body A",
+          "shortName": "Full body A",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Goblet squat",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Leg press",
+                "Bodyweight squat"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Chest press machine",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Dumbbell bench",
+                "Push-ups"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Lat pulldown",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Assisted pull-up machine"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Dumbbell Romanian deadlift",
+              "sets": "3",
+              "reps": "10–12",
+              "swaps": [
+                "Back extension"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Plank",
+              "sets": "3",
+              "reps": "20–40 seconds",
+              "swaps": [
+                "Dead bug"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "name": "Full body B",
+          "shortName": "Full body B",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Leg press",
+              "sets": "3",
+              "reps": "10–15",
+              "swaps": [
+                "Goblet squat"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Seated cable row",
+              "sets": "3",
+              "reps": "10–12",
+              "swaps": [
+                "Chest-supported row machine"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Dumbbell shoulder press",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Shoulder press machine"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Hip thrust",
+              "sets": "3",
+              "reps": "10–12",
+              "swaps": [
+                "Dumbbell glute bridge"
+              ],
+              "note": "Barbell, machine or a dumbbell on the hips."
+            },
+            {
+              "group": "E",
+              "name": "Dead bug",
+              "sets": "3",
+              "reps": "8 each side",
+              "swaps": [
+                "Plank"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "name": "Full body C",
+          "shortName": "Full body C",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Reverse lunge",
+              "sets": "3",
+              "reps": "8–10 each leg",
+              "swaps": [
+                "Step-ups",
+                "Leg press"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Incline dumbbell press",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Incline machine press",
+                "Push-ups"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Dumbbell row",
+              "sets": "3",
+              "reps": "10 each arm",
+              "swaps": [
+                "Cable row"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Seated leg curl",
+              "sets": "3",
+              "reps": "10–15",
+              "swaps": [
+                "Lying leg curl"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Farmer's carries",
+              "sets": "3",
+              "reps": "30–40 steps",
+              "swaps": [
+                "Dead hangs"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
-      "label": "Calories",
-      "text": "roughly 1,700–1,900"
+      "key": "upper-lower-4",
+      "name": "Upper / lower, 4 days",
+      "description": "Two upper-body days, a lower-body day and a full-body day, with supersets. For people who already lift.",
+      "defaultDays": [
+        "MONDAY",
+        "TUESDAY",
+        "THURSDAY",
+        "FRIDAY"
+      ],
+      "tips": [
+        "Exercises sharing a group letter are done back to back (a superset), then rest.",
+        "\"To failure\" means stop when another clean rep isn't possible.",
+        "Rest 2 to 3 minutes after heavy barbell sets, 60 to 90 seconds after everything else.",
+        "Leave one or two reps in the tank on most sets. Push the last set harder.",
+        "When every set reaches the top of the rep range, add 5 lb for upper body or 10 lb for lower body next time.",
+        "Gym packed? Do the superset exercises one after the other instead of back to back.",
+        "Short on time? Skip the last group, not the first lift.",
+        "Optional after lifting: 20 to 30 minutes of easy cardio, then sauna."
+      ],
+      "days": [
+        {
+          "order": 1,
+          "name": "Upper Body",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Barbell bench press",
+              "sets": "3",
+              "reps": "6–10",
+              "swaps": [
+                "Smith machine bench",
+                "Chest press machine",
+                "Dumbbell bench"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Dumbbell press",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Incline machine press"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Weighted chin-ups",
+              "sets": "4",
+              "reps": "3–6",
+              "swaps": [
+                "Lat pulldown, underhand grip",
+                "Assisted chin-up machine"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Curls",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Cable curls",
+                "Machine curls"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Hanging knee raises",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Captain's chair knee raises",
+                "Ab machine"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Face pulls",
+              "sets": "4",
+              "reps": "15–20",
+              "swaps": [
+                "Reverse pec-deck"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Push-ups",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Chest press machine, light"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Side raises",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Cable lateral raise",
+                "Machine lateral raise"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Calf raises",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Seated calf raise",
+                "Leg-press calf raise"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "name": "Lower Body",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Barbell squat",
+              "sets": "3",
+              "reps": "6–10",
+              "swaps": [
+                "Leg press",
+                "Hack squat",
+                "Smith machine squat"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Good mornings",
+              "sets": "3",
+              "reps": "6–12",
+              "swaps": [
+                "Romanian deadlift",
+                "Seated or lying leg curl"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Lunges",
+              "sets": "4",
+              "reps": "10–15",
+              "swaps": [
+                "Walking dumbbell lunges",
+                "Bulgarian split squats",
+                "Leg extension"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Bodyweight pull-ups",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Lat pulldown",
+                "Assisted pull-up machine"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Wrist curls",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Dead hangs",
+                "Farmer's carries"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Hanging leg raises",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Captain's chair leg raises",
+                "Cable crunches"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Calf raises",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Standing calf machine"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "name": "Upper Body",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Standing overhead press",
+              "sets": "4",
+              "reps": "6–10",
+              "swaps": [
+                "Seated dumbbell shoulder press",
+                "Shoulder press machine",
+                "Smith machine press"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Pause bench press",
+              "sets": "4",
+              "reps": "4–8",
+              "swaps": [
+                "Incline dumbbell press with a pause"
+              ],
+              "note": "Hold 1–2 seconds on the chest."
+            },
+            {
+              "group": "B",
+              "name": "Face pulls",
+              "sets": "4",
+              "reps": "15–20",
+              "swaps": [
+                "Reverse pec-deck",
+                "Band pull-aparts"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Preacher curls",
+              "sets": "4",
+              "reps": "6–10",
+              "swaps": [
+                "Machine preacher curl",
+                "Incline dumbbell curl"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Bent-over side raises",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Rear-delt machine",
+                "Cable rear-delt fly"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Calf raises",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Any calf machine"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Rows",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Chest-supported row machine",
+                "Cable row",
+                "Dumbbell row"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "name": "Full Body",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Reverse lunges",
+              "sets": "4",
+              "reps": "10–15",
+              "swaps": [
+                "Leg press",
+                "Hack squat"
+              ]
+            },
+            {
+              "group": "A",
+              "name": "Chest flies",
+              "sets": "4",
+              "reps": "10–15",
+              "swaps": [
+                "Pec-deck",
+                "Cable crossover"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Weighted pull-ups",
+              "sets": "4",
+              "reps": "3–6",
+              "swaps": [
+                "Lat pulldown"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Push-ups",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Machine chest press",
+                "Dips"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Romanian deadlift",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Leg curl machine",
+                "Back extension"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Triceps extensions",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Cable pushdowns",
+                "Overhead cable extension",
+                "Dips"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Face pulls",
+              "sets": "4",
+              "reps": "15–20",
+              "swaps": [
+                "Reverse pec-deck"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Leg raises",
+              "sets": "4",
+              "reps": "to failure",
+              "swaps": [
+                "Ab machine"
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
-      "label": "Carbs",
-      "text": "most of them around training: breakfast, the meal before and the meal after the gym"
-    },
-    {
-      "label": "Fats",
-      "text": "a thumb-sized portion per meal: avocado, olive oil, nuts, cheese"
-    },
-    {
-      "label": "Water",
-      "text": "a bottle with you at the gym and one through the day"
+      "key": "glute-3",
+      "name": "Glute focus, 3 days",
+      "description": "Two lower-body days built around hip thrusts and split squats, and an upper-body day.",
+      "defaultDays": [
+        "MONDAY",
+        "WEDNESDAY",
+        "FRIDAY"
+      ],
+      "tips": [
+        "Rest 2 minutes after the first two exercises, about 1 minute after the rest.",
+        "Stop each set with one or two good reps left. Push the last set a bit harder.",
+        "When every set reaches the top of the rep range, add the smallest weight jump next time.",
+        "Feel it in the glutes, not the lower back. On hip thrusts, tuck the chin and keep the ribs down.",
+        "Shorter? Use a low bench or step for hip thrusts, and slide machine seats forward."
+      ],
+      "days": [
+        {
+          "order": 1,
+          "name": "Glutes and hamstrings",
+          "shortName": "Glutes + hams",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Hip thrust",
+              "sets": "4",
+              "reps": "8–12",
+              "swaps": [
+                "Smith machine hip thrust",
+                "Dumbbell glute bridge"
+              ],
+              "note": "Barbell or machine."
+            },
+            {
+              "group": "B",
+              "name": "Romanian deadlift",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Dumbbell Romanian deadlift",
+                "Cable pull-through"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Back extension",
+              "sets": "3",
+              "reps": "12–15",
+              "swaps": [
+                "Reverse hyper",
+                "Light hip thrust machine"
+              ],
+              "note": "Squeeze at the top."
+            },
+            {
+              "group": "D",
+              "name": "Seated leg curl",
+              "sets": "3",
+              "reps": "10–15",
+              "swaps": [
+                "Lying leg curl"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Hip abduction machine",
+              "sets": "3",
+              "reps": "15–20",
+              "swaps": [
+                "Banded side steps",
+                "Cable side kick"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "name": "Upper body plus glutes",
+          "shortName": "Upper",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Lat pulldown",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Assisted pull-up machine"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Dumbbell shoulder press",
+              "sets": "3",
+              "reps": "8–12",
+              "swaps": [
+                "Shoulder press machine"
+              ]
+            },
+            {
+              "group": "C",
+              "name": "Seated cable row",
+              "sets": "3",
+              "reps": "10–12",
+              "swaps": [
+                "Chest-supported row machine"
+              ]
+            },
+            {
+              "group": "D",
+              "name": "Side raises",
+              "sets": "3",
+              "reps": "12–15",
+              "swaps": [
+                "Cable or machine lateral raise"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Cable glute kickback",
+              "sets": "3",
+              "reps": "12–15 each leg",
+              "swaps": [
+                "Kickback machine",
+                "Banded kickbacks"
+              ]
+            },
+            {
+              "group": "F",
+              "name": "Plank or cable crunch",
+              "sets": "3",
+              "reps": "sets",
+              "swaps": [
+                "Any ab machine"
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "name": "Glutes and quads",
+          "shortName": "Glutes + quads",
+          "exercises": [
+            {
+              "group": "A",
+              "name": "Bulgarian split squat",
+              "sets": "3",
+              "reps": "8–12 each leg",
+              "swaps": [
+                "Reverse lunge",
+                "Step-ups"
+              ]
+            },
+            {
+              "group": "B",
+              "name": "Leg press",
+              "sets": "3",
+              "reps": "10–15",
+              "swaps": [
+                "Hack squat",
+                "Goblet squat"
+              ],
+              "note": "Feet high and wide."
+            },
+            {
+              "group": "C",
+              "name": "Hip thrust",
+              "sets": "3",
+              "reps": "12–15",
+              "swaps": [
+                "Glute bridge machine",
+                "Single-leg glute bridge"
+              ],
+              "note": "Lighter, with a 2-second squeeze."
+            },
+            {
+              "group": "D",
+              "name": "Cable glute kickback",
+              "sets": "3",
+              "reps": "12–15 each leg",
+              "swaps": [
+                "Kickback machine"
+              ]
+            },
+            {
+              "group": "E",
+              "name": "Hip abduction machine",
+              "sets": "3",
+              "reps": "15–20",
+              "swaps": [
+                "Banded side steps"
+              ]
+            }
+          ]
+        }
+      ]
     }
-  ],
-  "extraPantryStaples": [
-    "gochugaru",
-    "achiote paste",
-    "lemongrass paste",
-    "chipotles in adobo",
-    "canned pigeon peas"
   ]
 }

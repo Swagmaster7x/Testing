@@ -53,8 +53,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.R
 import com.personal.mealgym.data.LibraryFilter
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
@@ -62,6 +64,7 @@ import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.ShowMessages
+import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.label
@@ -74,6 +77,7 @@ private data class SlotRef(val date: LocalDate, val slot: MealSlot, val recipe: 
 fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppViewModels.Factory)) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val filter by vm.filter.collectAsStateWithLifecycle()
+    val others by vm.others.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var picking by remember { mutableStateOf<SlotRef?>(null) }
@@ -148,10 +152,10 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                 onOpen = { acting = null; target.recipe?.let { nav.recipe(it.id) } },
                 onChange = { acting = null; picking = target },
                 onCopy = { acting = null; copying = target },
-                otherSideName = vm.otherSideName.takeIf {
-                    target.slot != MealSlot.SNACK && target.recipe?.onlyForProfileId == null
-                },
-                onAddToOtherSide = { acting = null; target.recipe?.let { vm.addToOtherSide(target.date, target.slot, it) } },
+                // Only people who have this slot, and only for recipes everyone can see.
+                others = others.filter { target.slot != MealSlot.SNACK || it.snackSlot }
+                    .takeIf { target.recipe?.onlyForProfileId == null }.orEmpty(),
+                onAddTo = { other -> acting = null; target.recipe?.let { vm.addToOther(other, target.date, target.slot, it) } },
                 onClear = { acting = null; vm.clearSlot(target.date, target.slot) },
                 onDismiss = { acting = null },
             )
@@ -253,8 +257,8 @@ private fun SlotActionsSheet(
     onOpen: () -> Unit,
     onChange: () -> Unit,
     onCopy: () -> Unit,
-    otherSideName: String?,
-    onAddToOtherSide: () -> Unit,
+    others: List<Profile>,
+    onAddTo: (Profile) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -274,11 +278,13 @@ private fun SlotActionsSheet(
             ListItem(headlineContent = { Text("Open recipe") }, modifier = Modifier.clickable(onClick = onOpen))
             ListItem(headlineContent = { Text("Change") }, modifier = Modifier.clickable(onClick = onChange))
             ListItem(headlineContent = { Text("Copy to other days") }, modifier = Modifier.clickable(onClick = onCopy))
-            if (otherSideName != null) {
+            others.forEach { other ->
                 ListItem(
-                    headlineContent = { Text("Add to the other side too") },
-                    supportingContent = { Text("Same meal, same slot, on $otherSideName") },
-                    modifier = Modifier.clickable(onClick = onAddToOtherSide),
+                    headlineContent = {
+                        Text(if (BuildConfig.STORE || others.size > 1) "Add to ${other.name}'s plan too" else "Add to the other side too")
+                    },
+                    supportingContent = { Text("Same meal, same slot, on ${Sides.planName(other)}") },
+                    modifier = Modifier.clickable { onAddTo(other) },
                 )
             }
             ListItem(headlineContent = { Text("Clear this slot") }, modifier = Modifier.clickable(onClick = onClear))

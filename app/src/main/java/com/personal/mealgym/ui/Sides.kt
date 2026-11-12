@@ -1,13 +1,15 @@
 package com.personal.mealgym.ui
 
-import com.personal.mealgym.data.Profiles
+import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.Profile
 
-/** What differs between the two sides, apart from the theme. */
+/** What differs between people, apart from the theme. */
 object Sides {
-    /** Ashley's Today and Plan add a fourth slot, Snack. */
-    fun slotsFor(profileId: Long): List<MealSlot> =
-        if (profileId == Profiles.ASHLEY) MealSlot.entries.toList() else listOf(MealSlot.BREAKFAST, MealSlot.LUNCH, MealSlot.DINNER)
+    /** People with the snack slot get a fourth slot on Today and Plan. */
+    fun slotsFor(profile: Profile): List<MealSlot> =
+        if (profile.snackSlot) MealSlot.entries.toList() else listOf(MealSlot.BREAKFAST, MealSlot.LUNCH, MealSlot.DINNER)
 
-    fun isAshley(profileId: Long) = profileId == Profiles.ASHLEY
+    /** "Ashley's Side" in the personal app; just the name in the store app. */
+    fun planName(profile: Profile): String = if (BuildConfig.STORE) profile.name else "${profile.name}'s Side"
 }

@@ -56,8 +56,6 @@ import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.LocalCopy
 import com.personal.mealgym.ui.Routes
-import com.personal.mealgym.ui.SideCopy
-import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.data.seed.GuideLine
 import com.personal.mealgym.ui.components.MotifStrip
 import com.personal.mealgym.ui.components.sparkleOn
@@ -74,6 +72,7 @@ import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppViewModels.Factory)) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val filter by vm.filter.collectAsStateWithLifecycle()
+    val profile by vm.profile.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
     var picking by rememberSaveable { mutableStateOf<MealSlot?>(null) }
@@ -114,10 +113,10 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
             }
             item { GymCard(state, onOpenGym = { nav.tab(Routes.GYM) }) }
             item { SaunaCard(state, onOpenSauna = nav::sauna) }
-            if (Sides.isAshley(vm.profileId) && vm.dailyGuide.isNotEmpty()) {
+            if (profile.easierToFinish && vm.dailyGuide.isNotEmpty()) {
                 item { DailyGuideCard(vm.dailyGuide) }
             }
-            if (Sides.isAshley(vm.profileId)) item { MotifStrip(Modifier.padding(top = 8.dp)) }
+            if (profile.isGlam) item { MotifStrip(Modifier.padding(top = 8.dp)) }
         }
 
         val slot = picking
@@ -189,7 +188,7 @@ private fun GymCard(state: TodayUi, onOpenGym: () -> Unit) {
                     is GymToday.Done -> {
                         val session = plan.doneSession
                         val dayText = "Day ${status.session.dayOrder}${session?.let { ": ${it.dayName}" } ?: ""}"
-                        if (LocalCopy.current == SideCopy.Ashley) {
+                        if (LocalCopy.current.playful) {
                             Text(LocalCopy.current.doneToday, style = MaterialTheme.typography.titleMedium)
                             Text(dayText, style = MaterialTheme.typography.bodyMedium)
                         } else {

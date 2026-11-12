@@ -1,5 +1,6 @@
 package com.personal.mealgym.ui
 
+import com.personal.mealgym.TestPeople
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -12,8 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.personal.mealgym.MainActivity
 import com.personal.mealgym.MealGymApp
-import com.personal.mealgym.data.Profiles
-import com.personal.mealgym.data.SideState
+import com.personal.mealgym.Opening
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.domain.Dates
 import kotlinx.coroutines.flow.first
@@ -47,14 +47,14 @@ class ScreenshotTest {
 
     private fun openSide(profileId: Long) = runBlocking {
         container.settings.setActiveProfile(profileId)
-        withTimeout(10_000) { container.sideState.first { it == SideState.Chosen(profileId) } }
+        withTimeout(10_000) { container.opening.first { (it as? Opening.Open)?.profile?.id == profileId } }
     }
 
     @Before
     fun planAWeek() = runBlocking {
         withTimeout(30_000) { container.ready.first { it } }
-        openSide(Profiles.SWAG)
-        val swag = Profiles.SWAG
+        openSide(TestPeople.SWAG)
+        val swag = TestPeople.SWAG
         val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
         val today = LocalDate.now()
         val weekStart = Dates.weekStart(today)
@@ -66,10 +66,12 @@ class ScreenshotTest {
         meals.setSlot(swag, weekStart, MealSlot.DINNER, recipes.getValue("D3").id)
         meals.setSlot(swag, weekStart.plusDays(1), MealSlot.DINNER, recipes.getValue("S1").id)
         meals.setSlot(swag, today, MealSlot.DINNER, recipes.getValue("D2").id)
+        // Today is on screen before each test starts.
+        compose.waitUntil(15_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun planAshleysDay() = runBlocking {
-        val ashley = Profiles.ASHLEY
+        val ashley = TestPeople.ASHLEY
         val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
         val today = LocalDate.now()
         container.meals.setSlot(ashley, today, MealSlot.BREAKFAST, recipes.getValue("SB1").id)
@@ -148,7 +150,7 @@ class ScreenshotTest {
     fun sharedShoppingList() {
         runBlocking {
             val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
-            container.meals.fillBatch(Profiles.ASHLEY, Dates.weekStart(LocalDate.now()), MealSlot.LUNCH, recipes.getValue("L6"))
+            container.meals.fillBatch(TestPeople.ASHLEY, Dates.weekStart(LocalDate.now()), MealSlot.LUNCH, recipes.getValue("L6"))
         }
         tab("Plan")
         waitForText("Shopping list")
@@ -194,7 +196,7 @@ class ScreenshotTest {
     fun chooserThenAshleysSide() {
         runBlocking {
             container.settings.clearActiveProfile()
-            withTimeout(10_000) { container.sideState.first { it == SideState.NotChosen } }
+            withTimeout(10_000) { container.opening.first { it is Opening.Choose } }
         }
         waitForText("Whose phone is this?")
         shot("00-chooser")

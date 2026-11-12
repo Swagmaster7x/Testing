@@ -26,15 +26,38 @@ enum class StoreSection { PROTEIN, PRODUCE_FROZEN, CARBS, PANTRY }
 @Serializable
 enum class Feeling { GREAT, FINE, ROUGH }
 
-/** One person's side of the app: its own theme, plans, schedule and history. */
+/**
+ * One person in the app: their own look, meal plan, gym days and history. What used to be
+ * hard-wired for Swag or Ashley is now a setting on the profile.
+ */
 @Serializable
 @Entity
 data class Profile(
     @PrimaryKey val id: Long,
     val name: String,
-    /** "IRON" (Swag's dark fantasy) or "GLAM" (Ashley's Y2K glam). */
+    /** "IRON" (dark fantasy) or "GLAM" (Y2K glam). */
     val themeKey: String,
-)
+    /** Adds a fourth meal slot, Snack. */
+    @ColumnInfo(defaultValue = "0") val snackSlot: Boolean = false,
+    /** Share of a serving eaten at lunch and dinner (1.0, or 0.75 for three-quarters). */
+    @ColumnInfo(defaultValue = "1.0") val portion: Double = 1.0,
+    /** Recipe tips: [TIPS_FILL_UP] (half-plate, bulk it up) or [TIPS_EASIER] (make it easier to finish). */
+    @ColumnInfo(defaultValue = TIPS_FILL_UP) val tipsStyle: String = TIPS_FILL_UP,
+    /** Shows training-day badges on the week view. */
+    @ColumnInfo(defaultValue = "0") val weekBadges: Boolean = false,
+    /** The starter workout plan this person began with, for its gym tips. */
+    val templateKey: String? = null,
+) {
+    val isGlam: Boolean get() = themeKey == THEME_GLAM
+    val easierToFinish: Boolean get() = tipsStyle == TIPS_EASIER
+
+    companion object {
+        const val THEME_IRON = "IRON"
+        const val THEME_GLAM = "GLAM"
+        const val TIPS_FILL_UP = "FILL_UP"
+        const val TIPS_EASIER = "EASIER"
+    }
+}
 
 /** Small key/value facts about the database itself, such as which seed level is installed. */
 @Entity
