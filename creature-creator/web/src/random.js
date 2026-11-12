@@ -32,16 +32,20 @@ export function randomCreature(rand, o = {}) {
   const d = newCreature(type);
   d.name = randomName(rand, o.titled);
   d.sex = rand() < 0.5 ? 'm' : 'f'; d.bulk = R(0.82, 1.3); d.dimorph = R(0.4, 1.2);
-  for (const n of d.nodes) { const k = n.role === 'neck' || n.role === 'waist' ? R(0.9, 1.15) : R(0.82, 1.28); n.rx *= k; n.ry *= k * R(0.92, 1.08); }
+  // Humanoid shapes are easy to spoil, so they vary less than the others.
+  const lo = type === 'humanoid' ? 0.96 : 0.82, hi = type === 'humanoid' ? 1.07 : 1.28;
+  for (const n of d.nodes) { const k = n.role === 'neck' || n.role === 'waist' ? R(0.92, 1.1) : R(lo, hi); n.rx *= k; n.ry *= k * R(0.94, 1.06); }
+  if (type === 'humanoid') d.bulk = R(0.94, 1.1);
 
   const hue = rand(), L = d.look;
   Object.assign(L, {
-    base: col(hue, R(0.25, 0.8), R(0.25, 0.62)), second: col(hue + R(-0.25, 0.25), R(0.35, 0.8), R(0.1, 0.4)), belly: col(hue + 0.04, R(0.15, 0.4), R(0.7, 0.88)),
+    base: col(hue, R(0.45, 0.9), R(0.2, 0.5)), second: col(hue + R(-0.3, 0.3), R(0.45, 0.9), R(0.08, 0.32)), belly: col(hue + 0.04, R(0.15, 0.4), R(0.7, 0.88)),
     hair: col(hue + R(0, 0.5), 0.5, R(0.15, 0.5)), membrane: col(hue + R(-0.1, 0.1), 0.45, R(0.45, 0.7)), eye: col(rand(), 0.8, 0.47),
     accent: rand() < 0.7 ? col(0.11, 0.3, R(0.75, 0.9)) : col(hue, 0.2, 0.12),
     pattern: Math.floor(rand() * 8), patScale: R(0.7, 2), bellyAmt: R(0.3, 0.9),
   });
-  if (rand() < 0.5) { L.cover = pick(COVERS); L.furLen = R(0.1, 0.55); L.furDroop = R(0.1, 0.7); }
+  if (rand() < 0.5) { L.cover = pick(type === 'humanoid' ? ['skin', 'skin', 'scales', 'slime'] : COVERS); L.furLen = R(0.1, 0.55); L.furDroop = R(0.1, 0.7); }
+  if (type === 'humanoid') L.cloth = col(hue + 0.45, R(0.3, 0.6), R(0.18, 0.35));
 
   const swap = (p, kind) => { const was = PARTS[p.kind], now = PARTS[kind]; if (was.size && now.size) p.size *= now.size / was.size; p.kind = kind; p.p = defaultParams(kind); };
   const frames = bodyGeometry(d, { sexless: true }).userData.frames;
@@ -53,7 +57,7 @@ export function randomCreature(rand, o = {}) {
     else if (def.cat === 'mouth' && def.slot === 'mouth' && rand() < 0.55) swap(p, mouthKind);
     else if (def.cat === 'limbs' && p.p.endType !== undefined) {
       if (rand() < 0.4) p.p.endType = pick(p.kind.startsWith('arm') ? HANDS : FEET);
-      p.p.thick *= R(0.85, 1.35); p.p.muscle = R(0.9, 1.35);
+      p.p.thick *= type === 'humanoid' ? R(0.9, 1.15) : R(0.85, 1.35); p.p.muscle = type === 'humanoid' ? R(0.95, 1.15) : R(0.9, 1.35);
     }
   }
   if (!has('mouth')) addPart(d, mouthKind, frames);
@@ -63,8 +67,9 @@ export function randomCreature(rand, o = {}) {
   if (rand() < 0.15) addPart(d, 'spike', frames);
   for (const p of d.parts) {
     const def = PARTS[p.kind];
-    p.size *= R(0.88, 1.2);
-    if (def.cat === 'limbs' || def.cat === 'eyes') continue;
+    const hairy = p.kind.startsWith('hair') || p.kind === 'wrap' || p.kind === 'brow';
+    if (!hairy) p.size *= type === 'humanoid' ? R(0.95, 1.1) : R(0.88, 1.2);
+    if (def.cat === 'limbs' || def.cat === 'eyes' || hairy) continue;
     for (const [k, s] of Object.entries(def.P || {})) {       // nudge each slider a little toward a random setting
       if (['count', 'feathers', 'tines', 'lift', 'sweep', 'span'].includes(k)) continue;
       p.p[k] = p.p[k] + (R(s[0], s[1]) - p.p[k]) * 0.3;

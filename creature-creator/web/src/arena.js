@@ -1,14 +1,15 @@
 // The colosseum: scenery, the two fighters, the fight loop and its screens.
 import * as THREE from 'three';
-import { buildCreature, disposeTree, bounds } from './creature.js';
+import { buildCreature, disposeTree, bounds, applyShellStep } from './creature.js';
 import { makeMaterials, applyLook } from './materials.js';
 import { TEMPLATES } from './templates.js';
 import { statsOf, traits, makeFighter, step, usePower, useGuard, useAbility, ai, oppMul, championPoints, ABILITY_CD, ENDLESS, HEAL } from './battle.js';
 import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock, eliteFor, LEVELS, titlePoints } from './items.js';
 import { randomCreature } from './random.js';
-import { rng } from './geom.js';
+import { rng, setDetail } from './geom.js';
 import { makeRig, applyRig, strikePose, zero, resetBones, STRIKE_LEN, STYLES } from './anim.js';
 import { makeFx } from './fx.js';
+import { play, synth, music } from './audio.js';
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const ease = (x) => x * x * (3 - 2 * x);
@@ -84,18 +85,6 @@ function weaponMesh(id) {
   return g;
 }
 
-let audio = null;
-function sfx(kind) {
-  try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    const t = audio.currentTime, o = audio.createOscillator(), gn = audio.createGain();
-    const [f0, f1, dur, type, vol] = { hit: [150, 50, 0.14, 'triangle', 0.5], power: [220, 40, 0.3, 'sawtooth', 0.5], block: [700, 500, 0.09, 'square', 0.2], miss: [500, 800, 0.1, 'sine', 0.12], win: [440, 880, 0.6, 'triangle', 0.35], lose: [200, 60, 0.9, 'sawtooth', 0.3] }[kind];
-    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(gn).connect(audio.destination); o.start(t); o.stop(t + dur + 0.02);
-  } catch (e) { /* no sound available */ }
-}
-
 /** env: { scene, camera, M (the player's materials), h (DOM helper), store, onDone(result) } */
 export function createArena(env) {
   const { scene, camera, h, store } = env;
@@ -112,7 +101,10 @@ export function createArena(env) {
     applyLook(mats, data.look, TEMPLATES[data.type].bellyDir);
     resetBones(mats);
     const anchors = [];
-    const cr = buildCreature(data, mats, { anchors, animated: true }), box = bounds(cr), size = box.getSize(new THREE.Vector3());
+    setDetail(0.62);                          // fighters are seen small, so they are built lighter than in the workshop
+    let cr; try { cr = buildCreature(data, mats, { anchors, animated: true }); } finally { setDetail(1); }
+    applyShellStep(cr, Math.max(2, env.gfx().step));
+    const box = bounds(cr), size = box.getSize(new THREE.Vector3());
     const st = statsOf(data);
     const s = clamp(1.9 / Math.max(size.y, size.z * 0.85, size.x * 0.55, 0.6), 0.5, 2.4) * (0.85 + 0.35 * clamp(Math.cbrt(st.hp / 200), 0.6, 1.4));
     const hover = data.type === 'aquatic' ? 0.45 : 0;
@@ -147,7 +139,7 @@ export function createArena(env) {
     if (kinds.has('tail_stinger')) styles.push('sting');
     if (!styles.length) styles.push('lunge');
     rig.armSel = -1; rig.len = size.z * s;
-    return { cr, mats, pose, holder, side, rig, styles, style: styles[0], styleN: 0, hover, st, walk: walk || 0, half: size.x * s / 2, len: size.z * s,
+    return { cr, mats, glow: [mats.skin, ...mats.shells], pose, holder, side, rig, styles, style: styles[0], styleN: 0, hover, st, walk: walk || 0, half: size.x * s / 2, len: size.z * s,
       head: new THREE.Vector3(0, size.y * s + hover + 0.15, -size.z * s * 0.3), mid: new THREE.Vector3(0, size.y * s * 0.55 + hover, -size.z * s * 0.2), front: new THREE.Vector3(0, size.y * s * 0.5 + hover, 0.1),
       strikeT: -1, winding: false, power: false, recoil: 0, flash: 0, dead: -1, dodge: -1, fxT: 0, thud: false, ph: Math.random() * 6 };
   }
@@ -185,10 +177,10 @@ export function createArena(env) {
       h('div', { class: 'floaters' }),
       h('div', { class: 'acts' },
         h('div', null,
-          h('button', { id: 'bpow', onpointerdown: press(() => usePower(A.F[0]) && sfx('miss')) }, h('i'), h('em', null, '⚔️'), h('span', null, 'Power')),
-          h('button', { id: 'bgrd', onpointerdown: press(() => useGuard(A.F[0]) && sfx('block')) }, h('i'), h('em', null, '🛡️'), h('span', null, 'Guard'))),
+          h('button', { id: 'bpow', onpointerdown: press(() => usePower(A.F[0]) && play('draw')) }, h('i'), h('em', null, '⚔️'), h('span', null, 'Power')),
+          h('button', { id: 'bgrd', onpointerdown: press(() => useGuard(A.F[0]) && play('switch')) }, h('i'), h('em', null, '🛡️'), h('span', null, 'Guard'))),
         h('div', null, A.run.load.abilities.map((a, k) =>
-          h('button', { class: 'abil', id: 'bab' + k, onpointerdown: press(() => { if (useAbility(A.F, 0, k, A.rand, A.queue)) sfx('power'); }) }, h('i'), h('em', null, item(a.id, 'ability').icon), h('span', null, item(a.id, 'ability').name))))));
+          h('button', { class: 'abil', id: 'bab' + k, onpointerdown: press(() => { useAbility(A.F, 0, k, A.rand, A.queue); }) }, h('i'), h('em', null, item(a.id, 'ability').icon), h('span', null, item(a.id, 'ability').name))))));
   }
   // The gauntlet being run: its difficulty level, how many fights it has, and whether it is the endless pit.
   const lvl = () => LEVELS[A.run.level ?? 2], endless = () => !!A.run.endless, fights = () => (endless() ? Infinity : lvl().fights);
@@ -225,7 +217,7 @@ export function createArena(env) {
       h('p', { class: 'runs', id: 'gruns' }),
       h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
         h('button', { class: 'ad', id: 'gad', onclick: async (e) => { if (await adFor(e, 'gate')) { addRun(meta); env.saveMeta(); } tickRuns(); } }, '📺 Watch an ad: +1 run'),
-        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; store.set('cc.run', A.run); sfx('block'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
+        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; store.set('cc.run', A.run); play('gate'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
     tickRuns();
   }
   /** First step after the gate: the Head Start gift (once per gauntlet), then the first fight. */
@@ -257,7 +249,8 @@ export function createArena(env) {
     const s = statsOf(A.data), load = A.run.load;
     if (!A.run.draft) { A.run.draft = draft(Math.random, s, load, env.meta(), Math.min(A.run.round, 12)); store.set('cc.run', A.run); }
     el.replaceChildren(h('div', { class: 'floaters' }));
-    const pick = (o) => { take(load, o); env.meta().seen[o.cat + ':' + o.id] = 1; env.stat('mostWeapons', load.weapons.length, true); env.saveMeta(); A.run.draft = null; store.set('cc.run', A.run); sfx('block'); nextFight(); };
+    for (let k = 0; k < 3; k++) setTimeout(() => A.phase === 'won' && play('card', 0.7), 60 + k * 100);
+    const pick = (o) => { take(load, o); env.meta().seen[o.cat + ':' + o.id] = 1; env.stat('mostWeapons', load.weapons.length, true); env.saveMeta(); A.run.draft = null; store.set('cc.run', A.run); play(o.cat === 'weapon' ? 'draw' : 'confirm'); nextFight(); };
     const card = (o) => {
       const it = item(o.id, o.cat), owned = o.cat === 'ability' && load.abilities.find((a) => a.id === o.id);
       const shown = o.cat === 'ability' ? { ...o, lvl: (owned ? owned.lvl + 1 + (o.rar > 0 ? 1 : 0) : 1 + o.rar) } : o;
@@ -300,6 +293,7 @@ export function createArena(env) {
     A.run.fighting = true; A.run.dead = false; store.set('cc.run', A.run);
     hud(); bars();
     A.phase = 'intro'; A.phaseT = 0;
+    music(boss ? 'boss' : 'battle');
     if (A.elite) A.views[1].holder.scale.setScalar(A.elite.id === 'giant' ? 1.25 : 1.08);
     message(boss ? (endless() ? 'Champion!' : 'Final fight') : A.elite ? 'Elite!' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name + (A.elite ? ' (+50% points)' : ''));
   }
@@ -323,7 +317,7 @@ export function createArena(env) {
     env.stat('fightsWon'); if (!endless()) env.stat('bestFight', A.run.round + 1, true); else env.stat('bestEndless', A.run.round + 1, true);
     if (A.elite) env.stat('elites');
     if (!A.hurt) env.stat('flawless'); if (f.hp < f.max * 0.1) env.stat('closeCalls');
-    meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; A.run.lastPts = pts; env.saveMeta();
+    meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; A.run.lastPts = pts; env.saveMeta(); play('coins');
     A.run.bonusHp = (A.run.bonusHp || 0) + f.m.killHp;
     A.run.round++; A.run.fighting = false;
     A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * (HEAL + 0.04 * (meta.boosts.recov || 0) + f.m.killHeal));
@@ -333,7 +327,7 @@ export function createArena(env) {
     reward(A.enemy.name.split(',')[0] + ' is dead', '+' + pts + ' points. ' + A.data.name + ' recovers to ' + Math.round(A.run.hp) + ' / ' + f.max + ' health. ' + (isBoss(A.run.round) ? (endless() ? 'A champion is next. ' : 'Only the champion remains. ') : '') + 'Choose a reward:');
   }
   function champion() {
-    A.phase = 'champion'; store.set('cc.run', null); sfx('win'); A.cheer = 6;
+    A.phase = 'champion'; store.set('cc.run', null); music(null); synth('win'); synth('crowd'); A.cheer = 6;
     dropView(0); A.views[0] = makeView(A.data, env.M, -1, A.run.load);
     const level = A.run.level ?? 2, pts = titlePoints(level, A.F[0].hp / A.F[0].max), earned = A.run.earned || 0, opens = level >= (env.meta().level || 0) && level < LEVELS.length - 1;
     dropView(1); A.views[0].holder.position.x = 0; A.views[0].holder.rotation.y = 0.35;
@@ -356,10 +350,10 @@ export function createArena(env) {
   /** Lifetime totals from this run. Called once, when the run is over for good. */
   function endRun() { const q = A.run.sum || {}; if (A.run.counted) return; A.run.counted = true; env.stat('damage', Math.round(q.dealt || 0)); env.stat('biggestHit', q.big || 0, true); env.stat('runs'); }
   function died() {
-    A.phase = 'dead'; sfx('lose');
+    A.phase = 'dead'; music(null); synth('lose');
     A.run.dead = true; A.run.fighting = false; store.set('cc.run', A.run);      // closing the app here does not undo the death
     el.querySelector('.acts').classList.add('hidden'); message('', '');
-    const meta = env.meta(), again = () => { A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); sfx('win'); nextFight(); };
+    const meta = env.meta(), again = () => { A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); synth('heal'); nextFight(); };
     const adBtn = (label) => !A.run.adRevived && h('button', { class: 'ad', onclick: async (e) => { if (!(await adFor(e, 'dead'))) return; A.run.adRevived = true; again(); } }, label);
     if (endless()) {                                  // the pit never costs a creature
       panel(h('h2', null, A.data.name + ' is carried from the pit'),
@@ -395,11 +389,11 @@ export function createArena(env) {
     if (v.walk > 0) {                                   // walking in from the gate
       const d = Math.min(v.walk, 4.6 * dt); v.walk -= d; v.holder.position.x = v.side * (0.75 + v.walk);
       T.gait = 1; T.y += Math.abs(Math.sin(rig.gaitPh)) * 0.04; T.pitch = 0.04;
-      v.fxT += dt; if (v.fxT > 0.16) { v.fxT = 0; fx.burst('dust', world(v, new THREE.Vector3(0, 0.05, -v.len * 0.5)), 2, { speed: 0.5 }); }
+      v.fxT += dt; if (v.fxT > 0.16) { v.fxT = 0; play('step', 0.35); fx.burst('dust', world(v, new THREE.Vector3(0, 0.05, -v.len * 0.5)), 2, { speed: 0.5 }); }
     } else if (v.dead >= 0) {                           // collapse and go limp
       v.dead += dt; const k = Math.min(1, v.dead / 0.75), e = k * k * (3 - 2 * k);
       Object.assign(T, { roll: 1.48 * e * (i ? -1 : 1), y: Math.sin(e * Math.PI / 2) * v.half * 0.85 + Math.sin(k * Math.PI) * 0.25, z: -0.5 * e, pitch: -0.2 * Math.sin(k * Math.PI), legF: -0.5 * e, legH: 0.55 * e, legOut: 0.35 * e, armAll: -0.7 * e, armOut: 0.5 * e, wing: -0.7 * e, tent: -0.6 * e, tailUp: -0.3 * e, wag: 0, flap: 0, sy: 1 - 0.06 * e });
-      if (k >= 0.8 && !v.thud) { v.thud = true; fx.burst('dust', world(v, new THREE.Vector3(0, 0.1, -v.len * 0.5)), 26, { spread: v.len * 0.8 }); A.shake = Math.max(A.shake, 0.18); }
+      if (k >= 0.8 && !v.thud) { v.thud = true; play('thud'); fx.burst('dust', world(v, new THREE.Vector3(0, 0.1, -v.len * 0.5)), 26, { spread: v.len * 0.8 }); A.shake = Math.max(A.shake, 0.18); }
     } else if (A.phase === 'champion' || (A.phase === 'ending' && A.winner === i && A.phaseT > 0.5)) {   // celebrate
       const hop = Math.abs(Math.sin(t * 5.5));
       Object.assign(T, { y: T.y + hop * 0.22, sy: 1 + (hop - 0.5) * 0.08, armAll: -2.7, armOut: 0.35, wing: 0.7, flap: 0.5, tailUp: 0.5, wag: 3, pitch: -0.15, tent: -0.9, legF: -0.25 * hop });
@@ -425,7 +419,7 @@ export function createArena(env) {
     applyRig(rig, T, dt, v.pose);
     v.flash = Math.max(0, v.flash - dt * 5);
     const guard = f && f.guard > 0 ? 0.1 : 0, shell = f && f.buff.shell > 0 ? 0.12 : 0;
-    for (const m of [v.mats.skin, ...v.mats.shells]) m.emissive.setRGB(v.flash * 0.5 + guard * 0.2 + shell, guard * 0.6 + shell, guard + shell);
+    for (const m of v.glow) m.emissive.setRGB(v.flash * 0.5 + guard * 0.2 + shell, guard * 0.6 + shell, guard + shell);
     v.holder.updateMatrixWorld(true);
     // Lingering ailments show on the body.
     if (f && v.dead < 0 && A.phase === 'fight') {
@@ -453,7 +447,7 @@ export function createArena(env) {
     }
     if (ev.type === 'cast') {
       const me = A.views[ev.by], foe = A.views[1 - ev.by];
-      floater(ev.by, ev.name, 'cast'); sfx('miss');
+      floater(ev.by, ev.name, 'cast'); synth(ev.name === 'Roar' || ev.name === 'Frenzy' ? 'roar' : 'cast');
       me.style = 'roar'; me.strikeT = 0; me.power = false;
       const on = { 'Ink Cloud': ['ink', foe, 26], Web: ['web', foe, 40], 'Venom Spit': ['venom', foe, 26], Roar: ['magic', me, 14], 'Shell Up': ['shield', me, 22], Frenzy: ['fire', me, 22], Dive: ['dust', me, 18] }[ev.name] || ['magic', me, 16];
       fx.burst(on[0], world(on[1], on[1].mid), on[2], { spread: 0.9 });
@@ -461,7 +455,7 @@ export function createArena(env) {
       if (ev.name === 'Shell Up') fx.ring(world(me, new THREE.Vector3(0, 0.05, -me.len / 2)), 0x7fd0ff, 2);
       return;
     }
-    if (ev.type === 'heal') { floater(ev.on, ev.name, 'venom'); sfx('win'); fx.burst('heal', world(A.views[ev.on], A.views[ev.on].mid), 30, { spread: 1.1 }); return; }
+    if (ev.type === 'heal') { floater(ev.on, ev.name, 'venom'); synth('heal'); fx.burst('heal', world(A.views[ev.on], A.views[ev.on].mid), 30, { spread: 1.1 }); return; }
     const a = A.views[ev.by], d = A.views[1 - ev.by];
     if ((ev.by === 1 && ev.dmg > 0) || (ev.by === 0 && (ev.thorns || ev.riposte))) A.hurt = true;
     const q = A.run.sum;
@@ -469,7 +463,7 @@ export function createArena(env) {
     if (ev.name && ABILITY_STYLE[ev.name]) { const want = ABILITY_STYLE[ev.name]; a.style = (want === 'tail' && !a.rig.kinds.has('tail')) || (want === 'slash' && !a.rig.arms) || (want === 'lash' && !a.rig.kinds.has('tentacle')) ? 'lunge' : want; a.rig.armSel = -1; }
     a.strikeT = 0; a.power = !!ev.power || !!ev.ability;
     if (ev.name) floater(ev.by, ev.name, 'cast');
-    if (ev.miss) { floater(1 - ev.by, 'Miss', 'dim'); sfx('miss'); d.dodge = 0; fx.burst('dust', world(d, new THREE.Vector3(0, 0.05, -d.len * 0.4)), 8); return; }
+    if (ev.miss) { floater(1 - ev.by, 'Miss', 'dim'); play('whoosh', 0.8); d.dodge = 0; fx.burst('dust', world(d, new THREE.Vector3(0, 0.05, -d.len * 0.4)), 8); return; }
     const hard = ev.power || ev.crit || ev.ability, at = world(d, d.front);
     d.recoil = ev.blocked ? 0.3 : hard ? 1 : 0.6; if (!ev.blocked) d.flash = 1;
     A.shake = ev.blocked ? 0.05 : ev.power ? 0.3 : hard ? 0.2 : 0.1; A.cheer = Math.max(A.cheer, hard ? 1 : 0.4);
@@ -489,7 +483,7 @@ export function createArena(env) {
     if (ev.riposte) { floater(ev.by, 'Riposte -' + ev.riposte, 'dim'); a.recoil = 0.5; a.flash = 1; }
     const tag = ev.stun ? 'Stunned' : ev.venom ? 'Poisoned' : ev.burn ? 'Burning' : ev.bleed ? 'Bleeding' : '';
     if (tag) floater(1 - ev.by, tag, ev.venom ? 'venom' : ev.burn ? 'burn' : 'bleed');
-    sfx(ev.blocked ? 'block' : hard ? 'power' : 'hit');
+    if (ev.blocked) play('block', 0.9); else { play(hard ? 'heavy' : 'hit', hard ? 1 : 0.8); if (a.style === 'slash' || a.style === 'swipe' || a.style === 'sting') play('slash', 0.6); if (ev.burn || ev.name === 'Fire Breath') synth('fire'); }
   }
   A.update = (real, t) => {
     // Heavy hits freeze the action for an instant; a kill plays out in slow motion.
@@ -503,7 +497,7 @@ export function createArena(env) {
       let w = -1;
       for (let k = 0; k < 2 && w < 0; k++) { ai(A.F, 1, dt / 2, A.rand, skill, evs); if (A.auto) ai(A.F, 0, dt / 2, A.rand, 0.5, evs); w = step(A.F, dt / 2, A.rand, evs); }
       evs.forEach(onEvent); bars();
-      if (w >= 0) { A.phase = 'ending'; A.phaseT = 0; A.winner = w; A.views[1 - w].dead = 0; A.cheer = 3; A.slow = 0.9; A.punch = 0.14; message('K.O.', ''); if (w === 0) sfx('win'); }
+      if (w >= 0) { A.phase = 'ending'; A.phaseT = 0; A.winner = w; A.views[1 - w].dead = 0; A.cheer = 3; A.slow = 0.9; A.punch = 0.14; message('K.O.', ''); synth('crowd'); if (w === 0) synth('level'); }
     }
     if (A.phase === 'ending' && A.phaseT > 2.1) { if (A.winner === 0) wonFight(); else died(); }
     for (let i = 0; i < 2; i++) if (A.views[i]) animate(A.views[i], i, dt, A.t);
@@ -511,8 +505,9 @@ export function createArena(env) {
     // Crowd bounce, camera sway and shake.
     A.cheer = Math.max(0, A.cheer - dt * 0.8);
     const amp = 0.03 + 0.14 * Math.min(A.cheer, 1);
-    S.seats.forEach((s, i) => { S.m4.makeTranslation(s.x, s.y + Math.abs(Math.sin(t * 6 * (1 + (i % 5) * 0.2) + s.ph)) * amp, s.z); S.crowd.setMatrixAt(i, S.m4); });
-    S.crowd.instanceMatrix.needsUpdate = true;
+    A.tick = (A.tick || 0) + 1;
+    if (A.tick % 2 === 0) S.seats.forEach((s, i) => { S.m4.makeTranslation(s.x, s.y + Math.abs(Math.sin(t * 6 * (1 + (i % 5) * 0.2) + s.ph)) * amp, s.z); S.crowd.setMatrixAt(i, S.m4); });
+    if (A.tick % 2 === 0) S.crowd.instanceMatrix.needsUpdate = true;
     if (A.confetti) {
       A.confetti.bits.forEach((b, i) => { b.y -= b.v * dt; if (b.y < 0) b.y = 8; S.m4.makeRotationFromEuler(new THREE.Euler(b.r + A.t * b.w, b.r * 2 + A.t * b.w * 0.7, 0)).setPosition(b.x + Math.sin(A.t + b.r) * 0.3, b.y, b.z); A.confetti.mesh.setMatrixAt(i, S.m4); });
       A.confetti.mesh.instanceMatrix.needsUpdate = true;
@@ -532,7 +527,7 @@ export function createArena(env) {
     A.run = run || { id: data.id, round: 0, hp: null, level: Math.min(env.meta().levelSel || 0, env.meta().level || 0), endless: !!(env.meta().endlessSel && env.meta().champions), seed: Math.floor(Math.random() * 1e9), load: newLoad(), bonusHp: 0, earned: 0, rerolls: env.meta().boosts.reroll || 0, draft: null };
     if (!A.run.load) A.run.load = newLoad();
     A.eLoad = null; A.queue = [];
-    keepBg = scene.background; scene.background = S.sky; S.g.visible = true;
+    keepBg = scene.background; scene.background = S.sky; S.g.visible = true; music('battle');
     el.classList.remove('hidden');
     A.views[0] = makeView(data, env.M, -1, A.run.load);
     // Coming back after the app was closed. A death stays a death; walking out mid-fight is forgiven once.

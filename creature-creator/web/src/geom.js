@@ -9,6 +9,10 @@ export const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 export const lerp = (a, b, t) => a + (b - a) * t;
 const X = v(1, 0, 0), Y = v(0, 1, 0), Z = v(0, 0, 1);
 
+let DETAIL = 1;
+/** Mesh detail for everything built from now on: 1 = full (the editor), lower = lighter. */
+export const setDetail = (k) => { DETAIL = k; };
+
 export function rng(seed) {
   let s = (seed | 0) + 0x6d2b79f5;
   return () => {
@@ -37,7 +41,8 @@ function sampleScalar(arr, u) {
  *       side (direction that rx is measured along), ridges (ring bumps), frames (keep lookup data)
  */
 export function tube(nodes, o = {}) {
-  const radial = o.radial ?? 14, sub = o.sub ?? 6, capRings = o.capRings ?? 4;
+  // DETAIL thins the mesh for models seen small (the arena): fewer sides and fewer samples along the path.
+  const radial = Math.max(5, Math.round((o.radial ?? 14) * DETAIL)), sub = Math.max(2, Math.round((o.sub ?? 6) * (DETAIL < 1 ? 0.7 : 1))), capRings = DETAIL < 1 ? Math.min(o.capRings ?? 4, 3) : o.capRings ?? 4;
   const capS = o.capStart ?? 1, capE = o.capEnd ?? 1;
   const n = nodes.length;
   const curve = new THREE.CatmullRomCurve3(nodes.map((q) => q.p), false, 'centripetal');
@@ -145,7 +150,8 @@ export function T(spec, o) {
 }
 
 export function ball(r, sx = 1, sy = 1, sz = 1, x = 0, y = 0, z = 0, seg = 14) {
-  const g = new THREE.SphereGeometry(r, seg, Math.max(8, Math.round(seg * 0.7)));
+  seg = Math.max(6, Math.round(seg * DETAIL));
+  const g = new THREE.SphereGeometry(r, seg, Math.max(5, Math.round(seg * 0.7)));
   g.scale(sx, sy, sz); g.translate(x, y, z);
   return g;
 }

@@ -8,8 +8,9 @@ import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
 import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, LEVELS } from './items.js';
 import { showAd } from './ads.js';
+import { play, synth, music, setAudio, audioOn, audioStats } from './audio.js';
 import { randomCreature } from './random.js';
-import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp } from './creature.js';
+import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp, setShellStep, applyShellStep } from './creature.js';
 
 const $ = (id) => document.getElementById(id);
 function h(tag, props, ...kids) {
@@ -168,10 +169,17 @@ function creatureThumb(d) {
   if (keep) { keep.group.visible = true; applyLook(M, data.look, TEMPLATES[data.type].bellyDir); }
   return url;
 }
+// Thumbnails never change between launches, so they are kept on the device instead of being re-rendered.
+const THUMB_VER = 'cc.thumbs.5';
+const thumbCache = store.get(THUMB_VER, {});
+let thumbDirty = false;
+function keepThumb(key, url) { thumbCache[key] = url; if (!thumbDirty) { thumbDirty = true; setTimeout(() => { thumbDirty = false; store.set(THUMB_VER, thumbCache); }, 1500); } return url; }
+for (const k of Object.keys(localStorage)) if (k.startsWith('cc.thumbs.') && k !== THUMB_VER) localStorage.removeItem(k);
 const partThumbs = {};
 const THUMB_LOOK = { base: '#9fb6b0', second: '#5c7a76', belly: '#c9d8d2', bellyAmt: 0.5, pattern: 0, patScale: 1, cover: 'skin', furLen: 0, furDroop: 0, accent: '#efe6cf', hair: '#d98a3a', membrane: '#d99a8a', eye: '#3f9f6a' };
 function partThumb(kind) {
   if (partThumbs[kind]) return partThumbs[kind];
+  if (thumbCache['p:' + kind]) return (partThumbs[kind] = thumbCache['p:' + kind]);
   const def = PARTS[kind];
   const d = { type: 'quadruped', sex: 'f', dimorph: 0, bulk: 1, stretch: 1, look: THUMB_LOOK, parts: [], nodes: [{ y: 0, z: -0.25, rx: 0.3, ry: 0.3 }, { y: 0, z: 0.25, rx: 0.3, ry: 0.3 }] };
   const where = { limbs: [0.5, 1.9], wings: [0.5, 0.9], tails: [-0.9, 0], back: [0.5, 0], mouth: [1.9, Math.PI], eyes: [1.3, 1.0] }[def.cat] || [0.6, 0.6];
@@ -186,11 +194,11 @@ function partThumb(kind) {
   const bg = scene.background; scene.background = new THREE.Color(0x16282b);
   const box = new THREE.Box3().setFromObject(def.ridge ? tmp.group : g);
   const dir = { mouth: [1, 0.3, 0.8], eyes: [0.6, 0.2, 1], tails: [1, 0.3, -0.3], limbs: [1, 0.15, 0.7] }[def.cat] || [1, 0.4, 0.8];
-  const url = snapshot(112, 112, box, new THREE.Vector3(...dir), 'image/png');
+  const url = snapshot(112, 112, box, new THREE.Vector3(...dir), 'image/jpeg');
   scene.background = bg; pad.visible = shadow.visible = pv;
   stage.remove(tmp.group); disposeTree(tmp.group);
   if (keep) { keep.group.visible = true; applyLook(M, data.look, TEMPLATES[data.type].bellyDir); }
-  return (partThumbs[kind] = url);
+  return (partThumbs[kind] = keepThumb('p:' + kind, url));
 }
 
 // ------------------------------------------------------------------ layout + render loop
@@ -218,7 +226,7 @@ function frame(t) {
   requestAnimationFrame(frame);
   const dt = Math.min((t - last) / 1000, 0.1); last = t;
   if (window.__ccPause) return;               // test hook: lets a script drive frames by hand
-  if (arena.active) { arena.update(dt, t / 1000); renderer.render(scene, camera); return; }
+  if (arena.active) { arena.update(dt, t / 1000); renderer.render(scene, camera); watchFrame(t); return; }
   if (!inEditor || !cr) return;
   controls.orbit.autoRotate = spin; controls.orbit.update(dt);
   if (pendingRebuild) { pendingRebuild = false; rebuild(); }
@@ -230,6 +238,31 @@ function frame(t) {
   handles.children.forEach((m) => m.scale.setScalar(s * (m.userData.node === nodeSel ? 1.5 : 1.1)));
   marker.scale.setScalar(s * 1.7); marker.quaternion.copy(camera.quaternion);
   renderer.render(scene, camera);
+  watchFrame(t);
+}
+
+// ------------------------------------------------------------------ automatic quality
+// Phones differ hugely. If frames come slowly, sharpness and fur density step down; if there is
+// plenty of headroom they step back up. The level found is remembered for next time.
+const GFX = [{ pr: 2, step: 1 }, { pr: 1.5, step: 1 }, { pr: 1.5, step: 2 }, { pr: 1.2, step: 2 }, { pr: 1, step: 3 }];
+let gfx = 0, lastDraw = 0, slowN = 0, fastN = 0, gfxLock = 0, downLock = 0;
+function setGfx(level, remember) {
+  gfx = Math.max(0, Math.min(GFX.length - 1, level));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, GFX[gfx].pr));
+  setShellStep(GFX[gfx].step);
+  if (cr) applyShellStep(cr, GFX[gfx].step);
+  for (const v of arena.views) if (v) applyShellStep(v.cr, Math.max(2, GFX[gfx].step));
+  layout();
+  if (remember) { meta.gfx = gfx; saveMeta(); }
+}
+function watchFrame(t) {
+  const ms = t - lastDraw; lastDraw = t;
+  if (ms > 600 || ms <= 0) return;                  // not back-to-back frames (idle, or a one-off hitch)
+  slowN = ms > 25 ? slowN + 1 : Math.max(0, slowN - 2);
+  fastN = ms < 13 ? fastN + 1 : 0;
+  if (ms > 80) slowN += 4;                          // very slow frames count for more, so a struggling phone is helped quickly
+  if (slowN > 45 && gfx < GFX.length - 1 && t > downLock) { slowN = 0; fastN = 0; downLock = t + 4000; gfxLock = t + 30000; setGfx(gfx + 1, true); }
+  else if (fastN > 900 && gfx > 0 && t > gfxLock) { fastN = 0; gfxLock = t + 60000; setGfx(gfx - 1, true); }
 }
 let pendingRebuild = false, dirty = true;
 const touch = () => { dirty = true; };
@@ -414,7 +447,7 @@ function renderLeft() {
   el.append(h('h3', null, CATS.find((c) => c[0] === tab)[1]), h('p', { class: 'note' }, 'Tap to add. Then tap the part on your creature and drag it where you want it.'));
   const grid = h('div', { class: 'grid' });
   for (const [kind, def] of Object.entries(PARTS)) if (def.cat === tab) {
-    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { if (tooMany()) return; const p = addPart(data, kind, cr.frames); rebuild(); commit(); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
+    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { if (tooMany()) return; const p = addPart(data, kind, cr.frames); rebuild(); commit(); play('place'); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
     else grid.append(h('button', { class: 'tile locked', onclick: () => buy('part:' + kind, PART_COST[kind], def.n, renderLeft) }, h('img', { src: partThumb(kind), alt: '' }), def.n, h('small', null, 'Locked · ' + PART_COST[kind])));
   }
   el.append(grid);
@@ -450,7 +483,7 @@ function inspector(el, part) {
   el.append(h('h4', null, 'Shown on'), chips([[null, 'Both'], ['f', 'Female only'], ['m', 'Male only']], part.sexOnly, (x) => { part.sexOnly = x; live(); done(); renderRight(); }),
     h('div', { class: 'row', style: 'margin-top:10px' },
       h('button', { onclick: () => { if (tooMany()) return; const c = JSON.parse(JSON.stringify(part)); c.id = 'p' + Date.now().toString(36); c.u = clamp(c.u - 0.08, -0.9, 1.9); data.parts.push(c); rebuild(); commit(); select(c.id); } }, 'Copy'),
-      h('button', { class: 'warn', onclick: () => { data.parts = data.parts.filter((p) => p.id !== part.id); sel = null; rebuild(); commit(); renderUI(); } }, 'Delete')),
+      h('button', { class: 'warn', onclick: () => { data.parts = data.parts.filter((p) => p.id !== part.id); play('drop'); sel = null; rebuild(); commit(); renderUI(); } }, 'Delete')),
     h('div', { class: 'row' }, h('button', { onclick: () => select(null) }, 'Done')));
 }
 function renderTop() {
@@ -500,9 +533,9 @@ if (meta.rank !== undefined) {          // older saves used numbered ranks; map 
 }
 const saveMeta = () => store.set('cc.meta', meta);
 function buy(key, cost, label, then) {
-  if (meta.points < cost) { toast('Not enough points: ' + label + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
+  if (meta.points < cost) { play('error'); toast('Not enough points: ' + label + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
   if (!confirm('Unlock ' + label + ' for ' + cost + ' points?')) return;
-  meta.points -= cost; meta.unlocked[key] = true; saveMeta(); toast('Unlocked ' + label); then && then();
+  meta.points -= cost; meta.unlocked[key] = true; saveMeta(); play('latch'); play('confirm'); toast('Unlocked ' + label); then && then();
 }
 /** Counters behind the goals: add to one, or (best = true) keep the highest value seen. */
 function stat(k, val = 1, best) { meta.stats[k] = best ? Math.max(meta.stats[k] || 0, val) : (meta.stats[k] || 0) + val; saveMeta(); }
@@ -518,7 +551,7 @@ function crown(pts, run) {
   const list = store.get('cc.saved', []), e = list.find((c) => c.id === data.id);
   if (e) { e.data = JSON.parse(JSON.stringify(data)); e.name = data.name; store.set('cc.saved', list); }
 }
-const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, stat, crown, bonus: (pts) => { meta.points += pts; saveMeta(); }, onDone: battleDone, meta: () => meta, saveMeta });
+const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, gfx: () => GFX[gfx], stat, crown, bonus: (pts) => { meta.points += pts; saveMeta(); }, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
   const other = store.get('cc.run', null);
   if (other && other.id !== data.id && !(run && run.id === data.id) && !confirm('Another creature is still in the middle of a gauntlet. Starting this one abandons that run. Go ahead?')) return;
@@ -549,7 +582,7 @@ function battleDone(res) {
     store.set('cc.saved', store.get('cc.saved', []).filter((c) => c.id !== data.id));
     store.set('cc.current', null);
     if (cr) { stage.remove(cr.group); disposeTree(cr.group); cr = null; }
-    data = null; inEditor = false;
+    data = null; inEditor = false; music('menu');
     $('start').classList.remove('hidden'); renderStart(); layout();
     return;
   }
@@ -558,6 +591,7 @@ function battleDone(res) {
   inEditor = true; $('editor').classList.remove('hidden');
   rebuild(); if (res.type === 'champion') save(true);
   renderUI(); fitCamera();
+  music('menu');
   if (res.type === 'champion') { toast(data.name + ' is champion! +' + res.points + ' points'); askForReview(); }
   if (res.type === 'retired') { toast(data.name + ' won ' + res.wins + ' fights in the pit'); if (res.wins >= 10) askForReview(); }
 }
@@ -591,6 +625,8 @@ function goHome() {
   renderStart();
 }
 const typeThumbs = {};
+// Body-type pictures are pre-rendered files (assets/www/thumbs), so the first launch does not have to draw them.
+const typeThumb = (id) => 'thumbs/' + id + '.jpg';
 function tickRunPill() {
   const el = $('runpill'); if (!el) return;
   const r = runsNow(meta);
@@ -608,7 +644,7 @@ function renderShop() {
     const [have, need] = g.prog(meta), done = have >= need, claimed = !!meta.goals[g.id];
     return h('div', { class: 'shoprow' + (claimed ? ' owned' : '') }, h('div', { class: 'ico' }, claimed ? '✅' : done ? '🏅' : '🎯'),
       h('div', { class: 'what' }, h('b', null, g.name), h('small', null, g.text), h('div', { class: 'bar' }, h('i', { style: 'width:' + Math.min(100, have / need * 100) + '%' })), h('small', null, Math.min(have, need) + ' / ' + need)),
-      claimed ? h('span', { class: 'have' }, 'Claimed') : h('button', { class: done ? 'go' : '', disabled: !done, onclick: () => { meta.goals[g.id] = 1; meta.points += g.pts; saveMeta(); toast(g.name + ': +' + g.pts + ' points'); renderStart(); } }, (done ? 'Claim ' : '') + g.pts + ' pts'));
+      claimed ? h('span', { class: 'have' }, 'Claimed') : h('button', { class: done ? 'go' : '', disabled: !done, onclick: () => { meta.goals[g.id] = 1; meta.points += g.pts; saveMeta(); play('coins'); synth('level'); toast(g.name + ': +' + g.pts + ' points'); renderStart(); } }, (done ? 'Claim ' : '') + g.pts + ' pts'));
   };
   const rec = (k, val) => h('div', { class: 'shoprow' }, h('div', { class: 'what' }, h('small', null, k), h('b', null, String(val))));
   const tabs = {
@@ -649,25 +685,38 @@ function renderStart() {
       h('small', null, '1. Pick a body below and build a critter: drag the dots to shape it, add parts, colour it.'), h('small', null, '2. Hit Battle to enter the Colosseum: ten fights to the death, with a reward to choose after each win.'),
       h('small', null, '3. How you build it matters: size is health, teeth and claws are attack, arms hold weapons. Spend the points you earn in the Shop.'),
       h('button', { onclick: (e) => { e.stopPropagation(); meta.seenIntro = 1; saveMeta(); renderStart(); } }, 'Got it')),
-    gift && h('div', { class: 'card resume gift', onclick: () => { const g = claimDaily(meta); saveMeta(); if (g) toast('Daily gift: +' + g.points + ' points' + (g.revive ? ' and a revive' : '')); renderStart(); } }, h('b', null, '🎁 Daily gift: +' + gift.points + ' points' + (gift.revive ? ' and a revive' : '')), h('small', null, 'Day ' + gift.streak + ' in a row. Come back tomorrow for more; every seventh day adds a revive. Tap to collect.')),
+    gift && h('div', { class: 'card resume gift', onclick: () => { const g = claimDaily(meta); saveMeta(); play('coins'); if (g) toast('Daily gift: +' + g.points + ' points' + (g.revive ? ' and a revive' : '')); renderStart(); } }, h('b', null, '🎁 Daily gift: +' + gift.points + ' points' + (gift.revive ? ' and a revive' : '')), h('small', null, 'Day ' + gift.streak + ' in a row. Come back tomorrow for more; every seventh day adds a revive. Tap to collect.')),
     h('h2', null, 'Start from a body type'),
     h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => { const open_ = Object.keys(TEMPLATES).filter((t) => typeOpen(meta, t)); open(randomCreature(Math.random, { type: open_[Math.floor(Math.random() * open_.length)] })); } }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
       Object.entries(TEMPLATES).map(([id, t]) =>
       typeOpen(meta, id)
-        ? h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, t.blurb))
-        : h('div', { class: 'card locked', onclick: () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, 'Locked · ' + TYPE_COST[id] + ' points'))))].filter(Boolean));
+        ? h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumb(id), alt: '' }), h('b', null, t.name), h('small', null, t.blurb))
+        : h('div', { class: 'card locked', onclick: () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart) }, h('img', { src: typeThumb(id), alt: '' }), h('b', null, t.name), h('small', null, 'Locked · ' + TYPE_COST[id] + ' points'))))].filter(Boolean));
   tickRunPill();
   if (cur || saved.length) el.append(h('h2', null, 'Your creatures'),
     h('div', { class: 'cards' },
       cur && h('div', { class: 'card', onclick: () => open(cur) }, h('img', { src: creatureThumb(cur), alt: '' }), h('b', null, 'Continue'), h('small', null, cur.name)),
       saved.map((c) => h('div', { class: 'card', onclick: () => open(JSON.parse(JSON.stringify(c.data))) }, h('img', { src: c.thumb, alt: '' }), h('b', null, c.name), h('small', null, TEMPLATES[c.data.type].name + (c.data.champion ? ' · Champion' + (c.data.champion > 1 ? ' x' + c.data.champion : '') : '')),
         h('button', { class: 'del warn', onclick: (e) => { e.stopPropagation(); if (confirm('Delete "' + c.name + '"?')) { store.set('cc.saved', store.get('cc.saved', []).filter((x) => x.id !== c.id)); renderStart(); } } }, '×')))));
+  const au = audioOn(), flip = (k) => { meta.audio = { ...audioOn(), [k]: !audioOn()[k] }; saveMeta(); setAudio(meta.audio); renderStart(); };
+  el.append(h('div', { class: 'settings' }, h('button', { class: au.music ? 'on' : '', onclick: () => flip('music') }, '🎵 Music ' + (au.music ? 'on' : 'off')), h('button', { class: au.sfx ? 'on' : '', onclick: () => flip('sfx') }, '🔊 Sound ' + (au.sfx ? 'on' : 'off'))));
 }
 
+// Every button makes a small sound; a few kinds get their own.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button, .card'); if (!b || b.disabled || b.closest('#battle .acts')) return;
+  if (b.closest('#tabs') || b.closest('.chips')) play('switch', 0.6);
+  else if (b.classList.contains('card') || b.classList.contains('tile')) play('select', 0.7);
+  else if (b.classList.contains('warn')) play('back', 0.7);
+  else play('click', 0.6);
+}, true);
 controls.orbit = new OrbitControls(camera, canvas);
 Object.assign(controls.orbit, { enableDamping: true, dampingFactor: 0.12, enablePan: false, autoRotateSpeed: 2.2, rotateSpeed: 0.9, maxPolarAngle: Math.PI * 0.62, minPolarAngle: 0.15 });
 controls.orbit.addEventListener('change', touch);
+if (meta.gfx) setGfx(meta.gfx);
+if (meta.audio) setAudio(meta.audio);
+music('menu');
 layout();
 renderStart();
 requestAnimationFrame(frame);
-window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, get meta() { return meta; }, saveMeta, renderStart, runsNow, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
+window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, setGfx, get gfx() { return gfx; }, get meta() { return meta; }, saveMeta, renderStart, runsNow, audioStats, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };

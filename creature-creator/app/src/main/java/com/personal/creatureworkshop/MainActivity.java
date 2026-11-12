@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);          // saved creatures live in localStorage
         s.setAllowFileAccess(true);
         s.setSupportZoom(false);
+        s.setMediaPlaybackRequiresUserGesture(false);   // lets the music start without waiting for a tap
         s.setTextZoom(100);
         web.setWebChromeClient(new WebChromeClient());   // lets confirm() dialogs show
         web.addJavascriptInterface(new Bridge(), "Android");
@@ -174,6 +175,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        web.evaluateJavascript("window.ccPause && window.ccPause(true)", null);     // silence music and effects in the background
         web.onPause();
         web.pauseTimers();
     }
@@ -183,6 +185,7 @@ public class MainActivity extends Activity {
         super.onResume();
         web.resumeTimers();
         web.onResume();
+        web.evaluateJavascript("window.ccPause && window.ccPause(false)", null);
     }
 
     @Override

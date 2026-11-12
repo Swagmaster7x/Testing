@@ -95,7 +95,7 @@ export function makeMaterials() {
             normal = normalize(abs(det) * normal - grad * uBump); }
           #endif`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-          totalEmissiveRadiance += diffuseColor.rgb * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0) * 0.4;`);
+          totalEmissiveRadiance += diffuseColor.rgb * pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.5) * 0.2;`);
     };
     return m;
   };

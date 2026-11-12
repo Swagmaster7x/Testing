@@ -216,6 +216,14 @@ export function rebuildShells(cr, skipId) {
     m.raycast = () => {};
     cr.shells.add(m);
   }
+  applyShellStep(cr, cr.shellStep || SHELL_STEP);
+}
+let SHELL_STEP = 1;
+/** Fur is drawn as stacked layers; step 2 draws every second layer, step 3 every third: lighter, slightly sparser. */
+export function setShellStep(n) { SHELL_STEP = n; }
+export function applyShellStep(cr, step) {
+  cr.shellStep = step;
+  cr.shells.children.forEach((m, i) => { m.visible = (i + 1) % step === 0 || i === SHELLS - 1; });
 }
 
 export function disposeTree(o) {

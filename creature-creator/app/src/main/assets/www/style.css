@@ -238,3 +238,6 @@ button.ad, .panel button.ad { background: linear-gradient(#7a52e0, #4a2aa8); bor
 .card.intro b { color: var(--ink); }
 .card.intro small { display: block; color: #cfe6e2; margin: 2px 0; }
 .card.intro button { margin-top: 6px; }
+
+.settings { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.settings button { font-size: 12.5px; min-height: 30px; padding: 3px 12px; }
