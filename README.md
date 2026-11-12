@@ -14,12 +14,21 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26)
 - **Shopping across sides.** "Just mine" or "Both of us" on the shopping list (Ashley's lunches and dinners count as about three-quarters of a serving), "Add to the other side too" on a planned meal, and a meal plan can be exported on one phone and imported on the other (there is no sync).
 - **Exercise demos.** Each exercise shows a start photo; tapping it opens the start and end positions flipping like a GIF, with written steps. Photos and steps come from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain), bundled with `tools/exercise_demos.py` after reviewing `tools/exercise-match-report.md`. Three moves without a good photo get form cues instead, and every demo has a "Watch a demo" button that opens a web search in the phone's browser.
 
+## Two editions
+
+The project builds two apps from the same code (Gradle product flavors):
+
+- **personal**: the app on Swag's and Ashley's phones. Package `com.personal.mealgym`, fully offline, sideloaded. Everything above and below describes it.
+- **store**: the Google Play version. Anyone sets up their own people on first launch (name, look, starter workout plan, training days, snack slot, portion size, recipe-tip style), there's no personal content, exercises get written form cues instead of photos, and it shows AdMob banners (after Google's consent prompt where the law requires it) with a one-time "Remove ads" purchase. It has its own package name, so it installs alongside the personal app and never touches its data.
+
+Everything needed to publish the store edition is in [store-kit/](store-kit/README.md): a launch checklist, listing text, Data safety answers, a privacy policy and the store graphics. `tools/store_seed.py` builds the store's `seed.json` from the personal one, and `tools/form_cues.py` writes its exercise cues.
+
 ## Put it on your phone
 
-You need `app-debug.apk`, either the one from the Claude session or one you build (below).
+You need `app-personal-debug.apk`, either the one from the Claude session or one you build (below).
 
 - **With a cable:** turn on Developer options and USB debugging on the phone, plug it in, then run
-  `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+  `adb install -r app/build/outputs/apk/personal/debug/app-personal-debug.apk`
 - **Without a cable:** send the APK to yourself (Google Drive, email), open it on the phone, and allow "Install unknown apps" for the app you opened it from when Android asks.
 
 Android may show a Play Protect warning for an app it hasn't seen before. That's expected for a personal build.
@@ -30,13 +39,16 @@ Android may show a Play Protect warning for an app it hasn't seen before. That's
 
 1. Install a JDK (17 or newer) and the Android SDK (Android Studio, or just the command-line tools). The build needs SDK platform 37; Gradle downloads the rest itself.
 2. Point the build at the SDK: set `ANDROID_HOME`, or put `sdk.dir=/path/to/Android/sdk` in `local.properties`.
-3. Run `./gradlew assembleDebug` (on Windows, `gradlew.bat assembleDebug`).
-4. The APK is at `app/build/outputs/apk/debug/app-debug.apk`.
+3. Run `./gradlew assemblePersonalDebug` (on Windows, `gradlew.bat assemblePersonalDebug`).
+4. The APK is at `app/build/outputs/apk/personal/debug/app-personal-debug.apk`.
+
+`./gradlew assembleStoreDebug` builds the store edition for a look (Google's test ads, no purchase). The Play upload is `./gradlew bundleStoreRelease`; see [store-kit/launch-checklist.md](store-kit/launch-checklist.md) for the signing key and settings it needs.
 
 ## Tests
 
-- `./gradlew testDebugUnitTest` runs everything: the shopping-list roll-up, "which workout is today", quantity parsing, the seed file, repository and backup tests on a real Room database, and a smoke test that opens every main screen.
-- `./gradlew recordRoborazziDebug` also saves screenshots of those screens to `app/build/outputs/roborazzi/`.
+- `./gradlew testPersonalDebugUnitTest` runs the personal edition's tests: the shopping-list roll-up, "which workout is today", quantity parsing, the seed file, database upgrades from versions 1 and 2, repository and backup tests on a real Room database, and a smoke test that opens every main screen.
+- `./gradlew testStoreDebugUnitTest` runs the store edition's: its seed and form cues, first-launch setup, People in Settings, and where banners may appear.
+- `./gradlew recordRoborazziPersonalDebug` (or `…StoreDebug`) also saves screenshots to `app/build/outputs/roborazzi/`.
 
 ## How it works
 
