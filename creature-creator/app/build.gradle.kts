@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
 }
@@ -25,8 +27,34 @@ android {
         }
     }
 
+    // Release builds for Google Play are signed with your own upload key, which is NOT kept in this repo.
+    // Put its details in keystore.properties next to this file (see README) and run ./gradlew bundleRelease.
+    val keyProps = Properties().apply {
+        val f = rootProject.file("keystore.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    if (keyProps.containsKey("storeFile")) {
+        signingConfigs.create("release") {
+            storeFile = rootProject.file(keyProps.getProperty("storeFile"))
+            storePassword = keyProps.getProperty("storePassword")
+            keyAlias = keyProps.getProperty("keyAlias")
+            keyPassword = keyProps.getProperty("keyPassword")
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfigs.findByName("release")?.let { signingConfig = it }
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+dependencies {
+    implementation("com.google.android.gms:play-services-ads:25.5.0")           // rewarded ads (AdMob)
+    implementation("com.google.android.ump:user-messaging-platform:4.0.0")     // the consent prompt Google requires in Europe
 }

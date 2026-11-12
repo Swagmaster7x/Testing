@@ -49,7 +49,7 @@ const FRAG_PATTERN = /* glsl */`
   col = mix(col, uBellyCol, bel);
   if (uTex == 1) { vec3 w = vor(vWPos*uTexScale); float e = smoothstep(0.0, 0.16, w.y-w.x); col *= mix(0.6, 1.0, e) * (0.9 + 0.2*w.z); ccH = e * 0.012 + w.z * 0.004; }
   else if (uTex == 2) { float k = fbm(vWPos*30.0); col *= 0.92 + 0.16*k; ccH = k * 0.004; }
-  else if (uShell == 0.0 && uFurLen == 0.0) { float k = fbm(vWPos*60.0); col *= 0.97 + 0.06*k; ccH = k * 0.0007 + vn(vWPos*220.0) * 0.00035; }
+  else if (uShell == 0.0 && uFurLen == 0.0) { float k = fbm(vWPos*60.0); col *= 0.97 + 0.06*k; ccH = k * 0.0003 + vn(vWPos*220.0) * 0.00018; }
   if (uShell > 0.0) col *= furShade; else if (uFurLen > 0.0) col *= 0.75;
   diffuseColor.rgb = col;
 }
@@ -113,6 +113,7 @@ export function makeMaterials() {
     tongue: std({ color: 0xd96a7c, roughness: 0.4 }),
     dark: std({ color: 0x1b1718, roughness: 0.25 }),
     lip: std({ roughness: 0.35 }),
+    cloth: std({ roughness: 0.9, side: THREE.DoubleSide }),
     glint: new THREE.MeshBasicMaterial({ color: 0xffffff }),
     lash: std({ color: 0x151012, roughness: 0.6 }),
     eyeCache: new Map(),
@@ -142,6 +143,7 @@ export function applyLook(M, look, bellyDir) {
   M.hair.color.set(look.hair);
   M.membrane.color.set(look.membrane);
   M.glass.color.set(look.membrane);
+  M.cloth.color.set(look.cloth || '#6b4a2e');
   M.lip.color.set(look.base).lerp(new THREE.Color(0xb8405e), 0.6);
 }
 

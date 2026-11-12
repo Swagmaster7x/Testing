@@ -4,7 +4,7 @@ import { buildCreature, disposeTree, bounds } from './creature.js';
 import { makeMaterials, applyLook } from './materials.js';
 import { TEMPLATES } from './templates.js';
 import { statsOf, traits, makeFighter, step, usePower, useGuard, useAbility, ai, oppMul, championPoints, ABILITY_CD, ROUNDS, HEAL } from './battle.js';
-import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY } from './items.js';
+import { item, draft, take, describe, newLoad, loadMods, enemyLoad, handsUsed, fightPoints, RARITY, runsNow, spendRun, addRun, clock } from './items.js';
 import { randomCreature } from './random.js';
 import { rng } from './geom.js';
 import { makeRig, applyRig, strikePose, zero, resetBones, STRIKE_LEN, STYLES } from './anim.js';
@@ -197,9 +197,21 @@ export function createArena(env) {
       h('div', { class: 'stats' }, h('div', null, h('small', null, 'Weapon hands'), h('b', null, String(s.slots))), h('div', null, h('small', null, 'Ability slots'), h('b', null, String(s.abilitySlots))), h('div', null, h('small', null, 'Revives'), h('b', null, String(meta.revives || 0)))),
       h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle can hold one weapon.' : 'With no hands it can carry a single weapon in its jaws. Add arms or tentacles to wield more.', ' Wings, tails, horns, venom and the rest decide which abilities and relics can turn up.'),
       h('p', { class: 'warn' }, 'Fights are to the death. If ' + A.data.name + ' dies with no revive, it is gone for good.'),
+      h('p', { class: 'runs', id: 'gruns' }),
       h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
-        h('button', { class: 'go', onclick: () => { sfx('block'); if ((meta.boosts.head || 0) > 0) reward('A gift from the crowd', 'Choose a reward before the first fight.'); else nextFight(); } }, 'Enter the arena')));
+        h('button', { class: 'ad', id: 'gad', onclick: async () => { const r = await env.showAd(); if (r.ok) { addRun(meta); env.saveMeta(); tickRuns(); } else if (r.why) env.toast(r.why); } }, '📺 Watch an ad: +1 run'),
+        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); sfx('block'); if ((meta.boosts.head || 0) > 0) reward('A gift from the crowd', 'Choose a reward before the first fight.'); else nextFight(); } }, 'Enter the arena')));
+    tickRuns();
   }
+  /** Keeps the "runs left" line on the gate current while the clock ticks. */
+  function tickRuns() {
+    const line = document.getElementById('gruns'); if (!line) return;
+    const r = runsNow(env.meta());
+    line.textContent = '⚡ Runs: ' + r.n + ' / ' + r.max + (r.next ? ' · next in ' + clock(r.next) : '') + (r.n ? '. Entering uses one.' : '. None left: wait, or watch an ad.');
+    document.getElementById('ggo').disabled = r.n <= 0;
+    document.getElementById('gad').classList.toggle('hidden', r.n >= r.max);
+  }
+  setInterval(() => { if (A.phase === 'gate') tickRuns(); }, 1000);
   /** The three-card reward screen. */
   function reward(title, sub) {
     A.phase = 'won';
@@ -219,6 +231,12 @@ export function createArena(env) {
       h('div', { class: 'rewards' }, A.run.draft.length ? A.run.draft.map(card) : h('p', { class: 'dim' }, 'Nothing more fits this body.')),
       h('p', { class: 'dim' }, 'Hands ' + handsUsed(load) + '/' + s.slots + ' · Abilities ' + load.abilities.length + '/' + s.abilitySlots + ' · Relics ' + load.relics.length + (icons(load) ? '   ' + icons(load) : '')),
       h('div', { class: 'row' },
+        A.run.lastPts > 0 && h('button', { class: 'ad', onclick: async (e) => {
+          const r = await env.showAd();
+          if (!r.ok) { if (r.why) env.toast(r.why); return; }
+          const m = env.meta(); m.points += A.run.lastPts; A.run.earned += A.run.lastPts; env.saveMeta();
+          env.toast('Doubled: +' + A.run.lastPts + ' points'); A.run.lastPts = 0; store.set('cc.run', A.run); e.target.remove();
+        } }, '📺 Watch an ad: double the ' + A.run.lastPts + ' points'),
         A.run.rerolls > 0 && h('button', { onclick: () => { A.run.rerolls--; A.run.draft = null; reward(title, sub); } }, 'Reroll (' + A.run.rerolls + ' left)'),
         !A.run.draft.length && h('button', { class: 'go', onclick: () => { A.run.draft = null; nextFight(); } }, 'Next fight')));
     p.classList.add('wide');
@@ -258,7 +276,7 @@ export function createArena(env) {
   }
   function wonFight() {
     const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round);
-    meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; env.saveMeta();
+    meta.points += pts; A.run.earned = (A.run.earned || 0) + pts; A.run.lastPts = pts; env.saveMeta();
     A.run.bonusHp = (A.run.bonusHp || 0) + f.m.killHp;
     A.run.round++;
     A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * (HEAL + 0.04 * (meta.boosts.recov || 0) + f.m.killHeal));
@@ -281,7 +299,9 @@ export function createArena(env) {
     panel(h('h2', { class: 'gold' }, 'Champion!'),
       h('p', null, h('b', null, A.data.name), ' won all ten fights and rules the Colosseum.'),
       h('div', { class: 'stats' }, h('div', null, h('small', null, 'Fights'), h('b', null, String(earned))), h('div', null, h('small', null, 'Title'), h('b', null, '+1000')), h('div', null, h('small', null, 'Health left'), h('b', null, '+' + (pts - 1000))), h('div', null, h('small', null, 'Total'), h('b', { class: 'gold' }, String(pts + earned)))),
-      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'champion', points: pts }) }, 'Take the crown'))).classList.add('low');
+      h('div', { class: 'row' },
+        h('button', { class: 'ad', onclick: async () => { const r = await env.showAd(); if (r.ok) finish({ type: 'champion', points: pts * 2 }); else if (r.why) env.toast(r.why); } }, '📺 Watch an ad: double the title prize (+' + pts + ')'),
+        h('button', { class: 'go', onclick: () => finish({ type: 'champion', points: pts }) }, 'Take the crown'))).classList.add('low');
   }
   function died() {
     A.phase = 'dead'; sfx('lose');
@@ -289,10 +309,16 @@ export function createArena(env) {
     const meta = env.meta(), earned = A.run.earned || 0;
     panel(h('h2', { class: 'red' }, A.data.name + ' has fallen'),
       h('p', null, 'Killed by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ' of ' + ROUNDS + ', after ' + A.run.round + (A.run.round === 1 ? ' win' : ' wins') + ' and ' + earned + ' points earned.'),
+      !A.run.adRevived && h('p', null, 'The crowd wants more: watch an ad to bring it back once, at half health.'),
       meta.revives > 0 ? h('p', null, 'You hold ' + meta.revives + (meta.revives === 1 ? ' revive.' : ' revives.') + ' Using one brings it back at half health to fight ' + A.enemy.name.split(',')[0] + ' again.') : h('p', { class: 'dim' }, 'The dead do not return. Build a new creature and try again. Revives are sold in the shop.'),
       h('div', { class: 'row' },
+        !A.run.adRevived && h('button', { class: 'ad', onclick: async () => {
+          const r = await env.showAd();
+          if (!r.ok) { if (r.why) env.toast(r.why); return; }
+          A.run.adRevived = true; A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); sfx('win'); nextFight();
+        } }, '📺 Watch an ad to revive'),
         meta.revives > 0 && h('button', { class: 'go', onclick: () => { meta.revives--; env.saveMeta(); A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); sfx('win'); nextFight(); } }, 'Use a revive'),
-        h('button', { class: meta.revives > 0 ? '' : 'go', onclick: () => { store.set('cc.run', null); finish({ type: 'dead', round: A.run.round, by: A.enemy.name }); } }, meta.revives > 0 ? 'Let it die' : 'Create a new creature'))).classList.add('low');
+        h('button', { class: meta.revives > 0 || !A.run.adRevived ? '' : 'go', onclick: () => { store.set('cc.run', null); finish({ type: 'dead', round: A.run.round, by: A.enemy.name }); } }, meta.revives > 0 ? 'Let it die' : 'Create a new creature'))).classList.add('low');
   }
   function finish(result) {
     dropView(0); dropView(1);

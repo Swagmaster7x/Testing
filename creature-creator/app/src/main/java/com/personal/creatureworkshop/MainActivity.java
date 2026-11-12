@@ -17,6 +17,17 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.rewarded.RewardedAd;
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
+import com.google.android.ump.ConsentInformation;
+import com.google.android.ump.ConsentRequestParameters;
+import com.google.android.ump.UserMessagingPlatform;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -24,10 +35,12 @@ import java.io.OutputStream;
 /**
  * A full-screen landscape shell around the bundled editor (assets/www).
  * The editor is a WebGL page; this class only hosts it, hides the system bars,
- * routes the back button, and saves photos to the gallery.
+ * routes the back button, saves photos to the gallery, and shows rewarded ads (AdMob).
  */
 public class MainActivity extends Activity {
     private WebView web;
+    private RewardedAd rewarded;          // the next ad, loaded ahead of time
+    private boolean adLoading, adsStarted, earned;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +70,70 @@ public class MainActivity extends Activity {
         if (savedInstanceState == null) web.loadUrl("file:///android_asset/www/index.html");
         else web.restoreState(savedInstanceState);
         hideSystemBars();
+        askConsentThenStartAds();
+    }
+
+    // ------------------------------------------------------------------ ads
+
+    /** Google requires asking for consent (where the law needs it) before any ad is requested. */
+    private void askConsentThenStartAds() {
+        ConsentInformation info = UserMessagingPlatform.getConsentInformation(this);
+        ConsentRequestParameters params = new ConsentRequestParameters.Builder().build();
+        info.requestConsentInfoUpdate(this, params,
+                () -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, formError -> {
+                    if (info.canRequestAds()) startAds();
+                }),
+                requestError -> { if (info.canRequestAds()) startAds(); });
+        if (info.canRequestAds()) startAds();      // consent already known from an earlier launch
+    }
+
+    private void startAds() {
+        if (adsStarted) return;
+        adsStarted = true;
+        new Thread(() -> MobileAds.initialize(this, status -> runOnUiThread(this::loadRewarded))).start();
+    }
+
+    private void loadRewarded() {
+        if (!adsStarted || adLoading || rewarded != null) return;
+        adLoading = true;
+        RewardedAd.load(this, getString(R.string.admob_rewarded_id), new AdRequest.Builder().build(), new RewardedAdLoadCallback() {
+            @Override
+            public void onAdLoaded(RewardedAd ad) { adLoading = false; rewarded = ad; }
+
+            @Override
+            public void onAdFailedToLoad(LoadAdError error) { adLoading = false; rewarded = null; }
+        });
+    }
+
+    /** Tell the page how the ad went: window.ccAdDone(earned, reason). */
+    private void adDone(boolean ok, String why) {
+        runOnUiThread(() -> web.evaluateJavascript("window.ccAdDone && window.ccAdDone(" + ok + "," + org.json.JSONObject.quote(why) + ")", null));
+    }
+
+    private void showRewarded() {
+        if (rewarded == null) {
+            loadRewarded();
+            adDone(false, "No ad is ready yet. Check your connection and try again in a moment.");
+            return;
+        }
+        RewardedAd ad = rewarded;
+        rewarded = null;
+        earned = false;
+        ad.setFullScreenContentCallback(new FullScreenContentCallback() {
+            @Override
+            public void onAdDismissedFullScreenContent() {
+                hideSystemBars();
+                adDone(earned, earned ? "" : "The ad was closed before the reward.");
+                loadRewarded();
+            }
+
+            @Override
+            public void onAdFailedToShowFullScreenContent(AdError error) {
+                adDone(false, "The ad could not be shown.");
+                loadRewarded();
+            }
+        });
+        ad.show(this, reward -> earned = true);
     }
 
     @Override
@@ -120,6 +197,12 @@ public class MainActivity extends Activity {
     }
 
     private class Bridge {
+        /** Called by the page when the player chooses to watch an ad for a reward. */
+        @JavascriptInterface
+        public void showRewarded() {
+            runOnUiThread(MainActivity.this::showRewarded);
+        }
+
         /** Called by the Photo button with a base64 PNG. */
         @JavascriptInterface
         public void savePng(String base64, String name) {

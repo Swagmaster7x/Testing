@@ -32,7 +32,7 @@ function eye(type) {
     if (type !== 'compound') it.push({ g: ball(0.055, 1.5, 1, 0.5, -0.14, 0.17, zc + 0.455, 8), m: c.M.glint });    // catchlight
     if (stalk) it.push({ g: T([[0, 0, -0.3, 0.3], [0, 0.05, 0.5, 0.2], [0, 0, 1.15, 0.19], [0, 0, 1.5, 0.4]], { capEnd: 0.6 }), m: 'skin' });
     if (type !== 'compound') {
-      const ring = new THREE.TorusGeometry(r * 1.02, r * 0.17, 8, 28); ring.scale(1, 1, 1.3);
+      const ring = new THREE.TorusGeometry(r * 1.0, r * 0.12, 8, 28); ring.scale(1, 1, 1.5);
       if (!stalk) it.push({ g: move(ring, 0, 0, -0.03), m: 'skin' });
       const lid = p.lid ?? 0.3;
       if (lid > 0.02 && type !== 'beady') {
@@ -141,6 +141,26 @@ function feelers(p, c) {
     gs.push(tube([{ p: a, rx: 0.12 }, { p: b, rx: 0.1 }, { p: e1, rx: 0.07 }, { p: e2, rx: 0.02 }], { radial: 8 }));
   }
   return [{ g: merge(gs), m: 'skin' }, { g: ball(0.25, 1.2, 0.7, 0.4, 0, -0.05, 0), m: 'mouth' }];
+}
+function brow(p, c) {
+  const pts = [];
+  for (let i = 0; i <= 4; i++) { const x = i / 4 - 0.5; pts.push(v(x, p.arch * 0.22 * (1 - x * x * 4) + x * -0.1, 0.04 - x * x * 0.25)); }
+  return [{ g: blade(pts, [0.03, 0.09 * p.thick, 0.1 * p.thick, 0.08 * p.thick, 0.02], 0.045, v(0, 0, 1), { radial: 6, sub: 3 }), m: 'hair' }];
+}
+/** A band of cloth or leather hugging the body: shorts, a chest wrap, a belt, a collar. */
+function wrap(p, c) {
+  const n = 22, rad = 40, u0 = clamp(c.part.u - p.span / 2, -0.97, 1.97), u1 = clamp(c.part.u + p.span / 2, -0.97, 1.97), t = c.size * 0.3;
+  const pos = [], nor = [], idx = [];
+  for (let i = 0; i <= n; i++) for (let j = 0; j <= rad; j++) {
+    const f = surfaceFrame(c.frames, lerp(u0, u1, i / n), (j / rad) * PI * 2), edge = Math.min(i, n - i) === 0 ? 0.35 : 1;
+    const q = f.pos.addScaledVector(f.normal, t * edge);
+    pos.push(q.x, q.y, q.z); nor.push(f.normal.x, f.normal.y, f.normal.z);
+  }
+  for (let i = 0; i < n; i++) for (let j = 0; j < rad; j++) { const a = i * (rad + 1) + j, b = a + rad + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); g.setIndex(idx);
+  return [{ g, m: 'cloth' }];
 }
 function nose(p) {
   return [{ g: merge([T([[0, 0.5 * p.len, -0.1, 0.09, 0.08], [0, 0.2, 0.1 * p.len + 0.05, 0.12, 0.11], [0, -0.06, 0.3 * p.len, 0.17, 0.14]], { radial: 10 }),
@@ -345,10 +365,10 @@ const HANDS = {
 
 // ---------------------------------------------------------------- limbs (world space)
 const LIMB = {
-  plant: { pts: [[0, 0, 0], [0.03, -0.24, 0.035], [0.05, -0.5, 0.075], [0.04, -0.74, 0.005], [0.03, -0.97, -0.03]], r: [1.0, 1.08, 0.72, 0.84, 0.48], bulge: [1, 3] },
+  plant: { pts: [[0, 0, 0], [0.02, -0.14, 0.02], [0.035, -0.3, 0.035], [0.04, -0.48, 0.045], [0.038, -0.63, 0.0], [0.032, -0.8, -0.012], [0.03, -0.97, -0.012]], r: [1.02, 1.1, 0.98, 0.72, 0.86, 0.6, 0.46], bulge: [1, 2, 4] },
   digi: { pts: [[0, 0, 0], [0.03, -0.2, 0.1], [0.05, -0.42, 0.16], [0.04, -0.62, -0.02], [0.03, -0.8, -0.12], [0.03, -0.97, -0.03]], r: [1.1, 1.2, 0.8, 0.62, 0.42, 0.4], bulge: [1] },
   pillar: { pts: [[0, 0, 0], [0.01, -0.3, 0.01], [0.02, -0.6, 0.02], [0.02, -0.9, 0]], r: [1.15, 1.1, 0.95, 0.95], bulge: [1] },
-  arm: { pts: [[0, 0, 0], [0.05, -0.22, -0.01], [0.08, -0.46, -0.03], [0.09, -0.7, 0.04], [0.09, -0.93, 0.11]], r: [0.95, 1.02, 0.7, 0.74, 0.5], bulge: [1, 3] },
+  arm: { pts: [[0, 0, 0], [0.045, -0.1, -0.005], [0.06, -0.26, -0.012], [0.075, -0.46, -0.028], [0.082, -0.59, 0.008], [0.086, -0.78, 0.058], [0.088, -0.93, 0.1]], r: [1.0, 1.14, 0.98, 0.72, 0.84, 0.6, 0.5], bulge: [1, 2, 4] },
   insect: { pts: [[0, 0, 0], [0.28, 0.2, 0], [0.5, 0.32, 0], [0.72, -0.15, 0.02], [0.88, -0.65, 0.03], [0.93, -0.95, 0.03]], r: [0.75, 0.62, 0.5, 0.42, 0.3, 0.16], bulge: [] },
 };
 function limb(style, ends, defEnd) {
@@ -585,6 +605,7 @@ export const PARTS = {
   eye_beady: eyeDef('Beady eye', 'beady', { size: 0.3 }),
   eye_compound: eyeDef('Compound eye', 'compound', { size: 0.8 }),
   eye_stalk: eyeDef('Stalk eye', 'stalk', { size: 0.45 }),
+  brow: { n: 'Eyebrow', cat: 'eyes', kind: 'surface', slot: 'brow', size: 0.6, sink: 0, mirror: true, P: { arch: [-1, 2, 0.6, 'Arch'], thick: [0.4, 2.5, 1, 'Thickness'] }, build: brow },
 
   muzzle: { n: 'Muzzle', cat: 'mouth', kind: 'surface', slot: 'mouth', size: 1.25, P: { len: [0.3, 2.5, 1, 'Length'], open: [0, 1, 0.15, 'Open'], teeth: [0, 3, 1, 'Teeth'] }, build: muzzle },
   beak: { n: 'Beak', cat: 'mouth', kind: 'surface', slot: 'mouth', size: 1.2, P: { len: [0.4, 3.5, 1, 'Length'], hook: [0, 1.5, 0.5, 'Hook'], open: [0, 1, 0.1, 'Open'] }, build: beak },
@@ -613,6 +634,9 @@ export const PARTS = {
   antenna_feather: { n: 'Feathery antenna', cat: 'horns', kind: 'surface', slot: 'horn', size: 1.2, mirror: true, orn: true, P: hornP, build: antenna(true) },
   crest: { n: 'Feather crest', cat: 'horns', kind: 'surface', slot: 'top', size: 1.3, orn: true, P: { len: [0.3, 3, 1, 'Length'], count: [3, 30, 9, 'Feathers'], spread: [0.1, 1.4, 0.45, 'Spread'], droop: [0, 1, 0.1, 'Droop'] }, build: cluster({ count: 9, spread: 0.45, droop: 0.1, width: 0.12, capR: 0.3 }) },
   hair: { n: 'Hair', cat: 'horns', kind: 'surface', slot: 'top', size: 2.3, P: { len: [0.15, 2.5, 0.7, 'Length'], count: [20, 200, 110, 'Thickness'], spread: [0.5, 1.9, 1.45, 'Coverage'], droop: [0, 1, 0.85, 'Droop'] }, build: cluster({ count: 110, spread: 1.45, droop: 0.85, width: 0.085, capR: 0.5, hug: true }) },
+
+  hair_short: { n: 'Cropped hair', cat: 'horns', kind: 'surface', slot: 'top', size: 2.3, P: { len: [0.1, 1, 0.26, 'Length'], count: [40, 220, 150, 'Thickness'], spread: [0.5, 1.9, 1.3, 'Coverage'], droop: [0, 1, 0.55, 'Droop'] }, build: cluster({ count: 150, spread: 1.3, droop: 0.55, width: 0.075, capR: 0.5, hug: true }) },
+  hair_long: { n: 'Long hair', cat: 'horns', kind: 'surface', slot: 'top', size: 2.3, P: { len: [0.8, 3.2, 1.7, 'Length'], count: [40, 220, 130, 'Thickness'], spread: [0.5, 1.9, 1.5, 'Coverage'], droop: [0, 1, 1, 'Droop'] }, build: cluster({ count: 130, spread: 1.5, droop: 1, width: 0.09, capR: 0.5, hug: true }) },
 
   leg_human: leg('Walker leg', 'plant', 'human'),
   leg_beast: leg('Beast leg', 'digi', 'paw'),
@@ -647,6 +671,7 @@ export const PARTS = {
   ridge_sail: { n: 'Sail', cat: 'back', kind: 'world', slot: 'back', rel: 0.45, ridge: true, P: { count: [3, 20, 9, 'Spines'], span: [0.05, 1.6, 0.55, 'Row length'], lean: [-1, 1.5, 0.2, 'Lean'] }, build: ridge('sail') },
   ridge_mane: { n: 'Mane', cat: 'back', kind: 'world', slot: 'mane', rel: 0.4, ridge: true, orn: true, P: { count: [3, 30, 14, 'Thickness'], span: [0.05, 1.6, 0.3, 'Row length'], lean: [-1, 1.5, 0.5, 'Sweep'], droop: [0, 2, 1, 'Droop'] }, build: ridge('mane') },
   spike: { n: 'Single spike', cat: 'back', kind: 'surface', slot: 'back', size: 0.5, P: hornP, build: horn('spike') },
+  wrap: { n: 'Wrap band', cat: 'back', kind: 'world', slot: 'back', rel: 0.06, ridge: true, mirror: false, P: { span: [0.03, 1.2, 0.16, 'Width'] }, build: wrap },
   shell: { n: 'Shell', cat: 'back', kind: 'surface', slot: 'back', size: 2.4, P: { dome: [0.2, 1.5, 0.55, 'Dome'], long: [0.6, 2.2, 1.35, 'Length'] }, build: shell },
 };
 

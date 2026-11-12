@@ -101,10 +101,28 @@ export const BOOSTS = [
   { id: 'fero', name: 'Ferocity', icon: '💢', max: 5, cost: (l) => 150 + 100 * l, text: '+4% attack for every creature, per level.' },
   { id: 'recov', name: 'Recovery', icon: '⛺', max: 5, cost: (l) => 120 + 80 * l, text: '+4% more health restored between fights, per level.' },
   { id: 'reroll', name: 'Fickle Crowd', icon: '🎲', max: 3, cost: (l) => 250 + 150 * l, text: '+1 reroll of the rewards per gauntlet, per level.' },
+  { id: 'stable', name: 'Bigger Stable', icon: '⚡', max: 2, cost: (l) => 600 + 400 * l, text: '+1 to the most runs you can hold, per level.' },
   { id: 'head', name: 'Head Start', icon: '🎁', max: 1, cost: () => 800, text: 'Choose a reward before the first fight.' },
   { id: 'revive', name: 'Revive', icon: '✨', max: 3, cost: () => 500, text: 'Brings a dead creature back once, mid-gauntlet, at half health. Used up when spent. Hold up to three.', consumable: true },
 ];
-export const newMeta = () => ({ points: 0, champions: 0, fallen: 0, unlocked: {}, boosts: {}, revives: 0 });
+export const newMeta = () => ({ points: 0, champions: 0, fallen: 0, unlocked: {}, boosts: {}, revives: 0, runs: null });
+
+// ------------------------------------------------------------------ runs (energy): a few gauntlets, recharging in real time
+export const RUN_MAX = 5, RUN_MS = 30 * 60 * 1000;          // one run comes back every 30 minutes
+export const runMax = (meta) => RUN_MAX + (meta.boosts.stable || 0);
+/** Bring the run counter up to date with the clock. Returns { n, max, next } where next is ms until the next run (0 when full). */
+export function runsNow(meta, now = Date.now()) {
+  const max = runMax(meta);
+  if (!meta.runs) meta.runs = { n: max, t: now };
+  const r = meta.runs;
+  if (r.t > now) r.t = now;                                 // clock moved backwards: start the wait again
+  while (r.n < max && now - r.t >= RUN_MS) { r.n++; r.t += RUN_MS; }
+  if (r.n >= max) r.t = now;
+  return { n: r.n, max, next: r.n >= max ? 0 : RUN_MS - (now - r.t) };
+}
+export function spendRun(meta, now = Date.now()) { const s = runsNow(meta, now); if (s.n <= 0) return false; if (s.n >= s.max) meta.runs.t = now; meta.runs.n--; return true; }
+export function addRun(meta, now = Date.now()) { runsNow(meta, now); meta.runs.n++; }
+export const clock = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 export const owns = (meta, key) => !!meta.unlocked[key];
 export const typeOpen = (meta, t) => FREE_TYPES.includes(t) || owns(meta, 'type:' + t);
 export const partOpen = (meta, k) => !PART_COST[k] || owns(meta, 'part:' + k);

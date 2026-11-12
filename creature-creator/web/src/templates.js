@@ -4,16 +4,21 @@
 // Part position: u runs 0..1 along the spine (below 0 / above 1 = the rounded ends),
 // a is the angle around the body (0 = spine side, PI = belly side).
 const PI = Math.PI;
-const look = (o) => ({ base: '#c9b08a', second: '#6b4a2e', belly: '#efe2c8', bellyAmt: 0.8, pattern: 0, patScale: 1, cover: 'skin', furLen: 0.3, furDroop: 0.3, accent: '#e8e0cc', hair: '#3b2a1e', membrane: '#c98a8a', eye: '#3f8f4a', ...o });
+const look = (o) => ({ base: '#c9b08a', second: '#6b4a2e', belly: '#efe2c8', bellyAmt: 0.8, pattern: 0, patScale: 1, cover: 'skin', furLen: 0.3, furDroop: 0.3, accent: '#e8e0cc', hair: '#3b2a1e', cloth: '#6b4a2e', membrane: '#c98a8a', eye: '#3f8f4a', ...o });
 
 export const TEMPLATES = {
   humanoid: {
-    name: 'Humanoid', blurb: 'Upright, two arms, two legs', limbLen: 0.9, bellyDir: [0, -0.2, 1], dimorph: 'std',
-    capS: 0.55,
-    nodes: [[0.93, -0.012, 0.15, 0.1, 'hips'], [1.03, -0.01, 0.16, 0.105, 'hips'], [1.17, 0, 0.118, 0.088, 'waist'], [1.33, 0.012, 0.15, 0.115, 'chest'], [1.45, 0.005, 0.17, 0.105, 'shoulders'], [1.505, 0, 0.13, 0.085, 'shoulders'], [1.55, 0, 0.06, 0.058, 'neck'], [1.615, 0.008, 0.058, 0.058, 'neck'], [1.675, 0.022, 0.102, 0.108, 'head'], [1.765, 0.03, 0.128, 0.135, 'head'], [1.85, 0.022, 0.118, 0.126, 'head']],
-    slots: { eye: [0.893, 2.74], mouth: [0.812, PI], nose: [0.858, PI], cheek: [0.83, 2.45], chin: [0.79, PI], ear: [1.35, 1.1], earSide: [0.885, 1.57], horn: [1.4, 2.1], top: [1.85, 0], leg: [-0.4, 1.57], arm: [0.43, 1.57], wing: [0.4, 0.45], tail: [0.03, 0], back: [0.3, 0], mane: [0.6, 0] },
-    look: look({ base: '#c99573', second: '#8a5a3c', belly: '#d9a888', bellyAmt: 0.4, hair: '#2c1b12', eye: '#4a7fb5' }),
-    parts: [['leg_human', 'leg', { size: 0.9 }], ['arm_human', 'arm', { size: 0.74, p: { splay: 0.12 } }], ['eye_round', 'eye', { size: 0.058, p: { lid: 0.28, iris: 0.85 } }], ['nose', 'nose', { size: 0.042 }], ['lips', 'mouth', { size: 0.07 }], ['ear_elf', 'earSide', { size: 0.08, p: { len: 0.25 } }], ['hair', 'top', { size: 0.3, p: { len: 0.6 } }]],
+    name: 'Humanoid', blurb: 'Upright, two arms, two legs', limbLen: 0.9, bellyDir: [0, -0.2, 1], dimorph: 'human',
+    capS: 0.5,
+    // [y, z, half width, half depth, role, front depth x, back depth x]
+    nodes: [[0.9, -0.008, 0.142, 0.094, 'hips', 0.95, 1.12], [1.0, -0.006, 0.156, 0.104, 'hips', 0.98, 1.18], [1.1, 0, 0.14, 0.095, 'waist', 1.03, 1.0], [1.2, 0.006, 0.121, 0.085, 'waist', 1.0, 0.98], [1.31, 0.012, 0.139, 0.1, 'chest', 1.04, 1.0],
+      [1.4, 0.015, 0.157, 0.107, 'chest', 1.1, 0.96], [1.475, 0.008, 0.172, 0.094, 'shoulders', 1.0, 1.0], [1.525, 0.002, 0.122, 0.076, 'shoulders', 0.95, 1.05], [1.562, 0.002, 0.063, 0.061, 'neck'], [1.62, 0.01, 0.056, 0.058, 'neck'],
+      [1.69, 0.03, 0.08, 0.094, 'head', 1.16, 0.9], [1.752, 0.032, 0.112, 0.118, 'head', 1.07, 1.0], [1.82, 0.024, 0.124, 0.13, 'head', 1.0, 1.05], [1.878, 0.016, 0.102, 0.11, 'head']],
+    slots: { eye: [0.882, 2.8], brow: [0.912, 2.8], mouth: [0.808, PI], nose: [0.848, PI], cheek: [0.83, 2.45], chin: [0.78, PI], ear: [1.35, 1.1], earSide: [0.86, 1.57], horn: [1.4, 2.1], top: [1.85, 0], leg: [-0.4, 1.57], arm: [0.452, 1.57], wing: [0.42, 0.45], tail: [0.03, 0], back: [0.3, 0], mane: [0.6, 0] },
+    look: look({ base: '#c99573', second: '#8a5a3c', belly: '#d9a888', bellyAmt: 0.35, hair: '#2c1b12', eye: '#4a7fb5', cloth: '#5a3a24' }),
+    parts: [['leg_human', 'leg', { size: 0.9, p: { end: 0.9 } }], ['arm_human', 'arm', { size: 0.72, p: { splay: 0.1, end: 0.82 } }], ['eye_round', 'eye', { size: 0.047, p: { lid: 0.22, iris: 0.9 } }], ['brow', 'brow', { size: 0.055 }], ['nose', 'nose', { size: 0.05, p: { len: 1.25, wide: 0.85 } }],
+      ['lips', 'mouth', { size: 0.074, p: { full: 0.95, smile: 0.25 } }], ['ear_elf', 'earSide', { size: 0.075, p: { len: 0.25 } }], ['hair', 'top', { size: 0.3, p: { len: 0.55, count: 140 } }],
+      ['wrap', [-0.36, 0], { size: 0.028, p: { span: 1.02 } }], ['wrap', [0.4, 0], { size: 0.02, sexOnly: 'f', p: { span: 0.1 } }]],
   },
   quadruped: {
     name: 'Quadruped', blurb: 'Four legs, tail, muzzle', limbLen: 0.85, bellyDir: [0, -1, 0], dimorph: 'std',

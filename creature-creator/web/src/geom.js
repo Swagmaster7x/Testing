@@ -42,6 +42,8 @@ export function tube(nodes, o = {}) {
   const n = nodes.length;
   const curve = new THREE.CatmullRomCurve3(nodes.map((q) => q.p), false, 'centripetal');
   const rxa = nodes.map((q) => q.rx), rya = nodes.map((q) => q.ry ?? q.rx);
+  // Optional: depth on the belly side (f) and spine side (b) as multiples of ry, so sections need not be plain ovals.
+  const fa = nodes.map((q) => q.f ?? 1), ba = nodes.map((q) => q.b ?? 1), RF = [], RB = [];
   const m = (n - 1) * sub + 1;
   const C = [], T = [], S = [], U = [], RX = [], RY = [];
   let side = null;
@@ -57,7 +59,7 @@ export function tube(nodes, o = {}) {
     C.push(c); T.push(t); S.push(side); U.push(t.clone().cross(side).normalize());
     let rx = sampleScalar(rxa, u), ry = sampleScalar(rya, u);
     if (o.ridges) { const w = 1 + o.ridgeAmp * Math.sin(u * o.ridges * Math.PI * 2); rx *= w; ry *= w; }
-    RX.push(Math.max(rx, 1e-4)); RY.push(Math.max(ry, 1e-4));
+    RX.push(Math.max(rx, 1e-4)); RY.push(Math.max(ry, 1e-4)); RF.push(sampleScalar(fa, u)); RB.push(sampleScalar(ba, u));
   }
   // Rings, including rounded caps. uParam runs -1..0 over the start cap, 0..1 body, 1..2 end cap.
   const rings = [];
@@ -78,7 +80,8 @@ export function tube(nodes, o = {}) {
     const g = rings[r], i = g.i;
     for (let j = 0; j <= radial; j++) {
       const a = (j / radial) * Math.PI * 2;
-      tmp.copy(g.c).addScaledVector(S[i], RX[i] * g.s * Math.sin(a)).addScaledVector(U[i], RY[i] * g.s * Math.cos(a));
+      const ca = Math.cos(a);
+      tmp.copy(g.c).addScaledVector(S[i], RX[i] * g.s * Math.sin(a)).addScaledVector(U[i], RY[i] * g.s * ca * (ca < 0 ? RF[i] : RB[i]));
       const o3 = (r * W + j) * 3;
       pos[o3] = tmp.x; pos[o3 + 1] = tmp.y; pos[o3 + 2] = tmp.z;
       uv[(r * W + j) * 2] = g.u; uv[(r * W + j) * 2 + 1] = j / radial;
@@ -106,7 +109,7 @@ export function tube(nodes, o = {}) {
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setIndex(idx);
-  if (o.frames) geo.userData.frames = { C, T, S, U, RX, RY, capS, capE, m };
+  if (o.frames) geo.userData.frames = { C, T, S, U, RX, RY, RF, RB, capS, capE, m };
   geo.userData.end = { p: C[m - 1], t: T[m - 1], r: (RX[m - 1] + RY[m - 1]) / 2 };
   return geo;
 }
@@ -119,7 +122,8 @@ export function surfaceFrame(fr, u, a) {
   const side = fr.S[i0].clone().lerp(fr.S[i1], w).normalize();
   const t = fr.T[i0].clone().lerp(fr.T[i1], w).normalize();
   const up = t.clone().cross(side).normalize();
-  const rx = lerp(fr.RX[i0], fr.RX[i1], w), ry = lerp(fr.RY[i0], fr.RY[i1], w);
+  const rx = lerp(fr.RX[i0], fr.RX[i1], w), ry0 = lerp(fr.RY[i0], fr.RY[i1], w);
+  const ry = ry0 * (Math.cos(a) < 0 ? lerp(fr.RF[i0], fr.RF[i1], w) : lerp(fr.RB[i0], fr.RB[i1], w));
   let scale = 1, phi = 0, sgn = 0;
   if (u < 0 || u > 1) {
     sgn = u < 0 ? -1 : 1;

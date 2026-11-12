@@ -13,6 +13,11 @@ const SEX = {
     m: { roles: { shoulders: [0.16, 0.08], chest: [0.1, 0.05], neck: [0.2, 0.16], waist: [0.04, 0.02], head: [0.03, 0.03] }, limb: 0.15, orn: 0.3, all: 0.03 },
     f: { roles: { shoulders: [-0.1, -0.05], chest: [-0.04, 0.07], waist: [-0.14, -0.08], hips: [0.13, 0.07], neck: [-0.13, -0.1] }, limb: -0.1, orn: -0.4, all: -0.02 },
   },
+  // Humanoids: the same idea, plus the front and back of the torso change shape.
+  human: {
+    m: { roles: { shoulders: [0.14, 0.06], chest: [0.08, 0.02], neck: [0.2, 0.16], waist: [0.06, 0.04], head: [0.03, 0.02] }, front: { chest: [-0.04, 0.04], waist: [0.03, 0] }, limb: 0.14, orn: 0.3, all: 0.03 },
+    f: { roles: { shoulders: [-0.09, -0.04], chest: [-0.05, 0], waist: [-0.13, -0.06], hips: [0.1, 0.04], neck: [-0.12, -0.1] }, front: { chest: [0.24, 0], hips: [0, 0.12], waist: [-0.04, 0] }, limb: -0.1, orn: -0.4, all: -0.02 },
+  },
   reverse: {
     m: { roles: { abdomen: [-0.12, -0.12], head: [0.05, 0.05] }, limb: -0.05, orn: 0.35, all: -0.05 },
     f: { roles: { abdomen: [0.2, 0.18] }, limb: 0.05, orn: -0.3, all: 0.04 },
@@ -21,14 +26,14 @@ const SEX = {
 
 export function sexMods(data) {
   const s = SEX[TEMPLATES[data.type].dimorph][data.sex], k = data.dimorph;
-  return { roles: s.roles, k, limb: 1 + s.limb * k, orn: 1 + s.orn * k, all: 1 + s.all * k };
+  return { roles: s.roles, front: s.front, k, limb: 1 + s.limb * k, orn: 1 + s.orn * k, all: 1 + s.all * k };
 }
 
 export function newCreature(type) {
   const t = TEMPLATES[type];
   const data = {
     v: 1, name: 'New ' + t.name, type, sex: 'f', dimorph: 0.7, bulk: 1, stretch: 1,
-    nodes: t.nodes.map((n) => ({ y: n[0], z: n[1], rx: n[2], ry: n[3], role: n[4] })),
+    nodes: t.nodes.map((n) => ({ y: n[0], z: n[1], rx: n[2], ry: n[3], role: n[4], f: n[5] ?? 1, b: n[6] ?? 1 })),
     look: { ...t.look }, parts: [],
   };
   const fr = bodyGeometry(data, { sexless: true }).userData.frames;
@@ -39,7 +44,7 @@ export function newCreature(type) {
 /** Add a part at its slot for this body type (or at an explicit [u, a]). */
 export function addPart(data, kind, frames, where, o = {}) {
   const def = PARTS[kind], t = TEMPLATES[data.type];
-  let [u, a] = where || t.slots[def.slot] || t.slots.back;
+  let [u, a] = where || t.slots[def.slot] || (def.slot === 'brow' ? [t.slots.eye[0] + 0.035, t.slots.eye[1]] : t.slots.back);
   while (!where && data.parts.some((q) => Math.abs(q.u - u) < 0.02 && Math.abs(q.a - a) < 0.05 && PARTS[q.kind].cat === def.cat)) u -= 0.07;
   const f = surfaceFrame(frames, u, a);
   const part = {
@@ -58,9 +63,11 @@ export function bodyGeometry(data, o = {}) {
   const cy = data.nodes.reduce((s, n) => s + n.y, 0) / data.nodes.length, cz = data.nodes.reduce((s, n) => s + n.z, 0) / data.nodes.length;
   const nodes = data.nodes.map((n) => {
     const r = (!o.sexless && sm.roles[n.role]) || [0, 0];
+    const fk = (!o.sexless && sm.front && sm.front[n.role]) || [0, 0];
     return {
       p: v(0, cy + (n.y - cy) * data.stretch, cz + (n.z - cz) * data.stretch),
       rx: n.rx * data.bulk * (o.sexless ? 1 : sm.all) * (1 + r[0] * sm.k), ry: n.ry * data.bulk * (o.sexless ? 1 : sm.all) * (1 + r[1] * sm.k),
+      f: (n.f ?? 1) * (1 + fk[0] * sm.k), b: (n.b ?? 1) * (1 + fk[1] * sm.k),
     };
   });
   return tube(nodes, { radial: 52, sub: 10, capRings: 7, side: X.clone(), frames: true, capStart: TEMPLATES[data.type].capS ?? 1 });

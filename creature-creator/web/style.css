@@ -213,3 +213,13 @@ input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 
   .acts button em { font-size: 22px; }
   .acts button span { font-size: 9.5px; }
 }
+
+/* runs, ads */
+.runpill { background: linear-gradient(#2c5a64, #1e444c); border: 1px solid #4a8a94; border-radius: 20px; padding: 3px 12px; color: var(--ink); font-weight: 500; white-space: nowrap; }
+button.ad, .panel button.ad { background: linear-gradient(#7a52e0, #4a2aa8); border-color: #c0a4ff; border-bottom-color: #26105e; color: #fff; font-weight: 600; }
+.panel p.runs { font-weight: 600; color: #ffe2a8; }
+.adph { position: fixed; inset: 0; z-index: 80; background: #000d; display: flex; align-items: center; justify-content: center; text-align: center; }
+.adph div { background: #1a1a22; border: 2px dashed #8a8aa0; border-radius: 18px; padding: 18px 34px; }
+.adph small { text-transform: uppercase; letter-spacing: 2px; color: #a0a0b8; }
+.adph b { display: block; font-size: 60px; line-height: 1.1; }
+.adph p { margin: 0; color: #c8c8d8; font-size: 12px; }

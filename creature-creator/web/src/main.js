@@ -6,7 +6,8 @@ import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
-import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe } from './items.js';
+import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock } from './items.js';
+import { showAd } from './ads.js';
 import { randomCreature } from './random.js';
 import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp } from './creature.js';
 
@@ -317,7 +318,7 @@ const SWATCHES = ['#f4f0e6', '#d9d2c2', '#a8a29a', '#6b6660', '#3a3632', '#14100
   '#f2c230', '#e8a020', '#d9702a', '#c8501c', '#a8301c', '#701818', '#f2a0b0', '#e06a8a', '#c4472e', '#b03080', '#7a3aa0', '#4a2a7a',
   '#bfe8e0', '#7fc4d0', '#3a9fc2', '#2f7fc2', '#1f4f9a', '#1c2f5a', '#c8e6a0', '#9fb86a', '#4faa4a', '#2f6b3a', '#1f4a3a', '#12281a',
   '#e6dfa0', '#b8b060', '#7a8a3a', '#8fb0ab'];
-const COLORS = [['base', 'Main'], ['second', 'Pattern'], ['belly', 'Belly'], ['eye', 'Eyes'], ['accent', 'Horn, claw'], ['hair', 'Hair, feather'], ['membrane', 'Wing skin']];
+const COLORS = [['base', 'Main'], ['second', 'Pattern'], ['belly', 'Belly'], ['eye', 'Eyes'], ['accent', 'Horn, claw'], ['hair', 'Hair, feather'], ['membrane', 'Wing skin'], ['cloth', 'Cloth']];
 let colorSlot = 'base';
 const needsRebuild = (k) => k === 'eye';
 function setLook(k, val, final) {
@@ -492,7 +493,7 @@ function buy(key, cost, label, then) {
   if (!confirm('Unlock ' + label + ' for ' + cost + ' points?')) return;
   meta.points -= cost; meta.unlocked[key] = true; saveMeta(); toast('Unlocked ' + label); then && then();
 }
-const arena = createArena({ scene, camera, M, h, store, sun, onDone: battleDone, meta: () => meta, saveMeta });
+const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
   save(true);
   sel = null; controls.orbit.enabled = false;
@@ -544,6 +545,7 @@ function open(d) {
   if (run && d.id && run.id === d.id) { store.set('cc.run', null); toast('Gauntlet abandoned. It starts again from fight one.'); }
   data = d; sel = null; nodeSel = -1; tab = 'body'; undo = []; redo = []; inEditor = true;
   if (data.sex === undefined) data.sex = 'f';
+  if (!data.look.cloth) data.look.cloth = '#6b4a2e';
   $('start').classList.add('hidden'); $('editor').classList.remove('hidden');
   rebuild(); commit(); renderUI(); fitCamera();
 }
@@ -553,6 +555,12 @@ function goHome() {
   renderStart();
 }
 const typeThumbs = {};
+function tickRunPill() {
+  const el = $('runpill'); if (!el) return;
+  const r = runsNow(meta);
+  el.textContent = '⚡ ' + r.n + '/' + r.max + (r.next ? ' · ' + clock(r.next) + ' · 📺 +1' : '');
+}
+setInterval(tickRunPill, 1000);
 let shopTab = null;
 function renderShop() {
   const el = $('start');
@@ -585,7 +593,7 @@ function renderStart() {
   const rec = meta, run = store.get('cc.run', null);
   const runOk = run && cur && cur.id === run.id;
   el.replaceChildren(...[h('h1', null, 'Creature ', h('span', null, 'Workshop'),
-      h('small', { class: 'record' }, h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
+      h('small', { class: 'record' }, h('span', { class: 'runpill', id: 'runpill', onclick: async () => { const r = runsNow(meta); if (r.n >= r.max) return; const a = await showAd(); if (a.ok) { addRun(meta); saveMeta(); tickRunPill(); toast('+1 run'); } else if (a.why) toast(a.why); } }), h('button', { class: 'shopbtn', onclick: () => { shopTab = 'Bodies'; renderStart(); } }, 'Shop'), ' ', h('b', null, rec.points + ' points'), ' · ' + rec.champions + (rec.champions === 1 ? ' champion' : ' champions') + ' · ' + rec.fallen + ' fallen')),
     runOk && h('div', { class: 'card resume', onclick: () => { data = cur; enterBattle(run); } }, h('b', null, 'Gauntlet in progress'), h('small', null, cur.name + ' is waiting for fight ' + (run.round + 1) + ' of 10. Tap to return to the Colosseum.')),
     h('h2', null, 'Start from a body type'),
     h('div', { class: 'cards' }, h('div', { class: 'card', onclick: () => { const open_ = Object.keys(TEMPLATES).filter((t) => typeOpen(meta, t)); open(randomCreature(Math.random, { type: open_[Math.floor(Math.random() * open_.length)] })); } }, h('div', { class: 'dice' }, '?'), h('b', null, 'Random'), h('small', null, 'Roll a surprise creature')),
@@ -593,6 +601,7 @@ function renderStart() {
       typeOpen(meta, id)
         ? h('div', { class: 'card', onclick: () => open(newCreature(id)) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, t.blurb))
         : h('div', { class: 'card locked', onclick: () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart) }, h('img', { src: typeThumbs[id] || (typeThumbs[id] = creatureThumb(newCreature(id))), alt: '' }), h('b', null, t.name), h('small', null, 'Locked · ' + TYPE_COST[id] + ' points'))))].filter(Boolean));
+  tickRunPill();
   if (cur || saved.length) el.append(h('h2', null, 'Your creatures'),
     h('div', { class: 'cards' },
       cur && h('div', { class: 'card', onclick: () => open(cur) }, h('img', { src: creatureThumb(cur), alt: '' }), h('b', null, 'Continue'), h('small', null, cur.name)),
@@ -606,4 +615,4 @@ controls.orbit.addEventListener('change', touch);
 layout();
 renderStart();
 requestAnimationFrame(frame);
-window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, get meta() { return meta; }, saveMeta, renderStart, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
+window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, get meta() { return meta; }, saveMeta, renderStart, runsNow, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
