@@ -130,6 +130,38 @@ class RepositoryTest {
     }
 
     @Test
+    fun aBackupKeepsEveryonesLookIncludingOnesMadeInTheCreator() = runBlocking {
+        val mine = """{"primary":4285416649,"type":"TYPEWRITER","sparkles":true}"""
+        val ashley = db.profileDao().all().single { it.id == TestPeople.ASHLEY }
+        db.profileDao().upsert(ashley.copy(themeKey = "CUSTOM", customLook = mine))
+        val swag = db.profileDao().all().single { it.id == TestPeople.SWAG }
+        db.profileDao().upsert(swag.copy(themeKey = "ARCTIC"))
+
+        val backup = BackupManager(db, settings, context.contentResolver, ::builtInPeople)
+        val text = backup.encode(backup.snapshot())
+        val otherDb = newDb()
+        val restorer = BackupManager(otherDb, newSettings(), context.contentResolver, ::builtInPeople)
+        restorer.restore(restorer.decode(text))
+
+        val restored = otherDb.profileDao().all()
+        assertEquals("ARCTIC", restored.single { it.id == TestPeople.SWAG }.themeKey)
+        assertEquals("CUSTOM", restored.single { it.id == TestPeople.ASHLEY }.themeKey)
+        assertEquals(mine, restored.single { it.id == TestPeople.ASHLEY }.customLook)
+    }
+
+    @Test
+    fun aBackupFromBeforeLooksRestoresWithoutACustomLook() = runBlocking {
+        val backup = BackupManager(db, settings, context.contentResolver, ::builtInPeople)
+        // Written by the previous version: profiles have no customLook field at all.
+        val text = backup.encode(backup.snapshot()).replace(Regex(",\\s*\"customLook\":\\s*null"), "")
+        assertFalse(text.contains("customLook"))
+        val otherDb = newDb()
+        val restorer = BackupManager(otherDb, newSettings(), context.contentResolver, ::builtInPeople)
+        restorer.restore(restorer.decode(text))
+        assertEquals(db.profileDao().all(), otherDb.profileDao().all())
+    }
+
+    @Test
     fun addingAndRemovingAPerson() = runBlocking {
         val people = ProfileRepository(db, settings)
         val template = com.personal.mealgym.data.seed.WorkoutTemplate(

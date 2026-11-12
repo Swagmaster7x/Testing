@@ -20,5 +20,6 @@ can create.
 | Starter plans | Your own workout days | Full body 3 days, Upper / lower 4 days, Glute focus 3 days, or empty |
 | Recipes | 36, including the coffee-shop orders and daily guide | 31 shared recipes and snacks |
 | Exercise help | Photos from free-exercise-db plus steps | Three written form cues per move plus "Watch a demo" |
+| Looks | 15 ready-made plus your own, in Settings > Look | The same, and chosen during setup |
 | Internet | None (blocked in the manifest) | Ads and Google Play billing only |
 | Ads | None | Banner on Plan, Cook, recipes and History, after consent; "Remove ads" one-time purchase |

@@ -50,7 +50,9 @@ FOR THE WHOLE HOUSEHOLD
 • Send your meal plan to another phone as a file.
 
 YOUR LOOK
-• Choose dark fantasy (iron, ember and parchment) or Y2K glam (chrome, pink and sparkle). Each person picks their own.
+• 15 looks to choose from, from dark fantasy and Y2K glam to deep sea, cherry blossom, neon arcade and track day.
+• Or make your own: pick your colours, heading font, corners, day or night, and extras like sparkles.
+• Each person on the phone picks their own.
 
 PRIVATE BY DESIGN
 • No account and no sign-in. Your plans, workouts and history stay on your phone.

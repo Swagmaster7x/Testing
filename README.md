@@ -14,6 +14,14 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26)
 - **Shopping across sides.** "Just mine" or "Both of us" on the shopping list (Ashley's lunches and dinners count as about three-quarters of a serving), "Add to the other side too" on a planned meal, and a meal plan can be exported on one phone and imported on the other (there is no sync).
 - **Exercise demos.** Each exercise shows a start photo; tapping it opens the start and end positions flipping like a GIF, with written steps. Photos and steps come from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain), bundled with `tools/exercise_demos.py` after reviewing `tools/exercise-match-report.md`. Three moves without a good photo get form cues instead, and every demo has a "Watch a demo" button that opens a web search in the phone's browser.
 
+## Looks (version 3)
+
+Settings > Look offers 15 ready-made looks and a creator for your own. Swag's dark fantasy and Ashley's Y2K glam are unchanged (hand-tuned colours, same fonts and decorations); the other 13 are Deep sea, Evergreen, Desert sunset, Neon arcade (always dark), Paper and ink, Cherry blossom, Matcha latte, Starlight (always dark), Citrus burst, Lavender fields, Coffeehouse, Track day and Glacier. "Create your own" picks a main and second colour, background tint, day/night, heading font, corners, backdrop, and extras (glossy buttons, sparkles, fun icons and wording), with a live day and night preview.
+
+- Looks are data (`ui/theme/Looks.kt`). The new ones build their day and night colour schemes from a few seed colours (`ui/theme/Tones.kt`), nudging every text colour until it reaches WCAG AA contrast (4.5:1) on every surface it sits on. `LooksTest` checks all 15 looks and 300 random creator colour pairs.
+- Fonts added for the new looks, all bundled with their licences in `licenses/`: DM Serif Display, Bebas Neue, Space Mono, Righteous (SIL Open Font License) and Special Elite (Apache 2.0). The look icons are original vector drawings (`res/drawable/ic_look_*.xml`).
+- Database version 4 adds `Profile.customLook` (the creator's choices as JSON). Backups carry it; older backups restore without one.
+
 ## Two editions
 
 The project builds two apps from the same code (Gradle product flavors):

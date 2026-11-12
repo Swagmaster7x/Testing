@@ -205,6 +205,31 @@ class ScreenshotTest {
         shot("00b-ashley-today")
     }
 
+    @Test
+    fun swagTriesANewLookAndGoesBack() {
+        fun swag() = container.profiles.value.single { it.id == TestPeople.SWAG }
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()
+        waitForText("Change look")
+        compose.onAllNodesWithText("Change look").onFirst().performClick()
+        waitForText("Ready-made")
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(androidx.compose.ui.test.hasContentDescription("Glacier look"))
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Glacier look")).onFirst().performClick()
+        compose.waitUntil(10_000) { swag().themeKey == "ARCTIC" }
+        compose.waitForIdle()
+        shot("60-swag-glacier")
+        compose.waitUntil(15_000) { compose.onAllNodesWithText(" is on.", substring = true).fetchSemanticsNodes().isEmpty() }
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(androidx.compose.ui.test.hasContentDescription("Dark fantasy look"))
+        compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Dark fantasy look")).onFirst().performClick()
+        compose.waitUntil(10_000) { swag().themeKey == "IRON" }
+        // Ashley's door is still glam; Swag's is dark fantasy again.
+        runBlocking {
+            container.settings.clearActiveProfile()
+            withTimeout(10_000) { container.opening.first { it is Opening.Choose } }
+        }
+        waitForText("Whose phone is this?")
+        shot("61-doors-after-trying-looks")
+    }
+
     private fun waitForText(text: String) {
         compose.waitUntil(15_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()

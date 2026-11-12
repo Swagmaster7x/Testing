@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -167,7 +168,11 @@ fun LookPreview(look: Look, modifier: Modifier = Modifier) {
         Mode.LIGHT -> listOf(false)
         Mode.DARK -> listOf(true)
     }
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    // A picture, not controls: screen readers hear one description, and the sample button can't be mistaken for a real one.
+    Row(
+        modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = "Preview of this look" },
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         modes.forEach { dark ->
             MealGymTheme(look = look, darkTheme = dark) {
                 Surface(
@@ -191,11 +196,11 @@ fun LookPreview(look: Look, modifier: Modifier = Modifier) {
                             }
                             Spacer(Modifier.height(10.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                AppButton(onClick = {}) { Text("Start") }
+                                AppButton(onClick = {}) { Text("Button") }
                                 Spacer(Modifier.width(6.dp))
                                 Badge("makes 4")
                             }
-                            TextButton(onClick = {}) { Text("Change") }
+                            TextButton(onClick = {}) { Text("Link") }
                         }
                     }
                 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -441,6 +442,8 @@ fun ThemedBackground(modifier: Modifier = Modifier, content: @Composable BoxScop
                     )
                 }
             },
-        content = content,
-    )
+    ) {
+        // Text drawn straight on the backdrop (no Scaffold or Surface between) takes the look's text colour.
+        CompositionLocalProvider(LocalContentColor provides colors.onBackground) { content() }
+    }
 }
