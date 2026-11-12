@@ -365,11 +365,11 @@ const HANDS = {
 
 // ---------------------------------------------------------------- limbs (world space)
 const LIMB = {
-  plant: { pts: [[0, 0, 0], [0.02, -0.14, 0.02], [0.035, -0.3, 0.035], [0.04, -0.48, 0.045], [0.038, -0.63, 0.0], [0.032, -0.8, -0.012], [0.03, -0.97, -0.012]], r: [1.02, 1.1, 0.98, 0.72, 0.86, 0.6, 0.46], bulge: [1, 2, 4] },
-  digi: { pts: [[0, 0, 0], [0.03, -0.2, 0.1], [0.05, -0.42, 0.16], [0.04, -0.62, -0.02], [0.03, -0.8, -0.12], [0.03, -0.97, -0.03]], r: [1.1, 1.2, 0.8, 0.62, 0.42, 0.4], bulge: [1] },
-  pillar: { pts: [[0, 0, 0], [0.01, -0.3, 0.01], [0.02, -0.6, 0.02], [0.02, -0.9, 0]], r: [1.15, 1.1, 0.95, 0.95], bulge: [1] },
-  arm: { pts: [[0, 0, 0], [0.045, -0.1, -0.005], [0.06, -0.26, -0.012], [0.075, -0.46, -0.028], [0.082, -0.59, 0.008], [0.086, -0.78, 0.058], [0.088, -0.93, 0.1]], r: [1.0, 1.14, 0.98, 0.72, 0.84, 0.6, 0.5], bulge: [1, 2, 4] },
-  insect: { pts: [[0, 0, 0], [0.28, 0.2, 0], [0.5, 0.32, 0], [0.72, -0.15, 0.02], [0.88, -0.65, 0.03], [0.93, -0.95, 0.03]], r: [0.75, 0.62, 0.5, 0.42, 0.3, 0.16], bulge: [] },
+  plant: { pts: [[0, 0, 0], [0.02, -0.14, 0.02], [0.035, -0.3, 0.035], [0.04, -0.48, 0.045], [0.038, -0.63, 0.0], [0.032, -0.8, -0.012], [0.03, -0.97, -0.012]], r: [1.02, 1.1, 0.98, 0.72, 0.86, 0.6, 0.46], bulge: [1, 2, 4], knee: 3 },
+  digi: { pts: [[0, 0, 0], [0.03, -0.2, 0.1], [0.05, -0.42, 0.16], [0.04, -0.62, -0.02], [0.03, -0.8, -0.12], [0.03, -0.97, -0.03]], r: [1.1, 1.2, 0.8, 0.62, 0.42, 0.4], bulge: [1], knee: 2 },
+  pillar: { pts: [[0, 0, 0], [0.01, -0.3, 0.01], [0.02, -0.6, 0.02], [0.02, -0.9, 0]], r: [1.15, 1.1, 0.95, 0.95], bulge: [1], knee: 1 },
+  arm: { pts: [[0, 0, 0], [0.045, -0.1, -0.005], [0.06, -0.26, -0.012], [0.075, -0.46, -0.028], [0.082, -0.59, 0.008], [0.086, -0.78, 0.058], [0.088, -0.93, 0.1]], r: [1.0, 1.14, 0.98, 0.72, 0.84, 0.6, 0.5], bulge: [1, 2, 4], knee: 3 },
+  insect: { pts: [[0, 0, 0], [0.28, 0.2, 0], [0.5, 0.32, 0], [0.72, -0.15, 0.02], [0.88, -0.65, 0.03], [0.93, -0.95, 0.03]], r: [0.75, 0.62, 0.5, 0.42, 0.3, 0.16], bulge: [], knee: 2 },
 };
 function limb(style, ends, defEnd) {
   return (p, c) => {
@@ -383,8 +383,12 @@ function limb(style, ends, defEnd) {
     });
     const nodes = pts.map((q, i) => ({ p: q, rx: sp.r[i] * th * (sp.bulge.includes(i) ? p.muscle : 1) }));
     const insect = style === 'insect';
-    const g = tube(nodes, { radial: 16, sub: 7, ridges: insect ? 5 : 0, ridgeAmp: 0.1 });
-    const it = [{ g, m: 'skin', fur: insect ? 0.5 : 0.75 }];
+    // The limb is two overlapping pieces, split at the knee or elbow, so it can bend there when animated.
+    // Everything marked seg: 1 (the lower piece, the foot or hand) hangs off that joint.
+    const K = sp.knee, o = { radial: 16, sub: 7, ridges: insect ? 3 : 0, ridgeAmp: 0.1 }, fur = insect ? 0.5 : 0.75;
+    const g = tube(nodes.slice(K), o);
+    const it = [{ g: tube(nodes.slice(0, K + 1), o), m: 'skin', fur }, { g, m: 'skin', fur, seg: 1 }];
+    c.knee = { p: pts[K].clone(), axis: (insect ? c.fwd : c.out).clone() };
     const end = g.userData.end, es = end.r * p.end, kind = p.endType ?? defEnd;
     if (c.anchors && ends === HANDS) c.anchors.push({ p: end.p.clone(), t: end.t.clone(), r: end.r * p.end });   // where a held weapon goes
     let mtx;
@@ -393,7 +397,7 @@ function limb(style, ends, defEnd) {
       const y = end.t.clone(), z = perp(y, c.fwd), x = y.clone().cross(z);
       mtx = basis(x.multiplyScalar(es), y.multiplyScalar(es), z.multiplyScalar(es), end.p.clone().addScaledVector(end.t, -end.r * 0.4));
     }
-    for (const q of ends[kind]()) it.push({ g: xf(q.g, mtx), m: q.m, fur: q.fur || 0 });
+    for (const q of ends[kind]()) it.push({ g: xf(q.g, mtx), m: q.m, fur: q.fur || 0, seg: 1 });
     return it;
   };
 }
@@ -676,7 +680,7 @@ export const PARTS = {
 };
 
 export const CATS = [
-  ['eyes', 'Eyes'], ['mouth', 'Mouth'], ['ears', 'Ears'], ['horns', 'Head'], ['limbs', 'Limbs'], ['wings', 'Wings'], ['tails', 'Tails'], ['back', 'Back'],
+  ['eyes', 'Eyes'], ['mouth', 'Mouth'], ['ears', 'Ears'], ['horns', 'Head'], ['limbs', 'Limbs'], ['wings', 'Wings'], ['tails', 'Tails'], ['back', 'Back|body'],
 ];
 
 export function defaultParams(kind) {

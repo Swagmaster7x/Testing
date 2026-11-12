@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private RewardedAd rewarded;          // the next ad, loaded ahead of time
     private boolean adLoading, adsStarted, earned;
+    private Billing billing;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +72,8 @@ public class MainActivity extends Activity {
         // The page keeps its own state (saved creatures, runs, points), so a fresh load is always right.
         web.loadUrl("file:///android_asset/www/index.html");
         hideSystemBars();
+        Telemetry.start(this);
+        billing = new Billing(this, js -> runOnUiThread(() -> { if (web != null) web.evaluateJavascript(js, null); }));
         askConsentThenStartAds();
     }
 
@@ -185,6 +188,8 @@ public class MainActivity extends Activity {
         super.onResume();
         web.resumeTimers();
         web.onResume();
+        Reminders.cancelAll(this);              // the player is here; no need to nag
+        if (billing != null) billing.restore();
         web.evaluateJavascript("window.ccPause && window.ccPause(false)", null);
     }
 
@@ -209,7 +214,74 @@ public class MainActivity extends Activity {
         });
     }
 
+    private File saveFile() { return new File(getFilesDir(), "save.json"); }
+
     private class Bridge {
+        /**
+         * The page hands over a copy of the player's progress. It is kept in the app's own files, which
+         * Android backs up to the player's Google account and restores on a reinstall or a new phone.
+         */
+        @JavascriptInterface
+        public void saveState(String json) {
+            try (OutputStream out = new FileOutputStream(saveFile())) {
+                out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            } catch (Exception ignored) {
+                // The page still has its own copy.
+            }
+        }
+
+        /** The copy saved by saveState, or an empty string. */
+        @JavascriptInterface
+        public String loadState() {
+            File f = saveFile();
+            if (!f.exists()) return "";
+            try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+                byte[] buf = new byte[(int) f.length()];
+                int n = 0;
+                while (n < buf.length) { int r = in.read(buf, n, buf.length - n); if (r < 0) break; n += r; }
+                return new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                return "";
+            }
+        }
+
+        /** Android's share sheet, for critter codes and backup codes. */
+        @JavascriptInterface
+        public void shareText(String text, String title) {
+            runOnUiThread(() -> startActivity(android.content.Intent.createChooser(
+                    new android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), title)));
+        }
+
+        @JavascriptInterface
+        public void remind(int id, double atMillis, String title, String text) {
+            Reminders.schedule(MainActivity.this, id, (long) atMillis, title, text);
+        }
+
+        @JavascriptInterface
+        public void cancelReminders() {
+            Reminders.cancelAll(MainActivity.this);
+        }
+
+        /** Android 13 and later need the player's permission before any notification can show. */
+        @JavascriptInterface
+        public void askNotify() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 7);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void buy(String productId) {
+            runOnUiThread(() -> { if (billing != null) billing.buy(productId); });
+        }
+
+        @JavascriptInterface
+        public void track(String name, String jsonParams) {
+            Telemetry.event(MainActivity.this, name, jsonParams);
+        }
+
         /** Called by the page after a happy moment (a title won, a long Endless run). */
         @JavascriptInterface
         public void requestReview() {

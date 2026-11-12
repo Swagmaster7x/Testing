@@ -4,6 +4,14 @@ plugins {
     id("com.android.application")
 }
 
+// Analytics and crash reports are optional. Put the google-services.json from your Firebase project
+// in this folder and they switch on; without it the app builds exactly as before, with no Firebase code.
+val firebase = file("google-services.json").exists()
+if (firebase) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 android {
     namespace = "com.personal.creatureworkshop"
     compileSdk = 37
@@ -48,6 +56,8 @@ android {
         }
     }
 
+    sourceSets.getByName("main").java.srcDir(if (firebase) "src/firebase/java" else "src/plain/java")
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -58,4 +68,10 @@ dependencies {
     implementation("com.google.android.gms:play-services-ads:25.5.0")           // rewarded ads (AdMob)
     implementation("com.google.android.ump:user-messaging-platform:4.0.0")     // the consent prompt Google requires in Europe
     implementation("com.google.android.play:review:2.0.2")                     // the in-app "rate this app" card
+    implementation("com.android.billingclient:billing:9.1.0")                  // Google Play purchases
+    if (firebase) {
+        implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+        implementation("com.google.firebase:firebase-analytics")
+        implementation("com.google.firebase:firebase-crashlytics")
+    }
 }

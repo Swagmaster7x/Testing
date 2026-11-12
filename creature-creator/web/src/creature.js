@@ -78,15 +78,15 @@ function toMeshes(items, M, partId) {
   for (const it of items) {
     if (!it || !it.g) continue;
     const mat = typeof it.m === 'string' ? M[it.m] : it.m;
-    const key = mat.uuid + (it.fur || 0);
-    if (!groups.has(key)) groups.set(key, { mat, fur: it.fur, gs: [] });
+    const key = mat.uuid + (it.fur || 0) + (it.seg ? 's' : '');
+    if (!groups.has(key)) groups.set(key, { mat, fur: it.fur, seg: it.seg || 0, gs: [] });
     groups.get(key).gs.push(it.g);
   }
   const out = [];
   for (const g of groups.values()) {
     const mesh = new THREE.Mesh(merge(g.gs), g.mat);
     mesh.userData.fur = g.mat === M.skin ? (g.fur === true ? 1 : g.fur || 0) : 0;
-    mesh.castShadow = g.mat !== M.glass; mesh.receiveShadow = g.mat === M.skin;
+    mesh.castShadow = g.mat !== M.glass; mesh.receiveShadow = g.mat === M.skin; mesh.userData.seg = g.seg;
     out.push(mesh);
   }
   return out;
@@ -142,7 +142,10 @@ export function buildPartGroup(data, part, frames, M, anchors, bones) {
     out.applyAxisAngle(Y, -yaw);
     ctx.out = out; ctx.fwd = out.clone().cross(Y).normalize();
     ctx.root = def.ridge ? f.pos : f.pos.clone().addScaledVector(f.normal, -f.r * (def.cat === 'limbs' ? 0.4 : 0.25));
-    for (const m of toMeshes(def.build(part.p, ctx), M)) { inner.add(m); if (m.material === M.skin) restAttrs(m); }
+    // Pieces below the knee or elbow go in their own node, so that joint can bend.
+    const low = new THREE.Group();
+    for (const m of toMeshes(def.build(part.p, ctx), M)) { (m.userData.seg ? low : inner).add(m); if (m.material === M.skin) restAttrs(m); }
+    if (ctx.knee) { low.userData.joint2 = { pivot: ctx.knee.p, axis: ctx.knee.axis }; inner.add(low); }
     // Limbs, wings and tails can swing from their root when the creature is animated.
     if (!def.ridge) inner.userData.joint = { pivot: ctx.root.clone(), kind: def.cat === 'limbs' ? (part.kind.startsWith('leg') ? 'leg' : part.kind === 'tentacle' ? 'tentacle' : 'arm') : def.cat === 'wings' ? 'wing' : 'tail', partId: part.id, side: 1 };
   }
@@ -155,9 +158,14 @@ export function buildPartGroup(data, part, frames, M, anchors, bones) {
     mir.add(twin);
     group.add(mir);
   }
-  if (bones && inner.userData.joint) for (const n of [inner, twin]) if (n && bones.n < BONES) n.userData.joint.bone = bones.n++;
-  // A held weapon is parented to the hand's own node (node), at p/t in that node's space.
-  if (mine) for (const a of mine) { anchors.push({ ...a, node: inner }); if (twin) anchors.push({ ...a, node: twin }); }
+  const lower = (n) => n.children.find((ch) => ch.userData.joint2) || n;
+  if (bones && inner.userData.joint) for (const n of [inner, twin]) if (n) {
+    if (bones.n < BONES) n.userData.joint.bone = bones.n++;
+    const lo = lower(n);
+    if (lo !== n) lo.userData.joint2 = { ...lo.userData.joint2, bone: bones.n < BONES ? bones.n++ : 0 };
+  }
+  // A held weapon is parented to the hand's own node (the piece below the elbow), at p/t in that node's space.
+  if (mine) for (const a of mine) { anchors.push({ ...a, node: lower(inner) }); if (twin) anchors.push({ ...a, node: lower(twin) }); }
   return group;
 }
 
@@ -198,7 +206,8 @@ export function rebuildShells(cr, skipId) {
     let p = o, skip = false;
     while (p) { if (skipId && p.userData.partId === skipId) skip = true; p = p.parent; }
     if (skip) return;
-    let bone = 0; for (let q = o.parent; q && q !== cr.group; q = q.parent) if (q.userData.joint && q.userData.joint.bone) bone = q.userData.joint.bone;
+    let bone = 0;                         // the nearest moving piece this mesh belongs to
+    for (let q = o.parent; q && q !== cr.group && !bone; q = q.parent) bone = (q.userData.joint2 && q.userData.joint2.bone) || (q.userData.joint && q.userData.joint.bone) || 0;
     const mw = inv.clone().multiply(o.matrixWorld);
     const g = o.geometry.clone(); g.deleteAttribute('rp'); g.deleteAttribute('rn'); g.applyMatrix4(mw);
     if (mw.determinant() < 0) flipWinding(g);

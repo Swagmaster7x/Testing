@@ -208,21 +208,30 @@ export function createArena(env) {
         ? h('p', null, h('b', null, A.data.name), ' fights on for as long as it can. Opponents never stop getting stronger, with a champion every tenth fight. How far can it go?')
         : h('p', null, h('b', null, A.data.name), ' faces ' + L.fights + ' fights in a row, each tougher than the last, ending with the reigning champion. Choose a reward after every win.'),
       h('div', { class: 'stats' }, cell('Health', s.hp), cell('Attack', s.atk.toFixed(1)), cell('Armour', Math.round(s.def * 100) + '%'), cell('Speed', s.spd.toFixed(2)), cell('Hands', s.slots), cell('Abilities', s.abilitySlots), cell('Revives', meta.revives || 0)),
-      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle holds one weapon.' : 'No hands: it carries one weapon in its jaws, at reduced effect. Add arms or tentacles to wield more.', ' Its body decides which abilities and relics turn up.'),
+      h('p', { class: 'dim' }, tr.length ? 'Traits: ' + tr.map(env.tr).join(', ') + '. ' : '', s.hands ? 'Each arm or tentacle holds one weapon.' : 'No hands: it carries one weapon in its jaws, at reduced effect. Add arms or tentacles to wield more.', ' Its body decides which abilities and relics turn up.'),
       endless() ? h('p', { class: 'warn' }, 'The pit is an exhibition: when it falls it is carried out alive, and keeps its points.') : h('p', { class: 'warn' }, 'Fights are to the death. If it dies with no revive, it is gone for good.'),
       h('div', { class: 'ranks' }, h('small', null, 'Difficulty: harder levels have more fights, tougher opponents and pay more. Win the title to open the next.'),
         h('div', { class: 'chips' },
-          LEVELS.map((d, i) => i <= meta.level + 1 && h('button', { class: !endless() && i === A.run.level ? 'on' : '', disabled: i > meta.level, onclick: () => choose(i, false) }, (i > meta.level ? '🔒 ' : '') + d.name + ' · ' + d.fights)),
-          h('button', { class: endless() ? 'on' : '', disabled: !meta.champions, onclick: () => choose(A.run.level, true) }, (meta.champions ? '' : '🔒 ') + '∞ Endless'))),
+          LEVELS.map((d, i) => i <= meta.level + 1 && h('button', { class: !endless() && i === A.run.level ? 'on' : '', disabled: i > meta.level, onclick: () => choose(i, false) }, (i > meta.level ? '🔒 ' : '') + env.tr(d.name) + ' · ' + d.fights)),
+          h('button', { class: endless() ? 'on' : '', disabled: !meta.champions, onclick: () => choose(A.run.level, true) }, (meta.champions ? '' : '🔒 ') + '∞ Endless'),
+          h('button', { onclick: async () => {
+            const text = prompt('Paste a critter code from a friend. One free fight, nothing at stake.');
+            if (!text) return;
+            const got = await env.decode(text);
+            if (!got || got.kind !== 'c' || !env.valid(got.data)) { env.toast('That is not a critter code.'); return; }
+            A.run.duel = got.data; env.track('duel'); nextFight();
+          } }, '🤝 Duel a friend'))),
       h('p', { class: 'runs', id: 'gruns' }),
       h('div', { class: 'row' }, h('button', { onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'),
         h('button', { class: 'ad', id: 'gad', onclick: async (e) => { if (await adFor(e, 'gate')) { addRun(meta); env.saveMeta(); } tickRuns(); } }, '📺 Watch an ad: +1 run'),
-        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; store.set('cc.run', A.run); play('gate'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
+        h('button', { class: 'go', id: 'ggo', onclick: () => { if (!spendRun(meta)) { tickRuns(); return; } env.saveMeta(); A.run.paid = true; saveRun(); env.track('run_start', { level: endless() ? 'endless' : lvl().name, type: A.data.type }); play('gate'); enter(); } }, endless() ? 'Enter the pit' : 'Enter the arena'))).classList.add('wide');
     tickRuns();
   }
+  // A friendly duel is never saved: it is one free fight with nothing at stake.
+  const saveRun = () => { if (!A.run.duel) store.set('cc.run', A.run); };
   /** First step after the gate: the Head Start gift (once per gauntlet), then the first fight. */
   function enter() {
-    if ((env.meta().boosts.head || 0) > 0 && !A.run.headTaken) { A.run.headTaken = true; store.set('cc.run', A.run); reward('A gift from the crowd', 'Choose a reward before the first fight.'); }
+    if ((env.meta().boosts.head || 0) > 0 && !A.run.headTaken) { A.run.headTaken = true; saveRun(); reward('A gift from the crowd', 'Choose a reward before the first fight.'); }
     else nextFight();
   }
   /** Run a rewarded ad from a button. True only if it was earned and the screen is still the one that offered it. */
@@ -238,7 +247,7 @@ export function createArena(env) {
   function tickRuns() {
     const line = document.getElementById('gruns'); if (!line) return;
     const r = runsNow(env.meta());
-    line.textContent = '⚡ Runs: ' + r.n + ' / ' + r.max + (r.next ? ' · next in ' + clock(r.next) : '') + (r.n ? '. Entering uses one.' : '. None left: wait, or watch an ad.');
+    line.textContent = r.free ? env.tr('⚡ Arena Patron: unlimited runs.') : env.tr('⚡ Runs: ' + r.n + ' / ' + r.max) + (r.next ? env.tr(' · next in ' + clock(r.next)) : '') + env.tr(r.n ? '. Entering uses one.' : '. None left: wait, or watch an ad.');
     document.getElementById('ggo').disabled = r.n <= 0;
     document.getElementById('gad').classList.toggle('hidden', r.n >= r.max);
   }
@@ -247,10 +256,10 @@ export function createArena(env) {
   function reward(title, sub) {
     A.phase = 'won';
     const s = statsOf(A.data), load = A.run.load;
-    if (!A.run.draft) { A.run.draft = draft(Math.random, s, load, env.meta(), Math.min(A.run.round, 12)); store.set('cc.run', A.run); }
+    if (!A.run.draft) { A.run.draft = draft(Math.random, s, load, env.meta(), Math.min(A.run.round, 12)); saveRun(); }
     el.replaceChildren(h('div', { class: 'floaters' }));
     for (let k = 0; k < 3; k++) setTimeout(() => A.phase === 'won' && play('card', 0.7), 60 + k * 100);
-    const pick = (o) => { take(load, o); env.meta().seen[o.cat + ':' + o.id] = 1; env.stat('mostWeapons', load.weapons.length, true); env.saveMeta(); A.run.draft = null; store.set('cc.run', A.run); play(o.cat === 'weapon' ? 'draw' : 'confirm'); nextFight(); };
+    const pick = (o) => { env.track('reward', { item: o.cat + ':' + o.id, rarity: o.rar }); take(load, o); env.meta().seen[o.cat + ':' + o.id] = 1; env.stat('mostWeapons', load.weapons.length, true); env.saveMeta(); A.run.draft = null; saveRun(); play(o.cat === 'weapon' ? 'draw' : 'confirm'); nextFight(); };
     const card = (o) => {
       const it = item(o.id, o.cat), owned = o.cat === 'ability' && load.abilities.find((a) => a.id === o.id);
       const shown = o.cat === 'ability' ? { ...o, lvl: (owned ? owned.lvl + 1 + (o.rar > 0 ? 1 : 0) : 1 + o.rar) } : o;
@@ -261,12 +270,12 @@ export function createArena(env) {
     };
     const p = panel(h('h2', null, title), h('p', null, sub),
       h('div', { class: 'rewards' }, A.run.draft.length ? A.run.draft.map(card) : h('p', { class: 'dim' }, 'Nothing more fits this body.')),
-      h('p', { class: 'dim' }, 'Hands ' + handsUsed(load) + '/' + s.slots + ' · Abilities ' + load.abilities.length + '/' + s.abilitySlots + ' · Relics ' + load.relics.length + (icons(load) ? '   ' + icons(load) : '')),
+      h('p', { class: 'dim' }, 'Hands ' + handsUsed(load) + '/' + s.slots + ' · Abilities ' + load.abilities.length + '/' + s.abilitySlots + ' · Relics ' + load.relics.length, icons(load) ? '   ' + icons(load) : ''),
       h('div', { class: 'row' },
         A.run.lastPts > 0 && h('button', { class: 'ad', onclick: async (e) => {
           if (!(await adFor(e, 'won')) || !(A.run.lastPts > 0)) return;
           const m = env.meta(); m.points += A.run.lastPts; A.run.earned += A.run.lastPts; env.saveMeta();
-          env.toast('Doubled: +' + A.run.lastPts + ' points'); A.run.lastPts = 0; store.set('cc.run', A.run); e.target.remove();
+          env.toast('Doubled: +' + A.run.lastPts + ' points'); A.run.lastPts = 0; saveRun(); e.target.remove();
         } }, '📺 Watch an ad: double the ' + A.run.lastPts + ' points'),
         A.run.rerolls > 0 && h('button', { onclick: () => { A.run.rerolls--; A.run.draft = null; reward(title, sub); } }, 'Reroll (' + A.run.rerolls + ' left)'),
         !A.run.draft.length && h('button', { class: 'go', onclick: () => { A.run.draft = null; nextFight(); } }, 'Next fight')));
@@ -274,28 +283,28 @@ export function createArena(env) {
   }
   function nextFight() {
     dropView(1); dropView(0);
-    const boss = isBoss(A.run.round), meta = env.meta(), b = meta.boosts;
+    const boss = !A.run.duel && isBoss(A.run.round), meta = env.meta(), b = meta.boosts;
     if (!A.run.sum) A.run.sum = { dealt: 0, taken: 0, big: 0, crits: 0, blocks: 0 };
     A.views[0] = makeView(A.data, env.M, -1, A.run.load, A.entered ? 0 : 5.5); A.entered = true;
-    A.enemy = randomCreature(rng(A.run.seed + A.run.round * 7919), { titled: true });
+    A.enemy = A.run.duel ? JSON.parse(JSON.stringify(A.run.duel)) : randomCreature(rng(A.run.seed + A.run.round * 7919), { titled: true });
     if (boss) A.enemy.name = A.enemy.name.split(' ')[0] + ', Champion of the Sands';
     const ps = statsOf(A.data), es = statsOf(A.enemy);
-    A.eLoad = enemyLoad(rng(A.run.seed + A.run.round), es, A.run.round);
-    A.elite = eliteFor(rng(A.run.seed * 3 + A.run.round), A.run.round, boss);
+    A.eLoad = A.run.duel ? newLoad() : enemyLoad(rng(A.run.seed + A.run.round), es, A.run.round);
+    A.elite = A.run.duel ? null : eliteFor(rng(A.run.seed * 3 + A.run.round), A.run.round, boss);
     if (A.elite) A.enemy.name = A.elite.name + ' ' + A.enemy.name.split(' ')[0];
     A.hurt = false;
     A.views[1] = makeView(A.enemy, ME, 1, A.eLoad, 6);
     if (boss) A.views[1].holder.scale.setScalar(1.18);
     A.F = [makeFighter(ps, { mods: loadMods(A.run.load, ps), abilities: A.run.load.abilities, bonusHp: A.run.bonusHp, boost: { hp: 1 + 0.05 * (b.vital || 0), atk: 1 + 0.04 * (b.fero || 0) } }),
-      makeFighter(es, { mul: oppMul(A.run.round * (endless() ? ENDLESS.slope : lvl().slope), endless() ? 0 : lvl().tier, boss, endless()), mods: (() => { const m = loadMods(A.eLoad, es); if (A.elite) for (const k in A.elite.mods) m[k] = (m[k] || 0) + A.elite.mods[k]; return m; })() })];
+      makeFighter(es, { mul: A.run.duel ? { hp: 1, atk: 1 } : oppMul(A.run.round * (endless() ? ENDLESS.slope : lvl().slope), endless() ? 0 : lvl().tier, boss, endless()), mods: (() => { const m = loadMods(A.eLoad, es); if (A.elite) for (const k in A.elite.mods) m[k] = (m[k] || 0) + A.elite.mods[k]; return m; })() })];
     if (A.run.hp != null) A.F[0].hp = Math.min(A.F[0].max, A.run.hp);
     A.rand = Math.random; A.queue = [];
-    A.run.fighting = true; A.run.dead = false; store.set('cc.run', A.run);
+    A.run.fighting = true; A.run.dead = false; saveRun();
     hud(); bars();
     A.phase = 'intro'; A.phaseT = 0;
     music(boss ? 'boss' : 'battle');
     if (A.elite) A.views[1].holder.scale.setScalar(A.elite.id === 'giant' ? 1.25 : 1.08);
-    message(boss ? (endless() ? 'Champion!' : 'Final fight') : A.elite ? 'Elite!' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name + (A.elite ? ' (+50% points)' : ''));
+    message(A.run.duel ? 'Friendly duel' : boss ? (endless() ? 'Champion!' : 'Final fight') : A.elite ? 'Elite!' : 'Fight ' + (A.run.round + 1), 'vs ' + A.enemy.name + (A.elite ? ' (+50% points)' : ''));
   }
   function message(big, small) { const m = document.getElementById('bmsg'); if (m) m.replaceChildren(big ? h('b', null, big) : '', small ? h('span', null, small) : ''); }
   function bars() {
@@ -312,7 +321,16 @@ export function createArena(env) {
     cd('bpow', A.F[0].powerCd, 7, A.F[0].power); cd('bgrd', A.F[0].guardCd, A.F[0].guardEvery, A.F[0].guard > 0);
     A.F[0].abil.forEach((a, k) => cd('bab' + k, a.cd, ABILITY_CD[a.id], false));
   }
+  /** A friendly duel ends here either way: no points, no deaths. */
+  function duelOver(won) {
+    A.phase = 'won'; music(null); synth(won ? 'win' : 'lose');
+    el.querySelector('.acts').classList.add('hidden'); message('', '');
+    panel(h('h2', { class: won ? 'gold' : '' }, won ? A.data.name + ' wins the duel' : A.enemy.name + ' wins the duel'), h('p', null, 'A friendly match: nobody was hurt and nothing was won or lost.'), summary(),
+      h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => finish({ type: 'back' }) }, 'Back to the workshop'))).classList.add('low', 'wide');
+  }
   function wonFight() {
+    if (A.run.duel) { duelOver(true); return; }
+    env.track('fight_won', { fight: A.run.round + 1, level: endless() ? 'endless' : lvl().name, elite: A.elite ? A.elite.id : '' });
     const f = A.F[0], meta = env.meta(), pts = fightPoints(A.run.round, endless() ? 1 : lvl().pay, !!A.elite);
     env.stat('fightsWon'); if (!endless()) env.stat('bestFight', A.run.round + 1, true); else env.stat('bestEndless', A.run.round + 1, true);
     if (A.elite) env.stat('elites');
@@ -323,7 +341,7 @@ export function createArena(env) {
     A.run.hp = Math.min(f.max, Math.max(1, f.hp) + f.max * (HEAL + 0.04 * (meta.boosts.recov || 0) + f.m.killHeal));
     A.run.draft = null;
     if (A.run.round >= fights()) { champion(); return; }
-    store.set('cc.run', A.run);
+    saveRun();
     reward(A.enemy.name.split(',')[0] + ' is dead', '+' + pts + ' points. ' + A.data.name + ' recovers to ' + Math.round(A.run.hp) + ' / ' + f.max + ' health. ' + (isBoss(A.run.round) ? (endless() ? 'A champion is next. ' : 'Only the champion remains. ') : '') + 'Choose a reward:');
   }
   function champion() {
@@ -339,21 +357,24 @@ export function createArena(env) {
     el.replaceChildren(h('div', { class: 'floaters' }));
     A.run.earned = earned + pts;
     panel(h('h2', { class: 'gold' }, lvl().name + ' Champion!'),
-      h('p', null, h('b', null, A.data.name), ' won all ' + fights() + ' fights and takes the ' + lvl().name + ' title: +' + pts + ' points.' + (opens ? ' ' + LEVELS[level + 1].name + ' is now open.' : '') + (env.meta().champions ? '' : ' The Endless Pit is now open too.')),
+      h('p', null, h('b', null, A.data.name), ' won all ' + fights() + ' fights and takes the title: +' + pts + ' points.', opens && ' ' + LEVELS[level + 1].name + ' is now open.', !env.meta().champions && ' The Endless Pit is now open too.'),
       summary(),
       h('div', { class: 'row' },
         h('button', { class: 'ad', onclick: async (e) => { if (await adFor(e, 'champion')) { env.bonus(pts); finish({ type: 'champion', points: pts * 2 }); } } }, '📺 Watch an ad: double the title prize (+' + pts + ')'),
         h('button', { class: 'go', onclick: () => finish({ type: 'champion', points: pts }) }, 'Take the crown'))).classList.add('low', 'wide');
     endRun();
+    env.track('title', { level: lvl().name, type: A.data.type });
     env.crown(pts, A.run);            // the prize is banked now, so closing the app on this screen cannot lose it
   }
   /** Lifetime totals from this run. Called once, when the run is over for good. */
   function endRun() { const q = A.run.sum || {}; if (A.run.counted) return; A.run.counted = true; env.stat('damage', Math.round(q.dealt || 0)); env.stat('biggestHit', q.big || 0, true); env.stat('runs'); }
   function died() {
+    if (A.run.duel) { duelOver(false); return; }
+    env.track('run_lost', { fight: A.run.round + 1, level: endless() ? 'endless' : lvl().name, type: A.data.type });
     A.phase = 'dead'; music(null); synth('lose');
-    A.run.dead = true; A.run.fighting = false; store.set('cc.run', A.run);      // closing the app here does not undo the death
+    A.run.dead = true; A.run.fighting = false; saveRun();      // closing the app here does not undo the death
     el.querySelector('.acts').classList.add('hidden'); message('', '');
-    const meta = env.meta(), again = () => { A.run.hp = Math.round(A.F[0].max * 0.5); store.set('cc.run', A.run); synth('heal'); nextFight(); };
+    const meta = env.meta(), again = () => { A.run.hp = Math.round(A.F[0].max * 0.5); saveRun(); synth('heal'); nextFight(); };
     const adBtn = (label) => !A.run.adRevived && h('button', { class: 'ad', onclick: async (e) => { if (!(await adFor(e, 'dead'))) return; A.run.adRevived = true; again(); } }, label);
     if (endless()) {                                  // the pit never costs a creature
       panel(h('h2', null, A.data.name + ' is carried from the pit'),
@@ -366,7 +387,7 @@ export function createArena(env) {
     panel(h('h2', { class: 'red' }, A.data.name + ' has fallen'),
       h('p', null, 'Killed by ' + A.enemy.name + ' in fight ' + (A.run.round + 1) + ofN() + ' on ' + lvl().name + '.'),
       summary(),
-      h('p', { class: 'dim' }, (A.run.adRevived ? '' : 'Watch an ad to bring it back once, at half health. ') + (meta.revives > 0 ? 'You hold ' + meta.revives + (meta.revives === 1 ? ' revive.' : ' revives.') : 'Revives are sold in the shop.') + ' Otherwise the dead do not return.'),
+      h('p', { class: 'dim' }, !A.run.adRevived && 'Watch an ad to bring it back once, at half health. ', meta.revives > 0 ? 'You hold ' + meta.revives + (meta.revives === 1 ? ' revive.' : ' revives.') : 'Revives are sold in the shop.', ' Otherwise the dead do not return.'),
       h('div', { class: 'row' }, adBtn('📺 Watch an ad to revive'),
         meta.revives > 0 && h('button', { class: 'go', onclick: () => { meta.revives--; env.saveMeta(); again(); } }, 'Use a revive'),
         h('button', { class: meta.revives > 0 || !A.run.adRevived ? '' : 'go', onclick: () => { endRun(); store.set('cc.run', null); finish({ type: 'dead', round: A.run.round, by: A.enemy.name }); } }, meta.revives > 0 ? 'Let it die' : 'Create a new creature'))).classList.add('low', 'wide');
@@ -392,13 +413,13 @@ export function createArena(env) {
       v.fxT += dt; if (v.fxT > 0.16) { v.fxT = 0; play('step', 0.35); fx.burst('dust', world(v, new THREE.Vector3(0, 0.05, -v.len * 0.5)), 2, { speed: 0.5 }); }
     } else if (v.dead >= 0) {                           // collapse and go limp
       v.dead += dt; const k = Math.min(1, v.dead / 0.75), e = k * k * (3 - 2 * k);
-      Object.assign(T, { roll: 1.48 * e * (i ? -1 : 1), y: Math.sin(e * Math.PI / 2) * v.half * 0.85 + Math.sin(k * Math.PI) * 0.25, z: -0.5 * e, pitch: -0.2 * Math.sin(k * Math.PI), legF: -0.5 * e, legH: 0.55 * e, legOut: 0.35 * e, armAll: -0.7 * e, armOut: 0.5 * e, wing: -0.7 * e, tent: -0.6 * e, tailUp: -0.3 * e, wag: 0, flap: 0, sy: 1 - 0.06 * e });
+      Object.assign(T, { roll: 1.48 * e * (i ? -1 : 1), y: Math.sin(e * Math.PI / 2) * v.half * 0.85 + Math.sin(k * Math.PI) * 0.25, z: -0.5 * e, pitch: -0.2 * Math.sin(k * Math.PI), legF: -0.5 * e, legH: 0.55 * e, kneeF: 0.9 * e, kneeH: 0.5 * e, elbow: -0.8 * e, legOut: 0.35 * e, armAll: -0.7 * e, armOut: 0.5 * e, wing: -0.7 * e, tent: -0.6 * e, tailUp: -0.3 * e, wag: 0, flap: 0, sy: 1 - 0.06 * e });
       if (k >= 0.8 && !v.thud) { v.thud = true; play('thud'); fx.burst('dust', world(v, new THREE.Vector3(0, 0.1, -v.len * 0.5)), 26, { spread: v.len * 0.8 }); A.shake = Math.max(A.shake, 0.18); }
     } else if (A.phase === 'champion' || (A.phase === 'ending' && A.winner === i && A.phaseT > 0.5)) {   // celebrate
       const hop = Math.abs(Math.sin(t * 5.5));
-      Object.assign(T, { y: T.y + hop * 0.22, sy: 1 + (hop - 0.5) * 0.08, armAll: -2.7, armOut: 0.35, wing: 0.7, flap: 0.5, tailUp: 0.5, wag: 3, pitch: -0.15, tent: -0.9, legF: -0.25 * hop });
+      Object.assign(T, { y: T.y + hop * 0.22, sy: 1 + (hop - 0.5) * 0.08, kneeF: 0.5 * (1 - hop), kneeH: 0.5 * (1 - hop), elbow: -0.3, armAll: -2.7, armOut: 0.35, wing: 0.7, flap: 0.5, tailUp: 0.5, wag: 3, pitch: -0.15, tent: -0.9, legF: -0.25 * hop });
     } else if (f && A.phase === 'fight') {
-      if (f.st.stun > 0) Object.assign(T, { roll: 0.13 * Math.sin(t * 9), pitch: 0.12, legOut: 0.12, armAll: 0.2, wing: -0.3, wag: 0, sy: 0.96 });
+      if (f.st.stun > 0) Object.assign(T, { roll: 0.13 * Math.sin(t * 9), pitch: 0.12, kneeF: 0.35, kneeH: 0.35, elbow: -0.5, legOut: 0.12, armAll: 0.2, wing: -0.3, wag: 0, sy: 0.96 });
       else {
         if (v.strikeT < 0 && f.t < 0.45) {
           if (!v.winding) { v.winding = true; v.style = v.styles[v.styleN++ % v.styles.length]; v.power = f.power; rig.armSel = rig.arms ? (v.styleN % rig.arms) : -1; if (f.power && rig.arms > 1) rig.armSel = -1; }
@@ -408,7 +429,7 @@ export function createArena(env) {
           Object.assign(T, strikePose(v.style, 1, v.strikeT, v.power));
           v.strikeT += dt; if (v.strikeT > STRIKE_LEN) { v.strikeT = -1; v.winding = false; }
         }
-        if (f.guard > 0) Object.assign(T, { sy: 0.9, pitch: 0.12, armAll: -1.4, armOut: 0.3, wing: 0.7, z: (T.z || 0) - 0.12, legF: 0.15, tailUp: -0.2 });
+        if (f.guard > 0) Object.assign(T, { sy: 0.9, pitch: 0.12, armAll: -1.0, elbow: -1.7, kneeF: 0.5, kneeH: 0.5, armOut: 0.3, wing: 0.7, z: (T.z || 0) - 0.12, legF: 0.15, tailUp: -0.2 });
         if (f.buff.shell > 0) { T.sy = 0.82; T.legOut = 0.2; T.armAll = -0.8; }
         if (f.buff.frenzy > 0) { T.sy *= 1 + 0.03 * Math.sin(t * 22); T.wag = 4; }
         if (f.buff.evade > 0) { T.y += 1.3; T.flap = 1; T.pitch = -0.2; }
@@ -491,7 +512,18 @@ export function createArena(env) {
     if (A.freeze > 0) { A.freeze -= real; dt = real * 0.05; }
     if (A.slow > 0) { A.slow -= real; dt *= 0.3; }
     A.t += dt; A.phaseT += dt;
-    if (A.phase === 'intro' && A.phaseT > 1.9) { A.phase = 'fight'; A.phaseT = 0; message('Fight!', ''); setTimeout(() => A.phase === 'fight' && message('', ''), 700); }
+    if (A.phase === 'intro' && A.phaseT > 1.9) {
+      const go = () => { A.phase = 'fight'; A.phaseT = 0; message('Fight!', ''); setTimeout(() => A.phase === 'fight' && message('', ''), 700); };
+      if (!env.meta().tutFight && !window.__ccPause) {     // first fight ever: explain the two buttons before it starts
+        A.phase = 'tip'; message('', '');
+        const p = panel(h('h2', null, 'How fights work'),
+          h('p', null, 'Your critter attacks by itself. You help with two buttons:'),
+          h('p', null, h('b', null, '⚔️ Power'), ' makes its next attack hit more than twice as hard.'),
+          h('p', null, h('b', null, '🛡️ Guard'), ' blocks most of a hit. Press it just as the enemy rears back to strike.'),
+          h('p', { class: 'dim' }, 'Both need a few seconds to recharge. Later you will win abilities with buttons of their own.'),
+          h('div', { class: 'row' }, h('button', { class: 'go', onclick: () => { env.meta().tutFight = 1; env.saveMeta(); env.track('tutorial', { step: 'fight' }); p.remove(); go(); } }, 'Got it')));
+      } else go();
+    }
     if (A.phase === 'fight') {
       const evs = A.queue.splice(0), skill = Math.min(0.6, 0.15 + 0.035 * A.run.round);
       let w = -1;
@@ -536,7 +568,7 @@ export function createArena(env) {
     else if (A.run.draft) reward('Back to the sands', 'Choose your reward:');
     else if (A.run.round > 0 || A.run.paid) {
       const again = !!A.run.fighting;
-      if (again) { A.run.retried = true; store.set('cc.run', A.run); }
+      if (again) { A.run.retried = true; saveRun(); }
       A.phase = 'won'; el.replaceChildren();
       panel(h('h2', null, 'Back to the sands'), h('p', null, A.data.name + ' has won ' + A.run.round + ofN() + ' fights' + (A.run.hp != null ? ' and has ' + Math.round(A.run.hp) + ' health.' : '.')),
         again && h('p', { class: 'warn' }, 'You left in the middle of a fight, so it starts again. That is forgiven once per gauntlet: leave mid-fight again and it counts as a death.'),

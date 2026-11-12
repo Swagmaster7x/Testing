@@ -7,3 +7,4 @@ web/node_modules/
 keystore.properties
 *.jks
 *.aab
+tests/out/

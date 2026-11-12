@@ -74,7 +74,10 @@ p.note { color: var(--dim); font-size: 12px; margin: 4px 0 8px; }
 #editor > * { pointer-events: auto; }
 #topbar { position: absolute; left: 0; right: 0; top: 0; height: var(--top); display: flex; gap: 6px; align-items: center; padding: 5px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left)); background: linear-gradient(#17323a, #10242a); border-bottom: 1px solid var(--line); box-shadow: 0 4px 14px #0007; z-index: 3; }
 #topbar input { flex: 1; min-width: 60px; height: 36px; background: #0a171a; border: 1px solid var(--line); border-radius: 12px; padding: 6px 12px; font-weight: 500; user-select: text; -webkit-user-select: text; box-shadow: inset 0 2px 5px #0008; }
-#topbar .seg { display: flex; }
+#topbar { overflow-x: auto; scrollbar-width: none; }
+#topbar::-webkit-scrollbar { display: none; }
+#topbar button { white-space: nowrap; flex-shrink: 0; }
+#topbar .seg { display: flex; flex-shrink: 0; }
 #topbar .seg button:first-child { border-radius: 12px 0 0 12px; }
 #topbar .seg button:last-child { border-radius: 0 12px 12px 0; border-left: 0; }
 #tabs { position: absolute; left: env(safe-area-inset-left); top: var(--top); bottom: 0; width: var(--tab); background: linear-gradient(90deg, #0e2126, #12282e); border-right: 1px solid var(--line); overflow-y: auto; touch-action: pan-y; padding: 4px 0; }
@@ -241,3 +244,12 @@ button.ad, .panel button.ad { background: linear-gradient(#7a52e0, #4a2aa8); bor
 
 .settings { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
 .settings button { font-size: 12.5px; min-height: 30px; padding: 3px 12px; }
+
+/* first-time guide */
+#coach { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 12px; width: min(300px, 44vw); background: linear-gradient(#1f6a54, #124a3a); border: 2px solid var(--go); border-radius: 16px; padding: 8px 12px 10px; box-shadow: var(--shadow); z-index: 4; animation: fade 0.3s; }
+#coach small { text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px; color: #9ff5d4; }
+#coach p { margin: 3px 0 8px; font-size: 13.5px; }
+#coach .row { margin: 0; }
+.coach-glow { box-shadow: 0 0 0 3px var(--hot), 0 0 18px var(--hot) !important; animation: pulse 0.7s infinite alternate; }
+.card .shr { position: absolute; top: -6px; left: -6px; min-height: 0; width: 30px; height: 30px; padding: 0; border-radius: 15px; }
+.settings { flex-wrap: wrap; }

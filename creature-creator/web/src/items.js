@@ -113,6 +113,7 @@ export const runMax = (meta) => RUN_MAX + (meta.boosts.stable || 0);
 /** Bring the run counter up to date with the clock. Returns { n, max, next } where next is ms until the next run (0 when full). */
 export function runsNow(meta, now = Date.now()) {
   const max = runMax(meta);
+  if (meta.patron) return { n: max, max, next: 0, free: true };            // patrons are never out of runs
   if (!meta.runs) meta.runs = { n: max, t: now };
   const r = meta.runs;
   if (r.t > now) r.t = now;                                 // clock moved backwards: start the wait again
@@ -120,8 +121,8 @@ export function runsNow(meta, now = Date.now()) {
   if (r.n >= max) r.t = now;
   return { n: r.n, max, next: r.n >= max ? 0 : RUN_MS - (now - r.t) };
 }
-export function spendRun(meta, now = Date.now()) { const s = runsNow(meta, now); if (s.n <= 0) return false; if (s.n >= s.max) meta.runs.t = now; meta.runs.n--; return true; }
-export function addRun(meta, now = Date.now()) { const r = runsNow(meta, now); if (r.n < r.max) meta.runs.n++; }
+export function spendRun(meta, now = Date.now()) { if (meta.patron) return true; const s = runsNow(meta, now); if (s.n <= 0) return false; if (s.n >= s.max) meta.runs.t = now; meta.runs.n--; return true; }
+export function addRun(meta, now = Date.now()) { if (meta.patron) return; const r = runsNow(meta, now); if (r.n < r.max) meta.runs.n++; }
 export const clock = (ms) => { const s = Math.ceil(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 export const owns = (meta, key) => !!meta.unlocked[key];
 export const typeOpen = (meta, t) => FREE_TYPES.includes(t) || owns(meta, 'type:' + t);
@@ -266,3 +267,12 @@ export const GOALS = [
 ];
 export const goalDone = (meta, g) => { const [a, b] = g.prog(meta); return a >= b; };
 export const goalsReady = (meta) => GOALS.filter((g) => goalDone(meta, g) && !(meta.goals && meta.goals[g.id])).length;
+
+// ------------------------------------------------------------------ things sold for real money (Google Play Billing)
+// The ids must match the in-app products created in the Play Console. Prices shown come from Play.
+export const PRODUCTS = [
+  { id: 'patron', icon: '👑', name: 'Arena Patron', text: 'Unlimited runs, and every ad reward (extra run, revive, doubled points) without watching the ad. One purchase, kept forever.', once: true },
+  { id: 'points_small', icon: '💰', name: 'Purse of points', text: '2,500 points to spend in the shop.', points: 2500 },
+  { id: 'points_big', icon: '🏦', name: 'Chest of points', text: '8,000 points to spend in the shop.', points: 8000 },
+  { id: 'revives_3', icon: '✨', name: 'Three revives', text: 'Three revives, even if you are already holding the usual limit.', revives: 3 },
+];

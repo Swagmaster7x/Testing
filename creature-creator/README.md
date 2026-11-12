@@ -14,10 +14,16 @@ It is an original take on the "build a creature from parts" idea: its own parts,
 - **Skin:** smooth, fur (real layered fur with length and shagginess), scales, shell or slick; eight patterns; seven colour slots (main, pattern, belly, eyes, horn and claw, hair and feather, wing skin).
 - **Random creatures:** the "Random" card rolls a surprise creature (random body type, shape, colours and parts) that you can keep editing.
 - **The Colosseum:** the Battle button enters your creature in a gauntlet of fights to the death (six on the first difficulty, up to twenty on the last) against random creatures, each tougher and better armed than the last, ending with the reigning champion. Its stats come from how you built it: size gives health; teeth, claws, horns and clubs give attack; scales, shell and plates give armour; legs and wings give speed; eyes help it land hits. Fights run by themselves while you time Power strike, Guard and any abilities you have picked up.
-- **Animated fights:** creatures walk in from the gates, wind up and strike in a style that suits their body (bite, claw or weapon swing, tail whip, stinger, horn charge, wing swoop, tentacle lash), recoil, guard, dodge, stagger when stunned, collapse when killed and celebrate a win. Limbs, wings and tails swing from their joints and fur moves with them. Hits throw sparks and dust, ailments show on the body, heavy blows freeze the action for an instant and a kill plays in slow motion.
+- **Animated fights:** legs and arms are jointed, so knees and elbows bend as creatures walk, crouch, wind up and strike. Creatures walk in from the gates, wind up and strike in a style that suits their body (bite, claw or weapon swing, tail whip, stinger, horn charge, wing swoop, tentacle lash), recoil, guard, dodge, stagger when stunned, collapse when killed and celebrate a win. Limbs, wings and tails swing from their joints and fur moves with them. Hits throw sparks and dust, ailments show on the body, heavy blows freeze the action for an instant and a kill plays in slow motion.
 - **Rewards after every win:** choose one of three random rewards, in any mix of weapon, relic (a passive that stacks) and ability, each with a random rarity and strength. There are 12 weapons, 38 relics and 15 abilities, built around a handful of themes that feed each other: bleed, poison, fire, stuns, critical hits, speed, guarding, thorns and healing. The draft leans toward whatever matches what you already hold and labels the match.
 - **The body decides the build:** a creature holds one weapon per hand (each arm or tentacle is a hand, up to eight; with no hands it carries one in its jaws), and held weapons show on the model. Humanoid bodies get three ability slots, others two. Many abilities and relics only appear for the right body: Dive needs wings, Gore needs horns, Tail Sweep a tail, Venom Spit a stinger or mandibles, Stampede four legs, and so on.
 - **Winning and dying:** every fight won pays points (15 for the first, rising with each fight), and the title pays 100 per fight in the gauntlet plus up to 500 for health left, all multiplied by the difficulty's pay rate. If the creature dies it is deleted for good, unless you spend a revive. Closing the app between fights keeps your place. Closing it on the death screen does not undo the death, and leaving in the middle of a fight is forgiven once per gauntlet (the fight restarts); a second time counts as a death.
+- **A guided start:** a five-step guide walks a new player through shaping, adding parts, colouring and entering a fight, and the first fight explains Power and Guard before it begins. Both can be skipped.
+- **Play preview:** the Play button in the workshop shows your creature standing, walking and attacking.
+- **Progress that survives:** the save is mirrored into the app's own files, which Android backs up to the player's Google account, so points, unlocks and creatures return after a reinstall or on a new phone. A backup code can also be exported and imported by hand.
+- **Sharing and duels:** any saved creature can be shared as a short text code; a friend imports it to add the creature to their own collection, or pastes it at the arena gate for a friendly duel (one free fight, nothing at stake).
+- **Reminders:** optional notifications when runs have refilled and when the daily gift is ready.
+- **Languages:** English, Spanish, Brazilian Portuguese, French and German. The game starts in the phone's language and can be switched at the bottom of the main menu.
 - **Sound and music:** looping music for the menu and workshop, for fights and for final fights; recorded effects for hits, blocks, swipes, footsteps, falls, buttons, cards and coins; synthesised fanfares, crowd and roars. Music and sound can each be switched off at the bottom of the main menu, and everything goes quiet when the app is in the background. All third-party audio is CC0; see `CREDITS.md`.
 - **Runs smoothly on different phones:** fighters in the arena are built lighter than in the workshop, the workshop only redraws when something changes, and if frames come slowly the game steps sharpness and fur density down by itself (and back up when there is headroom), remembering the level for next time.
 - **Reasons to come back:**
@@ -54,6 +60,15 @@ The app uses Google AdMob rewarded ads and Google's consent prompt (UMP). As shi
 
 Things to know about how this is built: runs, points and unlocks live on the device only, so they are lost on uninstall and are not protected against tampering, and the run timer trusts the phone's clock. That is normal for a single-player game but worth knowing before adding anything paid.
 
+## Purchases, analytics and the other things that need your accounts
+
+These are built in but stay switched off until you supply the pieces only you can create.
+
+- **Purchases (Google Play Billing).** In the Play Console, under Monetise > Products > In-app products, create four products with exactly these ids: `patron` (bought once: unlimited runs and ad rewards without watching), `points_small` (2,500 points), `points_big` (8,000 points) and `revives_3` (three revives). Set your own prices; the shop's Premium tab shows whatever Play reports. Until the products exist and the app is installed from Play, the tab shows "Soon". Purchases are granted on the device with no server check, which is normal for a small single-player game but can be cheated on a rooted phone.
+- **Analytics and crash reports (Firebase).** Create a Firebase project, add an Android app with your package name, download `google-services.json` and put it in `app/`. The build detects the file and switches to the Firebase version of `Telemetry.java`; without the file there is no Firebase code in the app at all. Events sent: tutorial steps, run start, fights won, runs lost, titles, reward picks, unlocks, ads, purchases, shares, duels, and errors in the game page. Remember to declare analytics in the Play Data safety form and the privacy policy.
+- **Cloud backup.** Nothing to set up: it uses Android's automatic backup, which needs the player to have backup turned on in their phone settings. It is not instant sync between two phones in use at the same time.
+- **Leaderboards** are not included; they need Google Play Games Services set up in the Play Console.
+
 ## Build it
 
 1. Install a JDK (17 or newer) and the Android SDK with platform 37. Set `ANDROID_HOME`, or put `sdk.dir=...` in `local.properties`.
@@ -77,6 +92,9 @@ web/src/items.js       weapons, relics and abilities, the reward draft, and the 
 web/src/anim.js        poses and joints: how a body with no skeleton is made to move
 web/src/fx.js          particles and impact rings
 web/src/audio.js       sound effects, music and the synthesised sounds
+web/src/i18n.js        the translation layer; web/src/lang/*.json are the languages, keys.json the list of strings
+web/src/share.js       creature and backup codes
+tests/                 the test scripts (see tests/README.md)
 web/audio/             the recorded sound effects (packed into the bundle by web/tools/sfx.js)
 web/src/arena.js       the colosseum scene, fight animation and its screens
 app/                   the Android shell: a full-screen landscape WebView, back button, photo saving
@@ -87,6 +105,8 @@ Every model and texture is generated in code. The third-party pieces are three.j
 ## Tested and not tested
 
 The editor was exercised in headless Chromium at a phone-sized landscape screen with simulated touches: every part on every body type, spine dragging, tap to select, drag to move, sliders, male and female, patterns, undo, save and photo. The battle mode was run the same way with the clock driven by a script: gauntlets lost (with and without a revive), a gauntlet won, reward picks including a pre-fight reward and an eight-handed creature, shop purchases, and quitting and resuming. Balance was tuned with simulated gauntlets, rewards included. A fresh starter creature wins the Novice title about half the time, Bronze about one time in six and Silver rarely. A creature built for fighting wins Novice almost always, Bronze two times in three and Silver four in ten; with every shop boost it wins Gold about six times in ten, Platinum four in ten, Diamond two in ten and Legend about one time in fifty. Endless runs usually end between the eighth and the twentieth fight. Each reward was also measured on its own across five builds, and all of them add between roughly a third of a fight and one and a third fights to an average run.
+
+The newer Android pieces (the backup file, sharing, reminders, Google Play Billing, the Firebase variant, the review card) all compile, and the Firebase variant was built once with a placeholder config, but none of them has run on a device. The translations were written by machine and checked only by a script (every string present, placeholders and emoji intact); they have not been read by native speakers, and a few rarely seen messages may still appear in English.
 
 A later optimisation pass measured a fight scene at about 630,000 triangles and cut it to under 200,000 (lighter arena models, every second fur layer), and cut the time to the main menu from several seconds to under half a second by shipping the menu pictures and keeping part thumbnails on the device. Those figures are from a desktop test rig with a software renderer; real phone frame rates have not been measured, and none of the audio has been listened to, only checked to decode and play.
 

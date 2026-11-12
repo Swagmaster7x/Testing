@@ -6,8 +6,12 @@ import { makeMaterials, applyLook } from './materials.js';
 import { PARTS, CATS, defaultParams } from './parts.js';
 import { TEMPLATES } from './templates.js';
 import { createArena } from './arena.js';
-import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, LEVELS } from './items.js';
-import { showAd } from './ads.js';
+import { ITEMS, BOOSTS, FREE_TYPES, TYPE_COST, PART_COST, newMeta, typeOpen, partOpen, itemOpen, describe, runsNow, addRun, clock, GOALS, goalDone, goalsReady, dailyGift, claimDaily, LEVELS, PRODUCTS, RUN_MS, runMax } from './items.js';
+import { showAd as rawAd } from './ads.js';
+import { encode, decode, validCreature } from './share.js';
+import { tr, setLang, getLang, guessLang, LANGS, seen as i18nSeen } from './i18n.js';
+import { makeRig, applyRig, strikePose, zero, resetBones, STRIKE_LEN } from './anim.js';
+import { statsOf } from './battle.js';
 import { play, synth, music, setAudio, audioOn, audioStats } from './audio.js';
 import { randomCreature } from './random.js';
 import { newCreature, addPart, buildCreature, rebuildPart, rebuildShells, disposeTree, bounds, placement, clamp, setShellStep, applyShellStep } from './creature.js';
@@ -19,14 +23,32 @@ function h(tag, props, ...kids) {
     if (k === 'class') e.className = val; else if (k === 'style') e.style.cssText = val;
     else if (k.startsWith('on')) e.addEventListener(k.slice(2), val); else if (val !== false && val != null) e[k] = val;
   }
-  for (const k of kids.flat()) if (k != null && k !== false) e.append(k);
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(typeof k === 'string' ? tr(k) : k);        // all visible text is translated here
   return e;
 }
+const native = () => window.Android || null;
+// Pop-up questions are translated too.
+{ const c = window.confirm.bind(window), p = window.prompt.bind(window); window.confirm = (m) => c(tr(m)); window.prompt = (m, d) => p(tr(m), d); }
+const KEEP = ['cc.meta', 'cc.saved', 'cc.current', 'cc.run'];        // everything that makes up a player's progress
+let mirrorT = 0;
 const store = {
   get(k, d) { try { const s = localStorage.getItem(k); return s ? JSON.parse(s) : d; } catch (e) { return d; } },
-  set(k, val) { try { localStorage.setItem(k, JSON.stringify(val)); return true; } catch (e) { return false; /* storage full or blocked */ } },
+  set(k, val) {
+    try { localStorage.setItem(k, JSON.stringify(val)); } catch (e) { return false; /* storage full or blocked */ }
+    // Also hand a copy to the app itself. Android backs that file up to the player's Google account,
+    // so progress comes back after a reinstall or on a new phone.
+    if (KEEP.includes(k) && native() && native().saveState) { clearTimeout(mirrorT); mirrorT = setTimeout(() => { try { native().saveState(snapshotSave()); } catch (e) { /* not available */ } }, 1500); }
+    return true;
+  },
 };
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 2200); }
+function snapshotSave() { const o = {}; for (const k of KEEP) { const s = localStorage.getItem(k); if (s) o[k] = s; } return JSON.stringify(o); }
+function restoreSave(json) { const o = JSON.parse(json); let n = 0; for (const k of KEEP) if (typeof o[k] === 'string') { JSON.parse(o[k]); localStorage.setItem(k, o[k]); n++; } return n; }
+// A fresh install with a backed-up save: bring it back before anything reads it.
+try { if (!localStorage.getItem('cc.meta') && native() && native().loadState) { const s = native().loadState(); if (s) restoreSave(s); } } catch (e) { /* start fresh */ }
+/** Analytics: a named event with a few details. Does nothing unless the app was built with Firebase. */
+function track(name, params) { try { if (native() && native().track) native().track(name, JSON.stringify(params || {})); } catch (e) { /* ignore */ } }
+window.addEventListener('error', (e) => track('js_error', { msg: String(e.message).slice(0, 90), at: (e.filename || '').split('/').pop() + ':' + e.lineno }));
+function toast(msg) { const t = $('toast'); t.textContent = tr(msg); t.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.add('hidden'), 2200); }
 
 // ------------------------------------------------------------------ scene
 const canvas = $('view');
@@ -82,6 +104,7 @@ let undo = [], redo = [];
 
 // ------------------------------------------------------------------ build / refresh
 function rebuild() {
+  if (preview) stopPreview();
   if (cr) { stage.remove(cr.group); disposeTree(cr.group); }
   applyLook(M, data.look, TEMPLATES[data.type].bellyDir);
   cr = buildCreature(data, M);
@@ -229,6 +252,7 @@ function frame(t) {
   if (arena.active) { arena.update(dt, t / 1000); renderer.render(scene, camera); watchFrame(t); return; }
   if (!inEditor || !cr) return;
   controls.orbit.autoRotate = spin; controls.orbit.update(dt);
+  if (preview) { playPreview(dt); renderer.render(scene, camera); watchFrame(t); return; }
   if (pendingRebuild) { pendingRebuild = false; rebuild(); }
   // Only draw when something changed (saves battery).
   if (!dirty && !spin) return;
@@ -239,6 +263,38 @@ function frame(t) {
   marker.scale.setScalar(s * 1.7); marker.quaternion.copy(camera.quaternion);
   renderer.render(scene, camera);
   watchFrame(t);
+}
+
+// ------------------------------------------------------------------ animated preview in the workshop
+// "Play" swaps the editable model for a rigged copy and loops it through standing, walking and attacking.
+let preview = null;
+function startPreview() {
+  sel = null; refreshOverlay();
+  applyLook(M, data.look, TEMPLATES[data.type].bellyDir);
+  const view = buildCreature(data, M, { animated: true }), rig = makeRig(view), pose = new THREE.Group(), st = statsOf(data);
+  rig.len = 0; rig.armSel = -1;
+  const styles = [rig.arms ? 'slash' : st.claws && st.legs >= 4 ? 'swipe' : 'lunge', st.mouth ? 'bite' : 'lunge', st.wings ? 'swoop' : st.horns ? 'charge' : 'pounce'];
+  pose.add(view.group); stage.add(pose);
+  cr.group.visible = false; overlay.visible = false;
+  preview = { view, rig, pose, styles, t: 0, wings: st.wings };
+}
+function stopPreview() {
+  if (!preview) return;
+  stage.remove(preview.pose); disposeTree(preview.view.group); resetBones(M);
+  preview = null; cr.group.visible = true; overlay.visible = true; dirty = true;
+}
+function playPreview(dt) {
+  const p = preview; p.t += dt;
+  const u = p.t % 10, T = zero();
+  T.sy = 1 + Math.sin(p.t * 2) * 0.012; if (p.wings) T.flap = 0.05;
+  if (u > 2 && u < 5) { T.gait = 1; T.y = Math.abs(Math.sin(p.rig.gaitPh)) * 0.03; }             // walk on the spot
+  else if (u >= 5.5) {                                                                           // three attacks
+    const k = Math.floor((u - 5.5) / 1.5), local = (u - 5.5) % 1.5, style = p.styles[Math.min(k, 2)];
+    if (local < 0.5) Object.assign(T, strikePose(style, local / 0.5, -1, false));
+    else if (local < 0.5 + STRIKE_LEN) Object.assign(T, strikePose(style, 1, local - 0.5, false));
+    T.z = (T.z || 0) * 0.5;                                                                      // stay on the stand
+  }
+  applyRig(p.rig, T, dt, p.pose);
 }
 
 // ------------------------------------------------------------------ automatic quality
@@ -310,7 +366,7 @@ canvas.addEventListener('pointermove', (e) => {
 });
 function endDrag() {
   if (down.mode === 'part') { rebuildShells(cr); ground(); }
-  if (down.mode && down.moved) commit();
+  if (down.mode && down.moved) { commit(); coachEvent(down.mode === 'node' ? 'shape' : 'move'); }
   controls.orbit.enabled = true;
 }
 function pointerEnd(e) {
@@ -447,7 +503,7 @@ function renderLeft() {
   el.append(h('h3', null, CATS.find((c) => c[0] === tab)[1]), h('p', { class: 'note' }, 'Tap to add. Then tap the part on your creature and drag it where you want it.'));
   const grid = h('div', { class: 'grid' });
   for (const [kind, def] of Object.entries(PARTS)) if (def.cat === tab) {
-    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { if (tooMany()) return; const p = addPart(data, kind, cr.frames); rebuild(); commit(); play('place'); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
+    if (partOpen(meta, kind)) grid.append(h('button', { class: 'tile', onclick: () => { if (tooMany()) return; const p = addPart(data, kind, cr.frames); rebuild(); commit(); play('place'); coachEvent('add'); select(p.id); } }, h('img', { src: partThumb(kind), alt: '' }), def.n));
     else grid.append(h('button', { class: 'tile locked', onclick: () => buy('part:' + kind, PART_COST[kind], def.n, renderLeft) }, h('img', { src: partThumb(kind), alt: '' }), def.n, h('small', null, 'Locked · ' + PART_COST[kind])));
   }
   el.append(grid);
@@ -496,14 +552,44 @@ function renderTop() {
     h('button', { disabled: undo.length < 2, onclick: () => { if (undo.length > 1) { redo.push(undo.pop()); restore(undo[undo.length - 1]); } } }, 'Undo'),
     h('button', { disabled: !redo.length, onclick: () => { if (redo.length) { const s = redo.pop(); undo.push(s); restore(s); } } }, 'Redo'),
     h('button', { class: spin ? 'on' : '', onclick: () => { spin = !spin; renderTop(); } }, 'Spin'),
+    h('button', { class: preview ? 'on' : '', onclick: () => { if (preview) stopPreview(); else startPreview(); renderTop(); } }, preview ? '■ Stop' : '▶ Play'),
     h('button', { onclick: photo }, 'Photo'),
     h('button', { onclick: () => save() }, 'Save'),
     h('button', { class: 'battle', onclick: enterBattle }, '⚔️ Battle'));
 }
 function setSex(s) { data.sex = s; rebuild(); commit(); renderUI(); }
 function renderUI() {
+  if (preview) stopPreview();
+  if (tab === 'skin') coachEvent('skin');
   renderTabs(); renderLeft(); renderRight(); renderTop(); layout(); refreshOverlay();
-  $('hint').textContent = sel && sel !== 'body' ? '' : 'Drag to spin. Pinch to zoom. Tap a part to select it.';
+  $('hint').textContent = sel && sel !== 'body' ? '' : tr('Drag to spin. Pinch to zoom. Tap a part to select it.');
+  renderCoach();
+}
+
+// ------------------------------------------------------------------ first-time guide
+// A short walk through building a critter. Each step moves on when the player does the thing (or taps Next).
+const COACH = [
+  { id: 'shape', text: 'This is your critter. Drag one of the white dots to bend or stretch its body.' },
+  { id: 'add', text: 'Now give it something. Open a tab on the left, such as Mouth or Head, and tap a part to add it.' },
+  { id: 'move', text: 'Drag the new part across the body to move it. The sliders change its size and shape.' },
+  { id: 'skin', text: 'Open the Skin tab to change colours, patterns and fur.' },
+  { id: 'battle', text: 'Ready? Press Battle. In a fight, size is health, teeth and claws are attack, and arms hold weapons.' },
+];
+function coachEvent(id) {
+  if (!meta || (meta.tut || 0) >= COACH.length || COACH[meta.tut || 0].id !== id) return;
+  meta.tut = (meta.tut || 0) + 1; saveMeta(); track('tutorial', { step: id }); renderCoach();
+}
+function renderCoach() {
+  const el = $('coach'), i = meta.tut || 0;
+  const show = inEditor && !arena.active && i < COACH.length;
+  el.classList.toggle('hidden', !show);
+  document.querySelectorAll('.coach-glow').forEach((x) => x.classList.remove('coach-glow'));
+  if (!show) return;
+  const step = COACH[i];
+  el.replaceChildren(h('small', null, 'Step ' + (i + 1) + ' of ' + COACH.length), h('p', null, step.text),
+    h('div', { class: 'row' }, h('button', { onclick: () => { meta.tut = COACH.length; saveMeta(); track('tutorial', { step: 'skipped' }); renderCoach(); } }, 'Skip the guide'), h('button', { class: 'on', onclick: () => coachEvent(step.id) }, 'Next')));
+  const glow = step.id === 'battle' ? document.querySelector('#topbar .battle') : step.id === 'add' || step.id === 'skin' ? $('tabs') : null;
+  if (glow) glow.classList.add('coach-glow');
 }
 
 // ------------------------------------------------------------------ save, photo, start screen
@@ -535,7 +621,7 @@ const saveMeta = () => store.set('cc.meta', meta);
 function buy(key, cost, label, then) {
   if (meta.points < cost) { play('error'); toast('Not enough points: ' + label + ' costs ' + cost + ', you have ' + meta.points + '.'); return; }
   if (!confirm('Unlock ' + label + ' for ' + cost + ' points?')) return;
-  meta.points -= cost; meta.unlocked[key] = true; saveMeta(); play('latch'); play('confirm'); toast('Unlocked ' + label); then && then();
+  meta.points -= cost; meta.unlocked[key] = true; saveMeta(); track('unlock', { item: key }); play('latch'); play('confirm'); toast('Unlocked ' + label); then && then();
 }
 /** Counters behind the goals: add to one, or (best = true) keep the highest value seen. */
 function stat(k, val = 1, best) { meta.stats[k] = best ? Math.max(meta.stats[k] || 0, val) : (meta.stats[k] || 0) + val; saveMeta(); }
@@ -551,8 +637,14 @@ function crown(pts, run) {
   const list = store.get('cc.saved', []), e = list.find((c) => c.id === data.id);
   if (e) { e.data = JSON.parse(JSON.stringify(data)); e.name = data.name; store.set('cc.saved', list); }
 }
-const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, gfx: () => GFX[gfx], stat, crown, bonus: (pts) => { meta.points += pts; saveMeta(); }, onDone: battleDone, meta: () => meta, saveMeta });
+/** Rewarded ad, or for patrons simply the reward. */
+async function showAd(where) {
+  if (meta.patron) return { ok: true };
+  const r = await rawAd(); track('ad', { ok: r.ok ? 1 : 0 }); return r;
+}
+const arena = createArena({ scene, camera, M, h, store, sun, showAd, toast, track, tr, decode, valid: (d) => validCreature(d, TEMPLATES, PARTS), gfx: () => GFX[gfx], stat, crown, bonus: (pts) => { meta.points += pts; saveMeta(); }, onDone: battleDone, meta: () => meta, saveMeta });
 function enterBattle(run) {
+  coachEvent('battle');
   const other = store.get('cc.run', null);
   if (other && other.id !== data.id && !(run && run.id === data.id) && !confirm('Another creature is still in the middle of a gauntlet. Starting this one abandons that run. Go ahead?')) return;
   save(true);
@@ -589,6 +681,7 @@ function battleDone(res) {
   down.count = 0;
   if (res.type === 'retired') stat('bestEndless', res.wins, true);
   inEditor = true; $('editor').classList.remove('hidden');
+  scheduleReminders();
   rebuild(); if (res.type === 'champion') save(true);
   renderUI(); fitCamera();
   music('menu');
@@ -624,6 +717,60 @@ function goHome() {
   inEditor = false; $('editor').classList.add('hidden'); $('start').classList.remove('hidden');
   renderStart();
 }
+// ------------------------------------------------------------------ sharing, backup codes, reminders, purchases
+function sendText(text, what) {
+  if (native() && native().shareText) { native().shareText(text, what); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast(what + ' copied. Paste it anywhere to share it.'), () => prompt(what + ':', text));
+  else prompt(what + ':', text);
+}
+async function shareCreature(d) {
+  const c = JSON.parse(JSON.stringify(d)); delete c.id; delete c.champion;        // a shared critter starts a new life
+  sendText(await encode('c', c), 'Critter code for ' + d.name); track('share', { type: d.type });
+}
+async function backupCode() {
+  const o = {}; for (const k of KEEP) { const v = store.get(k, null); if (v) o[k] = k === 'cc.saved' ? v.map((c) => ({ ...c, thumb: '' })) : v; }
+  sendText(await encode('s', o), 'Critter Arena backup code');
+}
+async function importCode() {
+  const text = prompt('Paste a critter code, or a backup code:'); if (!text) return;
+  const got = await decode(text);
+  if (got && got.kind === 'c' && validCreature(got.data, TEMPLATES, PARTS)) {
+    const d = got.data; d.id = 'c' + Date.now().toString(36); delete d.champion;
+    const list = store.get('cc.saved', []); list.unshift({ id: d.id, name: d.name, thumb: creatureThumb(d), data: d }); store.set('cc.saved', list);
+    play('confirm'); toast('Added "' + d.name + '" to your creatures'); track('import', { type: d.type }); renderStart(); return;
+  }
+  if (got && got.kind === 's' && got.data['cc.meta'] && confirm('Replace everything on this device with the save in this code?')) {
+    for (const k of KEEP) if (got.data[k]) store.set(k, got.data[k]); else localStorage.removeItem(k);
+    location.reload(); return;
+  }
+  play('error'); toast('That code could not be read.');
+}
+/** Ask the phone to remind the player when runs are back and when the daily gift is ready. */
+function scheduleReminders() {
+  const A = native(); if (!A || !A.remind || !meta.remind) return;
+  try {
+    A.cancelReminders();
+    const r = runsNow(meta);
+    if (!meta.patron && r.n < r.max) A.remind(1, Date.now() + r.next + (r.max - r.n - 1) * RUN_MS, tr('Your runs are back'), tr('All ' + runMax(meta) + ' runs are ready. The Colosseum is waiting.'));
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(10, 0, 0, 0);
+    A.remind(2, tomorrow.getTime(), tr('Your daily gift is ready'), tr('Collect your points and keep your streak going.'));
+  } catch (e) { /* reminders are optional */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') scheduleReminders(); });
+// Google Play purchases. The app tells the page what is for sale and what has been bought.
+const products = {};
+window.ccProducts = (list) => { for (const p of list) products[p.id] = p; if (shopTab === 'Premium') renderStart(); };
+window.ccPurchased = (id, token) => {
+  const pr = PRODUCTS.find((x) => x.id === id); if (!pr) return;
+  meta.tokens = meta.tokens || {};
+  if (!pr.once && token && meta.tokens[token]) return;              // already granted
+  if (token) meta.tokens[token] = 1;
+  if (pr.once) { if (meta.patron) return; meta.patron = true; }
+  if (pr.points) meta.points += pr.points;
+  if (pr.revives) meta.revives = (meta.revives || 0) + pr.revives;
+  saveMeta(); play('coins'); synth('win'); toast('Thank you! ' + pr.name + ' added.'); track('purchase', { item: id });
+  if (!inEditor && !arena.active) renderStart();
+};
 const typeThumbs = {};
 // Body-type pictures are pre-rendered files (assets/www/thumbs), so the first launch does not have to draw them.
 const typeThumb = (id) => 'thumbs/' + id + '.jpg';
@@ -636,8 +783,8 @@ setInterval(tickRunPill, 1000);
 let shopTab = null;
 function renderShop() {
   const el = $('start');
-  const row = (icon, name, text, cost, owned, onbuy, extra) => h('div', { class: 'shoprow' + (owned ? ' owned' : '') }, h('div', { class: 'ico' }, icon), h('div', { class: 'what' }, h('b', null, name), extra && h('small', { class: 'req' }, extra), h('small', null, text)),
-    owned ? h('span', { class: 'have' }, typeof owned === 'string' ? owned : 'Owned') : h('button', { class: meta.points >= cost ? 'go' : '', onclick: onbuy }, cost + ' pts'));
+  const row = (icon, name, text, cost, owned, onbuy, extra, money) => h('div', { class: 'shoprow' + (owned ? ' owned' : '') }, h('div', { class: 'ico' }, icon), h('div', { class: 'what' }, h('b', null, name), extra && h('small', { class: 'req' }, extra), h('small', null, text)),
+    owned ? h('span', { class: 'have' }, typeof owned === 'string' ? owned : 'Owned') : h('button', { class: money || meta.points >= cost ? 'go' : '', onclick: onbuy }, money ? String(cost) : cost + ' pts'));
   const itemRows = (cat) => ITEMS.filter((it) => it.cat === cat).sort((a, b) => a.cost - b.cost).map((it) =>
     row(it.icon, it.name, describe({ id: it.id, cat, q: 1, rar: 0, lvl: 1 }), it.cost, itemOpen(meta, it) && (it.cost ? 'Owned' : 'Free'), () => buy('item:' + cat + ':' + it.id, it.cost, it.name, renderStart), it.reqText ? 'Needs ' + it.reqText : (it.hands === 2 ? 'Needs two free hands' : '')));
   const goalRow = (g) => {
@@ -653,8 +800,15 @@ function renderShop() {
       rec('Elite opponents beaten', meta.stats.elites || 0), rec('Different rewards picked', Object.keys(meta.seen).length + ' of ' + ITEMS.length), rec('Body types crowned', Object.keys(meta.typesWon).length + ' of 8'),
       ...meta.hall.map((c) => h('div', { class: 'shoprow' }, h('div', { class: 'ico' }, '👑'), h('div', { class: 'what' }, h('b', null, c.name), h('small', null, TEMPLATES[c.type].name + ' · ' + (c.level !== undefined ? LEVELS[c.level].name : 'Rank ' + c.rank) + ' · ' + new Date(c.when).toLocaleDateString()))))],
     Bodies: () => Object.entries(TEMPLATES).map(([id, t]) => row('🧬', t.name, t.blurb, TYPE_COST[id], typeOpen(meta, id) && (TYPE_COST[id] ? 'Owned' : 'Free'), () => buy('type:' + id, TYPE_COST[id], 'the ' + t.name + ' body', renderStart))),
-    Parts: () => Object.entries(PART_COST).map(([k, cost]) => row(h('img', { src: partThumb(k), alt: '' }), PARTS[k].n, 'Body part for the workshop (' + CATS.find((c) => c[0] === PARTS[k].cat)[1] + ').', cost, partOpen(meta, k), () => buy('part:' + k, cost, PARTS[k].n, renderStart))),
+    Parts: () => Object.entries(PART_COST).map(([k, cost]) => row(h('img', { src: partThumb(k), alt: '' }), PARTS[k].n, tr('Body part for the workshop.') + ' ' + tr(CATS.find((c) => c[0] === PARTS[k].cat)[1]), cost, partOpen(meta, k), () => buy('part:' + k, cost, PARTS[k].n, renderStart))),
     Weapons: () => itemRows('weapon'), Abilities: () => itemRows('ability'), Relics: () => itemRows('relic'),
+    Premium: () => PRODUCTS.map((pr) => {
+      const live = products[pr.id], owned = pr.once && meta.patron;
+      return row(pr.icon, pr.name, pr.text, live ? live.price : 'Soon', owned && 'Owned', () => {
+        if (!live) { toast('Purchases are available in the Google Play version.'); return; }
+        track('buy_tap', { item: pr.id }); native().buy(pr.id);
+      }, null, true);
+    }),
     Boosts: () => BOOSTS.map((b) => {
       const lvl = b.consumable ? meta.revives : (meta.boosts[b.id] || 0), full = lvl >= b.max, cost = b.cost(lvl);
       return row(b.icon, b.name + (b.consumable ? ' (holding ' + lvl + ')' : b.max > 1 ? ' (level ' + lvl + ' of ' + b.max + ')' : ''), b.text, cost, full && (b.consumable ? 'Full' : 'Maxed'), () => {
@@ -663,10 +817,10 @@ function renderShop() {
       });
     }),
   };
-  const notes = { Goals: 'Targets that pay points when you claim them.', Records: 'Your history in the Colosseum, and the hall of champions.', Weapons: 'Weapons you own can turn up as rewards after a fight. A creature holds one per hand.', Abilities: 'Abilities you own can turn up as rewards, if the creature has the right body for them.', Relics: 'Relics are passive rewards that stack. Many only work, or work better, with the right body.', Parts: 'Extra parts for building creatures. Starter creatures may already carry some of these.', Bodies: 'New body types to start from.', Boosts: 'Permanent upgrades, and revives.' };
-  el.replaceChildren(h('h1', null, shopTab === 'Goals' || shopTab === 'Records' ? 'Your ' : 'The ', h('span', null, shopTab === 'Goals' ? 'Goals' : shopTab === 'Records' ? 'Records' : 'Shop'), h('small', { class: 'record' }, h('b', null, meta.points + ' points'), ' ', h('button', { class: 'shopbtn', onclick: () => { shopTab = null; renderStart(); } }, 'Back'))),
+  const notes = { Premium: 'Optional purchases through Google Play. Everything in the game can also be earned by playing.', Goals: 'Targets that pay points when you claim them.', Records: 'Your history in the Colosseum, and the hall of champions.', Weapons: 'Weapons you own can turn up as rewards after a fight. A creature holds one per hand.', Abilities: 'Abilities you own can turn up as rewards, if the creature has the right body for them.', Relics: 'Relics are passive rewards that stack. Many only work, or work better, with the right body.', Parts: 'Extra parts for building creatures. Starter creatures may already carry some of these.', Bodies: 'New body types to start from.', Boosts: 'Permanent upgrades, and revives.' };
+  el.replaceChildren(h('h1', null, h('span', null, shopTab === 'Goals' ? 'Goals' : shopTab === 'Records' ? 'Records' : 'Shop'), h('small', { class: 'record' }, h('b', null, meta.points + ' points'), ' ', h('button', { class: 'shopbtn', onclick: () => { shopTab = null; renderStart(); } }, 'Back'))),
     h('div', { class: 'chips', style: 'margin-top:10px' }, Object.keys(tabs).map((t) => h('button', { class: t === shopTab ? 'on' : '', onclick: () => { shopTab = t; renderStart(); } }, t))),
-    h('p', { class: 'note' }, notes[shopTab] + (shopTab === 'Goals' || shopTab === 'Records' ? '' : ' Points come from every fight won (more for later fights) and a big bonus for the title.')),
+    h('p', { class: 'note' }, notes[shopTab] + (shopTab === 'Goals' || shopTab === 'Records' || shopTab === 'Premium' ? '' : ' Points come from every fight won (more for later fights) and a big bonus for the title.')),
     h('div', { class: 'shop' }, tabs[shopTab]()));
   el.scrollTop = 0;
 }
@@ -697,9 +851,15 @@ function renderStart() {
     h('div', { class: 'cards' },
       cur && h('div', { class: 'card', onclick: () => open(cur) }, h('img', { src: creatureThumb(cur), alt: '' }), h('b', null, 'Continue'), h('small', null, cur.name)),
       saved.map((c) => h('div', { class: 'card', onclick: () => open(JSON.parse(JSON.stringify(c.data))) }, h('img', { src: c.thumb, alt: '' }), h('b', null, c.name), h('small', null, TEMPLATES[c.data.type].name + (c.data.champion ? ' · Champion' + (c.data.champion > 1 ? ' x' + c.data.champion : '') : '')),
+        h('button', { class: 'shr', onclick: (e) => { e.stopPropagation(); shareCreature(c.data); } }, '↗'),
         h('button', { class: 'del warn', onclick: (e) => { e.stopPropagation(); if (confirm('Delete "' + c.name + '"?')) { store.set('cc.saved', store.get('cc.saved', []).filter((x) => x.id !== c.id)); renderStart(); } } }, '×')))));
   const au = audioOn(), flip = (k) => { meta.audio = { ...audioOn(), [k]: !audioOn()[k] }; saveMeta(); setAudio(meta.audio); renderStart(); };
-  el.append(h('div', { class: 'settings' }, h('button', { class: au.music ? 'on' : '', onclick: () => flip('music') }, '🎵 Music ' + (au.music ? 'on' : 'off')), h('button', { class: au.sfx ? 'on' : '', onclick: () => flip('sfx') }, '🔊 Sound ' + (au.sfx ? 'on' : 'off'))));
+  el.append(h('div', { class: 'settings' },
+    h('button', { onclick: () => { const codes = Object.keys(LANGS); meta.lang = codes[(codes.indexOf(getLang()) + 1) % codes.length]; saveMeta(); setLang(meta.lang); renderStart(); } }, '🌐 ' + LANGS[getLang()]),
+    h('button', { onclick: importCode }, '📥 Import a code'),
+    h('button', { onclick: backupCode }, '💾 Backup code'),
+    native() && native().askNotify && h('button', { class: meta.remind ? 'on' : '', onclick: () => { meta.remind = !meta.remind; saveMeta(); if (meta.remind) native().askNotify(); else native().cancelReminders(); renderStart(); } }, '🔔 Reminders ' + (meta.remind ? 'on' : 'off')),
+    h('button', { class: au.music ? 'on' : '', onclick: () => flip('music') }, '🎵 Music ' + (au.music ? 'on' : 'off')), h('button', { class: au.sfx ? 'on' : '', onclick: () => flip('sfx') }, '🔊 Sound ' + (au.sfx ? 'on' : 'off'))));
 }
 
 // Every button makes a small sound; a few kinds get their own.
@@ -713,10 +873,11 @@ document.addEventListener('click', (e) => {
 controls.orbit = new OrbitControls(camera, canvas);
 Object.assign(controls.orbit, { enableDamping: true, dampingFactor: 0.12, enablePan: false, autoRotateSpeed: 2.2, rotateSpeed: 0.9, maxPolarAngle: Math.PI * 0.62, minPolarAngle: 0.15 });
 controls.orbit.addEventListener('change', touch);
+setLang(meta.lang || guessLang());
 if (meta.gfx) setGfx(meta.gfx);
 if (meta.audio) setAudio(meta.audio);
 music('menu');
 layout();
 renderStart();
 requestAnimationFrame(frame);
-window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, setGfx, get gfx() { return gfx; }, get meta() { return meta; }, saveMeta, renderStart, runsNow, audioStats, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };
+window.__cc = { get data() { return data; }, get cr() { return cr; }, open, newCreature, select, PARTS, TEMPLATES, setTab: (t) => { tab = t; renderUI(); }, camera, controls, fitCamera, rebuild, renderer, scene, arena, tr, i18nSeen, setLang, ITEMS, describe, GOALS, BOOSTS, LEVELS, PRODUCTS, COACH, CATS, previewStep: (to) => { preview.t = 0; preview.rig.gaitPh = 0; for (let t = 0; t < to; t += 1 / 60) playPreview(1 / 60); }, setGfx, get gfx() { return gfx; }, get meta() { return meta; }, saveMeta, renderStart, runsNow, audioStats, enterBattle, randomCreature, addPartTest: (k) => addPart(data, k, cr.frames), pickAt: (x, y) => { setRay({ clientX: x, clientY: y }); return pickPart(); }, state: () => ({ sel, tab, down: { ...down } }) };

@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+  const ctx = await b.newContext({ viewport: { width: 860, height: 390 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+  const p = await ctx.newPage(); const errs = [];
+  p.on('console', (m) => { if (m.type() === 'error' && !/GPU stall/.test(m.text())) errs.push(m.text().slice(0, 200)); });
+  p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => d.accept());
+  await p.goto('file://' + require('path').resolve(__dirname, '../app/src/main/assets/www/index.html')); await p.waitForTimeout(1200);
+  const st = () => p.evaluate(() => window.__cc.audioStats());
+  console.log('before touch', JSON.stringify(await st()));
+  await p.locator('.card.intro button').tap(); await p.waitForTimeout(1500);
+  let s = await st(); console.log('after first tap: decoded', s.decoded + '/' + s.total, 'track', s.playing, 'paused', s.paused, 'clicks', JSON.stringify(s.counts));
+  await p.evaluate(() => { window.__ccPause = true; window.__ccAdInstant = true; const c = window.__cc; c.open(c.newCreature('humanoid')); });
+  await p.getByRole('button', { name: /Battle/ }).tap(); await p.waitForTimeout(400);
+  s = await st(); console.log('gate: track', s.playing);
+  await p.locator('#ggo').tap();
+  await p.evaluate(() => { const A = window.__cc.arena; A.auto = true; for (let i = 0; i < 4000 && A.phase !== 'won' && A.phase !== 'dead'; i++) A.update(0.05, A.t); });
+  await p.waitForTimeout(600);
+  s = await st(); console.log('after a fight:', JSON.stringify(s.counts), 'track', s.playing);
+  await p.evaluate(() => window.ccPause(true)); await p.waitForTimeout(300); s = await st(); console.log('backgrounded: playing', s.playing);
+  await p.evaluate(() => window.ccPause(false)); await p.waitForTimeout(500); s = await st(); console.log('foreground: playing', s.playing, 'paused', s.paused);
+  console.log('errors', JSON.stringify(errs));
+  await b.close();
+})();
