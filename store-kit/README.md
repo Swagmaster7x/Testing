@@ -16,9 +16,12 @@ can create.
 | | Personal edition | Store edition |
 | --- | --- | --- |
 | Package | `com.personal.mealgym` (sideloaded) | your own, e.g. `com.yourname.mealgym` |
-| People | Swag and Ashley, built in | Anyone: set up on first launch, add more in Settings > People |
-| Starter plans | Your own workout days | Full body 3 days, Upper / lower 4 days, Glute focus 3 days, or empty |
-| Recipes | 36, including the coffee-shop orders and daily guide | 31 shared recipes and snacks |
+| People | Swag and Ashley, built in | Anyone: a short questionnaire on first launch builds their plan; add more in Settings > People |
+| Plan builder | None (their plans are their own) | Daily calorie and protein guide, workout plan, meal sizes and a first week of meals from the setup answers; redo in Settings > My plan |
+| Allergies | Not asked | Nine allergens plus beef, pork and poultry kept off the plan; allergens listed on each recipe |
+| Cupboard | Cook > What can I make from my cupboard? | The same |
+| Starter plans | Your own workout days | Full body 3 days, Upper / lower 4 days, Glute focus 3 days, At home 3 days, or empty |
+| Recipes | 72, including the coffee-shop orders and daily guide | 67 shared recipes and snacks |
 | Exercise help | Photos from free-exercise-db plus steps | Three written form cues per move plus "Watch a demo" |
 | Looks | 15 ready-made plus your own, in Settings > Look | The same, and chosen during setup |
 | Internet | None (blocked in the manifest) | Ads and Google Play billing only |

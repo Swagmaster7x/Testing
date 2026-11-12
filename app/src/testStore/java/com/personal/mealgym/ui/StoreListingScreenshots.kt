@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.personal.mealgym.MainActivity
@@ -89,6 +90,8 @@ class StoreListingScreenshots {
 
     @Test
     fun alexDarkFantasy() {
+        // Two things already in the cupboard, so the shopping list shows its "check you have enough" label.
+        runBlocking { container.settings.setCupboard(setOf("chicken breast", "egg")) }
         open(alex)
         waitForText("Breakfast")
         shot("listing-1-today")
@@ -129,22 +132,65 @@ class StoreListingScreenshots {
         open(sam)
         waitForText("Snack")
         shot("listing-6-glam-today")
-        tab("Plan")
-        waitForText("Fill my week")
-        shot("listing-7-glam-plan")
     }
 
     @Test
+    fun cookFromTheCupboard() {
+        runBlocking {
+            container.settings.setCupboard(setOf("chicken breast", "salmon", "egg", "broccoli", "bell pepper", "garlic", "ginger", "scallion", "onion", "rice", "black bean", "lime", "avocado"))
+        }
+        open(alex)
+        tab("Cook")
+        waitForText("What can I make from my cupboard?")
+        compose.onAllNodesWithText("What can I make from my cupboard?").onFirst().performClick()
+        waitForText("Search ingredients")
+        compose.onAllNodesWithText("What I can make", substring = true).onFirst().performClick()
+        waitForText("To buy:")
+        shot("listing-9-cupboard")
+    }
+
+    /** The last page of setup: what the answers came to. Shown in the Deep sea look. */
+    @Test
     @Config(qualifiers = "w360dp-h640dp-notnight-xxhdpi")
-    fun setUpInAMinute() {
-        open(sam)
+    fun answersBecomeAPlan() {
+        val jo = runBlocking { container.people.create(Profile(0, "Jo", "OCEAN"), null, setOf(DayOfWeek.MONDAY)) }
+        open(jo)
         compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("Settings")).onFirst().performClick()
         waitForText("Add a person")
         compose.onAllNodesWithText("Add a person").onFirst().performClick()
         waitForText("What should the app call you?")
-        compose.onAllNodesWithText("Y2K glam").onFirst().performClick()
+        compose.onAllNodes(androidx.compose.ui.test.hasSetTextAction()).onFirst().performTextInput("Riley")
+        next()
+        waitForText("What are you aiming for?")
+        compose.onAllNodesWithText("Build muscle").onFirst().performClick()
+        compose.onAllNodesWithText("Male").onFirst().performClick()
+        type("Age", "29")
+        type("Height (ft)", "5")
+        type("and inches", "11")
+        type("Weight (lb)", "170")
+        next()
+        waitForText("Favourite cuisines")
+        compose.onAllNodesWithText("Asian").onFirst().performClick()
+        compose.onAllNodesWithText("Hispanic").onFirst().performClick()
+        next()
+        waitForText("Where will you train?")
+        compose.onAllNodesWithText("I've trained before").onFirst().performClick()
+        compose.onAllNodesWithText("4 days").onFirst().performClick()
+        next()
+        waitForText("Your daily guide")
+        shot("listing-10-your-plan")
+    }
+
+    private fun next() {
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Next"))
+        compose.onAllNodesWithText("Next").onFirst().performClick()
         compose.waitForIdle()
-        shot("listing-8-setup")
+    }
+
+    private fun type(label: String, text: String) {
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText(label))
+        compose.onAllNodes(hasText(label) and androidx.compose.ui.test.hasSetTextAction()).onFirst().performTextInput(text)
+        compose.waitForIdle()
     }
 
     private fun tab(label: String) {

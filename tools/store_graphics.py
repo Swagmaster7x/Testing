@@ -18,19 +18,20 @@ FONTS = ROOT / "app/src/main/res/font"
 
 # (recorded file, caption, look)
 SCREENS = [
+    ("listing-10-your-plan", "Answer a few questions.\nGet a plan built for you", "sea"),
     ("listing-1-today", "Today's meals and workout\non one screen", "iron"),
+    ("listing-9-cupboard", "Tick what's in your cupboard,\nsee what you can cook", "iron"),
     ("listing-2-plan", "Plan the week,\nor fill it in one tap", "iron"),
-    ("listing-3-recipe", "Recipes with real portions\nand protein swaps", "iron"),
     ("listing-4-shopping", "One shopping list\nfor the whole household", "iron"),
+    ("listing-3-recipe", "Recipes with real portions\nand protein swaps", "iron"),
     ("listing-5-gym", "Log every set,\nwith form tips for each move", "iron"),
-    ("listing-6-glam-today", "Two looks: dark fantasy\nor Y2K glam", "glam"),
-    ("listing-7-glam-plan", "Gym days and rest days\nright on your week", "glam"),
-    ("listing-8-setup", "Set up in a minute.\nAdd your household.", "glam"),
+    ("listing-6-glam-today", "15 looks,\nor design your own", "glam"),
 ]
 
 LOOKS = {
     "iron": {"top": (44, 22, 18), "bottom": (12, 9, 8), "text": (240, 230, 214), "font": "cinzel_700.ttf", "size": 64},
     "glam": {"top": (255, 214, 236), "bottom": (233, 213, 255), "text": (176, 18, 110), "font": "fredoka_600.ttf", "size": 66},
+    "sea": {"top": (206, 238, 244), "bottom": (205, 220, 246), "text": (9, 84, 98), "font": "fredoka_600.ttf", "size": 66},
 }
 
 W, H = 1080, 1920
@@ -74,6 +75,9 @@ def frame(name, caption, look):
 def main():
     for i, (name, caption, look) in enumerate(SCREENS, start=1):
         out = OUT / "screenshots" / f"{i:02d}-{name.split('-', 2)[-1]}.png"
+        if i == 1:
+            for old in (OUT / "screenshots").glob("*.png"):
+                old.unlink()
         frame(name, caption, look).save(out)
         print("wrote", out.relative_to(ROOT))
     Image.open(SHOTS / "play-icon-512.png").convert("RGB").save(OUT / "icon-512.png")

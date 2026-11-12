@@ -13,16 +13,25 @@ something else here and set the same name in `store.appName` (see the launch che
 
 ## Short description (80 characters max)
 
-    Plan your meals, shop once and log your gym sets. For you or the whole house.
+    A meal and workout plan built for you. Cook from your cupboard. Log your gym.
 
 ## Full description (4,000 characters max)
 
 ```
-Meal & Gym puts your week's meals, your shopping list and your gym log in one place.
+Meal & Gym puts your week's meals, your shopping list and your gym log in one place, and builds the plan for you.
+
+A PLAN BUILT FROM YOUR ANSWERS
+• Tell it your goal, a few details, the cuisines you like and what you can't eat. Every question is optional.
+• Get an estimated daily calorie and protein guide, a workout plan for the gym or home, and a first week of meals sized to fit.
+• Allergies and foods you don't eat are kept off your plan and out of your suggestions.
+
+COOK FROM YOUR CUPBOARD
+• Tick what's in your fridge and cupboards and see what you can make right now.
+• Recipes that are nearly there show exactly what's missing, and one tap plans them.
 
 PLAN THE WEEK
 • Breakfast, lunch and dinner for each day, plus an optional snack.
-• Pick from a library of 30+ high-protein recipes, or add your own.
+• Pick from 65+ healthy, high-protein recipes, including vegetarian and fish dishes, or add your own.
 • "Fill my week" plans the empty slots for you from the recipes you like.
 • Meal-prep recipes fill several days in one go. "Repeat last week" copies a week you liked.
 • Filter by protein, cuisine or "Not chicken", mark favourites, and hide recipes for a while.
@@ -38,7 +47,7 @@ COOK
 • "Make it with..." swaps the main protein, and the shopping list follows.
 
 TRAIN
-• Pick a starter plan: Full body 3 days, Upper / lower 4 days, or Glute focus 3 days. Or build your own.
+• Starter plans: Full body 3 days, Upper / lower 4 days, Glute focus 3 days, or At home 3 days with no equipment. Or build your own.
 • Tick off sets, swap a machine when the gym is busy, and note weight and reps ("Last time: 135 x 8").
 • A rest timer, written form tips for every exercise, and a quick "How did it go?" after each workout.
 • Missed a day? The plan just moves on to the next session. No streaks, no guilt.
@@ -55,13 +64,13 @@ YOUR LOOK
 • Each person on the phone picks their own.
 
 PRIVATE BY DESIGN
-• No account and no sign-in. Your plans, workouts and history stay on your phone.
+• No account and no sign-in. Your answers, plans, workouts and history stay on your phone.
 • Export a backup file whenever you like.
-• Meal & Gym never adds up calories, weighs you or counts streaks.
+• No food logging, no weigh-ins and no streaks. The calorie guide is a guide, not a scoreboard.
 
 The free version shows a small banner on some screens (never during a workout or while cooking). A one-time "Remove ads" purchase turns them off for good.
 
-Meal & Gym is a planner, not medical, nutrition or fitness advice. Check with a doctor before starting a new eating or training plan.
+Meal & Gym is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide is an estimate for healthy adults. Allergen information comes from ingredient names, so always check food labels. Check with a doctor before starting a new eating or training plan.
 ```
 
 ## Other listing fields
@@ -69,7 +78,7 @@ Meal & Gym is a planner, not medical, nutrition or fitness advice. Check with a 
 | Field | Value |
 | --- | --- |
 | App category | Health & Fitness |
-| Tags (pick up to 5) | Meal planner, Workout tracker, Recipes, Grocery list, Fitness |
+| Tags (pick up to 5) | Meal planner, Workout planner, Recipes, Grocery list, Fitness |
 | Contact email | A support address you check (required, shown publicly) |
 | Website | Optional; needed later if you want an app-ads.txt file |
 | Privacy policy | The public URL where you host `privacy-policy.html` |

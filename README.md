@@ -22,12 +22,22 @@ Settings > Look offers 15 ready-made looks and a creator for your own. Swag's da
 - Fonts added for the new looks, all bundled with their licences in `licenses/`: DM Serif Display, Bebas Neue, Space Mono, Righteous (SIL Open Font License) and Special Elite (Apache 2.0). The look icons are original vector drawings (`res/drawable/ic_look_*.xml`).
 - Database version 4 adds `Profile.customLook` (the creator's choices as JSON). Backups carry it; older backups restore without one.
 
+## Cupboard and plan builder (version 4)
+
+- **My cupboard** (both editions): Cook > "What can I make from my cupboard?" Tick what's in the house, by store section or by search; pantry staples from Settings already count. Recipes are ranked "Ready to cook", "Almost there" (up to three things to buy, listed) and "Needs a shop". "Plan it" puts one on a day in the coming week, and the shopping list labels anything ticked in the cupboard rather than hiding it. Matching is by plain food name (`domain/Cupboard.kt`): "low-sodium soy sauce" and "soy sauce" are one thing to tick.
+- **72 recipes**: 36 added in seed version 3, including vegetarian, fish and egg dishes and five snacks. `tools/recipes_v3.py` holds them and works out each one's approximate nutrition from its ingredients.
+- **Setup questions** (store edition): five short pages ask for a name and look; goal, sex, age, height, weight and activity; favourite cuisines, allergies and foods not eaten; where and how often the person trains. The last page shows what that comes to, all adjustable: an estimated daily calorie and protein guide, a suggested workout plan and training days, and meals sized to land near the guide. It then plans the first week. Every question is optional; Settings > My plan redoes them.
+- **The guide** (`domain/Plan.kt`): resting energy by the Mifflin-St Jeor equation times an activity factor, at most 20% (never more than 500 calories) below for fat loss or 10% (at most 300) above for building muscle. It gives no numbers to anyone under 18 or pregnant or breastfeeding, no deficit to someone underweight for their height, and never goes below 1,200 to 1,500 calories. It is shown as reference text; the app still never logs food or weight.
+- **Foods to avoid** (`domain/Foods.kt`): nine allergens plus beef, pork and poultry are worked out from each recipe's ingredient names and its chosen protein swap, erring towards flagging (soy sauce for wheat, kimchi for fish). Avoided recipes are left out of the pickers, Fill my week, the cupboard and the Cook list, and say why at the top of their page. The result for every built-in recipe was checked by hand and is pinned in `SeedFoodsTest`. It reads names, not labels, and the app says so wherever it shows the result.
+- The personal edition gets the cupboard and the new recipes. Swag's and Ashley's plans, portions and Ashley's own daily guide are unchanged; the questionnaire is store-only.
+- Database version 5 adds `Profile.planAnswers`. Nothing here needs the internet, and none of it leaves the phone.
+
 ## Two editions
 
 The project builds two apps from the same code (Gradle product flavors):
 
 - **personal**: the app on Swag's and Ashley's phones. Package `com.personal.mealgym`, fully offline, sideloaded. Everything above and below describes it.
-- **store**: the Google Play version. Anyone sets up their own people on first launch (name, look, starter workout plan, training days, snack slot, portion size, recipe-tip style), there's no personal content, exercises get written form cues instead of photos, and it shows AdMob banners (after Google's consent prompt where the law requires it) with a one-time "Remove ads" purchase. It has its own package name, so it installs alongside the personal app and never touches its data.
+- **store**: the Google Play version. Anyone sets up their own people on first launch with a short questionnaire that builds their plan, there's no personal content, exercises get written form cues instead of photos, and it shows AdMob banners (after Google's consent prompt where the law requires it) with a one-time "Remove ads" purchase. It has its own package name, so it installs alongside the personal app and never touches its data.
 
 Everything needed to publish the store edition is in [store-kit/](store-kit/README.md): a launch checklist, listing text, Data safety answers, a privacy policy and the store graphics. `tools/store_seed.py` builds the store's `seed.json` from the personal one, and `tools/form_cues.py` writes its exercise cues.
 

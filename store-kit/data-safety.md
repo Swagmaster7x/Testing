@@ -37,7 +37,12 @@ Mark each of these as **Collected** and **Shared**, **processed ephemerally: No*
 Leave every other type unticked. In particular, the app does **not** collect:
 
 - Personal info (names typed for each person stay on the phone)
-- Health and fitness (meal plans, workouts, sets and sauna times stay on the phone)
+- Health and fitness (meal plans, workouts, sets, sauna times and the optional setup answers
+  such as goal, sex, age, height, weight and allergies stay on the phone)
+
+Google's form counts data as "collected" only when it is sent off the device. The setup
+answers are processed on the phone and never transmitted, so they are not collected or shared.
+If a later version ever syncs or uploads them, this form must change first.
 - Financial info or purchase history (Google Play handles payment; the app only asks Play whether
   "Remove ads" was bought, and that answer stays on the phone)
 - Messages, photos, files, contacts, calendar, web browsing
@@ -54,7 +59,7 @@ to export or share them. Google treats user-initiated sharing like that as not "
 | App access | **All functionality is available without special access** |
 | Target audience and content | **18 and over** only. Including younger ages brings in the Families policy and its ad rules. |
 | Content rating | Fill in the questionnaire honestly: no violence, no user-to-user interaction or sharing between users, no location sharing, digital purchases **yes**. Expect the lowest rating (Everyone / PEGI 3). |
-| Health apps | Tick **Activity and fitness** and **Nutrition and weight management**. No Health Connect access. |
+| Health apps | Tick **Activity and fitness** and **Nutrition and weight management** (the app estimates a calorie and protein guide from height, weight, age and activity). No Health Connect access. Not a medical device: it gives no diagnosis or treatment, and says so in setup and in Settings. |
 | Foreground service permissions | `FOREGROUND_SERVICE_SPECIAL_USE`: see the launch checklist, step 6 |
 | Financial features, Government apps, News apps | **No** / not applicable |
 | Data deletion | No account, so no account-deletion link is needed |

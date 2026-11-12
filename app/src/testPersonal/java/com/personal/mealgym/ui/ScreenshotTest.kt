@@ -55,6 +55,8 @@ class ScreenshotTest {
     @Before
     fun planAWeek() = runBlocking {
         withTimeout(30_000) { container.ready.first { it } }
+        // Settings outlive a single test here, so start each one with an empty cupboard.
+        container.settings.setCupboard(emptySet())
         openSide(TestPeople.SWAG)
         val swag = TestPeople.SWAG
         val recipes = container.db.recipeDao().allRecipes().associateBy { it.seedKey }
