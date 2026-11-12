@@ -113,7 +113,7 @@ class StoreFlowTest {
 
     @Test
     fun bannersStayOffWorkoutsAndCooking() {
-        assertEquals(setOf(Routes.PLAN, Routes.COOK, Routes.RECIPE, Routes.HISTORY), Routes.withBanner)
+        assertEquals(setOf(Routes.PLAN, Routes.COOK, Routes.RECIPE, Routes.HISTORY, Routes.CUPBOARD), Routes.withBanner)
         // Ads wait for consent: nothing is requested in a test run.
         assertEquals(false, container.monetization.adsRemoved.value)
         assertTrue(container.monetization.available)

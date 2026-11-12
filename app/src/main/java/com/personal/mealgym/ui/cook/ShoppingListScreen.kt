@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.personal.mealgym.domain.Cupboard
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.ShoppingItem
 import com.personal.mealgym.ui.AppNavigator
@@ -46,6 +47,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
     val week by vm.ui.collectAsStateWithLifecycle()
     val offset by vm.weekOffset.collectAsStateWithLifecycle()
     val both by vm.both.collectAsStateWithLifecycle()
+    val cupboard by vm.cupboard.collectAsStateWithLifecycle()
     val people by vm.peopleCount.collectAsStateWithLifecycle()
     val allLabel = if (people > 2) "Everyone" else "Both of us"
     val context = LocalContext.current
@@ -119,7 +121,8 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
                 item(key = "h-${section.section}") { SectionHeader(section.section.label) }
                 items(section.items, key = { "i-${it.key}" }) { item ->
                     val checked = item.key in w.checkedKeys
-                    ShoppingRow(item, checked) { vm.toggle(w, item.key, !checked) }
+                    val inCupboard = Cupboard.options(item.name).any { it in cupboard }
+                    ShoppingRow(item, checked, inCupboard) { vm.toggle(w, item.key, !checked) }
                 }
             }
             if (w.result.skippedAlwaysHave.isNotEmpty()) {
@@ -147,7 +150,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
 }
 
 @Composable
-private fun ShoppingRow(item: ShoppingItem, checked: Boolean, onToggle: () -> Unit) {
+private fun ShoppingRow(item: ShoppingItem, checked: Boolean, inCupboard: Boolean, onToggle: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 4.dp),
@@ -167,6 +170,14 @@ private fun ShoppingRow(item: ShoppingItem, checked: Boolean, onToggle: () -> Un
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // Ticked in "My cupboard": worth a look before buying more.
+            if (inCupboard && !checked) {
+                Text(
+                    "In your cupboard: check you have enough",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
         if (item.amountText.isNotBlank()) {
             Text(

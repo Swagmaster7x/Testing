@@ -163,6 +163,9 @@ class ShoppingViewModel(private val c: AppContainer) : MessageViewModel() {
         Dates.weekStart(today).plusWeeks(offset) to both
     }.flatMapLatest { (ws, both) -> c.meals.shoppingWeek(profileId, ws, both) }.stateInVm(null)
 
+    /** What's ticked in "My cupboard": those items are labelled on the list, not removed. */
+    val cupboard: StateFlow<Set<String>> = c.settings.cupboard.stateInVm(emptySet())
+
     fun setBoth(both: Boolean) {
         viewModelScope.launch { c.settings.setShoppingBoth(profileId, both) }
     }

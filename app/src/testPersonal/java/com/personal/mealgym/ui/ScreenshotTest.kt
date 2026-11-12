@@ -19,6 +19,8 @@ import com.personal.mealgym.domain.Dates
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -203,6 +205,42 @@ class ScreenshotTest {
         compose.onAllNodesWithText("Ashley's Side").onFirst().performClick()
         waitForText("Snack")
         shot("00b-ashley-today")
+    }
+
+    @Test
+    fun cookFromTheCupboard() {
+        tab("Cook")
+        waitForText("What can I make from my cupboard?")
+        compose.onAllNodesWithText("What can I make from my cupboard?").onFirst().performClick()
+        waitForText("Search ingredients")
+        shot("70-cupboard-empty")
+        for (item in listOf("Chicken breast", "Salmon", "Broccoli", "Garlic", "Ginger", "Scallions", "Rice")) {
+            compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText(item))
+            compose.onAllNodesWithText(item).onFirst().performClick()
+        }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("What I have (7)").fetchSemanticsNodes().isNotEmpty() }
+        shot("71-cupboard-ticked")
+        compose.onAllNodesWithText("What I can make", substring = true).onFirst().performClick()
+        // Soy sauce, honey and the other staples already count, so the teriyaki bowl only lacks sesame seeds.
+        waitForText("Almost there")
+        shot("72-cupboard-recipes")
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Teriyaki chicken and broccoli rice bowl"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("To buy: sesame seeds"))
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Plan it"))
+        // Plan the first match for today; it lands on Swag's plan.
+        val before = runBlocking { container.meals.weekEntries(TestPeople.SWAG, Dates.weekStart(LocalDate.now())).size }
+        compose.onAllNodesWithText("Plan it").onFirst().performClick()
+        waitForText("Which day?")
+        shot("73-cupboard-plan-it")
+        compose.onAllNodesWithText("Add to my plan").onFirst().performClick()
+        waitForText("Planned for")
+        val after = runBlocking { container.meals.weekEntries(TestPeople.SWAG, Dates.weekStart(LocalDate.now())) }
+        assertTrue(after.size >= before)
+        // The cupboard is remembered.
+        assertEquals(
+            setOf("chicken breast", "salmon", "broccoli", "garlic", "ginger", "scallion", "rice"),
+            runBlocking { container.settings.cupboard.first() },
+        )
     }
 
     @Test

@@ -35,6 +35,7 @@ import com.personal.mealgym.R
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.ui.cook.CookScreen
 import com.personal.mealgym.ui.cook.CookingModeScreen
+import com.personal.mealgym.ui.cook.CupboardScreen
 import com.personal.mealgym.ui.cook.RecipeEditScreen
 import com.personal.mealgym.ui.cook.RecipeScreen
 import com.personal.mealgym.ui.cook.ShoppingListScreen
@@ -68,9 +69,10 @@ object Routes {
     const val DEMO = "demo/{name}"
     const val PERSON = "person/{id}"
     const val LOOK = "look"
+    const val CUPBOARD = "cupboard"
 
     /** Screens that may show a banner ad in the store edition. */
-    val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY)
+    val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY, CUPBOARD)
 
     fun recipe(id: Long) = "recipe/$id"
     fun cooking(id: Long) = "cooking/$id"
@@ -104,6 +106,7 @@ class AppNavigator(private val nav: NavHostController) {
     fun demo(exerciseName: String) = nav.navigate(Routes.demo(exerciseName))
     fun person(id: Long = 0) = nav.navigate(Routes.person(id))
     fun look() = nav.navigate(Routes.LOOK) { launchSingleTop = true }
+    fun cupboard() = nav.navigate(Routes.CUPBOARD) { launchSingleTop = true }
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -201,6 +204,7 @@ fun MealGymNavHost(
                 PersonScreen(navigator)
             }
             composable(Routes.LOOK) { LookScreen(navigator) }
+            composable(Routes.CUPBOARD) { CupboardScreen(navigator) }
         }
     }
     }

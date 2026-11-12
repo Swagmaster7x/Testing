@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.personal.mealgym.AppContainer
 import com.personal.mealgym.MealGymApp
 import com.personal.mealgym.ui.cook.CookViewModel
+import com.personal.mealgym.ui.cook.CupboardViewModel
 import com.personal.mealgym.ui.cook.RecipeEditViewModel
 import com.personal.mealgym.ui.cook.RecipeViewModel
 import com.personal.mealgym.ui.cook.ShoppingViewModel
@@ -38,6 +39,7 @@ object AppViewModels {
         initializer { HistoryViewModel(container()) }
         initializer { PersonViewModel(container(), createSavedStateHandle()) }
         initializer { LookViewModel(container()) }
+        initializer { CupboardViewModel(container()) }
     }
 
     private fun CreationExtras.container(): AppContainer =
