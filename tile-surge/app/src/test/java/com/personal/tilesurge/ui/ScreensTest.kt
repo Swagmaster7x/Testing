@@ -146,22 +146,23 @@ class ScreensTest {
         val f = Fingers(v)
         val frames = java.io.File(Shots.dir, "frames").apply { mkdirs() }
         var n = 0
-        var shots = 0
+        var stepsSeen = 0
+        var countdown = 0
         fun step(count: Int) = repeat(count) {
             v.step(1)
+            // every third frame, for a 20-frames-a-second clip
             if (n % 3 == 0) {
                 val bmp = Shots.bitmap(v)
                 java.io.FileOutputStream(java.io.File(frames, String.format("f%04d.png", n / 3))).use {
                     bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
                 }
             }
-            // a still picture a moment after each chain step begins
-            if (scene.game.chain - 1 > shots && scene.game.clearing) {
-                v.step(0)
-                pending = 14
-                shots = scene.game.chain - 1
+            // and a still picture a moment after each chain step begins
+            if (scene.game.chain - 1 > stepsSeen && scene.game.clearing) {
+                stepsSeen = scene.game.chain - 1
+                countdown = 14
             }
-            if (pending > 0 && --pending == 0) Shots.save(v, "50-chain-x${scene.game.chain}")
+            if (countdown > 0 && --countdown == 0) Shots.save(v, "50-chain-x${scene.game.chain}")
             n++
         }
         step(20)
@@ -176,8 +177,6 @@ class ScreensTest {
         assertTrue(scene.game.maxChain == 3)
         assertTrue(scene.game.score >= 340)
     }
-
-    private var pending = 0
 
     @Test
     fun infiniteGameOver() {
