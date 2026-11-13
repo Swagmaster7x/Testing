@@ -55,6 +55,7 @@ In Android Studio, open the `tile-surge` folder itself, not the repository root.
 - **Random play** (`core/FuzzTest`): millions of frames of random touches, checking after every frame that the board still makes sense (nothing floating, nothing left matched, nothing stuck in mid-air).
 - **Whole games** (`core/BotTest`): a simple computer player clears all 30 stages and plays Infinite on each difficulty, and prints how long it took.
 - **Touch** (`ui/TouchPlayTest`, `ui/NavigationTest`): the real view driven by simulated fingers: sliding, flicking, two fingers at once, pause, the menus, a whole stage and a whole Infinite game played through touch events only.
+- **The app itself** (`MainActivityTest`, `ui/LoopTest`): the activity started on Android 8, 10, 12, 13 and 15, with Back delivered the way each version delivers it, pausing when the app leaves the front, and the clock held to 60 ticks a second on 60, 90 and 120 Hz screens.
 - **The how-to boards and the sounds** (`ui/DemosTest`, `ui/SfxSynthTest`).
 - **Pictures** (`ui/ScreensTest`): draws every screen with the real drawing code and saves PNGs to `app/build/outputs/screens/`, at phone, small-phone and tablet sizes.
 
@@ -106,7 +107,9 @@ All times are frames at 60 a second.
 - **Nothing can be slid in right under a hanging tile.** It has to fall first. Without this, one tile shuffled between two columns could hold them both up for ever and stop the stack rising. (A test bot found that; it is now a rule with its own test.)
 - **A dropped tile finishes its trip.** If the finger lifts while the tile is still catching up, the tile carries on to the column where the finger left it.
 - **Forgiving touches.** A touch that lands just above or just beside a tile picks that tile up, and a tile keeps the grip the finger took on it, so it takes the same half-cell of movement to shift it whichever part of it was touched.
-- **Upright on phones.** On tablets and wide windows the readouts move to the left of the well and RAISE to the right.
+- **One hold at a time.** While one finger holds a tile, a second touch takes over only if it lands squarely on another tile. That lets two thumbs hand over to each other, while a palm on the well or a thumb that just misses RAISE knocks nothing loose. A finger resting on a tile through READY picks it up at GO.
+- **Sixty a second.** The game moves 60 times a second and asks the phone for a 60 Hz screen mode, so it is not jerky on 90 and 144 Hz screens.
+- **Upright on phones, either way up on tablets.** On tablets and wide windows the readouts move to the left of the well and RAISE to the right.
 
 ## Not in this version
 
