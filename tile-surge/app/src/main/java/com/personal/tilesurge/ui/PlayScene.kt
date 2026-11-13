@@ -324,17 +324,19 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                         raiseFinger = id
                         app.buzz()
                     }
-                    // One finger at a time works the well. A second one landing there while the first
-                    // is holding a tile (a palm, or a thumb aiming for RAISE) must not knock it loose.
-                    onBoard(x, y) -> if (boardFinger == -1) {
-                        if (grabAt(x, y)) {
-                            // a new hold; it takes over from any tile that was still travelling
+                    // One finger at a time holds a tile. While one is holding, another touch takes over only
+                    // if it lands squarely on a tile, so two thumbs can hand over to each other, but a palm
+                    // on an empty part of the well, or a thumb that just misses RAISE, knocks nothing loose.
+                    onBoard(x, y) -> {
+                        val free = boardFinger == -1
+                        if (grabAt(x, y, forgiving = free)) {
+                            // a new hold; it takes over from any tile that was held or still travelling
                             boardFinger = id
                             fingerX = x
                             fingerY = y
                             lettingGo = false
                             waitingForGo = false
-                        } else if (game.phase == Phase.COUNTDOWN) {
+                        } else if (free && game.phase == Phase.COUNTDOWN) {
                             boardFinger = id
                             fingerX = x
                             fingerY = y
@@ -375,15 +377,17 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     }
 
     /**
-     * Picks up the tile under the finger, forgiving a touch that lands just beside or just above one.
+     * Picks up the tile under the finger. With [forgiving], a touch that lands just beside or just above
+     * a tile picks that tile up too.
      * False if there was nothing there to pick up (and whatever was held before is still held).
      */
-    private fun grabAt(x: Float, y: Float): Boolean {
+    private fun grabAt(x: Float, y: Float, forgiving: Boolean = true): Boolean {
         val colF = (x - board.left) / board.cell
         val rowF = board.rowAt(game, y)
         val col = floor(colF).toInt()
         val row = floor(rowF).toInt()
         if (!game.grab(row, col)) {
+            if (!forgiving) return false
             // A tile that cannot be held just now (it is popping, or falling) is not a near miss of its neighbour.
             if (row in 0 until Game.ROWS && col in 0 until Game.COLS && game.grid[row][col].kind != 0) return false
             val fy = rowF - row

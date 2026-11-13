@@ -259,33 +259,63 @@ class TouchPlayTest {
     }
 
     @Test
-    fun `a second touch on the well does not knock a held tile loose`() {
+    fun `a stray second touch on the well does not knock a held tile loose`() {
         val (v, scene) = still(
             "..4...",
             "12345.",
         )
+        val cell = scene.board.cell
         val f = Fingers(v)
         f.down(0, scene.x(0), scene.y(0))
         val id = scene.game.grabbedId
         assertNotEquals(0, id)
-        // a palm on an empty part of the well, then on another tile, then just under the bottom row
+        // a palm on an empty part of the well
         f.down(1, scene.x(4), scene.y(6))
         assertEquals(id, scene.game.grabbedId)
-        f.up(1)
-        f.down(1, scene.x(2), scene.y(1))
-        assertEquals(id, scene.game.grabbedId)
-        f.move(1, scene.x(5), scene.y(1))
+        f.move(1, scene.x(1), scene.y(6))
         v.step(12)
-        assertEquals("the second finger moved nothing", "..4...\n12345.", scene.game.boardString().lines().takeLast(2).joinToString("\n"))
         f.up(1)
+        // a thumb that just misses RAISE and lands under the bottom row
         f.down(1, scene.x(3), scene.board.bottom + 5f * v.app.ui.unit)
         assertEquals(id, scene.game.grabbedId)
         f.up(1)
+        // a touch in the gap just above a tile, which a first finger would be forgiven for
+        f.down(1, scene.x(4), scene.y(1) + cell * 0.3f)
+        assertEquals(id, scene.game.grabbedId)
+        f.up(1)
+        v.step(12)
+        assertEquals("nothing has moved", "..4...\n12345.", scene.game.boardString().lines().takeLast(2).joinToString("\n"))
         // and the first finger still has its tile
         f.move(0, scene.x(1), scene.y(0))
         v.step(Game.SWAP_FRAMES + 1)
         assertEquals("21345.", scene.bottomRow())
         f.up(0)
+    }
+
+    @Test
+    fun `a second finger put squarely on another tile takes over, so two thumbs can hand over`() {
+        val (v, scene) = still("12345.")
+        val f = Fingers(v)
+        val one = scene.game.grid[0][0].id
+        val five = scene.game.grid[0][4].id
+        f.down(0, scene.x(0), scene.y(0))
+        assertEquals(one, scene.game.grabbedId)
+        // the other thumb lands on the 5 before the first has lifted
+        f.down(1, scene.x(4), scene.y(0))
+        assertEquals(five, scene.game.grabbedId)
+        // the first thumb's late wobble and lift change nothing
+        f.move(0, scene.x(2), scene.y(0))
+        v.step(12)
+        f.up(0)
+        assertEquals(five, scene.game.grabbedId)
+        assertEquals("12345.", scene.bottomRow())
+        // the second thumb slides its tile
+        f.move(1, scene.x(5), scene.y(0))
+        v.step(Game.SWAP_FRAMES + 1)
+        assertEquals("1234.5", scene.bottomRow())
+        f.up(1)
+        v.step(2)
+        assertEquals(0, scene.game.grabbedId)
     }
 
     @Test
