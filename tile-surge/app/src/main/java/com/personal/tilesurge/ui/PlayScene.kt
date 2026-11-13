@@ -452,7 +452,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         when (game.phase) {
             Phase.PLAYING -> {
                 // an alarm while the stack is pressed against the top and the clock is running out
-                if (game.topOccupied && !game.active && game.stopFrames == 0 && clock % 26 == 0) app.sound.play(Sfx.WARN)
+                if (game.topOccupied && !game.settling && game.stopFrames == 0 && clock % 26 == 0) app.sound.play(Sfx.WARN)
             }
             Phase.GAME_OVER, Phase.STAGE_CLEAR -> {
                 endFrames++

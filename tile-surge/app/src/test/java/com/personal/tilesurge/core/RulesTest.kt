@@ -462,6 +462,144 @@ class RulesTest {
         assertEquals(6 * Scoring.PER_TILE + Scoring.chainBonus(2), g.score)
     }
 
+    @Test
+    fun `a tile still sliding onto a popping group when it goes gets no chain credit`() {
+        fun board() = still(
+            ".2....",
+            "41....",
+            "13....",
+            "122...",
+        )
+        // How long from the swap that stacks the three 1s until they are gone.
+        val probe = board()
+        assertTrue(probe.trySwap(2, 0))
+        val gone = probe.runUntil { it.grid[0][0].kind == 0 }
+
+        for (early in -2..8) {
+            val g = board()
+            assertTrue(g.trySwap(2, 0))
+            g.run(gone - early)
+            // slide the top 2 across onto the column, `early` frames before the 1s under it go
+            g.trySwap(3, 0)
+            g.runUntil { !it.active }
+            // either way the 2 comes down beside the pair of 2s and they clear, leaving what stood on them
+            assertEquals(listOf(".4....", ".3...."), g.boardString().lines().takeLast(2))
+            val steps = g.events.filter { it.type == EventType.MATCH }.map { it.b }
+            // It had to have come to rest on the group (a four-frame slide, finished) to fall as part of a chain.
+            val rested = early > Game.SWAP_FRAMES
+            assertEquals("slide started $early frames before the group went", if (rested) listOf(1, 2) else listOf(1, 1), steps)
+        }
+    }
+
+    @Test
+    fun `a landed tile keeps its chain mark only while the cell right under it is mid-slide`() {
+        fun board() = still(
+            "2.....",
+            "1151..",
+            "2345..",
+            "5234..",
+            "4345..",
+        )
+        for (early in 0..6) {
+            val g = board()
+            assertTrue(g.trySwap(3, 2)) // three 1s, with a 2 resting on the left-hand one
+            g.runUntil { it.grid[4][0].state == TileState.HOVERING }
+            // The 2 will land on the 2 below it one frame after its hover runs out.
+            val landing = normal.hoverFrames + 1
+            // Two rows further down, slide another 2 into the column, `early` frames before that landing.
+            g.run(landing - early - 1)
+            assertTrue(g.trySwap(1, 0))
+            g.runUntil { !it.active }
+            val steps = g.events.filter { it.type == EventType.MATCH }.map { it.b }
+            // In place by the time the 2 lands: a chain. Still sliding, two cells below it: the mark is gone
+            // by the time the three 2s line up.
+            val inPlace = early >= Game.SWAP_FRAMES - 1
+            assertEquals("slide started $early frames before the landing", if (inPlace) listOf(1, 2) else listOf(1, 1), steps)
+        }
+    }
+
+    @Test
+    fun `a tile slid in under a falling one, even at the last moment, completes the chain`() {
+        fun board() = still(
+            "2.....",
+            "1151..",
+            "3245..",
+            "2434..",
+            "4343..",
+        )
+        for (early in 0..6) {
+            val g = board()
+            assertTrue(g.trySwap(3, 2)) // three 1s, with a 2 resting on the left-hand one
+            g.runUntil { it.grid[4][0].state == TileState.HOVERING }
+            val landing = normal.hoverFrames + 1
+            // Right where that 2 will land there is a 3. Trade it for the 2 beside it, `early` frames before
+            // the landing: for the last few of those the slide is still going as the tile touches down.
+            g.run(landing - early - 1)
+            assertTrue("slide started $early frames before the landing", g.trySwap(2, 0))
+            g.runUntil { !it.active }
+            assertEquals("slide started $early frames before the landing",
+                listOf(1, 2), g.events.filter { it.type == EventType.MATCH }.map { it.b })
+        }
+        // Once the tile has landed and sat still, the same trade is an ordinary match.
+        val late = board()
+        assertTrue(late.trySwap(3, 2))
+        late.runUntil { it.grid[3][0].kind == 2 && it.grid[3][0].state == TileState.LANDING }
+        late.run(1)
+        assertTrue(late.trySwap(2, 0))
+        late.runUntil { !it.active }
+        assertEquals(listOf(1, 1), late.events.filter { it.type == EventType.MATCH }.map { it.b })
+    }
+
+    @Test
+    fun `two tiles standing one on the other cannot be slid into a gap together`() {
+        for (gap in 0..6) {
+            // the lower one first, then the upper one after it
+            val g = still(
+                "2.....",
+                "1.....",
+            )
+            assertTrue(g.trySwap(0, 0))
+            g.run(gap)
+            assertFalse("upper tile, $gap frames after the lower", g.trySwap(1, 0))
+            g.runUntil { !it.active }
+            // the 1 moved; the 2 lost its footing and dropped straight down
+            assertEquals(listOf("......", "21...."), g.boardString().lines().takeLast(2))
+
+            // the upper one first, then the lower one under it
+            val h = still(
+                "2.....",
+                "1.....",
+            )
+            assertTrue(h.trySwap(1, 0))
+            h.run(gap)
+            assertFalse("lower tile, $gap frames after the upper", h.trySwap(0, 0))
+            h.runUntil { !it.active }
+            assertEquals(listOf("......", "12...."), h.boardString().lines().takeLast(2))
+            assertTrue(h.trySwap(0, 0))
+        }
+    }
+
+    @Test
+    fun `tiles that do not stand on each other can still be slid at the same time`() {
+        // two tiles on the same row, each into its own gap
+        val g = still("12.4..")
+        assertTrue(g.trySwap(0, 1))
+        assertTrue(g.trySwap(0, 3))
+        g.runUntil { !it.active }
+        assertEquals("1.2.4.", g.boardString().lines().last())
+
+        // a tile slid out from under two others that are trading places with each other
+        val h = still(
+            "34....",
+            "12....",
+        )
+        assertTrue(h.trySwap(0, 1)) // the 2 slides right into the gap
+        assertTrue(h.trySwap(1, 0)) // the 3 and 4 above trade places: neither is moving into a gap
+        h.runUntil { !it.active }
+        // the 3 ended up over the hole and dropped into it
+        assertEquals(listOf("4.....", "132..."), h.boardString().lines().takeLast(2))
+    }
+
     // ------------------------------------------------------------ rising
 
     @Test
@@ -495,18 +633,64 @@ class RulesTest {
     }
 
     @Test
-    fun `the stack waits while tiles move or pop`() {
+    fun `the stack waits while tiles hang, fall or pop`() {
         val g = Game.infinite(normal, 30, 3L)
         g.skipCountdown()
         g.setBoard("1121..")
-        g.run(5)
-        val before = g.riseOffset
-        assertTrue(before > 0)
         assertTrue(g.trySwap(0, 2))
-        g.run(Game.SWAP_FRAMES + flash + 3 * normal.popFrames - 1)
-        assertTrue(g.active)
-        // One more frame of rising happened on the frame the swap was made; nothing since.
-        assertTrue(g.riseOffset - before <= Game.ROW_UNITS / Speed.framesPerRow[30] + 1)
+        g.run(Game.SWAP_FRAMES)
+        assertTrue(g.settling)
+        // nothing more comes up for as long as the match is flashing and popping
+        val offset = g.riseOffset
+        g.run(flash + 3 * normal.popFrames - 1)
+        assertTrue(g.settling)
+        assertEquals(offset, g.riseOffset)
+        assertEquals(0, g.rowsRisen)
+
+        // the same while a tile hangs and drops
+        val h = Game.infinite(normal, 30, 3L)
+        h.skipCountdown()
+        h.setBoard(
+            "3.....",
+            "1.2...",
+        )
+        assertTrue(h.trySwap(1, 0)) // the 3 is pushed off its perch, into the gap beside it
+        h.run(Game.SWAP_FRAMES)
+        assertEquals(TileState.HOVERING, h.grid[1][1].state)
+        val before = h.riseOffset
+        h.runUntil { !it.settling }
+        assertEquals(before, h.riseOffset)
+        h.run(3)
+        assertTrue(h.riseOffset > before)
+    }
+
+    @Test
+    fun `sliding tiles about does not hold the stack back`() {
+        // Five different tiles and a gap: nothing here can ever match, however they are shuffled.
+        fun play(rub: Boolean): Int {
+            val g = Game.infinite(normal, Speed.MAX_LEVEL, 3L)
+            g.skipCountdown()
+            g.setBoard("12345.")
+            if (rub) assertTrue(g.grab(0, 0))
+            var n = 0
+            while (g.phase == Phase.PLAYING) {
+                // a finger rubbed from one side of the well to the other and back, over and over
+                if (rub) {
+                    if (g.grabbedId == 0) g.grab(g.stackHeight() - 1, g.boardString().lines()[Game.ROWS - g.stackHeight()].indexOf('1'))
+                    g.dragTo(if ((n / 20) % 2 == 0) Game.COLS - 1 else 0)
+                }
+                g.tick()
+                Checks.assertConsistent(g)
+                assertEquals("no match is possible on this board", 0, g.count(EventType.MATCH))
+                assertTrue("still going after $n frames", ++n < 5000)
+            }
+            if (rub) assertTrue("the tile really was kept moving", g.count(EventType.SWAP) > 100)
+            return g.frames
+        }
+        val handsOff = play(rub = false)
+        // eleven rows to the top at 45 frames a row, then the grace period
+        assertEquals(11 * Speed.framesPerRow[Speed.MAX_LEVEL] + normal.graceFrames, handsOff)
+        assertEquals("rubbing a tile to and fro must not buy any time", handsOff, play(rub = true))
     }
 
     @Test
@@ -638,18 +822,32 @@ class RulesTest {
     }
 
     @Test
-    fun `the grace period does not run while tiles are moving`() {
+    fun `the countdown at the top waits for falling tiles but not for sliding ones`() {
         val g = Game.infinite(normal, 1, 3L)
         g.skipCountdown()
-        // A column up to the top, and a loose tile at the bottom right to push around.
-        g.setBoard(*tallColumn(Game.ROWS).also { it[Game.ROWS - 1] = "2..3.." })
+        // A column up to the top; at the bottom right, a tile on a perch and a loose tile to push around.
+        g.setBoard(*tallColumn(Game.ROWS).also {
+            it[Game.ROWS - 2] = "1..4.."
+            it[Game.ROWS - 1] = "2..3.5"
+        })
         g.run(10)
         assertEquals(normal.graceFrames - 10, g.grace)
-        assertTrue(g.trySwap(0, 3))
+
+        // sliding the loose tile: the countdown runs straight on
+        assertTrue(g.trySwap(0, 4))
         g.run(Game.SWAP_FRAMES)
-        assertEquals(normal.graceFrames - 10, g.grace)
+        assertEquals(normal.graceFrames - 10 - Game.SWAP_FRAMES, g.grace)
+
+        // knocking the 4 off its perch: it runs during the slide, then waits while the tile hangs and drops
+        assertTrue(g.trySwap(1, 2))
+        g.run(Game.SWAP_FRAMES)
+        val grace = g.grace
+        assertEquals(normal.graceFrames - 10 - 2 * Game.SWAP_FRAMES, grace)
+        assertTrue(g.settling)
+        g.runUntil { !it.settling }
+        assertEquals(grace, g.grace)
         g.run(1)
-        assertEquals(normal.graceFrames - 11, g.grace)
+        assertEquals(grace - 1, g.grace)
     }
 
     @Test
@@ -762,6 +960,42 @@ class RulesTest {
         assertEquals(Phase.STAGE_CLEAR, g.phase)
         assertEquals(1, g.count(EventType.STAGE_CLEAR))
         assertFalse(g.trySwap(0, 0))
+    }
+
+    @Test
+    fun `a stage waits for pops still going on under the line before it is declared clear`() {
+        val def = Stages.get(1)
+        val g = Game.stage(def, 5L)
+        g.skipCountdown()
+        g.autoRise = false
+        g.setBoard("12....")
+        g.raiseHeld = true
+        g.runUntil { it.rowsRisen == def.lines + 2 }
+        g.raiseHeld = false
+        assertEquals(2, g.lineRow)
+        g.setBoard(
+            "11.1..", // above the line
+            "232323",
+            "554533",
+        )
+        g.events.clear()
+        val before = g.score
+        assertTrue(g.trySwap(2, 2)) // three 1s above the line
+        g.run(40)
+        assertTrue(g.trySwap(0, 2)) // then, while they flash, three 5s below it
+        // the 1s go first: nothing is left above the line, but the 5s are still popping
+        g.runUntil { it.grid[2][0].kind == 0 }
+        assertEquals(Phase.PLAYING, g.phase)
+        assertTrue(g.clearing)
+        g.runUntil { it.phase != Phase.PLAYING }
+        assertEquals(Phase.STAGE_CLEAR, g.phase)
+        // every tile that matched has popped and scored, and nothing is left hanging
+        assertEquals(6, g.count(EventType.POP))
+        assertEquals(6 * Scoring.PER_TILE, g.score - before)
+        assertFalse(g.settling)
+        for (r in 0 until Game.ROWS) for (c in 0 until Game.COLS) assertFalse(g.grid[r][c].isClearing)
+        // the three tiles that stood on the 5s have dropped into their places
+        assertEquals("232433", g.boardString().lines().last())
     }
 
     @Test

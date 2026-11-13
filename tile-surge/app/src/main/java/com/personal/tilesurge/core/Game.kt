@@ -19,7 +19,9 @@ enum class Phase { COUNTDOWN, PLAYING, GAME_OVER, STAGE_CLEAR }
  *    pops tile by tile, and then the whole group disappears together.
  *  - Tiles that fall because a group under them disappeared are marked. If a marked tile is part of a match when
  *    it lands, the chain counter goes up.
- *  - The stack rises all the time, but waits while anything is moving or popping, and pauses after combos and chains.
+ *  - The stack rises all the time, but waits while anything is hanging, falling or popping, and pauses after
+ *    combos and chains. A tile that is only sliding sideways does not hold it: with a finger on the glass a
+ *    tile can be kept sliding for as long as the player likes.
  *  - When a tile sits in the top row and the stack would rise, a short grace period runs out, and then the game is over.
  */
 class Game private constructor(
@@ -123,8 +125,15 @@ class Game private constructor(
     /** Tests switch this off to keep the stack still. */
     var autoRise = true
 
-    /** Something is sliding, hanging, falling or popping. The stack does not rise while this is true. */
+    /** Something is sliding, hanging, falling or popping: the board is not at rest. */
     var active = false
+        private set
+
+    /**
+     * Something is hanging, falling or popping. While this is true the stack does not rise and the
+     * countdown at the top does not run. Sliding alone does not count (see the class comment).
+     */
+    var settling = false
         private set
 
     /** A match is flashing or popping. */
@@ -217,6 +226,9 @@ class Game private constructor(
         if (row + 1 < ROWS &&
             (grid[row + 1][col].state == TileState.HOVERING || grid[row + 1][col + 1].state == TileState.HOVERING)
         ) return false
+        // Two tiles standing one on the other cannot both be slid into the same gap at once: the one
+        // above has lost its footing and must be left to fall.
+        if ((a.kind == 0 || b.kind == 0) && (gapSwapUnderWay(row + 1, col) || gapSwapUnderWay(row - 1, col))) return false
         grid[row][col] = b
         grid[row][col + 1] = a
         a.state = TileState.SWAPPING
@@ -228,6 +240,14 @@ class Game private constructor(
         active = true
         emit(EventType.SWAP, row, col)
         return true
+    }
+
+    /** True if the cells at [row], [col] and [col]+1 are a tile and a gap that are trading places right now. */
+    private fun gapSwapUnderWay(row: Int, col: Int): Boolean {
+        if (row !in 0 until ROWS) return false
+        val p = grid[row][col]
+        val q = grid[row][col + 1]
+        return p.state == TileState.SWAPPING && q.state == TileState.SWAPPING && (p.kind == 0) != (q.kind == 0)
     }
 
     /** Tiles at rest and plain gaps can be swapped. Anything sliding, hanging, falling or popping cannot. */
@@ -269,7 +289,7 @@ class Game private constructor(
     // ---------------------------------------------------------------- rising
 
     private fun rise() {
-        val canRise = !active && !topOccupied
+        val canRise = !settling && !topOccupied
         if (raiseHeld && canRise) manualRaise = true
         if (manualRaise && canRise) {
             // Raising by hand gives up whatever pause the player had earned.
@@ -278,7 +298,7 @@ class Game private constructor(
         } else {
             // Let go while blocked: forget the rest of the row.
             if (manualRaise && !raiseHeld) manualRaise = false
-            if (autoRise && !active && stopFrames == 0) {
+            if (autoRise && !settling && stopFrames == 0) {
                 if (topOccupied) {
                     grace--
                     if (grace <= 0) {
@@ -421,17 +441,21 @@ class Game private constructor(
         // Whatever was resting on this tile now hangs for a moment and then falls.
         // Those tiles are marked: if one completes a match when it lands, that is a chain.
         var rr = r + 1
+        // One extra frame, because each tile's own timer still runs later in this same pass.
+        var hover = difficulty.hoverFrames + 1
         while (rr < ROWS) {
             val u = grid[rr][c]
             if (u.kind == 0) break
             when (u.state) {
                 TileState.NORMAL, TileState.LANDING -> {
                     u.state = TileState.HOVERING
-                    // One extra frame, because this tile's own timer still runs later in this same pass.
-                    u.timer = difficulty.hoverFrames + 1
+                    u.timer = hover
                     u.chaining = true
                 }
-                TileState.SWAPPING, TileState.HOVERING -> u.chaining = true
+                // A tile the player is still sliding into place finishes its slide and gets no mark:
+                // it was not resting here. What rests on it hangs that much longer, so it all drops together.
+                TileState.SWAPPING -> hover += u.timer - 1
+                TileState.HOVERING -> u.chaining = true
                 else -> break
             }
             rr++
@@ -574,26 +598,19 @@ class Game private constructor(
     }
 
     /**
-     * A marked tile that has come to rest without matching loses its mark.
+     * A marked tile that has come to rest without matching loses its mark, unless the cell right under it
+     * is still mid-slide (it may be about to drop again, or a match may be about to complete beneath it).
      * When no marked tile is left anywhere, the chain is over.
      */
     private fun settleChains() {
         var any = false
-        for (c in 0 until COLS) {
-            // True while the tiles we are looking at stand on something that is still moving.
-            var unsettled = false
-            for (r in 0 until ROWS) {
-                val t = grid[r][c]
-                if (t.kind == 0) {
-                    unsettled = t.state == TileState.SWAPPING
-                    continue
-                }
-                when (t.state) {
-                    TileState.NORMAL, TileState.LANDING -> if (!unsettled) t.chaining = false
-                    TileState.SWAPPING, TileState.HOVERING, TileState.FALLING -> unsettled = true
-                    TileState.MATCHED, TileState.POPPING, TileState.POPPED -> unsettled = false
-                }
-                if (t.chaining) any = true
+        for (r in 0 until ROWS) for (c in 0 until COLS) {
+            val t = grid[r][c]
+            if (!t.chaining) continue
+            if (t.isResting && (r == 0 || grid[r - 1][c].state != TileState.SWAPPING)) {
+                t.chaining = false
+            } else {
+                any = true
             }
         }
         if (!any && chain > 1) {
@@ -606,18 +623,25 @@ class Game private constructor(
 
     private fun refreshFlags() {
         var act = false
+        var set = false
         var clr = false
         for (r in 0 until ROWS) for (c in 0 until COLS) {
             when (grid[r][c].state) {
-                TileState.SWAPPING, TileState.HOVERING, TileState.FALLING -> act = true
+                TileState.SWAPPING -> act = true
+                TileState.HOVERING, TileState.FALLING -> {
+                    act = true
+                    set = true
+                }
                 TileState.MATCHED, TileState.POPPING, TileState.POPPED -> {
                     act = true
+                    set = true
                     clr = true
                 }
                 TileState.NORMAL, TileState.LANDING -> Unit
             }
         }
         active = act
+        settling = set
         clearing = clr
         topOccupied = isTopOccupied()
     }
@@ -629,6 +653,9 @@ class Game private constructor(
 
     private fun checkStageClear() {
         if (mode != GameMode.STAGE || lineRow < 0) return
+        // Let anything still hanging, falling or popping under the line finish first, so the board is not
+        // frozen mid-pop. Nothing can come back above the line meanwhile: the stack does not rise.
+        if (settling) return
         for (r in lineRow until ROWS) for (c in 0 until COLS) if (grid[r][c].kind != 0) return
         phase = Phase.STAGE_CLEAR
         grabbedId = 0

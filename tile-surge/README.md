@@ -14,7 +14,7 @@ Kotlin, drawn on a plain Android `Canvas`, no libraries. Minimum Android 8 (API 
 - **Match.** Three or more of the same tile in a row or a column flash, pop one by one, and vanish together. Whatever was resting on them falls.
 - **Combos.** Four or more cleared at once is a combo.
 - **Chains.** When tiles that fall after a clear land in a new match, that is a chain, and it can keep going (×2, ×3, ...). You can line tiles up while a group is still flashing so that what falls next completes a match.
-- **The stack rises.** New rows come up from below all the time. The stack waits while tiles are moving or popping, and combos and chains hold it still for a few seconds more (the teal bar above the well).
+- **The stack rises.** New rows come up from below all the time. The stack waits while tiles are falling or popping, and combos and chains hold it still for a few seconds more (the teal bar above the well).
 - **RAISE.** Hold the button under the well to bring rows up faster. A quick tap brings exactly one row. One finger can hold RAISE while another slides tiles.
 - **The top.** When a tile is in the top row the stack stops and a red bar runs down. Clear the top row before it runs out or the game is over.
 
@@ -105,6 +105,9 @@ All times are frames at 60 a second.
 - **Raising at the top is safe.** RAISE does nothing while a tile is in the top row, rather than ending the game on the spot. The red countdown still runs.
 - **A tap finishes its row.** Letting go of RAISE part-way up a row lets that row finish coming in, so a tap is always worth exactly one row.
 - **Nothing can be slid in right under a hanging tile.** It has to fall first. Without this, one tile shuffled between two columns could hold them both up for ever and stop the stack rising. (A test bot found that; it is now a rule with its own test.)
+- **Sliding does not hold the stack.** The stack and the countdown at the top wait for tiles that are hanging, falling or popping, but not for tiles that are only being slid. With buttons, keeping a tile on the move takes a dozen presses a second; with a finger it takes none, and rubbing one tile to and fro would otherwise freeze the game for as long as you liked.
+- **Chain credit follows the usual rules.** A tile counts towards a chain if it was resting on the group that cleared. One still being slid into place when the group goes does not, and a tile that has landed keeps its credit only while the cell right under it is still mid-slide.
+- **A stage is cleared once the board is still.** If something is still popping or falling under the line when the last tile above it goes, the stage waits for it.
 - **A dropped tile finishes its trip.** If the finger lifts while the tile is still catching up, the tile carries on to the column where the finger left it.
 - **Forgiving touches.** A touch that lands just above or just beside a tile picks that tile up, and a tile keeps the grip the finger took on it, so it takes the same half-cell of movement to shift it whichever part of it was touched.
 - **One hold at a time.** While one finger holds a tile, a second touch takes over only if it lands squarely on another tile. That lets two thumbs hand over to each other, while a palm on the well or a thumb that just misses RAISE knocks nothing loose. A finger resting on a tile through READY picks it up at GO.

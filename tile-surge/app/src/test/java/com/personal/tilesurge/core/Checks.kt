@@ -19,6 +19,7 @@ object Checks {
         val seenIds = HashSet<Int>()
         var anyChaining = false
         var anyActive = false
+        var anySettling = false
 
         for (r in 0 until Game.ROWS) for (c in 0 until Game.COLS) {
             val t = g.grid[r][c]
@@ -42,6 +43,7 @@ object Checks {
             if (t.isClearing && (t.comboIndex !in 1..t.comboSize)) out += "$at combo ${t.comboIndex}/${t.comboSize}"
             if (t.chaining) anyChaining = true
             if (t.state != TileState.NORMAL && t.state != TileState.LANDING) anyActive = true
+            if (t.state == TileState.HOVERING || t.state == TileState.FALLING || t.isClearing) anySettling = true
 
             // A resting tile must stand on something solid, or on a cell a tile is still sliding through.
             if (t.isResting && r > 0) {
@@ -62,6 +64,7 @@ object Checks {
 
         if (g.phase == Phase.PLAYING || g.phase == Phase.COUNTDOWN) {
             if (g.active != anyActive) out += "active flag is ${g.active} but should be $anyActive"
+            if (g.settling != anySettling) out += "settling flag is ${g.settling} but should be $anySettling"
         }
         if (g.chain < 1) out += "chain is ${g.chain}"
         if (g.chain > 1 && !anyChaining) out += "chain is ${g.chain} but no tile carries the mark"

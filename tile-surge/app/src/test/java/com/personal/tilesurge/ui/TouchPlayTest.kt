@@ -5,6 +5,7 @@ import com.personal.tilesurge.core.Checks
 import com.personal.tilesurge.core.Difficulty
 import com.personal.tilesurge.core.Game
 import com.personal.tilesurge.core.Phase
+import com.personal.tilesurge.core.Speed
 import com.personal.tilesurge.core.TileState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -386,6 +387,36 @@ class TouchPlayTest {
         assertEquals(scene.game.grid[0][1].id, scene.game.grabbedId)
         f.up(1)
         f.up(0)
+    }
+
+    @Test
+    fun `rubbing a finger to and fro across the well does not hold the stack back`() {
+        // Five different tiles and a gap, at top speed: nothing can match, so the only question is
+        // whether keeping a tile on the move buys any time. It must not.
+        fun play(rub: Boolean): Int {
+            val (v, scene) = play(Setup.Infinite(Difficulty.NORMAL, Speed.MAX_LEVEL), 4L)
+            v.step(Game.COUNTDOWN_FRAMES)
+            scene.game.setBoard("12345.")
+            val f = Fingers(v)
+            val id = scene.game.grid[0][0].id
+            if (rub) f.down(0, scene.x(0), scene.y(0))
+            var n = 0
+            var moves = 0
+            var lastCol = 0
+            while (scene.game.phase == Phase.PLAYING) {
+                if (rub && n % 20 == 0) f.move(0, if ((n / 20) % 2 == 0) scene.x(5) else scene.x(0), scene.y(0))
+                v.step(1)
+                val col = scene.game.locate(id) % Game.COLS
+                if (col != lastCol) moves++
+                lastCol = col
+                assertTrue("still going after $n frames", ++n < 5000)
+            }
+            if (rub) assertTrue("the tile really was kept on the move ($moves moves)", moves > 100)
+            return scene.game.frames
+        }
+        val handsOff = play(rub = false)
+        assertEquals(11 * Speed.framesPerRow[Speed.MAX_LEVEL] + Difficulty.NORMAL.graceFrames, handsOff)
+        assertEquals(handsOff, play(rub = true))
     }
 
     // ------------------------------------------------------------ the raise button
