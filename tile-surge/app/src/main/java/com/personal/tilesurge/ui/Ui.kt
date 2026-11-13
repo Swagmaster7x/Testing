@@ -128,20 +128,21 @@ class Ui(context: Context) {
         return if (w <= maxWidth || w <= 0f) size else size * maxWidth / w
     }
 
-    /**
-     * Draws [s] wrapped to [maxWidth], centred on [cx], first line's middle at [top].
-     * Returns the y just below the last line. A line break in [s] starts a new line.
-     */
-    fun paragraph(c: Canvas, s: String, cx: Float, top: Float, maxWidth: Float, size: Float, color: Int, face: Typeface = semi): Float {
-        val lineHeight = size * 1.36f
-        var y = top
+    /** A paragraph already broken into lines for a given width and size. */
+    private class Wrapped(val text: String, val width: Float, val size: Float, val face: Typeface, val lines: List<String>)
+
+    /** The few paragraphs on screen are wrapped once and remembered, not worked out again every frame. */
+    private val wrapped = ArrayList<Wrapped>()
+
+    private fun wrap(s: String, maxWidth: Float, size: Float, face: Typeface): List<String> {
+        for (w in wrapped) if (w.width == maxWidth && w.size == size && w.face === face && w.text == s) return w.lines
+        val lines = ArrayList<String>()
         for (block in s.split('\n')) {
             val line = StringBuilder()
             for (word in block.split(' ')) {
                 val trial = if (line.isEmpty()) word else "$line $word"
                 if (line.isNotEmpty() && textWidth(trial, size, face) > maxWidth) {
-                    text(c, line.toString(), cx, y, size, color, Paint.Align.CENTER, face)
-                    y += lineHeight
+                    lines += line.toString()
                     line.setLength(0)
                     line.append(word)
                 } else {
@@ -149,7 +150,22 @@ class Ui(context: Context) {
                     line.append(trial)
                 }
             }
-            text(c, line.toString(), cx, y, size, color, Paint.Align.CENTER, face)
+            lines += line.toString()
+        }
+        if (wrapped.size >= 12) wrapped.removeAt(0)
+        wrapped += Wrapped(s, maxWidth, size, face, lines)
+        return lines
+    }
+
+    /**
+     * Draws [s] wrapped to [maxWidth], centred on [cx], first line's middle at [top].
+     * Returns the y just below the last line. A line break in [s] starts a new line.
+     */
+    fun paragraph(c: Canvas, s: String, cx: Float, top: Float, maxWidth: Float, size: Float, color: Int, face: Typeface = semi): Float {
+        val lineHeight = size * 1.36f
+        var y = top
+        for (line in wrap(s, maxWidth, size, face)) {
+            text(c, line, cx, y, size, color, Paint.Align.CENTER, face)
             y += lineHeight
         }
         return y - lineHeight + size * 0.7f

@@ -6,30 +6,38 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- flame red, top left -->
-    <path android:fillColor="#A3283A" android:pathData="M25,34a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <path android:fillColor="#EF4F50" android:pathData="M25,31a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <!-- amber, top right -->
-    <path android:fillColor="#B07006" android:pathData="M56,34a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <path android:fillColor="#F2AE1C" android:pathData="M56,31a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <!-- blue, bottom left -->
-    <path android:fillColor="#1E55AB" android:pathData="M25,65a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <path android:fillColor="#3A8DEE" android:pathData="M25,62a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <!-- green, bottom right -->
-    <path android:fillColor="#197546" android:pathData="M56,65a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
-    <path android:fillColor="#2EB866" android:pathData="M56,62a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+    <!-- Scaled about the middle so the whole picture sits inside the circle every launcher shows. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.8"
+        android:scaleY="0.8">
 
-    <!-- the arrow: a dark edge first, so it stands clear of the tiles -->
-    <path
-        android:pathData="M54,74V40M40,53L54,38L68,53"
-        android:strokeColor="#16122F"
-        android:strokeWidth="15"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M54,74V40M40,53L54,38L68,53"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        <!-- flame red, top left -->
+        <path android:fillColor="#A3283A" android:pathData="M25,34a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <path android:fillColor="#EF4F50" android:pathData="M25,31a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <!-- amber, top right -->
+        <path android:fillColor="#B07006" android:pathData="M56,34a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <path android:fillColor="#F2AE1C" android:pathData="M56,31a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <!-- blue, bottom left -->
+        <path android:fillColor="#1E55AB" android:pathData="M25,65a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <path android:fillColor="#3A8DEE" android:pathData="M25,62a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <!-- green, bottom right -->
+        <path android:fillColor="#197546" android:pathData="M56,65a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+        <path android:fillColor="#2EB866" android:pathData="M56,62a6,6 0,0 1,6 -6h15a6,6 0,0 1,6 6v15a6,6 0,0 1,-6 6h-15a6,6 0,0 1,-6 -6z" />
+
+        <!-- the arrow: a dark edge first, so it stands clear of the tiles -->
+        <path
+            android:pathData="M54,74V40M40,53L54,38L68,53"
+            android:strokeColor="#16122F"
+            android:strokeWidth="15"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M54,74V40M40,53L54,38L68,53"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
 </vector>

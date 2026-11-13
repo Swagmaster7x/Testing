@@ -258,6 +258,106 @@ class TouchPlayTest {
         f.up(1)
     }
 
+    @Test
+    fun `a second touch on the well does not knock a held tile loose`() {
+        val (v, scene) = still(
+            "..4...",
+            "12345.",
+        )
+        val f = Fingers(v)
+        f.down(0, scene.x(0), scene.y(0))
+        val id = scene.game.grabbedId
+        assertNotEquals(0, id)
+        // a palm on an empty part of the well, then on another tile, then just under the bottom row
+        f.down(1, scene.x(4), scene.y(6))
+        assertEquals(id, scene.game.grabbedId)
+        f.up(1)
+        f.down(1, scene.x(2), scene.y(1))
+        assertEquals(id, scene.game.grabbedId)
+        f.move(1, scene.x(5), scene.y(1))
+        v.step(12)
+        assertEquals("the second finger moved nothing", "..4...\n12345.", scene.game.boardString().lines().takeLast(2).joinToString("\n"))
+        f.up(1)
+        f.down(1, scene.x(3), scene.board.bottom + 5f * v.app.ui.unit)
+        assertEquals(id, scene.game.grabbedId)
+        f.up(1)
+        // and the first finger still has its tile
+        f.move(0, scene.x(1), scene.y(0))
+        v.step(Game.SWAP_FRAMES + 1)
+        assertEquals("21345.", scene.bottomRow())
+        f.up(0)
+    }
+
+    @Test
+    fun `a touch on empty space leaves a travelling tile alone, and a touch on a tile takes over`() {
+        val (v, scene) = still("12345.")
+        val f = Fingers(v)
+        // flick the 1 towards the far side and let go at once
+        f.down(0, scene.x(0), scene.y(0))
+        f.move(0, scene.x(4), scene.y(0))
+        f.up(0)
+        v.step(5)
+        // a touch on nothing: the tile carries on
+        f.down(0, scene.x(2), scene.y(5))
+        f.up(0)
+        v.step(40)
+        assertEquals("23451.", scene.bottomRow())
+
+        // the same flick again, but this time another tile is picked up while the first is on its way
+        scene.game.setBoard("12345.")
+        f.down(0, scene.x(0), scene.y(0))
+        f.move(0, scene.x(4), scene.y(0))
+        f.up(0)
+        v.step(5)
+        val travelling = scene.game.grabbedId
+        f.down(0, scene.x(5), scene.y(0))
+        assertEquals("an empty cell is not a tile", travelling, scene.game.grabbedId)
+        f.up(0)
+        f.down(0, scene.x(4), scene.y(0))
+        assertNotEquals(travelling, scene.game.grabbedId)
+        assertNotEquals(0, scene.game.grabbedId)
+        f.up(0)
+        v.step(40)
+        // the 1 stopped where it had got to when the other tile was taken up
+        assertEquals(0, scene.game.grabbedId)
+        assertTrue(scene.bottomRow().indexOf('1') in 1..3)
+    }
+
+    @Test
+    fun `a finger resting on a tile through READY picks it up at GO`() {
+        val (v, scene) = play(Setup.Infinite(Difficulty.NORMAL, 1), 4L)
+        val f = Fingers(v)
+        v.step(10)
+        val tile = scene.game.grid[0][2]
+        f.down(0, scene.x(2), scene.y(0))
+        assertEquals("nothing can be held during the countdown", 0, scene.game.grabbedId)
+        // a second finger during the countdown changes nothing
+        f.down(1, scene.x(4), scene.y(0))
+        f.up(1)
+        v.step(Game.COUNTDOWN_FRAMES - 10)
+        assertEquals(Phase.PLAYING, scene.game.phase)
+        assertEquals(tile.id, scene.game.grabbedId)
+        f.move(0, scene.x(3), scene.y(0))
+        v.step(Game.SWAP_FRAMES + 1)
+        assertEquals(3, scene.game.locate(tile.id) % Game.COLS)
+        f.up(0)
+    }
+
+    @Test
+    fun `a finger that rests on nothing through READY is forgotten at GO`() {
+        val (v, scene) = play(Setup.Infinite(Difficulty.NORMAL, 1), 4L)
+        val f = Fingers(v)
+        v.step(10)
+        f.down(0, scene.x(2), scene.y(10))
+        v.step(Game.COUNTDOWN_FRAMES)
+        assertEquals(0, scene.game.grabbedId)
+        // that finger is still down, yet another one can pick up a tile
+        f.down(1, scene.x(1), scene.y(0))
+        assertEquals(scene.game.grid[0][1].id, scene.game.grabbedId)
+        f.up(1)
+        f.up(0)
+    }
+
     // ------------------------------------------------------------ the raise button
 
     @Test
@@ -474,6 +574,66 @@ class TouchPlayTest {
         assertEquals(score, v.app.prefs.bestScore(Difficulty.HARD))
         Shots.tap(v, scene.menuButton)
         assertTrue(v.scene is InfiniteSetupScene)
+    }
+
+    @Test
+    fun `a panel button works while another finger is still resting on the screen`() {
+        val (v, scene) = play(Setup.Infinite(Difficulty.NORMAL, 1), 4L)
+        val f = Fingers(v)
+        v.step(Game.COUNTDOWN_FRAMES)
+        // the thumb goes down on RAISE and stays there for the rest of the test
+        f.down(1, scene.raiseRect.centerX(), scene.raiseRect.centerY())
+        var n = 0
+        while (scene.game.phase != Phase.GAME_OVER) {
+            v.step(1)
+            assertTrue(++n < 3600)
+        }
+        v.step(120)
+        assertTrue(scene.showsResult)
+        // PLAY AGAIN with a second finger
+        val again = scene.againButton.rect
+        f.down(0, again.centerX(), again.centerY())
+        assertTrue(scene.againButton.pressed)
+        f.up(0)
+        assertFalse(scene.showsResult)
+        assertEquals(Phase.COUNTDOWN, scene.game.phase)
+
+        // the resting thumb must not be holding RAISE in the new game until it is put down afresh
+        v.step(Game.COUNTDOWN_FRAMES + 60)
+        assertEquals(0, scene.game.rowsRisen)
+        assertFalse(scene.game.raiseHeld)
+
+        // pause with a second finger, and resume with it too
+        val pauseAt = scene.pauseButton.rect
+        f.down(0, pauseAt.centerX(), pauseAt.centerY())
+        f.up(0)
+        assertTrue(scene.isPaused)
+        val resume = scene.resumeButton.rect
+        f.down(0, resume.centerX(), resume.centerY())
+        f.up(0)
+        assertFalse(scene.isPaused)
+        f.up(1)
+    }
+
+    @Test
+    fun `a button left pressed by a cancelled touch is not still pressed next time`() {
+        val (v, scene) = play(Setup.Infinite(Difficulty.NORMAL, 1), 4L)
+        v.step(Game.COUNTDOWN_FRAMES + 5)
+        scene.pause()
+        val f = Fingers(v)
+        val r = scene.resumeButton.rect
+        f.down(0, r.centerX(), r.centerY())
+        assertTrue(scene.resumeButton.pressed)
+        f.cancel()
+        assertFalse(scene.resumeButton.pressed)
+        assertTrue(scene.isPaused)
+        // pressed, then Back closes the panel under the finger: the button must not stay down
+        f.down(0, r.centerX(), r.centerY())
+        assertTrue(v.back())
+        assertFalse(scene.isPaused)
+        f.up(0)
+        scene.pause()
+        assertFalse(scene.resumeButton.pressed)
     }
 
     @Test

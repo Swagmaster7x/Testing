@@ -75,6 +75,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     private var boardFinger = -1
     private var raiseFinger = -1
     private var fingerX = 0f
+    private var fingerY = 0f
+
+    /** A finger was put down on the well during READY; it picks up whatever is under it at GO. */
+    private var waitingForGo = false
 
     /** Where on the tile the finger took hold, sideways from its middle. The tile keeps that grip as it is dragged. */
     private var gripOffset = 0f
@@ -291,6 +295,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         boardFinger = -1
         raiseFinger = -1
         lettingGo = false
+        waitingForGo = false
         game.release()
         game.raiseHeld = false
         releaseButtons()
@@ -319,20 +324,32 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                         raiseFinger = id
                         app.buzz()
                     }
-                    onBoard(x, y) -> {
-                        // a new touch takes over from a tile that was still travelling
-                        game.release()
-                        lettingGo = false
-                        boardFinger = id
-                        fingerX = x
-                        grabAt(x, y)
+                    // One finger at a time works the well. A second one landing there while the first
+                    // is holding a tile (a palm, or a thumb aiming for RAISE) must not knock it loose.
+                    onBoard(x, y) -> if (boardFinger == -1) {
+                        if (grabAt(x, y)) {
+                            // a new hold; it takes over from any tile that was still travelling
+                            boardFinger = id
+                            fingerX = x
+                            fingerY = y
+                            lettingGo = false
+                            waitingForGo = false
+                        } else if (game.phase == Phase.COUNTDOWN) {
+                            boardFinger = id
+                            fingerX = x
+                            fingerY = y
+                            waitingForGo = true
+                        }
                     }
                 }
             }
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until e.pointerCount) {
                     val id = e.getPointerId(i)
-                    if (id == boardFinger) fingerX = e.getX(i)
+                    if (id == boardFinger) {
+                        fingerX = e.getX(i)
+                        fingerY = e.getY(i)
+                    }
                     // sliding well off the raise button lets go of it
                     if (id == raiseFinger && !onRaise(e.getX(i), e.getY(i), 44f * u)) raiseFinger = -1
                 }
@@ -343,6 +360,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                 if (id == boardFinger) {
                     fingerX = e.getX(i)
                     boardFinger = -1
+                    waitingForGo = false
                     if (game.grabbedId != 0) {
                         // Let the tile finish its trip to where the finger left it, then let go.
                         lettingGo = true
@@ -356,15 +374,18 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         return true
     }
 
-    /** Picks up the tile under the finger, forgiving a touch that lands just beside or just above one. */
-    private fun grabAt(x: Float, y: Float) {
+    /**
+     * Picks up the tile under the finger, forgiving a touch that lands just beside or just above one.
+     * False if there was nothing there to pick up (and whatever was held before is still held).
+     */
+    private fun grabAt(x: Float, y: Float): Boolean {
         val colF = (x - board.left) / board.cell
         val rowF = board.rowAt(game, y)
         val col = floor(colF).toInt()
         val row = floor(rowF).toInt()
         if (!game.grab(row, col)) {
             // A tile that cannot be held just now (it is popping, or falling) is not a near miss of its neighbour.
-            if (row in 0 until Game.ROWS && col in 0 until Game.COLS && game.grid[row][col].kind != 0) return
+            if (row in 0 until Game.ROWS && col in 0 until Game.COLS && game.grid[row][col].kind != 0) return false
             val fy = rowF - row
             val fx = colF - col
             // just above a tile (the stack keeps moving up under the finger), just below the bottom row, or just beside one
@@ -372,12 +393,13 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                 (row == -1 && fy > 0.55f && game.grab(0, col)) ||
                 (fx < 0.30f && game.grab(row, col - 1)) ||
                 (fx > 0.70f && game.grab(row, col + 1))
-            if (!found) return
+            if (!found) return false
         }
         val at = game.locate(game.grabbedId)
-        if (at < 0) return
+        if (at < 0) return false
         val centre = board.cellLeft(at % Game.COLS) + board.cell / 2f
         gripOffset = (x - centre).coerceIn(-board.cell * 0.75f, board.cell * 0.75f)
+        return true
     }
 
     /** Works out which column the finger is asking for and tells the game. */
@@ -446,6 +468,11 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                 EventType.GO -> {
                     goAge = 0
                     app.sound.play(Sfx.GO)
+                    // a finger that was already resting on a tile takes hold of it now
+                    if (waitingForGo) {
+                        waitingForGo = false
+                        if (boardFinger != -1 && !grabAt(fingerX, fingerY)) boardFinger = -1
+                    }
                 }
                 EventType.SWAP -> {
                     app.sound.play(Sfx.SWAP, volume = 0.8f)

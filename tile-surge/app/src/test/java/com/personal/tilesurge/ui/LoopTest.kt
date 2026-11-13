@@ -68,6 +68,13 @@ class LoopTest {
     }
 
     @Test(timeout = 60_000)
+    fun `a screen a shade off sixty hertz gets exactly one tick a frame`() {
+        // 17 ms a frame is 58.8 Hz. Rather than slip a tick every few seconds, the game keeps step with the screen.
+        val n = run(17, 3400)
+        assertEquals(199, n)
+    }
+
+    @Test(timeout = 60_000)
     fun `a slow screen still gets sixty ticks a second`() {
         val n = run(33, 3000)
         assertTrue("$n ticks in 3 s at 30 frames a second", n in 170..182)

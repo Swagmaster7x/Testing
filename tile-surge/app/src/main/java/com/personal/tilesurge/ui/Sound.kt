@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import java.io.File
 import java.io.FileOutputStream
@@ -18,6 +19,13 @@ class Sound(context: Context, private val prefs: Prefs) {
     private var pool: SoundPool? = null
     private val ids = IntArray(Sfx.entries.size)
     private val ready = HashSet<Int>()
+
+    /**
+     * Starting a sound can take a few milliseconds on older phones, which is a dropped frame in the
+     * middle of a chain. So sounds are started from a thread of their own, made when the first one plays.
+     */
+    private var playThread: HandlerThread? = null
+    private var player: Handler? = null
 
     init {
         try {
@@ -58,10 +66,26 @@ class Sound(context: Context, private val prefs: Prefs) {
         val id = ids[sfx.ordinal]
         if (id == 0 || !synchronized(ready) { ready.contains(id) }) return
         val v = volume.coerceIn(0f, 1f)
-        p.play(id, v, v, 1, 0, rate.coerceIn(0.5f, 2f))
+        val r = rate.coerceIn(0.5f, 2f)
+        val h = player ?: run {
+            val t = HandlerThread("sfx-play").apply { start() }
+            playThread = t
+            Handler(t.looper).also { player = it }
+        }
+        h.post {
+            try {
+                p.play(id, v, v, 1, 0, r)
+            } catch (e: Exception) {
+                // the pool was let go between asking and playing
+            }
+        }
     }
 
     fun release() {
+        player?.removeCallbacksAndMessages(null)
+        playThread?.quitSafely()
+        player = null
+        playThread = null
         pool?.release()
         pool = null
     }

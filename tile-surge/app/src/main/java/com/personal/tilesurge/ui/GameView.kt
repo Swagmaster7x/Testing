@@ -10,6 +10,7 @@ import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
+import kotlin.math.abs
 
 /**
  * The one view of the app. It owns the current [Scene], runs the game clock at a steady
@@ -36,7 +37,12 @@ class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(co
     private val frame = object : Choreographer.FrameCallback {
         override fun doFrame(now: Long) {
             if (!running) return
-            if (lastNanos != 0L) owedNanos += minOf(now - lastNanos, MAX_CATCH_UP)
+            if (lastNanos != 0L) {
+                val passed = now - lastNanos
+                // On a screen that refreshes at very nearly the game's own rate, play exactly one tick a
+                // frame. Otherwise the small mismatch would drop or double a tick every few seconds.
+                owedNanos += if (abs(passed - TICK_NANOS) < TICK_NANOS * 3 / 100) TICK_NANOS else minOf(passed, MAX_CATCH_UP)
+            }
             lastNanos = now
             var steps = 0
             while (owedNanos >= TICK_NANOS && steps < MAX_STEPS) {
@@ -47,8 +53,7 @@ class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(co
             if (steps == MAX_STEPS) owedNanos = 0
             if (steps > 0) {
                 invalidate()
-                val awake = scene.keepScreenOn
-                if (keepScreenOn != awake) keepScreenOn = awake
+                syncAwake()
             }
             Choreographer.getInstance().postFrameCallback(this)
         }
@@ -58,12 +63,20 @@ class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(co
         isHapticFeedbackEnabled = true
         isSoundEffectsEnabled = false
         contentDescription = "Tile Surge"
+        // The game moves sixty times a second; tell screens that can vary their rate that this is all it needs.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) requestedFrameRate = 60f
+    }
+
+    /** The screen is kept awake only while a game is actually running. */
+    private fun syncAwake() {
+        val awake = scene.keepScreenOn
+        if (keepScreenOn != awake) keepScreenOn = awake
     }
 
     fun show(next: Scene) {
         scene = next
         relayout()
-        keepScreenOn = next.keepScreenOn
+        syncAwake()
         onSceneChanged?.invoke(next)
         invalidate()
     }
@@ -82,12 +95,14 @@ class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(co
         running = false
         Choreographer.getInstance().removeFrameCallback(frame)
         scene.onInterrupted()
+        syncAwake()
         invalidate()
     }
 
     /** The app is still in front but something covered it (the notification shade, a dialog). */
     fun interrupted() {
         scene.onInterrupted()
+        syncAwake()
         invalidate()
     }
 

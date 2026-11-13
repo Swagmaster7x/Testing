@@ -52,7 +52,8 @@ class TitleScene(app: App) : Scene(app) {
         val l = colLeft + 36f * u
         val r = colRight - 36f * u
         val h = safe.height()
-        tile = 44f * u
+        tile = (44f * u).toInt().toFloat()
+        app.art.prepare(tile.toInt())
         logoY = safe.top + h * 0.13f
         val bigH = 70f * u
         var y = safe.top + h * 0.47f
@@ -83,7 +84,7 @@ class TitleScene(app: App) : Scene(app) {
         var x = cx - total / 2f
         for (kind in 1..TileArt.KINDS) {
             val bob = sin(clock * 0.06f + kind * 0.8f) * 7f * u
-            app.art.paintTile(c, kind, x, logoY + bob, tile)
+            app.art.stamp(c, kind, x, logoY + bob, tile, tile, null)
             x += tile + gap
         }
 

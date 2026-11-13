@@ -2,6 +2,8 @@ package com.personal.tilesurge
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
@@ -24,11 +26,15 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            window.attributes = window.attributes.apply {
+        window.attributes = window.attributes.apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
+            // The game moves sixty times a second, so ask for a 60 Hz screen mode. On a 90 or 144 Hz
+            // screen the moves would otherwise fall unevenly across the frames and look jerky.
+            preferredRefreshRate = 60f
         }
+        applyOrientation(resources.configuration)
         // Draw behind where the system bars would be. (Android 15 and up do this by themselves.)
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) window.setDecorFitsSystemWindows(false)
@@ -45,6 +51,26 @@ class MainActivity : Activity() {
         }
         view.onSceneChanged = { scene -> setOwnsBack(scene !is TitleScene) }
         setOwnsBack(view.scene !is TitleScene)
+    }
+
+    /**
+     * Phones stay upright, as the manifest says: a well on its side would be too small to play.
+     * A tablet (or an unfolded phone) has room either way up, so there the lock is lifted
+     * and the game lays itself out for whichever shape it gets.
+     */
+    private fun applyOrientation(config: Configuration) {
+        val wanted = if (config.smallestScreenWidthDp >= 600) {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+        if (requestedOrientation != wanted) requestedOrientation = wanted
+    }
+
+    /** The manifest says the activity handles these itself, so a game in progress is never thrown away. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        applyOrientation(newConfig)
     }
 
     /** On the title screen Back leaves the app as usual; everywhere else it goes back a screen or pauses. */

@@ -43,7 +43,9 @@ abstract class Scene(val app: App) {
     protected val colLeft: Float get() = maxOf(safe.left, safe.centerX() - 180f * u)
     protected val colRight: Float get() = minOf(safe.right, safe.centerX() + 180f * u)
 
+    /** The button being pressed, and the finger pressing it. */
     private var held: Button? = null
+    private var heldFinger = -1
 
     fun resize(w: Float, h: Float, safeArea: RectF) {
         width = w
@@ -72,27 +74,44 @@ abstract class Scene(val app: App) {
         for (b in buttons) b.draw(c, ui)
     }
 
-    /** Standard pressing of [buttons] with the first finger. */
+    /**
+     * Standard pressing of [buttons]. One button at a time, by whichever finger went down on it:
+     * another finger still resting on the screen (on the raise button when a game ends, say)
+     * must not stop the panel's buttons from working.
+     */
     protected fun touchButtons(e: MotionEvent): Boolean {
         val slack = 6f * u
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                held = null
-                for (i in buttons.indices.reversed()) {
-                    val b = buttons[i]
-                    if (b.hit(e.x, e.y, slack)) {
-                        held = b
-                        b.pressed = true
-                        break
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                // the first finger of a new gesture clears anything left over from the last one
+                if (e.actionMasked == MotionEvent.ACTION_DOWN) releaseButtons()
+                if (held == null) {
+                    val i = e.actionIndex
+                    val x = e.getX(i)
+                    val y = e.getY(i)
+                    for (k in buttons.indices.reversed()) {
+                        val b = buttons[k]
+                        if (b.hit(x, y, slack)) {
+                            held = b
+                            heldFinger = e.getPointerId(i)
+                            b.pressed = true
+                            break
+                        }
                     }
                 }
             }
-            MotionEvent.ACTION_MOVE -> held?.let { it.pressed = it.hit(e.x, e.y, slack * 2.5f) }
-            MotionEvent.ACTION_UP -> {
+            MotionEvent.ACTION_MOVE -> {
                 val b = held
-                held = null
-                if (b != null) {
-                    val inside = b.pressed && b.hit(e.x, e.y, slack * 2.5f)
+                val i = e.findPointerIndex(heldFinger)
+                if (b != null && i >= 0) b.pressed = b.hit(e.getX(i), e.getY(i), slack * 2.5f)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val i = e.actionIndex
+                val b = held
+                if (b != null && e.getPointerId(i) == heldFinger) {
+                    held = null
+                    heldFinger = -1
+                    val inside = b.pressed && b.hit(e.getX(i), e.getY(i), slack * 2.5f)
                     b.pressed = false
                     if (inside) {
                         app.sound.play(Sfx.TAP)
@@ -100,10 +119,7 @@ abstract class Scene(val app: App) {
                     }
                 }
             }
-            MotionEvent.ACTION_CANCEL -> {
-                held?.pressed = false
-                held = null
-            }
+            MotionEvent.ACTION_CANCEL -> releaseButtons()
         }
         return true
     }
@@ -111,5 +127,6 @@ abstract class Scene(val app: App) {
     protected fun releaseButtons() {
         held?.pressed = false
         held = null
+        heldFinger = -1
     }
 }

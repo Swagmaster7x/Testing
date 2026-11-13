@@ -16,13 +16,14 @@
         tools:targetApi="33">
 
         <!--
-            Upright on phones, where a sideways well would be too small to play. Big screens ignore the
-            lock from Android 16 on; the game lays itself out for whatever shape it is given.
-            The activity handles size and orientation changes itself so a game in progress is never restarted.
+            Upright on phones, where a sideways well would be too small to play. MainActivity lifts the
+            lock on tablets, and the game lays itself out for whatever shape it is given.
+            The activity handles every configuration change itself (it draws its own screen and loads
+            nothing that depends on them), so a game in progress is never thrown away.
         -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|layoutDirection|locale"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|touchscreen|uiMode|density|fontScale|fontWeightAdjustment|layoutDirection|locale|grammaticalGender|colorMode|mcc|mnc|assetsPaths"
             android:exported="true"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
