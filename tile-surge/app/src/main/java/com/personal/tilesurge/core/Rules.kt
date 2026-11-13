@@ -3,7 +3,19 @@ package com.personal.tilesurge.core
 import kotlin.math.max
 import kotlin.math.min
 
-enum class GameMode { INFINITE, STAGE }
+enum class GameMode {
+    /** Play until the stack tops out. */
+    INFINITE,
+
+    /** Bring the clear line up and clear everything above it. */
+    STAGE,
+
+    /** Score as much as possible before the clock runs out. */
+    TIMED,
+
+    /** A fixed board that does not rise: clear every tile, in a set number of moves. Also used for the lessons. */
+    PUZZLE,
+}
 
 /**
  * How forgiving the timing is. All times are frames at 60 frames a second.
@@ -81,7 +93,27 @@ class StageDef(
     val lines: Int,
     val startRows: Int,
     val timing: Difficulty,
-)
+) {
+    /** Roughly how many tiles have to go: the opening stack and every row down to the line. */
+    private val work: Int get() = 6 * (startRows + lines)
+
+    /** Clear the stage within this many frames for three stars (a brisk tile and a half a second). */
+    val threeStarFrames: Int get() = work * 40
+
+    /** Within this many for two. */
+    val twoStarFrames: Int get() = work * 67
+
+    /** Stars for clearing the stage in [frames]; 0 if it has not been cleared. */
+    fun stars(frames: Int): Int = when {
+        frames <= 0 -> 0
+        frames <= threeStarFrames -> 3
+        frames <= twoStarFrames -> 2
+        else -> 1
+    }
+}
+
+/** A puzzle: clear every tile on [rows] (top row first) in no more than [moves] swaps. */
+class PuzzleDef(val number: Int, val moves: Int, val rows: List<String>, val answer: List<Int> = emptyList())
 
 object Stages {
     const val COUNT = 30

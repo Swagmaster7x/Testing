@@ -1,33 +1,44 @@
 package com.personal.tilesurge.ui
 
 import android.graphics.Canvas
+import com.personal.tilesurge.core.Puzzles
 import com.personal.tilesurge.core.Stages
 
-/** The thirty stages of Stage Clear. A stage opens when the one before it has been cleared. */
-class StageSelectScene(app: App) : Scene(app) {
+/**
+ * The thirty stages of Stage Clear, or (with [puzzles]) the thirty puzzles.
+ * Each one opens when the one before it has been cleared.
+ */
+class StageSelectScene(app: App, private val puzzles: Boolean = false) : Scene(app) {
 
+    private val count = if (puzzles) Puzzles.COUNT else Stages.COUNT
     internal val backButton = Button("") { app.go(TitleScene(app)) }.apply { icon = Icon.BACK }
-    internal val stageButtons = (1..Stages.COUNT).map { n -> Button("") { app.go(PlayScene(app, Setup.Stage(n))) } }
+    internal val stageButtons = (1..count).map { n ->
+        Button("") { app.go(PlayScene(app, if (puzzles) Setup.Puzzle(n) else Setup.Stage(n))) }
+    }
     private var titleY = 0f
 
     init {
         buttons += backButton
         buttons += stageButtons
-        val cleared = app.prefs.stagesCleared
+        val done = if (puzzles) app.prefs.puzzlesSolved else app.prefs.stagesCleared
         for ((i, b) in stageButtons.withIndex()) {
             val n = i + 1
             when {
-                !app.prefs.isUnlocked(n) -> {
+                n > done + 1 -> {
                     b.icon = Icon.LOCK
                     b.enabled = false
                 }
-                n <= cleared -> {
+                n <= done -> {
                     b.label = n.toString()
-                    b.note = Format.clock(app.prefs.bestStageFrames(n))
+                    if (puzzles) {
+                        b.note = "solved"
+                    } else {
+                        b.stars = Stages.get(n).stars(app.prefs.bestStageFrames(n))
+                    }
                 }
                 else -> {
                     b.label = n.toString()
-                    b.note = "next"
+                    b.note = if (puzzles) Puzzles.get(n).moves.let { if (it == 1) "1 move" else "$it moves" } else "next"
                     b.style = ButtonStyle.PRIMARY
                 }
             }
@@ -40,7 +51,7 @@ class StageSelectScene(app: App) : Scene(app) {
         titleY = top + 24f * u
 
         val cols = 5
-        val rows = Stages.COUNT / cols
+        val rows = (count + cols - 1) / cols
         val l = colLeft + 18f * u
         val r = colRight - 18f * u
         val gridTop = safe.top + 122f * u
@@ -64,9 +75,13 @@ class StageSelectScene(app: App) : Scene(app) {
     override fun draw(c: Canvas) {
         ui.background(c, width, height)
         val cx = safe.centerX()
-        ui.text(c, "STAGE CLEAR", cx, titleY, 26f * u, Palette.TEXT)
-        ui.paragraph(c, "Bring the clear line up into the well,\nthen clear every tile above it.", cx, safe.top + 78f * u,
-            colRight - colLeft - 48f * u, 13f * u, Palette.TEXT_DIM)
+        ui.text(c, if (puzzles) "PUZZLE" else "STAGE CLEAR", cx, titleY, 26f * u, Palette.TEXT)
+        val about = if (puzzles) {
+            "The board does not rise. Clear every tile\nin the moves you are given."
+        } else {
+            "Bring the clear line up into the well,\nthen clear every tile above it."
+        }
+        ui.paragraph(c, about, cx, safe.top + 78f * u, colRight - colLeft - 48f * u, 13f * u, Palette.TEXT_DIM)
         drawButtons(c)
     }
 }

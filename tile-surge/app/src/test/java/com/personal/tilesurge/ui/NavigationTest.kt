@@ -37,10 +37,26 @@ class NavigationTest {
         assertTrue(v.scene is TitleScene)
 
         t = v.scene as TitleScene
-        Shots.tap(v, t.howButton)
-        assertTrue(v.scene is HowToScene)
+        Shots.tap(v, t.puzzleButton)
+        assertTrue(v.scene is StageSelectScene)
         assertTrue(v.back())
-        assertTrue(v.scene is TitleScene)
+
+        t = v.scene as TitleScene
+        Shots.tap(v, t.timedButton)
+        assertTrue(v.scene is InfiniteSetupScene)
+        Shots.tap(v, (v.scene as InfiniteSetupScene).startButton)
+        assertTrue((v.scene as PlayScene).setup is Setup.Timed)
+        v.show(TitleScene(v.app))
+
+        t = v.scene as TitleScene
+        Shots.tap(v, t.dailyButton)
+        assertEquals(Days.today(), ((v.scene as PlayScene).setup as Setup.Daily).day)
+        v.show(TitleScene(v.app))
+
+        // HOW TO PLAY is the hands-on lessons
+        t = v.scene as TitleScene
+        Shots.tap(v, t.howButton)
+        assertEquals(1, ((v.scene as PlayScene).setup as Setup.Lesson).number)
     }
 
     @Test
@@ -137,7 +153,7 @@ class NavigationTest {
         v.app.prefs.recordStage(2, 2400)
         v.show(StageSelectScene(v.app))
         s = v.scene as StageSelectScene
-        assertEquals("0:30", s.stageButtons[0].note)
+        assertEquals(3, s.stageButtons[0].stars)
         assertEquals("next", s.stageButtons[2].note)
         assertFalse(s.stageButtons[3].enabled)
         Shots.tap(v, s.stageButtons[2])
@@ -161,7 +177,7 @@ class NavigationTest {
         v.show(StageSelectScene(v.app))
         assertTrue((v.scene as StageSelectScene).stageButtons.all { it.enabled })
         v.show(TitleScene(v.app))
-        assertEquals("all 30 stages cleared", (v.scene as TitleScene).stageButton.note)
+        assertEquals("all 30 cleared", (v.scene as TitleScene).stageButton.note)
     }
 
     @Test

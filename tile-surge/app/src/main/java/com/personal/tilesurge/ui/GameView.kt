@@ -20,7 +20,9 @@ import kotlin.math.abs
 class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(context) {
 
     val app = App(context, this)
-    var scene: Scene = firstScene?.invoke(app) ?: TitleScene(app)
+    /** The very first time, the game opens on its lessons. */
+    var scene: Scene = firstScene?.invoke(app)
+        ?: if (app.prefs.lessonsDone) TitleScene(app) else PlayScene(app, Setup.Lesson(1))
         private set
 
     /** Told whenever the screen changes, so the activity can decide who handles Back. */
@@ -85,6 +87,7 @@ class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(co
     fun resume() {
         if (running) return
         running = true
+        app.sound.setMusicPlaying(true)
         lastNanos = 0L
         owedNanos = 0L
         Choreographer.getInstance().postFrameCallback(frame)
@@ -93,6 +96,7 @@ class GameView(context: Context, firstScene: ((App) -> Scene)? = null) : View(co
     /** Stops the clock. Called when the app leaves the front. */
     fun pause() {
         running = false
+        app.sound.setMusicPlaying(false)
         Choreographer.getInstance().removeFrameCallback(frame)
         scene.onInterrupted()
         syncAwake()

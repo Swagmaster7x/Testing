@@ -303,6 +303,31 @@ class Ui(context: Context) {
                 rect.set(cx - s * 0.32f, cy - s * 0.66f, cx + s * 0.32f, cy + s * 0.20f)
                 c.drawArc(rect, 180f, 180f, false, line)
             }
+            Icon.STAR -> {
+                for (i in 0 until 10) {
+                    val a = Math.toRadians(-90.0 + 36.0 * i)
+                    val rad = if (i % 2 == 0) s else s * 0.45f
+                    val x = cx + (Math.cos(a) * rad).toFloat()
+                    val y = cy + (Math.sin(a) * rad).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                path.close()
+                c.drawPath(path, fill)
+            }
+            Icon.MUSIC_ON, Icon.MUSIC_OFF -> {
+                // two notes joined by a beam
+                c.drawCircle(cx - s * 0.42f, cy + s * 0.48f, s * 0.24f, fill)
+                c.drawCircle(cx + s * 0.38f, cy + s * 0.34f, s * 0.24f, fill)
+                line.strokeWidth = size * 0.09f
+                c.drawLine(cx - s * 0.22f, cy + s * 0.48f, cx - s * 0.22f, cy - s * 0.52f, line)
+                c.drawLine(cx + s * 0.58f, cy + s * 0.34f, cx + s * 0.58f, cy - s * 0.66f, line)
+                line.strokeWidth = size * 0.13f
+                c.drawLine(cx - s * 0.22f, cy - s * 0.52f, cx + s * 0.58f, cy - s * 0.66f, line)
+                if (which == Icon.MUSIC_OFF) {
+                    line.strokeWidth = size * 0.10f
+                    c.drawLine(cx - s * 0.80f, cy + s * 0.80f, cx + s * 0.80f, cy - s * 0.80f, line)
+                }
+            }
             Icon.CHECK -> {
                 path.moveTo(cx - s * 0.56f, cy + s * 0.02f)
                 path.lineTo(cx - s * 0.14f, cy + s * 0.44f)
@@ -313,7 +338,7 @@ class Ui(context: Context) {
     }
 }
 
-enum class Icon { PAUSE, BACK, NEXT, UP, MINUS, PLUS, SOUND_ON, SOUND_OFF, BUZZ_ON, BUZZ_OFF, LOCK, CHECK }
+enum class Icon { PAUSE, BACK, NEXT, UP, MINUS, PLUS, SOUND_ON, SOUND_OFF, BUZZ_ON, BUZZ_OFF, LOCK, CHECK, STAR, MUSIC_ON, MUSIC_OFF }
 
 enum class ButtonStyle {
     /** The main action on a screen: amber. */
@@ -333,6 +358,9 @@ class Button(var label: String, var style: ButtonStyle = ButtonStyle.PLAIN, val 
 
     /** A smaller second line under the label. */
     var note: String? = null
+
+    /** If 0 or more, three stars are drawn under the label with this many lit, instead of [note]. */
+    var stars = -1
     var pressed = false
     var enabled = true
     var visible = true
@@ -391,6 +419,15 @@ class Button(var label: String, var style: ButtonStyle = ButtonStyle.PLAIN, val 
         }
         val size = (if (textUnits > 0f) textUnits * u else (h - lip) * 0.40f)
         val fitted = ui.fitSize(label, size, rect.width() - 16f * u)
+        if (stars >= 0) {
+            ui.text(c, label, cx, cy - size * 0.36f, fitted, inkA)
+            val star = size * 0.62f
+            for (i in 0 until 3) {
+                val color = if (i < stars) Palette.ACCENT else Palette.withAlpha(ink, alpha * 0.22f)
+                ui.icon(c, Icon.STAR, cx + (i - 1) * star * 1.15f, cy + size * 0.66f, star, color)
+            }
+            return
+        }
         val n = note
         if (n == null) {
             ui.text(c, label, cx, cy, fitted, inkA)

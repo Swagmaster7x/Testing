@@ -30,6 +30,9 @@ enum class EventType {
 
     GAME_OVER,
     STAGE_CLEAR,
+
+    /** Score Attack: the clock ran out. */
+    TIME_UP,
 }
 
 /** Something that happened this frame, for the screen to show and the speaker to play. */

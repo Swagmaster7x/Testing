@@ -5,7 +5,8 @@ package com.personal.tilesurge.core
  * The same seed always gives the same game, which is what lets the tests replay one.
  */
 class Rng(seed: Long) {
-    private var state = seed
+    /** The whole of the generator's memory; saving and restoring it carries a game on exactly. */
+    var state = seed
 
     fun nextLong(): Long {
         state += 0x9E3779B97F4A7C15UL.toLong()

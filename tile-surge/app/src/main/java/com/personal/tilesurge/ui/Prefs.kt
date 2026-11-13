@@ -22,6 +22,68 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("hint_seen", false)
         set(v) = sp.edit().putBoolean("hint_seen", v).apply()
 
+    var music: Boolean
+        get() = sp.getBoolean("music", true)
+        set(v) = sp.edit().putBoolean("music", v).apply()
+
+    /** Set once the lessons have been finished or skipped, so they do not open by themselves again. */
+    var lessonsDone: Boolean
+        get() = sp.getBoolean("lessons_done", false)
+        set(v) = sp.edit().putBoolean("lessons_done", v).apply()
+
+    // ------------------------------------------------------------ a game put down part-way
+
+    /** What was being played (see Setup.encode) and the game itself, or null. */
+    val savedSetup: String? get() = sp.getString("saved_setup", null)
+    val savedGame: String? get() = sp.getString("saved_game", null)
+
+    fun saveGame(setup: String, game: String) = sp.edit().putString("saved_setup", setup).putString("saved_game", game).apply()
+
+    fun clearSavedGame() = sp.edit().remove("saved_setup").remove("saved_game").apply()
+
+    // ------------------------------------------------------------ Score Attack and the daily challenge
+
+    fun bestTimed(d: Difficulty): Int = sp.getInt("timed_${d.name}", 0)
+
+    fun recordTimed(d: Difficulty, score: Int): Boolean {
+        if (score <= bestTimed(d)) return false
+        sp.edit().putInt("timed_${d.name}", score).apply()
+        return true
+    }
+
+    /** The best score on the challenge for [day] (a date as 20261113), or 0. Only the latest day played is kept. */
+    fun dailyBest(day: Int): Int = if (sp.getInt("daily_day", 0) == day) sp.getInt("daily_best", 0) else 0
+
+    /** Days in a row the daily challenge has been played, counting [today] if it has been. */
+    fun dailyStreak(today: Int, yesterday: Int): Int {
+        val last = sp.getInt("daily_day", 0)
+        return if (last == today || last == yesterday) sp.getInt("daily_streak", 0) else 0
+    }
+
+    /** Records a daily score. True if it is the best for [day]. */
+    fun recordDaily(day: Int, yesterday: Int, score: Int): Boolean {
+        val last = sp.getInt("daily_day", 0)
+        val e = sp.edit()
+        if (last != day) {
+            e.putInt("daily_streak", if (last == yesterday) sp.getInt("daily_streak", 0) + 1 else 1)
+            e.putInt("daily_day", day).putInt("daily_best", score).apply()
+            return true
+        }
+        val better = score > sp.getInt("daily_best", 0)
+        if (better) e.putInt("daily_best", score).apply()
+        return better
+    }
+
+    // ------------------------------------------------------------ puzzles
+
+    val puzzlesSolved: Int get() = sp.getInt("puzzles_solved", 0)
+
+    fun isPuzzleOpen(n: Int): Boolean = n <= puzzlesSolved + 1
+
+    fun recordPuzzle(n: Int) {
+        if (n > puzzlesSolved) sp.edit().putInt("puzzles_solved", n).apply()
+    }
+
     // ------------------------------------------------------------ Infinite
 
     /** The difficulty last chosen for Infinite mode. */

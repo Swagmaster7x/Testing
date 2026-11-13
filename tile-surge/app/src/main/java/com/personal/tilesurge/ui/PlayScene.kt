@@ -8,6 +8,7 @@ import com.personal.tilesurge.core.Difficulty
 import com.personal.tilesurge.core.EventType
 import com.personal.tilesurge.core.Game
 import com.personal.tilesurge.core.Phase
+import com.personal.tilesurge.core.Puzzles
 import com.personal.tilesurge.core.Speed
 import com.personal.tilesurge.core.Stages
 import java.util.Locale
@@ -17,12 +18,6 @@ import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.random.Random
-
-/** What to play. */
-sealed class Setup {
-    class Infinite(val difficulty: Difficulty, val startLevel: Int) : Setup()
-    class Stage(val number: Int) : Setup()
-}
 
 /** Remembers the text made for a number, so a readout that has not changed is not formatted again every frame. */
 private class Memo(private val make: (Int) -> String) {
@@ -49,10 +44,21 @@ object Format {
 }
 
 /** The game itself: the well, the readouts above it, the raise button below it, and the pause and result panels. */
-class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null) : Scene(app) {
+class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null, resumed: Game? = null) : Scene(app) {
 
-    var game: Game = newGame()
+    var game: Game = resumed ?: newGame()
         private set
+
+    /** The lesson being taught, if this is one. */
+    private val lesson: Lesson? = (setup as? Setup.Lesson)?.let { Lessons.all[it.number - 1] }
+
+    /** Frames since the lesson's goal was met (0 = not yet), swaps made so far, and frames the board has sat still since. */
+    private var lessonDone = 0
+    private var lessonSwaps = 0
+    private var lessonIdle = 0
+
+    /** Frames of screen shake left after a big clear. */
+    private var shake = 0
     val board = BoardRenderer(ui, app.art)
 
     private enum class Panel { NONE, PAUSED, RESULT }
@@ -115,12 +121,13 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     internal val restartButton = Button("RESTART") { restart() }
     internal val quitButton = Button("QUIT") { quit() }
     internal val nextButton = Button("NEXT STAGE", ButtonStyle.PRIMARY) { nextStage() }
-    internal val againButton = Button("PLAY AGAIN") { restart() }
+    internal val againButton = Button("PLAY AGAIN") { if (setup is Setup.Lesson) app.go(HowToScene(app)) else restart() }
     internal val menuButton = Button("MENU") { quit() }
 
     init {
         buttons += listOf(pauseButton, resumeButton, restartButton, quitButton, nextButton, againButton, menuButton)
-        showPanel(Panel.NONE)
+        // a game picked up again waits on its pause panel until the player is ready
+        showPanel(if (resumed != null) Panel.PAUSED else Panel.NONE)
     }
 
     private fun newGame(): Game {
@@ -128,12 +135,29 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         return when (val s = setup) {
             is Setup.Infinite -> Game.infinite(s.difficulty, s.startLevel, seed)
             is Setup.Stage -> Game.stage(Stages.get(s.number), seed)
+            is Setup.Timed -> Game.timed(s.difficulty, s.startLevel, seed)
+            is Setup.Daily -> Game.timed(Setup.DAILY_DIFFICULTY, Setup.DAILY_LEVEL, Setup.dailySeed(s.day))
+            is Setup.Puzzle -> Game.puzzle(Puzzles.get(s.number))
+            is Setup.Lesson -> Lessons.all[s.number - 1].let { Game.fixed(it.rows, 0, it.raise, s.number.toLong()) }
         }
     }
 
     private fun recordToBeat(): Int = when (val s = setup) {
         is Setup.Infinite -> app.prefs.bestScore(s.difficulty)
         is Setup.Stage -> app.prefs.bestStageFrames(s.number)
+        is Setup.Timed -> app.prefs.bestTimed(s.difficulty)
+        is Setup.Daily -> app.prefs.dailyBest(s.day)
+        is Setup.Puzzle, is Setup.Lesson -> 0
+    }
+
+    /** Keeps the score if it is a record for whatever is being played. */
+    private fun recordScore() {
+        when (val s = setup) {
+            is Setup.Infinite -> newBest = app.prefs.recordScore(s.difficulty, game.score)
+            is Setup.Timed -> newBest = app.prefs.recordTimed(s.difficulty, game.score)
+            is Setup.Daily -> newBest = app.prefs.recordDaily(s.day, Days.yesterday(), game.score)
+            else -> Unit
+        }
     }
 
     /** The screen stays awake while a game is running, and may sleep on the pause and result panels. */
@@ -226,18 +250,39 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     private fun showPanel(p: Panel) {
         panel = p
         val stage = setup as? Setup.Stage
+        val puzzle = setup as? Setup.Puzzle
+        val lessons = setup is Setup.Lesson
         resumeButton.visible = p == Panel.PAUSED
         restartButton.visible = p == Panel.PAUSED
         quitButton.visible = p == Panel.PAUSED
         val cleared = game.phase == Phase.STAGE_CLEAR
-        nextButton.visible = p == Panel.RESULT && cleared && stage != null && stage.number < Stages.COUNT
+        val more = (stage != null && stage.number < Stages.COUNT) || (puzzle != null && puzzle.number < Puzzles.COUNT)
+        nextButton.visible = p == Panel.RESULT && ((cleared && more) || lessons)
+        nextButton.label = when {
+            lessons -> "PLAY STAGE 1"
+            puzzle != null -> "NEXT PUZZLE"
+            else -> "NEXT STAGE"
+        }
         againButton.visible = p == Panel.RESULT
         menuButton.visible = p == Panel.RESULT
         // The main action is whatever moves the player on.
         againButton.style = if (nextButton.visible) ButtonStyle.PLAIN else ButtonStyle.PRIMARY
-        againButton.label = if (stage != null && !cleared) "TRY AGAIN" else "PLAY AGAIN"
-        menuButton.label = if (stage != null) "STAGES" else "MENU"
-        quitButton.label = if (stage != null) "QUIT TO STAGES" else "QUIT TO MENU"
+        againButton.label = when {
+            lessons -> "READ THE RULES"
+            (stage != null || puzzle != null) && !cleared -> "TRY AGAIN"
+            else -> "PLAY AGAIN"
+        }
+        menuButton.label = when {
+            stage != null -> "STAGES"
+            puzzle != null -> "PUZZLES"
+            else -> "MENU"
+        }
+        quitButton.label = when {
+            stage != null -> "QUIT TO STAGES"
+            puzzle != null -> "QUIT TO PUZZLES"
+            lessons -> "SKIP THE LESSONS"
+            else -> "QUIT TO MENU"
+        }
         pauseButton.enabled = p == Panel.NONE
         if (width > 0f) layoutPanel()
     }
@@ -245,25 +290,41 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     // ------------------------------------------------------------ pausing, leaving, starting over
 
     fun pause() {
-        if (panel != Panel.NONE || game.phase == Phase.GAME_OVER || game.phase == Phase.STAGE_CLEAR) return
+        if (panel != Panel.NONE || (game.phase != Phase.PLAYING && game.phase != Phase.COUNTDOWN)) return
         dropFingers()
         showPanel(Panel.PAUSED)
+        // Put the game away as it stands, in case the app is closed before the player comes back to it.
+        val what = setup.encode()
+        if (what != null) app.prefs.saveGame(what, game.save())
     }
 
     private fun resume() = showPanel(Panel.NONE)
 
     private fun restart() {
+        app.prefs.clearSavedGame()
         game = newGame()
         resetRound()
     }
 
     private fun nextStage() {
-        val s = setup as? Setup.Stage ?: return
-        app.go(PlayScene(app, Setup.Stage(s.number + 1)))
+        when (val s = setup) {
+            is Setup.Stage -> app.go(PlayScene(app, Setup.Stage(s.number + 1)))
+            is Setup.Puzzle -> app.go(PlayScene(app, Setup.Puzzle(s.number + 1)))
+            is Setup.Lesson -> app.go(PlayScene(app, Setup.Stage(1)))
+            else -> Unit
+        }
     }
 
     private fun quit() {
-        app.go(if (setup is Setup.Stage) StageSelectScene(app) else InfiniteSetupScene(app))
+        app.prefs.clearSavedGame()
+        if (setup is Setup.Lesson) app.prefs.lessonsDone = true
+        app.go(when (setup) {
+            is Setup.Stage -> StageSelectScene(app)
+            is Setup.Puzzle -> StageSelectScene(app, puzzles = true)
+            is Setup.Infinite -> InfiniteSetupScene(app)
+            is Setup.Timed -> InfiniteSetupScene(app, timed = true)
+            is Setup.Daily, is Setup.Lesson -> TitleScene(app)
+        })
     }
 
     private fun resetRound() {
@@ -274,6 +335,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         goAge = GO_FRAMES
         endFrames = 0
         newBest = false
+        lessonDone = 0
+        lessonSwaps = 0
+        lessonIdle = 0
+        shake = 0
         bestAtStart = recordToBeat()
         showPanel(Panel.NONE)
     }
@@ -320,7 +385,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                         app.sound.play(Sfx.TAP)
                         pause()
                     }
-                    onRaise(x, y, 8f * u) -> if (raiseFinger == -1) {
+                    game.raiseAllowed && onRaise(x, y, 8f * u) -> if (raiseFinger == -1) {
                         raiseFinger = id
                         app.buzz()
                     }
@@ -447,19 +512,55 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         }
         if (game.phase == Phase.COUNTDOWN && game.countdown == Game.COUNTDOWN_FRAMES) app.sound.play(Sfx.READY)
         game.tick()
+        tickLesson()
         handleEvents()
         tickEffects()
         when (game.phase) {
             Phase.PLAYING -> {
                 // an alarm while the stack is pressed against the top and the clock is running out
                 if (game.topOccupied && !game.settling && game.stopFrames == 0 && clock % 26 == 0) app.sound.play(Sfx.WARN)
+                // Score Attack: a tick for each of the last ten seconds
+                if (game.timeLimit > 0 && game.timeLeft in 1..600 && game.timeLeft % 60 == 0) app.sound.play(Sfx.TAP)
             }
-            Phase.GAME_OVER, Phase.STAGE_CLEAR -> {
+            Phase.GAME_OVER, Phase.STAGE_CLEAR, Phase.TIME_UP -> {
                 endFrames++
                 if (game.phase == Phase.STAGE_CLEAR && endFrames < 50 && endFrames % 5 == 0) celebrate()
                 if (endFrames == RESULT_DELAY && panel == Panel.NONE) showPanel(Panel.RESULT)
             }
             Phase.COUNTDOWN -> Unit
+        }
+    }
+
+    /** A lesson moves on when its goal is met, and starts over if the player has used up the board without meeting it. */
+    private fun tickLesson() {
+        val l = lesson ?: return
+        if (panel != Panel.NONE) return
+        lessonSwaps += game.events.count { it.type == EventType.SWAP }
+        if (lessonDone == 0) {
+            if (l.done(game, game.events)) {
+                lessonDone = 1
+                showBanner("NICE!")
+                app.sound.play(Sfx.LEVEL)
+            } else {
+                lessonIdle = if (!l.raise && lessonSwaps > 0 && !game.active) lessonIdle + 1 else 0
+                if (lessonIdle > 110) {
+                    game = newGame()
+                    resetRound()
+                    showBanner("TRY THAT AGAIN")
+                }
+            }
+            return
+        }
+        lessonDone++
+        if (lessonDone >= 85 && !game.active) {
+            val number = (setup as Setup.Lesson).number
+            if (number < Lessons.COUNT) {
+                app.go(PlayScene(app, Setup.Lesson(number + 1)))
+            } else {
+                app.prefs.lessonsDone = true
+                dropFingers()
+                showPanel(Panel.RESULT)
+            }
         }
     }
 
@@ -498,6 +599,8 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                         app.sound.play(Sfx.MATCH, volume = 0.7f)
                     }
                     if (e.a >= 4) popups += Popup(x, y, "${e.a} COMBO", Palette.ACCENT, Palette.TEXT_DARK)
+                    // a big clear is felt as well as seen
+                    if (e.b >= 2 || e.a >= 5) shake = 10 + 2 * minOf(e.b, 5)
                 }
                 EventType.POP -> {
                     burst(board.cellLeft(e.col) + cell / 2f, board.cellTop(game, e.row) + cell / 2f, TileArt.LIGHT[e.kind], 7)
@@ -519,15 +622,24 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                     app.sound.play(Sfx.OVER)
                     app.buzz(strong = true)
                     dropFingers()
-                    val s = setup
-                    if (s is Setup.Infinite) newBest = app.prefs.recordScore(s.difficulty, game.score)
+                    app.prefs.clearSavedGame()
+                    recordScore()
+                }
+                EventType.TIME_UP -> {
+                    app.sound.play(Sfx.CLEAR)
+                    app.buzz(strong = true)
+                    dropFingers()
+                    app.prefs.clearSavedGame()
+                    recordScore()
                 }
                 EventType.STAGE_CLEAR -> {
                     app.sound.play(Sfx.CLEAR)
                     app.buzz(strong = true)
                     dropFingers()
+                    app.prefs.clearSavedGame()
                     val s = setup
                     if (s is Setup.Stage) newBest = app.prefs.recordStage(s.number, game.frames)
+                    if (s is Setup.Puzzle) app.prefs.recordPuzzle(s.number)
                 }
             }
         }
@@ -573,6 +685,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
         }
         if (bannerAge < BANNER_FRAMES) bannerAge++
         if (goAge < GO_FRAMES) goAge++
+        if (shake > 0) shake--
     }
 
     // ------------------------------------------------------------ drawing
@@ -588,9 +701,12 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
             else -> 0f
         }
         val grey = if (game.phase == Phase.GAME_OVER) minOf(Game.ROWS, endFrames / 3) else 0
+        c.save()
+        if (shake > 0) c.translate(sin(clock * 1.9f) * shake * 0.45f * u, cos(clock * 2.3f) * shake * 0.35f * u)
         board.draw(c, game, clock, grey, alarm)
         drawMeter(c)
         drawEffects(c)
+        c.restore()
         drawRaise(c)
         pauseButton.draw(c, ui)
         drawCallouts(c)
@@ -598,29 +714,56 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     }
 
     private fun drawReadouts(c: Canvas) {
-        val s = setup
-        if (s is Setup.Infinite) {
-            val best = maxOf(bestAtStart, game.score)
-            readout(c, cards[0], "SCORE", scoreText.of(game.score), bestText.of(best))
-            readout(c, cards[1], "TIME", timeText.of(game.seconds), null)
-            readout(c, cards[2], "SPEED", levelText.of(game.level), null)
-            // how close the next speed-up is
-            if (game.level < Speed.MAX_LEVEL) {
-                val r = cards[2]
-                val p = game.levelProgress.toFloat() / Speed.tilesToNextLevel(game.level)
-                val l = r.left + 10f * u
-                val w = r.width() - 20f * u
-                ui.roundRect(c, l, r.bottom - 9f * u, l + w, r.bottom - 5f * u, 2f * u, Palette.PANEL_DARK)
-                if (p > 0f) ui.roundRect(c, l, r.bottom - 9f * u, l + w * p, r.bottom - 5f * u, 2f * u, Palette.TEAL)
+        when (val s = setup) {
+            is Setup.Infinite -> {
+                readout(c, cards[0], "SCORE", scoreText.of(game.score), bestText.of(maxOf(bestAtStart, game.score)))
+                readout(c, cards[1], "TIME", timeText.of(game.seconds), null)
+                speedReadout(c)
             }
-        } else if (s is Setup.Stage) {
-            readout(c, cards[0], "STAGE", stageText.of(s.number), if (bestAtStart > 0) bestTimeText.of(bestAtStart) else null)
-            readout(c, cards[1], "TIME", timeText.of(game.seconds), null)
-            if (game.lineRow < 0) {
-                readout(c, cards[2], "LINE IN", countText.of(game.linesToGo), null)
-            } else {
-                readout(c, cards[2], "TO CLEAR", countText.of(tilesAboveLine()), null)
+            is Setup.Timed, is Setup.Daily -> {
+                readout(c, cards[0], "SCORE", scoreText.of(game.score), bestText.of(maxOf(bestAtStart, game.score)))
+                // whole seconds still to go, so it reads 0:01 until the very end
+                readout(c, cards[1], "TIME LEFT", timeText.of((game.timeLeft + 59) / 60), null)
+                speedReadout(c)
             }
+            is Setup.Stage -> {
+                readout(c, cards[0], "STAGE", stageText.of(s.number), if (bestAtStart > 0) bestTimeText.of(bestAtStart) else null)
+                readout(c, cards[1], "TIME", timeText.of(game.seconds), null)
+                if (game.lineRow < 0) {
+                    readout(c, cards[2], "LINE IN", countText.of(game.linesToGo), null)
+                } else {
+                    readout(c, cards[2], "TO CLEAR", countText.of(tilesAboveLine()), null)
+                }
+            }
+            is Setup.Puzzle -> {
+                readout(c, cards[0], "PUZZLE", stageText.of(s.number), null)
+                readout(c, cards[1], "MOVES", levelText.of(game.movesLeft), null)
+                readout(c, cards[2], "TILES", countText.of(game.tileCount()), null)
+            }
+            is Setup.Lesson -> {
+                // one wide card with what to do
+                val l = cards[0].left
+                val r = cards[2].right
+                val t = cards[0].top
+                val b = cards[0].bottom
+                ui.card(c, l, t, r, b, 12f * u)
+                val text = lesson?.text ?: ""
+                ui.text(c, "LESSON ${s.number} OF ${Lessons.COUNT}", (l + r) / 2f, t + 12f * u, 9.5f * u, Palette.ACCENT, face = ui.semi)
+                ui.paragraph(c, text, (l + r) / 2f, t + 28f * u, r - l - 16f * u, 11.5f * u, Palette.TEXT)
+            }
+        }
+    }
+
+    private fun speedReadout(c: Canvas) {
+        readout(c, cards[2], "SPEED", levelText.of(game.level), null)
+        // how close the next speed-up is
+        if (game.level < Speed.MAX_LEVEL) {
+            val r = cards[2]
+            val p = game.levelProgress.toFloat() / Speed.tilesToNextLevel(game.level)
+            val l = r.left + 10f * u
+            val w = r.width() - 20f * u
+            ui.roundRect(c, l, r.bottom - 9f * u, l + w, r.bottom - 5f * u, 2f * u, Palette.PANEL_DARK)
+            if (p > 0f) ui.roundRect(c, l, r.bottom - 9f * u, l + w * p, r.bottom - 5f * u, 2f * u, Palette.TEAL)
         }
     }
 
@@ -688,6 +831,18 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     }
 
     private fun drawRaise(c: Canvas) {
+        if (!game.raiseAllowed) {
+            // no raise button here; a puzzle says what is wanted instead
+            val s = setup
+            if (s is Setup.Puzzle) {
+                val moves = Puzzles.get(s.number).moves
+                ui.text(c, "Clear every tile in " + (if (moves == 1) "one move" else "$moves moves"),
+                    raiseRect.centerX(), raiseRect.centerY() - 8f * u, 15f * u, Palette.TEXT, face = ui.semi)
+                ui.text(c, "each cell a tile slides is a move", raiseRect.centerX(), raiseRect.centerY() + 14f * u,
+                    11.5f * u, Palette.TEXT_DIM, face = ui.semi)
+            }
+            return
+        }
         val r = raiseRect
         val held = raiseFinger != -1 && panel == Panel.NONE
         val blocked = game.phase != Phase.PLAYING || game.topOccupied
@@ -738,7 +893,22 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
             ui.roundRectLine(c, cx - w / 2f, y - 17f * u, cx + w / 2f, y + 17f * u, 17f * u, Palette.withAlpha(Palette.ACCENT, a), 1.5f * u)
             ui.text(c, banner, cx, y, size, Palette.withAlpha(Palette.ACCENT_LIGHT, a))
         }
-        if (game.phase == Phase.PLAYING && !app.prefs.hintSeen && panel == Panel.NONE) {
+        val l = lesson
+        if (l != null && lessonDone == 0 && panel == Panel.NONE && boardFinger == -1 && raiseFinger == -1 && !game.active) {
+            // a ghost of a finger shows the move, over and over
+            val t = (clock % 100) / 100f
+            if (l.raise) {
+                val pulse = 0.5f + 0.5f * sin(clock * 0.12f)
+                fingertip(c, raiseRect.right - 34f * u, raiseRect.centerY() - 2f * u, 0.5f + 0.5f * pulse)
+            } else if (game.grid[l.fromRow][l.fromCol].kind != 0) {
+                val from = board.cellLeft(l.fromCol) + board.cell * 0.6f
+                val to = board.cellLeft(l.toCol) + board.cell * 0.6f
+                val k = ((t - 0.25f) / 0.4f).coerceIn(0f, 1f)
+                val fade = if (t < 0.12f) t / 0.12f else if (t > 0.85f) (1f - t) / 0.15f else 1f
+                fingertip(c, from + (to - from) * k, board.cellTop(game, l.fromRow) + board.cell * 0.66f, fade)
+            }
+        }
+        if (game.phase == Phase.PLAYING && !app.prefs.hintSeen && panel == Panel.NONE && l == null) {
             val text = "Slide a tile sideways to swap it"
             val y = board.top + board.height * 0.24f
             val size = ui.fitSize(text, 14f * u, board.width - 36f * u, ui.semi)
@@ -748,6 +918,16 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
             ui.roundRectLine(c, cx - w / 2f, y - 16f * u + bob, cx + w / 2f, y + 16f * u + bob, 16f * u, Palette.TEAL, 1.5f * u)
             ui.text(c, text, cx, y + bob, size, Palette.TEXT, face = ui.semi)
         }
+    }
+
+    private fun fingertip(c: Canvas, x: Float, y: Float, alpha: Float) {
+        ui.fill.shader = null
+        ui.fill.color = Palette.withAlpha(0x66FFFFFF, alpha)
+        c.drawCircle(x, y, 14f * u, ui.fill)
+        ui.line.pathEffect = null
+        ui.line.color = Palette.withAlpha(0xE6FFFFFF.toInt(), alpha)
+        ui.line.strokeWidth = 2.4f * u
+        c.drawCircle(x, y, 14f * u, ui.line)
     }
 
     private fun drawPanel(c: Canvas) {
@@ -768,24 +948,52 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
     private fun drawResult(c: Canvas, r: RectF, cx: Float) {
         val s = setup
         val cleared = game.phase == Phase.STAGE_CLEAR
-        val title: String
-        val big: String
-        val bigLabel: String
-        val bestLine: String
+        var title: String
+        var bigLabel: String
+        var big: String
+        var bestLine: String
+        var highlight = false
+        var stars = -1
+        var labels = arrayOf("SCORE", "BEST COMBO", "BEST CHAIN")
+        var values = arrayOf(Format.number(game.score), game.maxCombo.toString(), "×" + game.maxChain)
         when (s) {
             is Setup.Infinite -> {
                 title = "GAME OVER"
                 bigLabel = "SCORE"
                 big = Format.number(game.score)
                 bestLine = if (newBest) "NEW BEST!" else "BEST " + Format.number(app.prefs.bestScore(s.difficulty))
+                highlight = newBest
+                labels = arrayOf("TIME", "SPEED", "BEST CHAIN")
+                values = arrayOf(Format.clock(game.frames), game.level.toString(), "×" + game.maxChain)
+            }
+            is Setup.Timed -> {
+                title = if (game.phase == Phase.TIME_UP) "TIME UP!" else "GAME OVER"
+                bigLabel = "SCORE"
+                big = Format.number(game.score)
+                bestLine = if (newBest) "NEW BEST!" else "BEST " + Format.number(app.prefs.bestTimed(s.difficulty))
+                highlight = newBest
+                labels = arrayOf("TILES", "SPEED", "BEST CHAIN")
+                values = arrayOf(game.tilesCleared.toString(), game.level.toString(), "×" + game.maxChain)
+            }
+            is Setup.Daily -> {
+                title = if (game.phase == Phase.TIME_UP) "TIME UP!" else "GAME OVER"
+                bigLabel = "TODAY'S CHALLENGE"
+                big = Format.number(game.score)
+                bestLine = if (newBest) "YOUR BEST TODAY!" else "YOUR BEST TODAY " + Format.number(app.prefs.dailyBest(s.day))
+                highlight = newBest
+                val streak = app.prefs.dailyStreak(Days.today(), Days.yesterday())
+                labels = arrayOf("TILES", "DAYS RUNNING", "BEST CHAIN")
+                values = arrayOf(game.tilesCleared.toString(), streak.toString(), "×" + game.maxChain)
             }
             is Setup.Stage -> {
                 val best = app.prefs.bestStageFrames(s.number)
                 if (cleared) {
                     title = "STAGE ${s.number} CLEAR!"
-                    bigLabel = "TIME"
+                    bigLabel = ""
+                    stars = Stages.get(s.number).stars(game.frames)
                     big = Format.clockTenths(game.frames)
                     bestLine = if (newBest) "NEW BEST TIME!" else "BEST " + Format.clockTenths(best)
+                    highlight = newBest
                 } else {
                     title = "STAGE ${s.number}"
                     bigLabel = "THE STACK REACHED THE TOP"
@@ -793,24 +1001,43 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null)
                     bestLine = if (best > 0) "BEST " + Format.clockTenths(best) else "NOT CLEARED YET"
                 }
             }
+            is Setup.Puzzle -> {
+                val def = Puzzles.get(s.number)
+                if (cleared) {
+                    title = "PUZZLE ${s.number} SOLVED!"
+                    bigLabel = "MOVES USED"
+                    big = (def.moves - game.movesLeft).toString()
+                    bestLine = if (s.number < Puzzles.COUNT) "ON TO THE NEXT" else "THAT WAS THE LAST ONE"
+                } else {
+                    title = "PUZZLE ${s.number}"
+                    bigLabel = "OUT OF MOVES"
+                    big = game.tileCount().toString()
+                    bestLine = "TILES LEFT"
+                }
+                labels = arrayOf("MOVES", "TILES", "BEST CHAIN")
+                values = arrayOf(def.moves.toString(), def.rows.sumOf { row -> row.count { it != '.' } }.toString(), "×" + game.maxChain)
+            }
+            is Setup.Lesson -> {
+                ui.text(c, "YOU'RE READY!", cx, r.top + 34f * u, 26f * u, Palette.GOOD)
+                ui.paragraph(c, "Slide, match, chain, raise: that is the whole game.\nStage Clear is a good place to start. In each stage a line comes up from below; clear every tile above it.",
+                    cx, r.top + 70f * u, r.width() - 36f * u, 13f * u, Palette.TEXT)
+                return
+            }
         }
         val titleColor = if (cleared) Palette.GOOD else Palette.TEXT
         ui.text(c, title, cx, r.top + 34f * u, ui.fitSize(title, 26f * u, r.width() - 32f * u), titleColor)
-        ui.text(c, bigLabel, cx, r.top + 66f * u, ui.fitSize(bigLabel, 11f * u, r.width() - 32f * u, ui.semi), Palette.TEXT_DIM, face = ui.semi)
+        if (stars >= 0) {
+            for (i in 0 until 3) {
+                ui.icon(c, Icon.STAR, cx + (i - 1) * 26f * u, r.top + 65f * u, 22f * u, if (i < stars) Palette.ACCENT else Palette.PANEL_LIGHT)
+            }
+        } else {
+            ui.text(c, bigLabel, cx, r.top + 66f * u, ui.fitSize(bigLabel, 11f * u, r.width() - 32f * u, ui.semi), Palette.TEXT_DIM, face = ui.semi)
+        }
         ui.text(c, big, cx, r.top + 96f * u, ui.fitSize(big, 40f * u, r.width() - 40f * u), Palette.TEXT)
-        val highlight = newBest && (cleared || s is Setup.Infinite)
-        ui.text(c, bestLine, cx, r.top + 128f * u, 13f * u, if (highlight) Palette.ACCENT else Palette.TEXT_DIM, face = ui.semi)
+        ui.text(c, bestLine, cx, r.top + 128f * u, ui.fitSize(bestLine, 13f * u, r.width() - 32f * u, ui.semi),
+            if (highlight) Palette.ACCENT else Palette.TEXT_DIM, face = ui.semi)
 
         // three small figures along the bottom of the summary
-        val labels: Array<String>
-        val values: Array<String>
-        if (s is Setup.Infinite) {
-            labels = arrayOf("TIME", "SPEED", "BEST CHAIN")
-            values = arrayOf(Format.clock(game.frames), game.level.toString(), "×" + game.maxChain)
-        } else {
-            labels = arrayOf("SCORE", "BEST COMBO", "BEST CHAIN")
-            values = arrayOf(Format.number(game.score), game.maxCombo.toString(), "×" + game.maxChain)
-        }
         val colW = (r.width() - 32f * u) / 3f
         for (i in 0 until 3) {
             val x = r.left + 16f * u + colW * (i + 0.5f)

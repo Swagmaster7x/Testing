@@ -3,7 +3,7 @@ package com.personal.tilesurge.core
 import kotlin.math.max
 import kotlin.math.min
 
-enum class Phase { COUNTDOWN, PLAYING, GAME_OVER, STAGE_CLEAR }
+enum class Phase { COUNTDOWN, PLAYING, GAME_OVER, STAGE_CLEAR, TIME_UP }
 
 /**
  * The whole puzzle: a 6 x 12 well of tiles that rises from below.
@@ -34,6 +34,14 @@ class Game private constructor(
     val stage: StageDef?,
     startRows: Int,
     val seed: Long,
+    /** Score Attack: frames of play allowed. 0 = no clock. */
+    val timeLimit: Int = 0,
+    /** Puzzles: swaps allowed. 0 = as many as you like. */
+    val moveLimit: Int = 0,
+    /** Puzzles and lessons: the board to start from, top row first. */
+    private val fixedRows: List<String>? = null,
+    /** Whether the raise button does anything. */
+    val raiseAllowed: Boolean = true,
 ) {
     companion object {
         const val COLS = 6
@@ -55,8 +63,55 @@ class Game private constructor(
         fun infinite(difficulty: Difficulty, startLevel: Int, seed: Long): Game =
             Game(GameMode.INFINITE, difficulty, difficulty.kinds, startLevel, null, 6, seed)
 
+        private const val SAVE_VERSION = 1
+
+        /** The game [saved] by [save], or null if the text is not one this version can read. */
+        fun restore(saved: String): Game? = try {
+            val v = saved.split(',').iterator()
+            if (v.next().toInt() != SAVE_VERSION) {
+                null
+            } else {
+                val mode = GameMode.entries[v.next().toInt()]
+                val difficulty = Difficulty.entries[v.next().toInt()]
+                val kinds = v.next().toInt()
+                val stageNumber = v.next().toInt()
+                val seed = v.next().toLong()
+                val timeLimit = v.next().toInt()
+                val g = when (mode) {
+                    GameMode.STAGE -> stage(Stages.get(stageNumber), seed)
+                    GameMode.TIMED -> Game(mode, difficulty, kinds, 1, null, 6, seed, timeLimit = timeLimit)
+                    GameMode.INFINITE -> Game(mode, difficulty, kinds, 1, null, 6, seed)
+                    GameMode.PUZZLE -> null
+                }
+                g?.load(v)
+                g
+            }
+        } catch (e: Exception) {
+            null
+        }
+
         fun stage(def: StageDef, seed: Long): Game =
             Game(GameMode.STAGE, def.timing, def.kinds, def.speedLevel, def, def.startRows, seed)
+
+        /** Score Attack: like Infinite, but it ends when the clock does. */
+        fun timed(difficulty: Difficulty, startLevel: Int, seed: Long, frames: Int = TIMED_FRAMES): Game =
+            Game(GameMode.TIMED, difficulty, difficulty.kinds, startLevel, null, 6, seed, timeLimit = frames)
+
+        /** A puzzle: the board does not rise, and every tile has to go within the moves allowed. */
+        fun puzzle(def: PuzzleDef): Game = fixed(def.rows, def.moves, raise = false, seed = def.number.toLong())
+
+        /**
+         * A board that stays as it is given: for puzzles ([moves] > 0) and for lessons (0 = no limit).
+         * It rises only if [raise] is allowed and the player raises it.
+         */
+        fun fixed(rows: List<String>, moves: Int, raise: Boolean, seed: Long): Game {
+            val kinds = maxOf(Difficulty.NORMAL.kinds, rows.maxOf { line -> line.maxOf { if (it == '.') 0 else it - '0' } })
+            return Game(GameMode.PUZZLE, Difficulty.NORMAL, kinds, 1, null, 1, seed,
+                moveLimit = moves, fixedRows = rows, raiseAllowed = raise)
+        }
+
+        /** Two minutes. */
+        const val TIMED_FRAMES = 120 * 60
     }
 
     private val rng = Rng(seed)
@@ -122,8 +177,22 @@ class Game private constructor(
     /** Set while the player holds the raise button. */
     var raiseHeld = false
 
-    /** Tests switch this off to keep the stack still. */
-    var autoRise = true
+    /** Whether the stack comes up by itself. Off for puzzles and lessons; tests switch it off too. */
+    var autoRise = mode != GameMode.PUZZLE
+
+    /** Puzzles: swaps still allowed. */
+    var movesLeft = moveLimit
+        private set
+
+    /** Score Attack: frames left on the clock. */
+    val timeLeft: Int get() = max(0, timeLimit - frames)
+
+    /** How many tiles are on the board. */
+    fun tileCount(): Int {
+        var n = 0
+        for (r in 0 until ROWS) for (c in 0 until COLS) if (grid[r][c].kind != 0) n++
+        return n
+    }
 
     /** Something is sliding, hanging, falling or popping: the board is not at rest. */
     var active = false
@@ -156,7 +225,14 @@ class Game private constructor(
     private val marks = Array(ROWS) { BooleanArray(COLS) }
 
     init {
-        fillStart(startRows)
+        if (fixedRows != null) {
+            setBoard(*fixedRows.toTypedArray())
+            // nothing to get ready for: a puzzle waits for the player
+            countdown = 0
+            phase = Phase.PLAYING
+        } else {
+            fillStart(startRows)
+        }
         refreshFlags()
     }
 
@@ -221,6 +297,7 @@ class Game private constructor(
         val b = grid[row][col + 1]
         if (a.kind == 0 && b.kind == 0) return false
         if (!canSwap(a) || !canSwap(b)) return false
+        if (moveLimit > 0 && movesLeft == 0) return false
         // Nothing may be slid in right under a tile that is hanging: it has to fall first.
         // (Otherwise one tile shuffled between two columns could hold them both up for ever.)
         if (row + 1 < ROWS &&
@@ -237,6 +314,7 @@ class Game private constructor(
         b.state = TileState.SWAPPING
         b.timer = SWAP_FRAMES
         b.swapDir = -1
+        if (moveLimit > 0) movesLeft--
         active = true
         emit(EventType.SWAP, row, col)
         return true
@@ -266,7 +344,7 @@ class Game private constructor(
                 }
             }
             Phase.PLAYING -> step()
-            Phase.GAME_OVER, Phase.STAGE_CLEAR -> Unit
+            Phase.GAME_OVER, Phase.STAGE_CLEAR, Phase.TIME_UP -> Unit
         }
     }
 
@@ -284,13 +362,31 @@ class Game private constructor(
         refreshFlags()
         if (stopFrames > 0 && !clearing) stopFrames--
         checkStageClear()
+        checkPuzzle()
+        if (timeLimit > 0 && frames >= timeLimit && phase == Phase.PLAYING) {
+            phase = Phase.TIME_UP
+            grabbedId = 0
+            emit(EventType.TIME_UP)
+        }
+    }
+
+    /** A puzzle is solved when the board is empty and still, and lost when the moves are gone and it is not. */
+    private fun checkPuzzle() {
+        if (mode != GameMode.PUZZLE || moveLimit == 0 || phase != Phase.PLAYING || active) return
+        if (tileCount() == 0) {
+            phase = Phase.STAGE_CLEAR
+            grabbedId = 0
+            emit(EventType.STAGE_CLEAR)
+        } else if (movesLeft == 0) {
+            endGame()
+        }
     }
 
     // ---------------------------------------------------------------- rising
 
     private fun rise() {
         val canRise = !settling && !topOccupied
-        if (raiseHeld && canRise) manualRaise = true
+        if (raiseHeld && canRise && raiseAllowed) manualRaise = true
         if (manualRaise && canRise) {
             // Raising by hand gives up whatever pause the player had earned.
             stopFrames = 0
@@ -430,7 +526,7 @@ class Game private constructor(
     private fun remove(r: Int, c: Int) {
         grid[r][c].clear()
         tilesCleared++
-        if (mode == GameMode.INFINITE && level < Speed.MAX_LEVEL) {
+        if ((mode == GameMode.INFINITE || mode == GameMode.TIMED) && level < Speed.MAX_LEVEL) {
             levelProgress++
             if (levelProgress >= Speed.tilesToNextLevel(level)) {
                 levelProgress = 0
@@ -701,6 +797,48 @@ class Game private constructor(
             val k = 1 + rng.nextInt(kinds)
             if (k != notA && k != notB) return k
         }
+    }
+
+    // ---------------------------------------------------------------- saving a game in progress
+
+    /**
+     * Everything needed to carry this game on later, as one line of text.
+     * (Not for puzzles and lessons, which are quicker to start again.)
+     */
+    fun save(): String {
+        val out = ArrayList<Any>()
+        out += SAVE_VERSION
+        out += mode.ordinal; out += difficulty.ordinal; out += kinds; out += (stage?.number ?: 0); out += seed; out += timeLimit
+        out += rng.state; out += nextId
+        out += phase.ordinal; out += countdown; out += frames; out += riseOffset; out += level; out += levelProgress
+        out += score; out += chain; out += maxChain; out += maxCombo; out += tilesCleared; out += rowsRisen
+        out += stopFrames; out += grace; out += lineRow; out += (if (manualRaise) 1 else 0)
+        for (c in 0 until COLS) out += incoming[c]
+        for (r in 0 until ROWS) for (c in 0 until COLS) {
+            val t = grid[r][c]
+            out += t.id; out += t.kind; out += t.state.ordinal; out += t.timer; out += (if (t.chaining) 1 else 0)
+            out += t.comboIndex; out += t.comboSize; out += t.chainIndex; out += t.swapDir
+        }
+        return out.joinToString(",")
+    }
+
+    private fun load(v: Iterator<String>) {
+        fun int() = v.next().toInt()
+        rng.state = v.next().toLong()
+        nextId = int()
+        phase = Phase.entries[int()]; countdown = int(); frames = int(); riseOffset = int(); level = int(); levelProgress = int()
+        score = int(); chain = int(); maxChain = int(); maxCombo = int(); tilesCleared = int(); rowsRisen = int()
+        stopFrames = int(); grace = int(); lineRow = int(); manualRaise = int() == 1
+        for (c in 0 until COLS) incoming[c] = int()
+        for (r in 0 until ROWS) for (c in 0 until COLS) {
+            val t = grid[r][c]
+            t.id = int(); t.kind = int(); t.state = TileState.entries[int()]; t.timer = int(); t.chaining = int() == 1
+            t.comboIndex = int(); t.comboSize = int(); t.chainIndex = int(); t.swapDir = int()
+        }
+        grabbedId = 0
+        raiseHeld = false
+        events.clear()
+        refreshFlags()
     }
 
     // ---------------------------------------------------------------- for tests and the how-to-play pictures

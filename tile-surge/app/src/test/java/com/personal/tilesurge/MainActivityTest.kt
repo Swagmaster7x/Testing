@@ -57,6 +57,8 @@ class MainActivityTest {
             val info = RuntimeEnvironment.getApplication().applicationInfo
             info.javaClass.getMethod("setEnableOnBackInvokedCallback", Boolean::class.javaPrimitiveType).invoke(info, true)
         }
+        // not the first launch: the lessons have been seen
+        RuntimeEnvironment.getApplication().getSharedPreferences("tilesurge", 0).edit().putBoolean("lessons_done", true).commit()
         controller = Robolectric.buildActivity(MainActivity::class.java).setup()
     }
 
@@ -189,6 +191,26 @@ class MainActivityTest {
             activity.onBackPressed()
             assertTrue(activity.isFinishing)
         }
+    }
+
+    @Test(timeout = 120_000)
+    fun `the very first launch opens on the lessons, and after them on the title`() {
+        controller.pause().stop().destroy()
+        val prefs = RuntimeEnvironment.getApplication().getSharedPreferences("tilesurge", 0)
+        prefs.edit().clear().commit()
+        val first = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val v = first.get().findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as GameView
+        assertEquals(1, ((v.scene as PlayScene).setup as Setup.Lesson).number)
+        // skipping them from the pause panel counts as having seen them
+        (v.scene as PlayScene).pause()
+        com.personal.tilesurge.ui.Shots.tap(v, (v.scene as PlayScene).quitButton)
+        assertTrue(v.scene is TitleScene)
+        first.pause().stop().destroy()
+        val second = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val v2 = second.get().findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as GameView
+        assertTrue(v2.scene is TitleScene)
+        second.pause().stop().destroy()
+        controller = Robolectric.buildActivity(MainActivity::class.java).setup()
     }
 
     @Test(timeout = 120_000)

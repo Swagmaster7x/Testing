@@ -5,8 +5,8 @@ import com.personal.tilesurge.core.Difficulty
 import com.personal.tilesurge.core.Speed
 import java.util.Locale
 
-/** Choosing a difficulty and a starting speed for Infinite mode. */
-class InfiniteSetupScene(app: App) : Scene(app) {
+/** Choosing a difficulty and a starting speed, for Infinite mode or (with [timed]) for Score Attack. */
+class InfiniteSetupScene(app: App, private val timed: Boolean = false) : Scene(app) {
 
     private var difficulty = app.prefs.difficulty
     private var level = app.prefs.startLevel(difficulty)
@@ -16,7 +16,7 @@ class InfiniteSetupScene(app: App) : Scene(app) {
     internal val slower = Button("") { setLevel(level - 1) }.apply { icon = Icon.MINUS }
     internal val faster = Button("") { setLevel(level + 1) }.apply { icon = Icon.PLUS }
     internal val startButton = Button("START", ButtonStyle.PRIMARY) {
-        app.go(PlayScene(app, Setup.Infinite(difficulty, level)))
+        app.go(PlayScene(app, if (timed) Setup.Timed(difficulty, level) else Setup.Infinite(difficulty, level)))
     }
 
     private var titleY = 0f
@@ -90,7 +90,7 @@ class InfiniteSetupScene(app: App) : Scene(app) {
     override fun draw(c: Canvas) {
         ui.background(c, width, height)
         val cx = safe.centerX()
-        ui.text(c, "INFINITE", cx, titleY, 26f * u, Palette.TEXT)
+        ui.text(c, if (timed) "SCORE ATTACK" else "INFINITE", cx, titleY, 26f * u, Palette.TEXT)
 
         ui.text(c, "DIFFICULTY", cx, sectionY, 12f * u, Palette.TEXT_DIM, face = ui.semi)
         val about = when (difficulty) {
@@ -106,8 +106,8 @@ class InfiniteSetupScene(app: App) : Scene(app) {
         val seconds = Speed.framesPerRow[level] / 60f
         ui.text(c, String.format(Locale.US, "a new row every %.1f s", seconds), cx, mid + 28f * u, 12f * u, Palette.TEXT_DIM, face = ui.semi)
 
-        val best = app.prefs.bestScore(difficulty)
-        ui.text(c, "BEST ON " + difficulty.label.uppercase(), cx, bestY, 12f * u, Palette.TEXT_DIM, face = ui.semi)
+        val best = if (timed) app.prefs.bestTimed(difficulty) else app.prefs.bestScore(difficulty)
+        ui.text(c, (if (timed) "BEST IN TWO MINUTES ON " else "BEST ON ") + difficulty.label.uppercase(), cx, bestY, 12f * u, Palette.TEXT_DIM, face = ui.semi)
         if (best > 0) {
             ui.text(c, Format.number(best), cx, bestY + 28f * u, 30f * u, Palette.ACCENT)
         } else {

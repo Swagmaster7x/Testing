@@ -22,7 +22,15 @@ Kotlin, drawn on a plain Android `Canvas`, no libraries. Minimum Android 8 (API 
 
 **Infinite** has no end. Choose Easy, Normal or Hard and a starting speed; the speed goes up as you clear tiles. Each difficulty keeps its best score.
 
-How to Play, on the title screen, shows all of this with small boards that play themselves.
+**Score Attack** is two minutes on the clock: score as much as you can. Best score per difficulty.
+
+**Daily Challenge** is a two-minute Score Attack on a board that is the same for everyone that day and changes at midnight. It keeps your best for the day and counts the days in a row you have played.
+
+**Puzzle** has 30 boards that do not rise. Clear every tile in the moves given (one to four); each cell a tile slides is a move. They open in order.
+
+**How to Play** is four short hands-on lessons (slide, fall, chain, raise) with a ghost finger showing each move. They open by themselves the first time the game is started. The pages of rules with self-playing boards are one tap further on.
+
+Also: one to three **stars** for each stage by how fast it was cleared; **Continue** on the title screen picks up a game that was left part-way (it is put away whenever the game is paused or the app is left); a background **tune** with its own switch; and the screen shakes a little on chains and big combos.
 
 ## Put it on your phone
 
@@ -56,6 +64,7 @@ In Android Studio, open the `tile-surge` folder itself, not the repository root.
 - **Whole games** (`core/BotTest`): a simple computer player clears all 30 stages and plays Infinite on each difficulty, and prints how long it took.
 - **Touch** (`ui/TouchPlayTest`, `ui/NavigationTest`): the real view driven by simulated fingers: sliding, flicking, two fingers at once, pause, the menus, a whole stage and a whole Infinite game played through touch events only.
 - **The app itself** (`MainActivityTest`, `ui/LoopTest`): the activity started on Android 8, 10, 12, 13 and 15, with Back delivered the way each version delivers it, pausing when the app leaves the front, and the clock held to 60 ticks a second on 60, 90 and 120 Hz screens.
+- **The newer modes** (`core/ModesTest`, `ui/FeaturesTest`, `ui/LessonsTest`): every puzzle's answer played in the real game and shown to need all its moves; a saved game restored and checked to carry on exactly; the daily board the same all day; lessons, puzzles and Score Attack played through by touch.
 - **The how-to boards and the sounds** (`ui/DemosTest`, `ui/SfxSynthTest`).
 - **Pictures** (`ui/ScreensTest`): draws every screen with the real drawing code and saves PNGs to `app/build/outputs/screens/`, at phone, small-phone and tablet sizes.
 
@@ -114,6 +123,10 @@ All times are frames at 60 a second.
 - **Sixty a second.** The game moves 60 times a second and asks the phone for a 60 Hz screen mode, so it is not jerky on 90 and 144 Hz screens.
 - **Upright on phones, either way up on tablets.** On tablets and wide windows the readouts move to the left of the well and RAISE to the right.
 
+- **Stars.** Three for clearing a stage at about a tile and a half a second, two at just under one a second, one for clearing it at all.
+- **Puzzles are made by a tool, not by hand.** `PuzzleMaker` (in the tests; run with `MAKE_PUZZLES=1`) tries random boards and keeps those whose shortest answer is exactly the length wanted. The 30 it chose are in `core/Puzzles.kt`, each with one answer.
+- **The tune** is sixteen bars written for the game and built from tones in code, like the sound effects. Nobody has listened to it yet: it was checked only as numbers. It has its own off switch.
+
 ## Not in this version
 
-Music, saving a game in progress when the app is closed, a versus mode and puzzle stages with a fixed number of moves.
+A versus mode, online scores for the daily challenge (it is the same board for everyone, but scores stay on the phone), and ads.
