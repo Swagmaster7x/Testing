@@ -4,6 +4,8 @@ A personal Android app (one phone, no accounts, fully offline) that plans the we
 
 Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26), targets Android 17 (API 37).
 
+> **Also in this repository:** [Tile Surge](tile-surge/README.md), a touch-screen puzzle game. It is a separate app with its own Gradle project in `tile-surge/`; nothing in Meal & Gym depends on it or was changed for it.
+
 **Look:** a dark-fantasy theme inspired by the mood of Berserk. It uses original artwork only (no characters, symbols or text from the manga): black iron and blood red when the phone is in dark mode, aged parchment and ink in light mode, headings in Cinzel, cut-corner "armour plate" cards, and an original broadsword-and-red-moon app icon. The colours, fonts and shapes live in `ui/theme/Theme.kt`.
 
 ## Version 2 ([SPEC-V2.md](SPEC-V2.md))
