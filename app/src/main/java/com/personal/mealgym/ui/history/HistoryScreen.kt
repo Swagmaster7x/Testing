@@ -31,6 +31,7 @@ import com.personal.mealgym.ui.AppViewModels
 import com.personal.mealgym.ui.MessageViewModel
 import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.EmptyState
+import com.personal.mealgym.ui.displayText
 import com.personal.mealgym.ui.label
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
@@ -50,19 +51,27 @@ class HistoryViewModel(c: AppContainer) : MessageViewModel() {
     private val profileId = c.currentProfileId()
 
     val ui: StateFlow<List<HistoryDay>?> = c.today.flatMapLatest { today ->
-        combine(c.meals.planUpTo(profileId, today), c.meals.recipes, c.gym.sessions(profileId), c.gym.saunaLogs(profileId)) { plan, recipes, sessions, sauna ->
+        combine(
+            c.meals.planUpTo(profileId, today),
+            c.meals.recipes,
+            c.gym.sessions(profileId),
+            c.gym.saunaLogs(profileId),
+            c.meals.offPlanUpTo(profileId, today),
+        ) { plan, recipes, sessions, sauna, offPlan ->
             val names = recipes.associate { it.id to it.name }
             val todayIso = Dates.iso(today)
-            val dates = (plan.map { it.date } + sessions.map { it.date } + sauna.map { it.date })
+            val dates = (plan.map { it.date } + sessions.map { it.date } + sauna.map { it.date } + offPlan.map { it.date })
                 .filter { it <= todayIso }
                 .distinct()
                 .sortedDescending()
             dates.map { iso ->
                 HistoryDay(
                     date = Dates.parse(iso),
-                    meals = plan.filter { it.date == iso }
-                        .sortedBy { it.slot.ordinal }
-                        .mapNotNull { entry -> names[entry.recipeId]?.let { entry.slot to it } },
+                    // Recipes, then anything planned as eating out, leftovers or a skip, in meal order.
+                    meals = (
+                        plan.filter { it.date == iso }.mapNotNull { entry -> names[entry.recipeId]?.let { entry.slot to it } } +
+                            offPlan.filter { it.date == iso }.map { it.slot to it.displayText() }
+                        ).distinctBy { it.first }.sortedBy { it.first.ordinal },
                     workouts = sessions.filter { it.date == iso }.sortedBy { it.id },
                     saunaMinutes = sauna.filter { it.date == iso }.sortedBy { it.id }.map { it.minutes },
                 )

@@ -397,6 +397,14 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                     onChange = vm::setShowNutrition,
                 )
             }
+            if (s.showNutrition) item {
+                SwitchRow(
+                    title = "Day totals",
+                    body = "What each planned day adds up to, on Plan and Today. It totals the plan; nothing you eat is logged.",
+                    checked = s.dayTotals,
+                    onChange = vm::setDayTotals,
+                )
+            }
             if (!profile.easierToFinish) item {
                 SwitchRow(
                     title = "Half-plate reminder",

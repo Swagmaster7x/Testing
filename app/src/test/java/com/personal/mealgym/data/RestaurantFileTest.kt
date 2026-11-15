@@ -49,6 +49,24 @@ class RestaurantFileTest {
     }
 
     @Test
+    fun roughFiguresForTheDaysTotalComeFromTheWording() {
+        fun pick(about: String?) = MenuPick("x", about)
+        assertEquals(310 to 17, pick("about 310 cal, 17 g protein").let { it.calories to it.protein })
+        // The middle of a range, for both parts.
+        assertEquals(355 to 28, pick("roughly 320 to 390 cal, 28 g protein").let { it.calories to it.protein })
+        assertEquals(265 to 17, pick("roughly 250 to 280 cal, 15 to 19 g protein").let { it.calories to it.protein })
+        assertEquals(20 to null, pick("about 20 cal a serving").let { it.calories to it.protein })
+        assertEquals(150 to 9, pick("about 150 cal, 9 g protein or more").let { it.calories to it.protein })
+        assertEquals(null to null, pick(null).let { it.calories to it.protein })
+        // Every pick with a figure can be counted, and none is implausible for one item.
+        for (p in places) for (item in p.picks.filter { it.about != null }) {
+            val calories = item.calories
+            assertTrue("${p.name}: ${item.name}", calories != null && calories in 15..800)
+            assertTrue("${p.name}: ${item.name}", (item.protein ?: 0) in 0..60)
+        }
+    }
+
+    @Test
     fun flagsAreRealAvoidNames() {
         val names = Avoid.entries.map { it.name }.toSet()
         for (p in places) for (pick in p.picks) {

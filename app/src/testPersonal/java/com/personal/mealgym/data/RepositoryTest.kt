@@ -7,6 +7,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.personal.mealgym.data.db.AppDatabase
+import com.personal.mealgym.data.db.CookRating
+import com.personal.mealgym.data.db.OffPlanKind
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.Feeling
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Profile
@@ -246,6 +249,162 @@ class RepositoryTest {
         val lunches = meals.planForWeek(TestPeople.SWAG, mon).first().filter { it.slot == MealSlot.LUNCH }.associate { it.date to it.recipeId }
         assertEquals(recipes.getValue("L4").id, lunches[mon.plusDays(1).toString()])
         assertEquals(guisado.id, lunches[mon.plusDays(4).toString()])
+    }
+
+    private fun shopping() = runBlocking {
+        meals.shoppingWeek(TestPeople.SWAG, mon, both = false).first().result.sections.flatMap { it.items }.associateBy { it.key }
+    }
+
+    private fun out(date: LocalDate, slot: MealSlot, kind: OffPlanKind, title: String? = null, calories: Int? = null) =
+        OffPlanMeal(profileId = TestPeople.SWAG, date = date.toString(), slot = slot, kind = kind, title = title, calories = calories)
+
+    @Test
+    fun aSlotHoldsARecipeOrSomethingOffThePlanNeverBoth() = runBlocking {
+        val guisado = recipes.getValue("L1")
+        meals.setSlot(TestPeople.SWAG, mon, MealSlot.LUNCH, guisado.id)
+        assertEquals("2 lb", shopping().getValue("chicken thigh").amountText)
+
+        // Eating out instead: the recipe leaves the slot and the shopping list.
+        meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.EATING_OUT, "  Chipotle: Chicken ", 180))
+        assertTrue(meals.planForWeek(TestPeople.SWAG, mon).first().isEmpty())
+        assertNull(shopping()["chicken thigh"])
+        val planned = meals.offPlanForWeek(TestPeople.SWAG, mon).first().single()
+        assertEquals("Chipotle: Chicken", planned.title)
+        assertEquals(180, planned.calories)
+
+        // Changing it replaces it; a blank title is no title.
+        meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.LEFTOVERS, "  "))
+        assertEquals(listOf(OffPlanKind.LEFTOVERS), meals.offPlanForWeek(TestPeople.SWAG, mon).first().map { it.kind })
+        assertNull(meals.offPlanForWeek(TestPeople.SWAG, mon).first().single().title)
+
+        // Picking a recipe again takes the slot back.
+        meals.setSlot(TestPeople.SWAG, mon, MealSlot.LUNCH, guisado.id)
+        assertTrue(meals.offPlanForWeek(TestPeople.SWAG, mon).first().isEmpty())
+        // Clearing clears either kind.
+        meals.setOffPlan(out(mon, MealSlot.DINNER, OffPlanKind.SKIP))
+        meals.clearSlot(TestPeople.SWAG, mon, MealSlot.DINNER)
+        meals.clearSlot(TestPeople.SWAG, mon, MealSlot.LUNCH)
+        assertTrue(meals.offPlanForWeek(TestPeople.SWAG, mon).first().isEmpty())
+        assertTrue(meals.planForWeek(TestPeople.SWAG, mon).first().isEmpty())
+        // Ashley's same slot is her own.
+        meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.SKIP).copy(profileId = TestPeople.ASHLEY))
+        assertTrue(meals.offPlanForWeek(TestPeople.SWAG, mon).first().isEmpty())
+    }
+
+    @Test
+    fun batchesAndLastWeeksCopiesLeaveOffPlanSlotsAlone() = runBlocking {
+        val guisado = recipes.getValue("L1")
+        meals.setOffPlan(out(mon.plusDays(1), MealSlot.LUNCH, OffPlanKind.EATING_OUT))
+        // Tuesday is spoken for, so the four portions go Monday, Wednesday, Thursday, Friday.
+        assertEquals(4, meals.fillBatch(TestPeople.SWAG, mon, MealSlot.LUNCH, guisado))
+        assertEquals(
+            listOf(mon, mon.plusDays(2), mon.plusDays(3), mon.plusDays(4)).map { it.toString() },
+            meals.planForWeek(TestPeople.SWAG, mon).first().map { it.date }.sorted(),
+        )
+        assertEquals(1, meals.offPlanForWeek(TestPeople.SWAG, mon).first().size)
+
+        // Last week's Saturday dinner doesn't overwrite this week's planned night out.
+        meals.setSlot(TestPeople.SWAG, mon.minusDays(2), MealSlot.DINNER, recipes.getValue("D1").id)
+        meals.setOffPlan(out(mon.plusDays(5), MealSlot.DINNER, OffPlanKind.EATING_OUT, "Birthday"))
+        assertEquals(0, meals.repeatLastWeek(TestPeople.SWAG, mon))
+        assertEquals("Birthday", meals.offPlanForWeek(TestPeople.SWAG, mon).first().single { it.slot == MealSlot.DINNER }.title)
+    }
+
+    @Test
+    fun cookingForGuestsBuysForThemToo() = runBlocking {
+        val guisado = recipes.getValue("L1") // serves 4, 2 lb chicken thighs
+        meals.setSlot(TestPeople.SWAG, mon, MealSlot.DINNER, guisado.id)
+        assertEquals("2 lb", shopping().getValue("chicken thigh").amountText)
+        // One serving for Swag and three guests still fits one batch.
+        meals.setExtraServings(TestPeople.SWAG, mon, MealSlot.DINNER, 3.0)
+        assertEquals("2 lb", shopping().getValue("chicken thigh").amountText)
+        // A fifth person means cooking it twice.
+        meals.setExtraServings(TestPeople.SWAG, mon, MealSlot.DINNER, 4.0)
+        assertEquals("4 lb", shopping().getValue("chicken thigh").amountText)
+        assertEquals(4.0, meals.planForWeek(TestPeople.SWAG, mon).first().single().extraServings, 0.0)
+        // Out of range is pulled back in, and copying a week doesn't copy the guests.
+        meals.setExtraServings(TestPeople.SWAG, mon, MealSlot.DINNER, 99.0)
+        assertEquals(MealRepository.MAX_EXTRA_SERVINGS, meals.planForWeek(TestPeople.SWAG, mon).first().single().extraServings, 0.0)
+        meals.repeatLastWeek(TestPeople.SWAG, mon.plusDays(7))
+        assertEquals(0.0, meals.planForWeek(TestPeople.SWAG, mon.plusDays(7)).first().single().extraServings, 0.0)
+    }
+
+    @Test
+    fun theLatestRatingOfARecipeIsTheOneThatCounts() = runBlocking {
+        val guisado = recipes.getValue("L1")
+        val tacos = recipes.getValue("B1")
+        meals.logCooked(TestPeople.SWAG, guisado.id, mon, CookRating.FINE)
+        meals.logCooked(TestPeople.SWAG, guisado.id, mon.plusDays(3), CookRating.LOVED)
+        // Cooked again with nothing said: the earlier opinion stands.
+        meals.logCooked(TestPeople.SWAG, guisado.id, mon.plusDays(5), null)
+        meals.logCooked(TestPeople.SWAG, tacos.id, mon, CookRating.NOT_AGAIN)
+        meals.logCooked(TestPeople.ASHLEY, tacos.id, mon, CookRating.LOVED)
+        assertEquals(mapOf(guisado.id to CookRating.LOVED, tacos.id to CookRating.NOT_AGAIN), meals.ratings(TestPeople.SWAG).first())
+        assertEquals(mapOf(tacos.id to CookRating.LOVED), meals.ratings(TestPeople.ASHLEY).first())
+        assertEquals(3, meals.cookLogs(TestPeople.SWAG).first().count { it.recipeId == guisado.id })
+    }
+
+    @Test
+    fun aBackupCarriesOffPlanMealsCookLogsSetsAndTheNewSettings() = runBlocking {
+        val guisado = recipes.getValue("L1")
+        meals.setSlot(TestPeople.SWAG, mon, MealSlot.DINNER, guisado.id)
+        meals.setExtraServings(TestPeople.SWAG, mon, MealSlot.DINNER, 2.0)
+        meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.EATING_OUT, "Chipotle: Chicken", 180))
+        meals.logCooked(TestPeople.SWAG, guisado.id, mon, CookRating.LOVED)
+        val day1 = db.workoutDao().getDays(TestPeople.SWAG).first { it.dayOrder == 1 }
+        gym.saveSession(
+            TestPeople.SWAG, mon, day1, Feeling.GREAT, null,
+            listOf(
+                SetLog(sessionId = 0, exerciseId = null, exerciseNameUsed = "Barbell bench press", weight = 135.0, reps = 8, setIndex = 0),
+                SetLog(sessionId = 0, exerciseId = null, exerciseNameUsed = "Barbell bench press", weight = 135.0, reps = 7, setIndex = 1),
+            ),
+        )
+        settings.setSuggestLifts(TestPeople.SWAG, true)
+        settings.setDayTotals(TestPeople.ASHLEY, true)
+        settings.setInCupboard(listOf("chicken thigh", "rice"), have = true, today = 20_000)
+        settings.setInCupboard("egg", have = true)
+        settings.setCupboardAuto(true)
+
+        val backup = BackupManager(db, settings, context.contentResolver, ::builtInPeople)
+        val file = backup.decode(backup.encode(backup.snapshot()))
+        assertEquals(4, file.formatVersion)
+
+        val otherDb = newDb()
+        val otherSettings = newSettings()
+        BackupManager(otherDb, otherSettings, context.contentResolver, ::builtInPeople).restore(file)
+        assertEquals(2.0, otherDb.planDao().all().single().extraServings, 0.0)
+        assertEquals("Chipotle: Chicken", otherDb.planDao().allOffPlan().single().title)
+        assertEquals(CookRating.LOVED, otherDb.planDao().allCookLogs().single().rating)
+        assertEquals(listOf(0, 1), otherDb.workoutDao().allSetLogs().map { it.setIndex })
+        assertTrue(otherSettings.current(TestPeople.SWAG).suggestLifts)
+        assertTrue(otherSettings.current(TestPeople.ASHLEY).dayTotals)
+        assertFalse("off in the personal edition unless switched on", otherSettings.current(TestPeople.SWAG).dayTotals)
+        assertEquals(setOf("chicken thigh", "rice", "egg"), otherSettings.cupboard.first())
+        assertEquals(mapOf("chicken thigh" to 20_000L, "rice" to 20_000L), otherSettings.cupboardSince.first())
+        assertTrue(otherSettings.cupboardAuto.first())
+
+        // A file from before any of this restores with none of it, and the edition's defaults.
+        val older = file.copy(
+            formatVersion = 3, offPlanMeals = emptyList(), cookLogs = emptyList(),
+            settings = file.settings.copy(suggestLifts = null, dayTotals = null, cupboardSince = emptyMap(), cupboardAuto = null),
+        )
+        val thirdSettings = newSettings()
+        val thirdDb = newDb()
+        BackupManager(thirdDb, thirdSettings, context.contentResolver, ::builtInPeople).restore(older)
+        assertTrue(thirdDb.planDao().allOffPlan().isEmpty())
+        assertFalse(thirdSettings.current(TestPeople.SWAG).suggestLifts)
+        assertFalse(thirdSettings.cupboardAuto.first())
+        assertTrue(thirdSettings.cupboardSince.first().isEmpty())
+    }
+
+    @Test
+    fun deletingAPersonTakesTheirOffPlanMealsAndCookLogs() = runBlocking {
+        meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.SKIP).copy(profileId = TestPeople.ASHLEY))
+        meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.SKIP))
+        meals.logCooked(TestPeople.ASHLEY, recipes.getValue("L1").id, mon, CookRating.FINE)
+        ProfileRepository(db, settings).delete(TestPeople.ASHLEY)
+        assertEquals(listOf(TestPeople.SWAG), db.planDao().allOffPlan().map { it.profileId })
+        assertTrue(db.planDao().allCookLogs().isEmpty())
     }
 
     @Test

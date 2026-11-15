@@ -56,10 +56,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.R
 import com.personal.mealgym.data.LibraryFilter
+import com.personal.mealgym.data.MealRepository
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.DayTotals
+import com.personal.mealgym.domain.Quantities
 import com.personal.mealgym.ui.AppNavigator
 import com.personal.mealgym.ui.components.AppScaffold
 import com.personal.mealgym.ui.AppViewModels
@@ -67,11 +71,18 @@ import com.personal.mealgym.ui.ShowMessages
 import com.personal.mealgym.ui.Sides
 import com.personal.mealgym.ui.components.Badge
 import com.personal.mealgym.ui.components.TabTopBar
+import com.personal.mealgym.ui.displayText
 import com.personal.mealgym.ui.label
 import com.personal.mealgym.ui.theme.MaterialThemeCarvedLabel
 import java.time.LocalDate
 
-private data class SlotRef(val date: LocalDate, val slot: MealSlot, val recipe: Recipe?)
+private data class SlotRef(
+    val date: LocalDate,
+    val slot: MealSlot,
+    val recipe: Recipe?,
+    val offPlan: OffPlanMeal? = null,
+    val extra: Double = 0.0,
+)
 
 @Composable
 fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppViewModels.Factory)) {
@@ -121,14 +132,24 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                     Text(if (filter == LibraryFilter()) "Fill my week" else "Fill my week (filters on)", maxLines = 1)
                 }
             }
+            if (state.showTotals) {
+                item {
+                    Text(
+                        (state.guide?.let { "Your guide is ${DayTotals.guideText(it)}. " } ?: "") +
+                            "Each day's total is what's planned, at your portion size. Nothing you eat is logged.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             items(state.days, key = { it.date.toString() }) { day ->
                 DayRow(
                     day = day,
                     badge = state.badges[day.date],
                     isToday = day.date == state.today,
-                    onSlot = { slot, recipe ->
-                        val ref = SlotRef(day.date, slot, recipe)
-                        if (recipe == null) picking = ref else acting = ref
+                    onSlot = { slot ->
+                        val ref = SlotRef(day.date, slot, day.slots[slot], day.offPlan[slot], day.extra[slot] ?: 0.0)
+                        if (ref.recipe == null && ref.offPlan == null) picking = ref else acting = ref
                     },
                 )
             }
@@ -144,6 +165,8 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                 onPick = { vm.setSlot(target.date, target.slot, it); picking = null },
                 onFillBatch = { vm.fillBatch(target.date, target.slot, it); picking = null },
                 onDismiss = { picking = null },
+                restaurants = vm.restaurants,
+                onOffPlan = { vm.setOffPlan(target.date, target.slot, it); picking = null },
             )
         }
 
@@ -159,6 +182,11 @@ fun PlanScreen(nav: AppNavigator, vm: PlanViewModel = viewModel(factory = AppVie
                 onAddTo = { other -> acting = null; target.recipe?.let { vm.addToOther(other, target.date, target.slot, it) } },
                 onClear = { acting = null; vm.clearSlot(target.date, target.slot) },
                 onDismiss = { acting = null },
+                onExtra = { extra ->
+                    vm.setExtraServings(target.date, target.slot, extra)
+                    acting = target.copy(extra = extra)
+                },
+                onPlace = { key -> acting = null; nav.restaurant(key) },
             )
         }
 
@@ -194,7 +222,7 @@ private fun WeekSwitcher(state: PlanUi, onShift: (Long) -> Unit, onThisWeek: () 
 }
 
 @Composable
-private fun DayRow(day: PlanDay, badge: String?, isToday: Boolean, onSlot: (MealSlot, Recipe?) -> Unit) {
+private fun DayRow(day: PlanDay, badge: String?, isToday: Boolean, onSlot: (MealSlot) -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -221,33 +249,61 @@ private fun DayRow(day: PlanDay, badge: String?, isToday: Boolean, onSlot: (Meal
                     SlotTile(
                         slot = slot,
                         recipe = day.slots[slot],
-                        onClick = { onSlot(slot, day.slots[slot]) },
+                        offPlan = day.offPlan[slot],
+                        extra = day.extra[slot] ?: 0.0,
+                        onClick = { onSlot(slot) },
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
+            }
+            day.total?.takeIf { !it.isEmpty }?.let { total ->
+                Text(DayTotals.text(total), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
 @Composable
-private fun SlotTile(slot: MealSlot, recipe: Recipe?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SlotTile(
+    slot: MealSlot,
+    recipe: Recipe?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    offPlan: OffPlanMeal? = null,
+    extra: Double = 0.0,
+) {
     val filled = recipe != null
+    // Eating out, leftovers and skips are planned too, but look different from a recipe to cook.
+    val other = offPlan != null && !filled
     Surface(
         modifier = modifier.heightIn(min = 72.dp).clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
-        color = if (filled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        contentColor = if (filled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-        border = if (filled) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = when {
+            filled -> MaterialTheme.colorScheme.primaryContainer
+            other -> MaterialTheme.colorScheme.secondaryContainer
+            else -> MaterialTheme.colorScheme.surface
+        },
+        contentColor = when {
+            filled -> MaterialTheme.colorScheme.onPrimaryContainer
+            other -> MaterialTheme.colorScheme.onSecondaryContainer
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        border = if (filled || other) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(slot.label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
             Text(
-                recipe?.name ?: "+ Add",
+                recipe?.name ?: offPlan?.let { it.title ?: it.kind.label } ?: "+ Add",
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (other && offPlan?.title != null) {
+                Text(offPlan.kind.label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (filled && extra > 0) {
+                Text("+${Quantities.format(extra)} for guests", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -262,6 +318,8 @@ private fun SlotActionsSheet(
     onAddTo: (Profile) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
+    onExtra: (Double) -> Unit,
+    onPlace: (String) -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(bottom = 24.dp)) {
@@ -272,13 +330,45 @@ private fun SlotActionsSheet(
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             Text(
-                target.recipe?.name.orEmpty(),
+                target.recipe?.name ?: target.offPlan?.displayText().orEmpty(),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
+            if (target.recipe == null) {
+                // Eating out, leftovers or a skip: nothing to open, copy or buy.
+                target.offPlan?.restaurantKey?.let { key ->
+                    ListItem(headlineContent = { Text("See this place's better picks") }, modifier = Modifier.clickable { onPlace(key) })
+                }
+                ListItem(headlineContent = { Text("Change") }, modifier = Modifier.clickable(onClick = onChange))
+                ListItem(headlineContent = { Text("Clear this slot") }, modifier = Modifier.clickable(onClick = onClear))
+                return@Column
+            }
             ListItem(headlineContent = { Text("Open recipe") }, modifier = Modifier.clickable(onClick = onOpen))
             ListItem(headlineContent = { Text("Change") }, modifier = Modifier.clickable(onClick = onChange))
             ListItem(headlineContent = { Text("Copy to other days") }, modifier = Modifier.clickable(onClick = onCopy))
+            ListItem(
+                headlineContent = { Text("Cooking for guests") },
+                supportingContent = {
+                    Text(
+                        if (target.extra > 0) {
+                            "${Quantities.format(target.extra)} extra serving${if (target.extra == 1.0) "" else "s"}, added to the shopping list"
+                        } else {
+                            "Add servings and the shopping list buys for them too"
+                        },
+                    )
+                },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { onExtra((target.extra - 1).coerceAtLeast(0.0)) }, enabled = target.extra > 0) {
+                            Text("−", style = MaterialTheme.typography.titleLarge)
+                        }
+                        Text(Quantities.format(target.extra), style = MaterialTheme.typography.titleMedium)
+                        IconButton(onClick = { onExtra(target.extra + 1) }, enabled = target.extra < MealRepository.MAX_EXTRA_SERVINGS) {
+                            Text("+", style = MaterialTheme.typography.titleLarge)
+                        }
+                    }
+                },
+            )
             others.forEach { other ->
                 ListItem(
                     headlineContent = {

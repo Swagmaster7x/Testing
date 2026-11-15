@@ -105,6 +105,9 @@ class MealRepository(
     fun offPlanForWeek(profileId: Long, weekStart: LocalDate): Flow<List<OffPlanMeal>> =
         planDao.observeOffPlan(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6)))
 
+    fun offPlanForRange(profileId: Long, start: LocalDate, end: LocalDate): Flow<List<OffPlanMeal>> =
+        planDao.observeOffPlan(profileId, Dates.iso(start), Dates.iso(end))
+
     fun offPlanUpTo(profileId: Long, date: LocalDate): Flow<List<OffPlanMeal>> = planDao.observeOffPlanUpTo(profileId, Dates.iso(date))
 
     suspend fun weekOffPlan(profileId: Long, weekStart: LocalDate): List<OffPlanMeal> =

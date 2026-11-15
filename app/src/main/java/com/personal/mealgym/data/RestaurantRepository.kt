@@ -49,6 +49,23 @@ data class MenuPick(
      * allergen list: the app says so wherever it uses this.
      */
     val contains: Set<Avoid> get() = Avoid.parse(has) + Foods.inName(name)
+
+    /** Rough calories for a day's total: the figure, or the middle of a range ("320 to 390"). */
+    val calories: Int? get() = middle(about, caloriesText)
+
+    val protein: Int? get() = middle(about, proteinText)
+
+    private companion object {
+        val caloriesText = Regex("(\\d[\\d,]*)(?:\\s*to\\s*(\\d[\\d,]*))?\\s*cal")
+        val proteinText = Regex("(\\d+)(?:\\s*to\\s*(\\d+))?\\s*g protein")
+
+        fun middle(text: String?, pattern: Regex): Int? {
+            val m = text?.let(pattern::find) ?: return null
+            val low = m.groupValues[1].replace(",", "").toIntOrNull() ?: return null
+            val high = m.groupValues[2].replace(",", "").toIntOrNull() ?: return low
+            return (low + high) / 2
+        }
+    }
 }
 
 /** A recipe in the library (by seed key) and the menu item it is like ("the Egg McMuffin"). */

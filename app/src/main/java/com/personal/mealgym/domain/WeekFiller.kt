@@ -51,6 +51,33 @@ object WeekFiller {
         return result
     }
 
+    /**
+     * Fills the week several ways and keeps the one [distance] likes best (the closest to the
+     * person's calorie and protein guide). Every attempt follows the same rules as [fill], so
+     * nothing is traded away to hit a number.
+     */
+    fun fillNear(
+        emptySlots: List<SlotKey>,
+        existing: Map<SlotKey, Recipe>,
+        candidatesFor: (MealSlot) -> List<Recipe>,
+        distance: (Map<SlotKey, Recipe>) -> Double,
+        attempts: Int = 60,
+        random: Random = Random.Default,
+    ): Map<SlotKey, Recipe> {
+        var best = fill(emptySlots, existing, candidatesFor, random)
+        var bestDistance = distance(best)
+        repeat(attempts - 1) {
+            val next = fill(emptySlots, existing, candidatesFor, random)
+            val d = distance(next)
+            // Never swap a fuller week for an emptier one that happens to score lower.
+            if (next.size > best.size || (next.size == best.size && d < bestDistance)) {
+                best = next
+                bestDistance = d
+            }
+        }
+        return best
+    }
+
     /** Whether a recipe passes the side's library filters. */
     fun matches(recipe: Recipe, filter: LibraryFilter): Boolean =
         (filter.protein == null || recipe.protein == filter.protein) &&

@@ -5,11 +5,18 @@ package com.personal.mealgym.ui.plan
 import androidx.lifecycle.viewModelScope
 import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.LibraryFilter
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.DayBadge
+import com.personal.mealgym.domain.DayTotal
+import com.personal.mealgym.domain.DayTotals
+import com.personal.mealgym.domain.PlanBuilder
+import com.personal.mealgym.domain.TargetResult
+import com.personal.mealgym.domain.Targets
+import com.personal.mealgym.domain.answers
 import com.personal.mealgym.domain.SessionRef
 import com.personal.mealgym.domain.WorkoutCycle
 import com.personal.mealgym.ui.MessageViewModel
@@ -27,7 +34,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-data class PlanDay(val date: LocalDate, val slots: Map<MealSlot, Recipe?>)
+data class PlanDay(
+    val date: LocalDate,
+    val slots: Map<MealSlot, Recipe?>,
+    /** Slots planned as eating out, leftovers or a skip. */
+    val offPlan: Map<MealSlot, OffPlanMeal> = emptyMap(),
+    /** Extra servings being cooked for guests, by slot. */
+    val extra: Map<MealSlot, Double> = emptyMap(),
+    /** What the day's planned meals add up to; null when totals are switched off. */
+    val total: DayTotal? = null,
+)
 
 data class PlanUi(
     val weekStart: LocalDate,
@@ -37,6 +53,9 @@ data class PlanUi(
     /** The schedule layer: "Glutes + hams", "Upper", "Rest"... (empty unless the person turned it on). */
     val badges: Map<LocalDate, String> = emptyMap(),
     val slots: List<MealSlot> = Sides.slotsFor(Profile(0, "", Profile.THEME_IRON)),
+    /** The person's daily guide, shown beside the totals when they have one. */
+    val guide: Targets? = null,
+    val showTotals: Boolean = false,
 ) {
     val isThisWeek: Boolean get() = weekStart == Dates.weekStart(today)
     val weekName: String
@@ -57,18 +76,35 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
     val ui: StateFlow<PlanUi?> = combine(weekStart, c.today, profile) { ws, today, p -> Triple(ws, today, p) }
         .flatMapLatest { (ws, today, person) ->
             val slots = Sides.slotsFor(person)
-            combine(c.meals.planForWeek(profileId, ws), c.meals.recipesFor(profileId), scheduleBadges(ws, today, person)) { plan, recipes, badges ->
+            combine(
+                c.meals.planForWeek(profileId, ws),
+                c.meals.recipesFor(profileId),
+                scheduleBadges(ws, today, person),
+                c.meals.offPlanForWeek(profileId, ws),
+                c.settings.settings(profileId),
+            ) { plan, recipes, badges, offPlan, s ->
                 val byId = recipes.associateBy { it.id }
+                val showTotals = s.dayTotals && s.showNutrition
                 val days = Dates.weekDays(ws).map { date ->
                     val iso = Dates.iso(date)
+                    val entries = plan.filter { it.date == iso }
+                    val recipeOf = slots.associateWith { slot -> entries.firstOrNull { it.slot == slot }?.let { byId[it.recipeId] } }
+                    // A recipe wins if a slot somehow holds both.
+                    val other = offPlan.filter { it.date == iso && recipeOf[it.slot] == null && it.slot in slots }.associateBy { it.slot }
                     PlanDay(
                         date = date,
-                        slots = slots.associateWith { slot ->
-                            plan.firstOrNull { it.date == iso && it.slot == slot }?.let { byId[it.recipeId] }
+                        slots = recipeOf,
+                        offPlan = other,
+                        extra = entries.filter { it.extraServings > 0 }.associate { it.slot to it.extraServings },
+                        total = if (showTotals) {
+                            DayTotals.total(slots.mapNotNull { slot -> recipeOf[slot]?.let { DayTotals.meal(it, person.portion, slot) } ?: other[slot]?.let(DayTotals::meal) })
+                        } else {
+                            null
                         },
                     )
                 }
-                PlanUi(ws, today, days, recipes, badges, slots)
+                val guide = (person.answers?.let(PlanBuilder::targets) as? TargetResult.Ready)?.targets
+                PlanUi(ws, today, days, recipes, badges, slots, guide = if (showTotals) guide else null, showTotals = showTotals)
             }
         }
         .stateInVm(null)
@@ -140,6 +176,26 @@ class PlanViewModel(private val c: AppContainer) : MessageViewModel() {
 
     fun clearSlot(date: LocalDate, slot: MealSlot) {
         viewModelScope.launch { c.meals.clearSlot(profileId, date, slot) }
+    }
+
+    /** Places offered under "Eating out". */
+    val restaurants = c.restaurants.all
+
+    /** Plans a slot as eating out, leftovers or a skip. It never reaches the shopping list. */
+    fun setOffPlan(date: LocalDate, slot: MealSlot, choice: OffPlanChoice) {
+        viewModelScope.launch {
+            c.meals.setOffPlan(
+                OffPlanMeal(
+                    profileId = profileId, date = Dates.iso(date), slot = slot, kind = choice.kind, title = choice.title,
+                    restaurantKey = choice.restaurantKey, calories = choice.calories, protein = choice.protein,
+                ),
+            )
+        }
+    }
+
+    /** Cooking for guests that meal: the shopping list buys for them too. */
+    fun setExtraServings(date: LocalDate, slot: MealSlot, extra: Double) {
+        viewModelScope.launch { c.meals.setExtraServings(profileId, date, slot, extra) }
     }
 
     fun copyTo(dates: Collection<LocalDate>, slot: MealSlot, recipe: Recipe) {

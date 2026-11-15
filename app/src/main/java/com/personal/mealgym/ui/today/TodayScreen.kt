@@ -67,6 +67,8 @@ import com.personal.mealgym.ui.components.TabTopBar
 import com.personal.mealgym.ui.components.formatClock
 import com.personal.mealgym.ui.gym.title
 import com.personal.mealgym.ui.label
+import com.personal.mealgym.data.db.OffPlanMeal
+import com.personal.mealgym.domain.DayTotals
 import com.personal.mealgym.ui.plan.RecipePickerSheet
 import com.personal.mealgym.ui.sauna.rememberSecondsLeft
 import com.personal.mealgym.ui.theme.Looks
@@ -114,7 +116,18 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
                     recipe = recipe,
                     onOpen = { recipe?.let { nav.recipe(it.id) } },
                     onPick = { picking = slot },
+                    offPlan = state.offPlan[slot],
                 )
+            }
+            state.total?.let { total ->
+                item {
+                    Text(
+                        "Today's plan: ${DayTotals.text(total).replaceFirstChar { it.lowercase() }}." +
+                            (state.guide?.let { " Your guide is ${DayTotals.guideText(it)}." } ?: ""),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             item { GymCard(state, onOpenGym = { nav.tab(Routes.GYM) }) }
             item { SaunaCard(state, onOpenSauna = nav::sauna) }
@@ -145,6 +158,8 @@ fun TodayScreen(nav: AppNavigator, vm: TodayViewModel = viewModel(factory = AppV
                 onPick = { vm.pick(state.date, slot, it); picking = null },
                 onFillBatch = { vm.fillBatch(state.date, slot, it); picking = null },
                 onDismiss = { picking = null },
+                restaurants = vm.restaurants,
+                onOffPlan = { vm.setOffPlan(state.date, slot, it); picking = null },
             )
         }
     }
@@ -156,8 +171,20 @@ private fun CardLabel(text: String, color: Color = MaterialTheme.colorScheme.pri
 }
 
 @Composable
-private fun MealCard(slot: MealSlot, recipe: Recipe?, onOpen: () -> Unit, onPick: () -> Unit) {
-    if (recipe == null) {
+private fun MealCard(slot: MealSlot, recipe: Recipe?, onOpen: () -> Unit, onPick: () -> Unit, offPlan: OffPlanMeal? = null) {
+    if (recipe == null && offPlan != null) {
+        // Planned, but not cooking: eating out, leftovers or skipping it.
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    CardLabel(slot.label)
+                    Text(offPlan.kind.label, style = MaterialTheme.typography.titleMedium)
+                    offPlan.title?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                TextButton(onClick = onPick) { Text("Change") }
+            }
+        }
+    } else if (recipe == null) {
         OutlinedCard(Modifier.fillMaxWidth()) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

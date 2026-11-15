@@ -1,6 +1,9 @@
 package com.personal.mealgym.ui
 
+import com.personal.mealgym.data.db.CookRating
 import com.personal.mealgym.data.db.Feeling
+import com.personal.mealgym.data.db.OffPlanKind
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.MealType
@@ -43,6 +46,23 @@ val StoreSection.label: String
         StoreSection.PRODUCE_FROZEN -> "Produce and Frozen"
         StoreSection.CARBS -> "Carbs"
         StoreSection.PANTRY -> "Pantry"
+    }
+
+val OffPlanKind.label: String
+    get() = when (this) {
+        OffPlanKind.EATING_OUT -> "Eating out"
+        OffPlanKind.LEFTOVERS -> "Leftovers"
+        OffPlanKind.SKIP -> "Skipping this meal"
+    }
+
+/** "Eating out: Chipotle: Chicken", or just the kind when nothing more was said. */
+fun OffPlanMeal.displayText(): String = title?.let { "${kind.label}: $it" } ?: kind.label
+
+val CookRating.label: String
+    get() = when (this) {
+        CookRating.LOVED -> "Loved it"
+        CookRating.FINE -> "It was fine"
+        CookRating.NOT_AGAIN -> "Not again"
     }
 
 val Feeling.label: String
