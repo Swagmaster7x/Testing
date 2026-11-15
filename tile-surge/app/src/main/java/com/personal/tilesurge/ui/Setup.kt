@@ -17,6 +17,9 @@ sealed class Setup {
     /** The daily challenge: a two-minute Score Attack on a board that is the same for everyone on [day] (20261113). */
     class Daily(val day: Int) : Setup()
     class Puzzle(val number: Int) : Setup()
+
+    /** Against the computer: whoever's stack reaches the top first loses. [difficulty] is how good the computer is. */
+    class Versus(val difficulty: Difficulty) : Setup()
     class Lesson(val number: Int) : Setup()
 
     /** One line of text that says what this is, for a game saved part-way; null for things not worth saving. */
@@ -25,7 +28,7 @@ sealed class Setup {
         is Stage -> "S,$number"
         is Timed -> "T,${difficulty.ordinal},$startLevel"
         is Daily -> "D,$day"
-        is Puzzle, is Lesson -> null
+        is Puzzle, is Lesson, is Versus -> null
     }
 
     companion object {

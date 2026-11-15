@@ -33,6 +33,18 @@ enum class EventType {
 
     /** Score Attack: the clock ran out. */
     TIME_UP,
+
+    /** A blocker turned into an ordinary tile. kind = what it became. */
+    BREAK,
+
+    /** A surge tile took its row with it. row = the row. */
+    POWER,
+
+    /** Blockers dropped into the well. a = how many. */
+    BLOCKS,
+
+    /** The fever meter filled: the stack holds still and scores double for a while. */
+    FEVER,
 }
 
 /** Something that happened this frame, for the screen to show and the speaker to play. */

@@ -895,7 +895,7 @@ class RulesTest {
 
     @Test
     fun `Stage Clear keeps its speed`() {
-        val g = Game.stage(Stages.get(3), 3L)
+        val g = Game.stage(Stages.get(2), 3L)
         g.skipCountdown()
         g.autoRise = false
         val level = g.level

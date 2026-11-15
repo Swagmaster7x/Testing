@@ -27,12 +27,13 @@ class BoardRenderer(private val ui: Ui, private val art: TileArt) {
     val right: Float get() = left + width
     val bottom: Float get() = top + height
 
-    fun place(left: Float, top: Float, cell: Float, rows: Int = Game.ROWS) {
+    fun place(left: Float, top: Float, cell: Float, rows: Int = Game.ROWS, prepare: Boolean = true) {
         this.left = left
         this.top = top
         this.cell = cell
         this.rows = rows
-        art.prepare(cell.toInt())
+        // a second, small well on the same screen borrows the sprites made for the main one
+        if (prepare) art.prepare(cell.toInt())
     }
 
     private fun lift(g: Game): Float = g.riseFraction * cell
@@ -72,7 +73,10 @@ class BoardRenderer(private val ui: Ui, private val art: TileArt) {
         // the row on its way up: dark, until it is fully in
         if (lift > 0.5f) {
             val y = bottom - lift
-            for (col in 0 until Game.COLS) art.stamp(c, g.incoming[col], cellLeft(col), y, cell, cell, TileArt.DIM)
+            for (col in 0 until Game.COLS) {
+                art.stamp(c, g.incoming[col], cellLeft(col), y, cell, cell, TileArt.DIM)
+                if (g.incomingPower[col]) art.drawPower(c, cellLeft(col), y, cell, cell, 0f, 0.35f)
+            }
         }
 
         val playing = g.phase == Phase.PLAYING
@@ -157,6 +161,8 @@ class BoardRenderer(private val ui: Ui, private val art: TileArt) {
         } else {
             art.stamp(c, t.kind, x, y, w, h, filter)
         }
+        if (t.frozen) art.drawFrozen(c, x, y, w, h)
+        if (t.power && !grey) art.drawPower(c, x, y, w, h, 0.5f + 0.5f * sin(clock * 0.2f))
     }
 
     /** Stage Clear: the line everything has to be cleared above. */

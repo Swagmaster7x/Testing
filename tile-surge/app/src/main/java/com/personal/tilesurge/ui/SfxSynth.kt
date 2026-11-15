@@ -9,7 +9,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.tanh
 
-enum class Sfx { TAP, SWAP, LAND, MATCH, POP, COMBO, CHAIN, ROW, WARN, LEVEL, LINE, READY, GO, OVER, CLEAR }
+enum class Sfx { TAP, SWAP, LAND, MATCH, POP, COMBO, CHAIN, ROW, WARN, LEVEL, LINE, READY, GO, OVER, CLEAR, BREAK, POWER, THUD, FEVER }
 
 /**
  * Makes every sound in the game out of a few tones: no recordings, no audio files.
@@ -19,7 +19,7 @@ object SfxSynth {
     const val RATE = 22050
 
     /** Bump when a sound changes, so phones drop the old cached files. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     private const val SINE = 0
     private const val TRIANGLE = 1
@@ -65,6 +65,12 @@ object SfxSynth {
             .tone(0, 140, 784f, 784f, 0.26f, TRIANGLE, 3f)
             .tone(120, 380, 1175f, 1175f, 0.28f, TRIANGLE, 3.5f)
             .tone(120, 380, 1568f, 1568f, 0.14f, SINE, 3.5f)
+        Sfx.BREAK -> Clip(180).noise(5, 60, 0.20f).tone(0, 150, 620f, 210f, 0.36f, SQUARE, 4f)
+        Sfx.POWER -> Clip(420).tone(0, 380, 300f, 1900f, 0.30f, TRIANGLE, 2.5f).tone(60, 340, 450f, 2850f, 0.14f, SINE, 2.5f).noise(0, 90, 0.10f)
+        Sfx.THUD -> Clip(220).tone(0, 200, 110f, 52f, 0.70f, SINE, 4f).noise(5, 40, 0.18f)
+        Sfx.FEVER -> Clip(520)
+            .tone(0, 140, 784f, 784f, 0.26f, TRIANGLE, 3f).tone(100, 140, 988f, 988f, 0.26f, TRIANGLE, 3f)
+            .tone(200, 140, 1175f, 1175f, 0.26f, TRIANGLE, 3f).tone(300, 210, 1568f, 1568f, 0.30f, TRIANGLE, 3f)
         Sfx.READY -> Clip(200).tone(0, 180, 660f, 660f, 0.32f, TRIANGLE, 3f)
         Sfx.GO -> Clip(420).tone(0, 400, 990f, 990f, 0.34f, TRIANGLE, 3f).tone(0, 400, 1485f, 1485f, 0.10f, SINE, 3f)
         Sfx.OVER -> Clip(1000)

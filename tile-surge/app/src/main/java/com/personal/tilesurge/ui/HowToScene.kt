@@ -34,9 +34,21 @@ class HowToScene(app: App) : Scene(app) {
             Demos.rise(),
         ),
         Page(
-            "TWO WAYS TO PLAY",
-            "STAGE CLEAR: a line comes up from below. Clear every tile above it to win the stage.\n" +
-                "INFINITE: no line and no end. The stack speeds up as you clear.",
+            "BLOCKERS AND ICE",
+            "Grey blockers cannot be slid or matched. Clear tiles right next to them and they turn into tiles.\n" +
+                "A frozen tile cannot be slid either, until a match beside it thaws it.",
+            Demos.blockers(),
+        ),
+        Page(
+            "SURGE AND FEVER",
+            "A glowing surge tile clears its whole row when it is matched.\n" +
+                "The gold bar under the well fills as you clear. When it is full: FEVER. The stack holds still and everything scores double.",
+            Demos.surge(),
+        ),
+        Page(
+            "WAYS TO PLAY",
+            "STAGE CLEAR: clear everything above the line, or whatever else the stage asks.\n" +
+                "INFINITE: no end. SCORE ATTACK: two minutes. VERSUS: send blockers to the computer before it buries you.",
             Demos.line(),
         ),
     )

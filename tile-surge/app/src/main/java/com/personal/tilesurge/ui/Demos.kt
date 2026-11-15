@@ -183,5 +183,39 @@ object Demos {
         },
     )
 
-    fun all(): List<Demo> = listOf(slide(), match(), chain(), rise(), line())
+    /** Blockers and ice: a match next to them turns the blockers into tiles and thaws the frozen one. */
+    fun blockers() = Demo(
+        rows = 4, length = 300,
+        build = {
+            still(
+                "4BB...",
+                "112134",
+            ).apply { grid[1][0].frozen = true }
+        },
+        act = { f, g ->
+            when (f) {
+                50 -> if (g.grab(0, 3)) g.dragTo(2)
+                75 -> g.release()
+            }
+        },
+    )
+
+    /** A surge tile: matched, it takes its whole row with it. */
+    fun surge() = Demo(
+        rows = 4, length = 280,
+        build = {
+            still(
+                "5.4.2.",
+                "112134",
+            ).apply { grid[0][3].power = true }
+        },
+        act = { f, g ->
+            when (f) {
+                50 -> if (g.grab(0, 3)) g.dragTo(2)
+                75 -> g.release()
+            }
+        },
+    )
+
+    fun all(): List<Demo> = listOf(slide(), match(), chain(), rise(), line(), blockers(), surge())
 }

@@ -4,13 +4,18 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.view.MotionEvent
+import com.personal.tilesurge.core.Bot
 import com.personal.tilesurge.core.Difficulty
 import com.personal.tilesurge.core.EventType
 import com.personal.tilesurge.core.Game
+import com.personal.tilesurge.core.GameMode
+import com.personal.tilesurge.core.Goal
+import com.personal.tilesurge.core.Hint
 import com.personal.tilesurge.core.Phase
 import com.personal.tilesurge.core.Puzzles
 import com.personal.tilesurge.core.Speed
 import com.personal.tilesurge.core.Stages
+import com.personal.tilesurge.core.Tile
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
@@ -61,6 +66,29 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private var shake = 0
     val board = BoardRenderer(ui, app.art)
 
+    /** Versus: the computer's game, the stand-in player working it, and the small picture of its well. */
+    var rival: Game? = null
+        private set
+    private var bot: Bot? = null
+    val rivalBoard = BoardRenderer(ui, app.art)
+
+    /** Versus: blockers sent across so far. */
+    var sent = 0
+        private set
+
+    /** Coins this round paid, shown on the result panel. */
+    var coinsEarned = 0
+        private set
+
+    /** The stage's goal, if this is a stage. */
+    private val stageDef = (setup as? Setup.Stage)?.let { Stages.get(it.number) }
+
+    /** New players are shown where a chain is waiting, once they have looked at the board for a while. */
+    private val hintsWanted = (setup is Setup.Stage || setup is Setup.Infinite) && app.prefs.stat("chain_steps") < HINTS_UNTIL
+    private var idle = 0
+    var hintCell = -1
+        private set
+
     private enum class Panel { NONE, PAUSED, RESULT }
 
     private var panel = Panel.NONE
@@ -106,6 +134,15 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private var goAge = GO_FRAMES
     private val random = Random(7)
 
+    /** The big words in the middle of the well for a long chain or a fever. */
+    private var bigText = ""
+    private var bigColor = 0
+    private var bigAge = BIG_FRAMES
+
+    /** A surge tile has just gone off along this row. */
+    private var flashRow = -1
+    private var flashAge = 0
+
     // ---- readout text
     private val scoreText = Memo { Format.number(it) }
     private val bestText = Memo { "BEST " + Format.number(it) }
@@ -114,6 +151,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private val levelText = Memo { it.toString() }
     private val countText = Memo { it.toString() }
     private val stageText = Memo { it.toString() }
+    private val chainsText = Memo { "$it/${stageDef?.target ?: 0}" }
 
     // ---- buttons
     internal val pauseButton = Button("", ButtonStyle.PLAIN) { pause() }.apply { icon = Icon.PAUSE }
@@ -126,6 +164,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
 
     init {
         buttons += listOf(pauseButton, resumeButton, restartButton, quitButton, nextButton, againButton, menuButton)
+        startRival()
         // a game picked up again waits on its pause panel until the player is ready
         showPanel(if (resumed != null) Panel.PAUSED else Panel.NONE)
     }
@@ -139,7 +178,37 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             is Setup.Daily -> Game.timed(Setup.DAILY_DIFFICULTY, Setup.DAILY_LEVEL, Setup.dailySeed(s.day))
             is Setup.Puzzle -> Game.puzzle(Puzzles.get(s.number))
             is Setup.Lesson -> Lessons.all[s.number - 1].let { Game.fixed(it.rows, 0, it.raise, s.number.toLong()) }
+            is Setup.Versus -> Game.infinite(Difficulty.NORMAL, VERSUS_LEVEL, seed).also { it.selfBlocks = false }
         }
+    }
+
+    /** Versus: sets the computer up with a well of its own. Its skill is how often it gets to think. */
+    private fun startRival() {
+        val s = setup as? Setup.Versus ?: return
+        val g = Game.infinite(Difficulty.NORMAL, VERSUS_LEVEL, game.seed + 1).also { it.selfBlocks = false }
+        rival = g
+        bot = Bot(g, when (s.difficulty) {
+            Difficulty.EASY -> 60
+            Difficulty.NORMAL -> 34
+            Difficulty.HARD -> 18
+        })
+        sent = 0
+    }
+
+    /** The computer's turn: it plays a frame, and what it clears comes over here as blockers. */
+    private fun tickRival() {
+        val g = rival ?: return
+        if (panel != Panel.NONE || (game.phase != Phase.PLAYING && game.phase != Phase.COUNTDOWN)) return
+        bot?.act()
+        g.tick()
+        for (e in g.events) {
+            when (e.type) {
+                EventType.MATCH -> game.receiveBlocks(g.cancelBlocks(attack(e.a, e.b)))
+                EventType.GAME_OVER -> game.win()
+                else -> Unit
+            }
+        }
+        g.events.clear()
     }
 
     private fun recordToBeat(): Int = when (val s = setup) {
@@ -147,7 +216,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         is Setup.Stage -> app.prefs.bestStageFrames(s.number)
         is Setup.Timed -> app.prefs.bestTimed(s.difficulty)
         is Setup.Daily -> app.prefs.dailyBest(s.day)
-        is Setup.Puzzle, is Setup.Lesson -> 0
+        is Setup.Puzzle, is Setup.Lesson, is Setup.Versus -> 0
     }
 
     /** Keeps the score if it is a record for whatever is being played. */
@@ -184,16 +253,25 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         val gap = 8f * u
         val pauseW = 46f * u
         pauseButton.set(r - pauseW, hudTop, r, hudTop + hudH)
-        val cardsW = r - l - pauseW - gap * 3
+        // versus: the computer's well, small, sits to the left of the readouts
+        var cl = l
+        var hudBottom = hudTop + hudH
+        if (rival != null) {
+            val mini = floor(7f * u)
+            rivalBoard.place(l + 4f * u, hudTop + 4f * u, mini, prepare = false)
+            cl = rivalBoard.right + 4f * u + gap
+            hudBottom = rivalBoard.bottom + 4f * u
+        }
+        val cardsW = r - cl - pauseW - gap * 3
         val w0 = cardsW * 0.42f
         val w1 = cardsW * 0.27f
-        cards[0].set(l, hudTop, l + w0, hudTop + hudH)
+        cards[0].set(cl, hudTop, cl + w0, hudTop + hudH)
         cards[1].set(cards[0].right + gap, hudTop, cards[0].right + gap + w1, hudTop + hudH)
         cards[2].set(cards[1].right + gap, hudTop, r - pauseW - gap, hudTop + hudH)
 
         val raiseH = 60f * u
         val raiseBottom = safe.bottom - 22f * u
-        val areaTop = hudTop + hudH + 24f * u
+        val areaTop = hudBottom + 24f * u
         val areaBottom = raiseBottom - raiseH - 16f * u
         val cell = floor(minOf((r - l - 8f * u) / Game.COLS, (areaBottom - areaTop) / Game.ROWS))
         val bw = cell * Game.COLS
@@ -224,6 +302,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         }
         val rl = board.right + 16f * u
         raiseRect.set(rl, board.bottom - 110f * u, rl + sideW, board.bottom + 4f * u)
+        if (rival != null) rivalBoard.place(rl + 4f * u, top + 22f * u, floor(minOf(9f * u, (sideW - 8f * u) / Game.COLS)), prepare = false)
     }
 
     private fun layoutPanel() {
@@ -235,7 +314,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             Panel.RESULT -> listOf(nextButton, againButton, menuButton).filter { it.visible }
             Panel.NONE -> emptyList()
         }
-        val head = if (panel == Panel.RESULT) 196f * u else 64f * u
+        val head = if (panel == Panel.RESULT) 196f * u + (if (coinsEarned > 0) 20f * u else 0f) else 64f * u
         val ph = head + shown.size * (bh + gap) + 14f * u
         val cx = safe.centerX()
         val cy = safe.centerY()
@@ -303,6 +382,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private fun restart() {
         app.prefs.clearSavedGame()
         game = newGame()
+        startRival()
         resetRound()
     }
 
@@ -324,6 +404,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             is Setup.Infinite -> InfiniteSetupScene(app)
             is Setup.Timed -> InfiniteSetupScene(app, timed = true)
             is Setup.Daily, is Setup.Lesson -> TitleScene(app)
+            is Setup.Versus -> VersusSetupScene(app)
         })
     }
 
@@ -339,6 +420,11 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         lessonSwaps = 0
         lessonIdle = 0
         shake = 0
+        bigAge = BIG_FRAMES
+        flashAge = 0
+        idle = 0
+        hintCell = -1
+        coinsEarned = 0
         bestAtStart = recordToBeat()
         showPanel(Panel.NONE)
     }
@@ -512,8 +598,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         }
         if (game.phase == Phase.COUNTDOWN && game.countdown == Game.COUNTDOWN_FRAMES) app.sound.play(Sfx.READY)
         game.tick()
+        tickRival()
         tickLesson()
         handleEvents()
+        tickHint()
         tickEffects()
         when (game.phase) {
             Phase.PLAYING -> {
@@ -529,6 +617,45 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             }
             Phase.COUNTDOWN -> Unit
         }
+    }
+
+    /** Looks for a chain the player could start, once the board has sat untouched for a few seconds. */
+    private fun tickHint() {
+        if (!hintsWanted) return
+        if (game.phase != Phase.PLAYING || panel != Panel.NONE || boardFinger != -1 || game.active) {
+            idle = 0
+            hintCell = -1
+            return
+        }
+        idle++
+        if (idle >= HINT_AFTER && idle % 20 == 0) hintCell = Hint.chainSwap(game)
+    }
+
+    /** Versus: how many blockers a clear of [tiles] at chain step [step] sends across. */
+    private fun attack(tiles: Int, step: Int): Int = maxOf(0, tiles - 3) + (if (step >= 2) step else 0)
+
+    /** The round is over: pay its coins, and add it to the missions and the lifetime figures. */
+    private fun countRun(firstSolve: Boolean = false) {
+        val s = setup
+        if (s is Setup.Lesson) return
+        val cleared = game.phase == Phase.STAGE_CLEAR
+        coinsEarned = when (s) {
+            is Setup.Stage -> {
+                val def = Stages.get(s.number)
+                if (cleared) Missions.COINS_PER_STAR * maxOf(0, def.stars(game.frames) - def.stars(bestAtStart)) else 0
+            }
+            is Setup.Puzzle -> if (cleared && firstSolve) Missions.COINS_PER_PUZZLE else 0
+            is Setup.Versus -> if (cleared) 15 + 10 * s.difficulty.ordinal else 0
+            else -> minOf(50, game.score / 400)
+        }
+        app.prefs.addCoins(coinsEarned)
+        if (s is Setup.Versus && cleared) app.prefs.recordVersusWin(s.difficulty)
+        app.prefs.finishRun(Days.today(), Run(
+            tiles = game.tilesCleared, bestChain = game.maxChain, bestCombo = game.maxCombo, blocks = game.blocksBroken,
+            chainSteps = game.chainSteps, score = game.score, timed = s is Setup.Timed || s is Setup.Daily,
+            stageCleared = s is Setup.Stage && cleared, puzzleSolved = s is Setup.Puzzle && cleared,
+            versusWon = s is Setup.Versus && cleared,
+        ))
     }
 
     /** A lesson moves on when its goal is met, and starts over if the player has used up the board without meeting it. */
@@ -567,6 +694,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private fun handleEvents() {
         if (game.events.isEmpty()) return
         var landed = false
+        var broke = false
         val cell = board.cell
         for (e in game.events) {
             when (e.type) {
@@ -577,6 +705,16 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     if (waitingForGo) {
                         waitingForGo = false
                         if (boardFinger != -1 && !grabAt(fingerX, fingerY)) boardFinger = -1
+                    }
+                    // say what this round is asking for
+                    val def = stageDef
+                    when {
+                        rival != null -> showBanner("FIRST TO THE TOP LOSES")
+                        def == null -> Unit
+                        def.goal == Goal.BREAK -> showBanner("BREAK EVERY BLOCKER")
+                        def.goal == Goal.CHAINS -> showBanner("MAKE ${def.target} CHAINS")
+                        def.goal == Goal.SURVIVE -> showBanner("HOLD OUT FOR " + Format.clock(def.target))
+                        else -> Unit
                     }
                 }
                 EventType.SWAP -> {
@@ -601,6 +739,17 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     if (e.a >= 4) popups += Popup(x, y, "${e.a} COMBO", Palette.ACCENT, Palette.TEXT_DARK)
                     // a big clear is felt as well as seen
                     if (e.b >= 2 || e.a >= 5) shake = 10 + 2 * minOf(e.b, 5)
+                    // a long chain gets the middle of the well to itself
+                    if (e.b >= 3) {
+                        showBig("×${e.b} CHAIN!", Palette.TEAL)
+                        burst(board.left + board.width / 2f, board.top + board.height * 0.33f, Palette.TEAL, 10 + 4 * minOf(e.b, 6))
+                    }
+                    val g = rival
+                    if (g != null) {
+                        val n = game.cancelBlocks(attack(e.a, e.b))
+                        g.receiveBlocks(n)
+                        sent += n
+                    }
                 }
                 EventType.POP -> {
                     burst(board.cellLeft(e.col) + cell / 2f, board.cellTop(game, e.row) + cell / 2f, TileArt.LIGHT[e.kind], 7)
@@ -608,12 +757,36 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     val steps = ((e.a - 1) * 2 + (e.b - 1) * 3).coerceAtMost(12)
                     app.sound.play(Sfx.POP, rate = 2f.pow(steps / 12f), volume = 0.9f)
                 }
-                EventType.ROW -> if (e.a == 1) app.sound.play(Sfx.ROW, volume = 0.6f)
+                EventType.ROW -> {
+                    if (e.a == 1) app.sound.play(Sfx.ROW, volume = 0.6f)
+                    hintCell = -1
+                }
                 EventType.LEVEL_UP -> {
                     showBanner("SPEED UP!")
                     app.sound.play(Sfx.LEVEL)
                 }
                 EventType.CHAIN_END -> Unit
+                EventType.BREAK -> {
+                    burst(board.cellLeft(e.col) + cell / 2f, board.cellTop(game, e.row) + cell / 2f, 0xFFC9CEDD.toInt(), 6)
+                    broke = true
+                }
+                EventType.POWER -> {
+                    flashRow = e.row
+                    flashAge = FLASH_FRAMES
+                    shake = maxOf(shake, 12)
+                    app.sound.play(Sfx.POWER)
+                    app.buzz(strong = true)
+                }
+                EventType.BLOCKS -> {
+                    shake = maxOf(shake, 6)
+                    app.sound.play(Sfx.THUD)
+                    app.buzz()
+                }
+                EventType.FEVER -> {
+                    showBig("FEVER!", Palette.ACCENT)
+                    app.sound.play(Sfx.FEVER)
+                    app.buzz(strong = true)
+                }
                 EventType.LINE_SHOWN -> {
                     showBanner("CLEAR EVERYTHING ABOVE THE LINE")
                     app.sound.play(Sfx.LINE)
@@ -624,6 +797,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     dropFingers()
                     app.prefs.clearSavedGame()
                     recordScore()
+                    countRun()
                 }
                 EventType.TIME_UP -> {
                     app.sound.play(Sfx.CLEAR)
@@ -631,6 +805,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     dropFingers()
                     app.prefs.clearSavedGame()
                     recordScore()
+                    countRun()
                 }
                 EventType.STAGE_CLEAR -> {
                     app.sound.play(Sfx.CLEAR)
@@ -639,17 +814,26 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     app.prefs.clearSavedGame()
                     val s = setup
                     if (s is Setup.Stage) newBest = app.prefs.recordStage(s.number, game.frames)
+                    val firstSolve = s is Setup.Puzzle && s.number > app.prefs.puzzlesSolved
                     if (s is Setup.Puzzle) app.prefs.recordPuzzle(s.number)
+                    countRun(firstSolve)
                 }
             }
         }
         if (landed) app.sound.play(Sfx.LAND, volume = 0.7f)
+        if (broke) app.sound.play(Sfx.BREAK, volume = 0.85f)
         game.events.clear()
     }
 
     private fun showBanner(text: String) {
         banner = text
         bannerAge = 0
+    }
+
+    private fun showBig(text: String, color: Int) {
+        bigText = text
+        bigColor = color
+        bigAge = 0
     }
 
     private fun burst(x: Float, y: Float, color: Int, count: Int) {
@@ -685,6 +869,8 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         }
         if (bannerAge < BANNER_FRAMES) bannerAge++
         if (goAge < GO_FRAMES) goAge++
+        if (bigAge < BIG_FRAMES) bigAge++
+        if (flashAge > 0) flashAge--
         if (shake > 0) shake--
     }
 
@@ -704,11 +890,13 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         c.save()
         if (shake > 0) c.translate(sin(clock * 1.9f) * shake * 0.45f * u, cos(clock * 2.3f) * shake * 0.35f * u)
         board.draw(c, game, clock, grey, alarm)
+        drawWellExtras(c)
         drawMeter(c)
         drawEffects(c)
         c.restore()
         drawRaise(c)
         pauseButton.draw(c, ui)
+        drawRival(c)
         drawCallouts(c)
         if (panel != Panel.NONE) drawPanel(c)
     }
@@ -729,11 +917,22 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             is Setup.Stage -> {
                 readout(c, cards[0], "STAGE", stageText.of(s.number), if (bestAtStart > 0) bestTimeText.of(bestAtStart) else null)
                 readout(c, cards[1], "TIME", timeText.of(game.seconds), null)
-                if (game.lineRow < 0) {
-                    readout(c, cards[2], "LINE IN", countText.of(game.linesToGo), null)
-                } else {
-                    readout(c, cards[2], "TO CLEAR", countText.of(tilesAboveLine()), null)
+                val def = stageDef
+                when {
+                    def != null && def.goal == Goal.BREAK ->
+                        readout(c, cards[2], "BLOCKERS", countText.of(game.blockCount() + game.pendingBlocks), null)
+                    def != null && def.goal == Goal.CHAINS ->
+                        readout(c, cards[2], "CHAINS", chainsText.of(minOf(game.chainSteps, def.target)), null)
+                    def != null && def.goal == Goal.SURVIVE ->
+                        readout(c, cards[2], "HOLD OUT", levelText.of((maxOf(0, def.target - game.frames) + 59) / 60), null)
+                    game.lineRow < 0 -> readout(c, cards[2], "LINE IN", countText.of(game.linesToGo), null)
+                    else -> readout(c, cards[2], "TO CLEAR", countText.of(tilesAboveLine()), null)
                 }
+            }
+            is Setup.Versus -> {
+                readout(c, cards[0], "TIME", timeText.of(game.seconds), null)
+                readout(c, cards[1], "SENT", countText.of(sent), null)
+                speedReadout(c)
             }
             is Setup.Puzzle -> {
                 readout(c, cards[0], "PUZZLE", stageText.of(s.number), null)
@@ -803,6 +1002,80 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 val w = board.width * minOf(1f, game.stopFrames / 240f)
                 if (w > h) ui.roundRect(c, board.left, y, board.left + w, y + h, h / 2f, Palette.TEAL)
             }
+        }
+    }
+
+    /** What sits on the well besides tiles: blockers on their way, the hint, a surge going off, and the fever bar. */
+    private fun drawWellExtras(c: Canvas) {
+        // blockers waiting to drop, lined up along the top
+        val waiting = game.pendingBlocks
+        if (waiting > 0 && game.phase == Phase.PLAYING) {
+            val size = 13f * u
+            val pulse = (150 + 105 * (0.5f + 0.5f * sin(clock * 0.25f))).toInt()
+            val shown = minOf(waiting, 6)
+            for (i in 0 until shown) {
+                app.art.stamp(c, Tile.BLOCK, board.left + 4f * u + i * (size + 2f * u), board.top + 4f * u, size, size, null, pulse)
+            }
+            if (waiting > shown) {
+                ui.text(c, "+" + (waiting - shown), board.left + 8f * u + shown * (size + 2f * u), board.top + 4f * u + size / 2f,
+                    11f * u, Palette.TEXT, Paint.Align.LEFT)
+            }
+        }
+        if (flashAge > 0 && flashRow >= 0) {
+            val k = flashAge.toFloat() / FLASH_FRAMES
+            val y = board.cellTop(game, flashRow)
+            val grow = board.cell * 0.25f * (1f - k)
+            ui.fill.shader = null
+            ui.fill.color = Palette.withAlpha(0xFFFFFFFF.toInt(), 0.85f * k)
+            c.drawRect(board.left, maxOf(board.top, y - grow), board.right, minOf(board.bottom, y + board.cell + grow), ui.fill)
+        }
+        if (hintCell >= 0 && panel == Panel.NONE) {
+            val row = hintCell / Game.COLS
+            val col = hintCell % Game.COLS
+            val x = board.cellLeft(col)
+            val y = board.cellTop(game, row)
+            val pulse = 0.55f + 0.45f * sin(clock * 0.16f)
+            ui.roundRectLine(c, x, y, x + board.cell * 2f, y + board.cell, board.cell * 0.22f,
+                Palette.withAlpha(Palette.ACCENT_LIGHT, pulse), 3f * u)
+            val ty = maxOf(board.top + 12f * u, y - 13f * u)
+            val tx = (x + board.cell).coerceIn(board.left + 50f * u, board.right - 50f * u)
+            ui.roundRect(c, tx - 46f * u, ty - 10f * u, tx + 46f * u, ty + 10f * u, 10f * u, Palette.withAlpha(Palette.PANEL_DARK, 0.9f))
+            ui.text(c, "swap for a chain", tx, ty, 10.5f * u, Palette.ACCENT_LIGHT, face = ui.semi)
+        }
+        // the fever bar under the well: it fills as tiles go, then runs down while the fever lasts
+        if (game.mode != GameMode.PUZZLE && (game.phase == Phase.PLAYING || game.phase == Phase.COUNTDOWN)) {
+            val y = board.bottom + 7f * u
+            val h = 5f * u
+            ui.roundRect(c, board.left, y, board.right, y + h, h / 2f, Palette.PANEL_DARK)
+            if (game.feverFrames > 0) {
+                val w = board.width * game.feverFrames / Game.FEVER_FRAMES
+                val color = if ((clock / 4) % 2 == 0) Palette.ACCENT_LIGHT else Palette.ACCENT
+                if (w > h) ui.roundRect(c, board.left, y, board.left + w, y + h, h / 2f, color)
+                val size = 14f * u * (1f + 0.06f * sin(clock * 0.3f))
+                ui.outlinedText(c, "FEVER  SCORE ×2", board.left + board.width / 2f, board.top + 64f * u, size,
+                    Palette.ACCENT_LIGHT, Palette.PANEL_DARK, 5f * u)
+            } else {
+                val w = board.width * game.fever / Game.FEVER_MAX
+                if (w > h) ui.roundRect(c, board.left, y, board.left + w, y + h, h / 2f, Palette.ACCENT_DARK)
+            }
+        }
+    }
+
+    /** Versus: the computer's well, and whose it is. */
+    private fun drawRival(c: Canvas) {
+        val g = rival ?: return
+        val s = setup as Setup.Versus
+        rivalBoard.draw(c, g, clock, if (g.phase == Phase.GAME_OVER) Game.ROWS else 0)
+        val name = "CPU · " + s.difficulty.label.uppercase()
+        if (wide) {
+            ui.text(c, name, rivalBoard.left + rivalBoard.width / 2f, rivalBoard.top - 14f * u, 10.5f * u, Palette.TEXT_DIM, face = ui.semi)
+        } else {
+            val x = cards[0].left
+            val y = cards[0].bottom + 20f * u
+            ui.icon(c, Icon.BACK, x + 7f * u, y, 14f * u, Palette.TEXT_DIM)
+            ui.text(c, name, x + 18f * u, y, 12f * u, Palette.TEXT_DIM, Paint.Align.LEFT, ui.semi)
+            val wins = app.prefs.versusWins(s.difficulty)
+            if (wins > 0) ui.text(c, "WINS $wins", pauseButton.rect.right, y, 12f * u, Palette.ACCENT, Paint.Align.RIGHT, ui.semi)
         }
     }
 
@@ -882,6 +1155,14 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             val t = goAge.toFloat() / GO_FRAMES
             val a = if (t > 0.6f) (1f - t) / 0.4f else 1f
             ui.outlinedText(c, "GO!", cx, cy, (46f + 14f * t) * u, Palette.withAlpha(Palette.ACCENT, a), Palette.withAlpha(Palette.PANEL_DARK, a), 8f * u)
+        }
+        if (bigAge < BIG_FRAMES) {
+            val t = bigAge.toFloat() / BIG_FRAMES
+            val scale = if (bigAge < 8) 0.5f + 0.7f * (bigAge / 8f) else if (bigAge < 14) 1.2f - 0.2f * ((bigAge - 8) / 6f) else 1f
+            val a = if (t > 0.7f) (1f - t) / 0.3f else 1f
+            val size = ui.fitSize(bigText, 38f * u, board.width - 24f * u) * scale
+            ui.outlinedText(c, bigText, cx, board.top + board.height * 0.33f, size,
+                Palette.withAlpha(bigColor, a), Palette.withAlpha(Palette.PANEL_DARK, a), 8f * u)
         }
         if (bannerAge < BANNER_FRAMES) {
             val t = bannerAge.toFloat() / BANNER_FRAMES
@@ -1017,6 +1298,16 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 labels = arrayOf("MOVES", "TILES", "BEST CHAIN")
                 values = arrayOf(def.moves.toString(), def.rows.sumOf { row -> row.count { it != '.' } }.toString(), "×" + game.maxChain)
             }
+            is Setup.Versus -> {
+                title = if (cleared) "YOU WIN!" else "YOU LOSE"
+                bigLabel = "AGAINST THE COMPUTER ON " + s.difficulty.label.uppercase()
+                big = Format.clock(game.frames)
+                val wins = app.prefs.versusWins(s.difficulty)
+                bestLine = if (wins == 1) "1 WIN SO FAR" else "$wins WINS SO FAR"
+                highlight = cleared
+                labels = arrayOf("SENT", "BEST COMBO", "BEST CHAIN")
+                values = arrayOf(sent.toString(), game.maxCombo.toString(), "×" + game.maxChain)
+            }
             is Setup.Lesson -> {
                 ui.text(c, "YOU'RE READY!", cx, r.top + 34f * u, 26f * u, Palette.GOOD)
                 ui.paragraph(c, "Slide, match, chain, raise: that is the whole game.\nStage Clear is a good place to start. In each stage a line comes up from below; clear every tile above it.",
@@ -1044,6 +1335,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             ui.text(c, labels[i], x, r.top + 154f * u, ui.fitSize(labels[i], 9.5f * u, colW - 6f * u, ui.semi), Palette.TEXT_DIM, face = ui.semi)
             ui.text(c, values[i], x, r.top + 172f * u, ui.fitSize(values[i], 16f * u, colW - 6f * u), Palette.TEXT)
         }
+        if (coinsEarned > 0) ui.text(c, "+$coinsEarned COINS", cx, r.top + 198f * u, 13f * u, Palette.ACCENT)
     }
 
     private companion object {
@@ -1051,5 +1343,14 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         const val POPUP_FRAMES = 64
         const val BANNER_FRAMES = 150
         const val GO_FRAMES = 40
+        const val BIG_FRAMES = 70
+        const val FLASH_FRAMES = 18
+
+        /** Frames the board sits untouched before a chain is pointed out, and the lifetime chain steps after which it no longer is. */
+        const val HINT_AFTER = 150
+        const val HINTS_UNTIL = 40
+
+        /** The speed a game against the computer starts at. */
+        const val VERSUS_LEVEL = 5
     }
 }

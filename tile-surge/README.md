@@ -18,7 +18,12 @@ Kotlin, drawn on a plain Android `Canvas`, no libraries. Minimum Android 8 (API 
 - **RAISE.** Hold the button under the well to bring rows up faster. A quick tap brings exactly one row. One finger can hold RAISE while another slides tiles.
 - **The top.** When a tile is in the top row the stack stops and a red bar runs down. Clear the top row before it runs out or the game is over.
 
-**Stage Clear** has 30 stages. In each one a clear line is on its way up from below; once it is in the well, clear every tile above it. Stages get faster and longer, and the last ten add a sixth tile. A stage opens when the one before it is cleared, and each keeps your best time.
+- **Blockers.** Grey blocks that cannot be slid or matched. A match right next to one turns it (and any blockers touching it) into ordinary tiles, which count as part of a chain if they then match. They drop in from the top in Infinite above Easy once the speed reaches 6, in some stages, and in Versus.
+- **Frozen tiles** cannot be slid until a match beside them thaws them. **Surge tiles** glow, and clear their whole row when matched.
+- **Fever.** The gold bar under the well fills as tiles are cleared. When it is full the stack holds still for eight seconds and everything scores double.
+- **A hint.** Until you have made forty chain steps, a swap that would start a chain is outlined if you leave the board alone for a few seconds (Stage Clear and Infinite only).
+
+**Stage Clear** has 40 stages. Most have a clear line on its way up from below; once it is in the well, clear every tile above it. Stages 3, 8, 13, ... ask you to break every blocker; 5, 10, 15, ... to make a number of chains; 7, 17, 27 and 37 to hold out for a minute or more while blockers rain down. Stages get faster and longer, and from 21 on there is a sixth tile. A stage opens when the one before it is cleared, and each keeps your best time.
 
 **Infinite** has no end. Choose Easy, Normal or Hard and a starting speed; the speed goes up as you clear tiles. Each difficulty keeps its best score.
 
@@ -26,9 +31,13 @@ Kotlin, drawn on a plain Android `Canvas`, no libraries. Minimum Android 8 (API 
 
 **Daily Challenge** is a two-minute Score Attack on a board that is the same for everyone that day and changes at midnight. It keeps your best for the day and counts the days in a row you have played.
 
+**Versus** is a game against the computer on Easy, Normal or Hard (how fast it thinks). You each have a well; its well is shown small beside the readouts. Clearing four or more at once, or making a chain, drops blockers into the other well (one for each tile past three, plus the chain step). Blockers on their way to you are cancelled by your own clears first. Whoever's stack reaches the top loses.
+
+**Missions** are three small goals a day (clear 300 tiles, make a ×4 chain, ...) that pay **coins**; stages pay 5 coins for each new star, puzzles 10 the first time, scored games up to 50, and a Versus win 15 to 35. The **Shop** sells three more tile colour sets and three more backdrops for them. The Missions screen also keeps lifetime figures and nine badges. Everything stays on the phone.
+
 **Puzzle** has 30 boards that do not rise. Clear every tile in the moves given (one to four); each cell a tile slides is a move. They open in order.
 
-**How to Play** is four short hands-on lessons (slide, fall, chain, raise) with a ghost finger showing each move. They open by themselves the first time the game is started. The pages of rules with self-playing boards are one tap further on.
+**How to Play** is four short hands-on lessons (slide, fall, chain, raise) with a ghost finger showing each move. They open by themselves the first time the game is started. Seven pages of rules with self-playing boards are one tap further on.
 
 Also: one to three **stars** for each stage by how fast it was cleared; **Continue** on the title screen picks up a game that was left part-way (it is put away whenever the game is paused or the app is left); a background **tune** with its own switch; and the screen shakes a little on chains and big combos.
 
@@ -61,7 +70,7 @@ In Android Studio, open the `tile-surge` folder itself, not the repository root.
 
 - **The rules** (`core/RulesTest`): one test per rule, on hand-written boards: swapping, hanging and falling, matching, pop order and timing, combos, chains, rising, RAISE, the top of the well, speeding up, the clear line.
 - **Random play** (`core/FuzzTest`): millions of frames of random touches, checking after every frame that the board still makes sense (nothing floating, nothing left matched, nothing stuck in mid-air).
-- **Whole games** (`core/BotTest`): a simple computer player clears all 30 stages and plays Infinite on each difficulty, and prints how long it took.
+- **Whole games** (`core/BotTest`): a simple computer player clears all 40 stages and plays Infinite on each difficulty, and prints how long it took.
 - **Touch** (`ui/TouchPlayTest`, `ui/NavigationTest`): the real view driven by simulated fingers: sliding, flicking, two fingers at once, pause, the menus, a whole stage and a whole Infinite game played through touch events only.
 - **The app itself** (`MainActivityTest`, `ui/LoopTest`): the activity started on Android 8, 10, 12, 13 and 15, with Back delivered the way each version delivers it, pausing when the app leaves the front, and the clock held to 60 ticks a second on 60, 90 and 120 Hz screens.
 - **The newer modes** (`core/ModesTest`, `ui/FeaturesTest`, `ui/LessonsTest`): every puzzle's answer played in the real game and shown to need all its moves; a saved game restored and checked to carry on exactly; the daily board the same all day; lessons, puzzles and Score Attack played through by touch.
@@ -76,7 +85,7 @@ In Android Studio, open the `tile-surge` folder itself, not the repository root.
 app/src/main/java/com/personal/tilesurge/
   core/            The game itself, with no Android code in it.
     Game.kt          The well and every rule; tick() is one frame at 60 a second.
-    Rules.kt         Difficulty timings, the speed table, scoring, the 30 stages.
+    Rules.kt         Difficulty timings, the speed table, scoring, the 40 stages and their goals.
     Tile.kt, GameEvent.kt, Rng.kt
   ui/              Everything on screen.
     GameView.kt      The one view: the 60-a-second clock, touch, safe area.
@@ -107,7 +116,7 @@ All times are frames at 60 a second.
 - **Swapping** takes 4 frames; falling is one cell a frame; RAISE brings a row in 15 frames.
 - **Speed** goes from level 1 (a row every 15 seconds) to level 50 (a row every 0.75 seconds), about 6% faster each level. In Infinite, level `n` takes `9 + n` cleared tiles to pass.
 - **Score:** 10 a tile; a combo of `n` adds `10 × (n − 3) × (n − 2)`; step `k` of a chain adds `50 × (k − 1)²`; 1 for every row raised by hand.
-- **Stages:** stage `n` has its line `6 + ¾(n − 1)` rows down and runs at speed `1 + ⅘(n − 1)`; stages 1 to 10 use the Easy timings, 11 to 20 Normal, 21 to 30 Hard with six tiles.
+- **Stages:** stage `n` has its line `6 + ¾(n − 1)` rows down and runs at speed `1 + ⅘(n − 1)`; stages 1 to 12 use the Easy timings, 13 to 26 Normal, 27 to 40 Hard; from 21 on there are six tiles.
 
 ## Choices made along the way
 
@@ -129,4 +138,4 @@ All times are frames at 60 a second.
 
 ## Not in this version
 
-A versus mode, online scores for the daily challenge (it is the same board for everyone, but scores stay on the phone), and ads.
+Two players against each other (Versus is against the computer only), online scores for the daily challenge (it is the same board for everyone, but scores stay on the phone), and ads.

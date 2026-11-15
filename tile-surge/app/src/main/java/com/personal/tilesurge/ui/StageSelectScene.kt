@@ -1,11 +1,12 @@
 package com.personal.tilesurge.ui
 
 import android.graphics.Canvas
+import com.personal.tilesurge.core.Goal
 import com.personal.tilesurge.core.Puzzles
 import com.personal.tilesurge.core.Stages
 
 /**
- * The thirty stages of Stage Clear, or (with [puzzles]) the thirty puzzles.
+ * The stages of Stage Clear, or (with [puzzles]) the puzzles.
  * Each one opens when the one before it has been cleared.
  */
 class StageSelectScene(app: App, private val puzzles: Boolean = false) : Scene(app) {
@@ -54,7 +55,7 @@ class StageSelectScene(app: App, private val puzzles: Boolean = false) : Scene(a
         val rows = (count + cols - 1) / cols
         val l = colLeft + 18f * u
         val r = colRight - 18f * u
-        val gridTop = safe.top + 122f * u
+        val gridTop = safe.top + (if (rows > 6) 112f else 122f) * u
         val gridBottom = safe.bottom - 24f * u
         val gap = 8f * u
         val w = (r - l - gap * (cols - 1)) / cols
@@ -63,7 +64,7 @@ class StageSelectScene(app: App, private val puzzles: Boolean = false) : Scene(a
             val x = l + (i % cols) * (w + gap)
             val y = gridTop + (i / cols) * (h + gap)
             b.set(x, y, x + w, y + h)
-            b.textUnits = 19f
+            b.textUnits = if (rows > 6) 16f else 19f
         }
     }
 
@@ -79,9 +80,22 @@ class StageSelectScene(app: App, private val puzzles: Boolean = false) : Scene(a
         val about = if (puzzles) {
             "The board does not rise. Clear every tile\nin the moves you are given."
         } else {
-            "Bring the clear line up into the well,\nthen clear every tile above it."
+            "Most stages: clear every tile above the line.\nOthers ask for blockers, chains, or holding out."
         }
         ui.paragraph(c, about, cx, safe.top + 78f * u, colRight - colLeft - 48f * u, 13f * u, Palette.TEXT_DIM)
         drawButtons(c)
+        if (puzzles) return
+        // a word on the stages that are not line stages
+        for ((i, b) in stageButtons.withIndex()) {
+            if (!b.enabled) continue
+            val word = when (Stages.get(i + 1).goal) {
+                Goal.LINE -> continue
+                Goal.BREAK -> "BLOCK"
+                Goal.CHAINS -> "CHAIN"
+                Goal.SURVIVE -> "HOLD"
+            }
+            val ink = if (b.style == ButtonStyle.PRIMARY) Palette.TEXT_DARK else Palette.TEAL
+            ui.text(c, word, b.rect.centerX(), b.rect.top + 8.5f * u, 7.5f * u, ink, face = ui.semi)
+        }
     }
 }

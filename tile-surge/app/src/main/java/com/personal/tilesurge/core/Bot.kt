@@ -99,6 +99,7 @@ class Bot(
             val t = game.grid[r][c]
             base[r][c] = when {
                 t.kind == 0 && t.state == TileState.NORMAL -> 0
+                t.isBlock || t.frozen -> -1 // cannot be slid, and never matches or (frozen) is left for others to free
                 t.isResting -> t.kind
                 t.state == TileState.HOVERING -> HANGING
                 else -> -1 // busy: sliding, falling or popping

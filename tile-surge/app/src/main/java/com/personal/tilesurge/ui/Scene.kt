@@ -13,6 +13,16 @@ class App(val context: Context, val view: GameView) {
     val prefs = Prefs(context)
     val sound = Sound(context, prefs)
 
+    init {
+        applyLooks()
+    }
+
+    /** Puts the tile set and backdrop the player has chosen into use. */
+    fun applyLooks() {
+        TileArt.theme = prefs.tileTheme
+        Palette.backdrop = prefs.backdrop
+    }
+
     fun go(scene: Scene) = view.show(scene)
 
     /** A short tick in the hand, if the player has it switched on. */

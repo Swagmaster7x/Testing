@@ -30,7 +30,7 @@ object Checks {
                 if (t.state != TileState.NORMAL && t.state != TileState.SWAPPING) out += "$at is empty but ${t.state}"
                 if (t.chaining) out += "$at is empty but marked as chaining"
             } else {
-                if (t.kind !in 1..g.kinds) out += "$at has kind ${t.kind}"
+                if (t.kind !in 1..g.kinds && !t.isBlock) out += "$at has kind ${t.kind}"
                 if (t.id == 0) out += "$at has a tile with no id"
                 if (!seenIds.add(t.id)) out += "$at repeats id ${t.id}"
             }
@@ -84,7 +84,7 @@ object Checks {
         return out
     }
 
-    private fun same(a: Tile, b: Tile) = b.isResting && a.kind == b.kind
+    private fun same(a: Tile, b: Tile) = a.isMatchable && b.isMatchable && a.kind == b.kind
 
     /** The board with each tile's state, for failure messages. */
     fun describe(g: Game): String {

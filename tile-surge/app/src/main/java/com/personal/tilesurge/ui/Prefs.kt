@@ -74,6 +74,96 @@ class Prefs(context: Context) {
         return better
     }
 
+    // ------------------------------------------------------------ coins, the shop and the lifetime figures
+
+    val coins: Int get() = sp.getInt("coins", 0)
+
+    fun addCoins(n: Int) {
+        if (n != 0) sp.edit().putInt("coins", maxOf(0, coins + n)).apply()
+    }
+
+    fun stat(name: String): Int = sp.getInt("stat_$name", 0)
+
+    val tileTheme: Int get() = sp.getInt("theme", 0)
+    val backdrop: Int get() = sp.getInt("backdrop", 0)
+
+    fun ownsTheme(i: Int): Boolean = i == 0 || (sp.getInt("themes_owned", 1) shr i) and 1 == 1
+    fun ownsBackdrop(i: Int): Boolean = i == 0 || (sp.getInt("backdrops_owned", 1) shr i) and 1 == 1
+
+    /** Puts tile set [i] in use, buying it first if need be. False if it is not owned and cannot be afforded. */
+    fun chooseTheme(i: Int): Boolean {
+        if (!ownsTheme(i)) {
+            val price = Missions.THEME_PRICES[i]
+            if (coins < price) return false
+            sp.edit().putInt("coins", coins - price).putInt("themes_owned", sp.getInt("themes_owned", 1) or (1 shl i)).apply()
+        }
+        sp.edit().putInt("theme", i).apply()
+        return true
+    }
+
+    fun chooseBackdrop(i: Int): Boolean {
+        if (!ownsBackdrop(i)) {
+            val price = Missions.BACKDROP_PRICES[i]
+            if (coins < price) return false
+            sp.edit().putInt("coins", coins - price).putInt("backdrops_owned", sp.getInt("backdrops_owned", 1) or (1 shl i)).apply()
+        }
+        sp.edit().putInt("backdrop", i).apply()
+        return true
+    }
+
+    // ------------------------------------------------------------ missions
+
+    private fun missionDay(day: Int) {
+        if (sp.getInt("m_day", 0) == day) return
+        val e = sp.edit().putInt("m_day", day)
+        for (i in 0 until 3) e.putInt("m_p$i", 0).putBoolean("m_c$i", false)
+        e.apply()
+    }
+
+    fun missionProgress(day: Int, i: Int): Int = if (sp.getInt("m_day", 0) == day) sp.getInt("m_p$i", 0) else 0
+    fun missionClaimed(day: Int, i: Int): Boolean = sp.getInt("m_day", 0) == day && sp.getBoolean("m_c$i", false)
+
+    /** Pays out mission [i] if it is done and has not been paid. Returns the coins paid. */
+    fun claimMission(day: Int, i: Int): Int {
+        val m = Missions.forDay(day)[i]
+        if (missionClaimed(day, i) || missionProgress(day, i) < m.target) return 0
+        sp.edit().putBoolean("m_c$i", true).putInt("coins", coins + m.reward).apply()
+        return m.reward
+    }
+
+    /** How many of today's missions are done and waiting to be claimed. */
+    fun missionsWaiting(day: Int): Int {
+        val list = Missions.forDay(day)
+        return (0 until 3).count { missionProgress(day, it) >= list[it].target && !missionClaimed(day, it) }
+    }
+
+    /** A game has ended: add it to the lifetime figures and to today's missions. */
+    fun finishRun(day: Int, run: Run) {
+        missionDay(day)
+        val e = sp.edit()
+        e.putInt("stat_games", stat("games") + 1)
+        e.putInt("stat_tiles", stat("tiles") + run.tiles)
+        e.putInt("stat_blocks", stat("blocks") + run.blocks)
+        e.putInt("stat_chain_steps", stat("chain_steps") + run.chainSteps)
+        e.putInt("stat_best_chain", maxOf(stat("best_chain"), run.bestChain))
+        e.putInt("stat_best_combo", maxOf(stat("best_combo"), run.bestCombo))
+        if (run.versusWon) e.putInt("stat_wins", stat("wins") + 1)
+        val list = Missions.forDay(day)
+        for (i in 0 until 3) e.putInt("m_p$i", Missions.progress(list[i], sp.getInt("m_p$i", 0), run))
+        e.apply()
+    }
+
+    // ------------------------------------------------------------ versus
+
+    /** How good the computer was last asked to be. */
+    var versusDifficulty: Difficulty
+        get() = Difficulty.entries.getOrElse(sp.getInt("versus_difficulty", 0)) { Difficulty.EASY }
+        set(v) = sp.edit().putInt("versus_difficulty", v.ordinal).apply()
+
+    fun versusWins(d: Difficulty): Int = sp.getInt("wins_${d.name}", 0)
+
+    fun recordVersusWin(d: Difficulty) = sp.edit().putInt("wins_${d.name}", versusWins(d) + 1).apply()
+
     // ------------------------------------------------------------ puzzles
 
     val puzzlesSolved: Int get() = sp.getInt("puzzles_solved", 0)

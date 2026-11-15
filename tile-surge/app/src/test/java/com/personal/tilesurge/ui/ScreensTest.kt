@@ -84,11 +84,11 @@ class ScreensTest {
     fun howTo() {
         val v = Shots.view(w, h) { HowToScene(it) }
         val scene = v.scene as HowToScene
-        val frames = intArrayOf(60, 100, 160, 85, 150)
-        for (page in 0 until 5) {
+        val frames = intArrayOf(60, 100, 160, 85, 110, 100, 150)
+        for (page in 0 until 7) {
             v.step(frames[page])
             Shots.save(v, "05-how-to-${page + 1}")
-            if (page < 4) Shots.tap(v, scene.nextButton)
+            if (page < 6) Shots.tap(v, scene.nextButton)
         }
     }
 

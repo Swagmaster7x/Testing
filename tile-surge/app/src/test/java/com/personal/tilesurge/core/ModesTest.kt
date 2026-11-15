@@ -119,17 +119,243 @@ class ModesTest {
     fun `stars reward a quicker clear`() {
         for (n in 1..Stages.COUNT) {
             val s = Stages.get(n)
-            assertTrue(s.threeStarFrames < s.twoStarFrames)
+            assertTrue(s.threeStarFrames <= s.twoStarFrames)
             assertEquals(0, s.stars(0))
             assertEquals(3, s.stars(1))
             assertEquals(3, s.stars(s.threeStarFrames))
-            assertEquals(2, s.stars(s.threeStarFrames + 1))
-            assertEquals(2, s.stars(s.twoStarFrames))
             assertEquals(1, s.stars(s.twoStarFrames + 1))
+            if (s.goal != Goal.SURVIVE) {
+                assertEquals(2, s.stars(s.threeStarFrames + 1))
+                assertEquals(2, s.stars(s.twoStarFrames))
+            }
         }
         // stage 1: three stars inside about three quarters of a minute, two inside a minute and a quarter
         assertEquals(44, Stages.get(1).threeStarFrames / 60)
         assertEquals(73, Stages.get(1).twoStarFrames / 60)
+    }
+
+    // ------------------------------------------------------------ blockers, surge tiles, frozen tiles, fever
+
+    private fun quiet(vararg rows: String): Game = Game.infinite(Difficulty.NORMAL, 1, 1L).apply {
+        skipCountdown()
+        autoRise = false
+        setBoard(*rows)
+        events.clear()
+    }
+
+    private fun Game.rest() {
+        var n = 0
+        do {
+            tick()
+            Checks.assertConsistent(this)
+            assertTrue(++n < 3000)
+        } while (active)
+    }
+
+    @Test
+    fun `a blocker cannot be slid or matched, and falls like anything else`() {
+        val g = quiet(
+            "B.....",
+            "1.....",
+            "BBB2..",
+        )
+        assertFalse(g.grab(0, 0))
+        assertFalse(g.trySwap(0, 2))
+        assertFalse(g.trySwap(2, 0))
+        g.rest()
+        assertEquals(0, g.count(EventType.MATCH))
+        // pull the 1 out from under the top blocker: it drops
+        assertTrue(g.trySwap(1, 0))
+        g.rest()
+        assertEquals(listOf("......", "B1....", "BBB2.."), g.boardString().lines().takeLast(3))
+    }
+
+    @Test
+    fun `a match beside blockers turns them, and the ones touching them, into tiles`() {
+        val g = quiet(
+            "B.....",
+            "BB...B",
+            "1121..",
+        )
+        assertTrue(g.trySwap(0, 2))
+        g.rest()
+        // the three joined blockers went with the match; the one far away did not
+        assertEquals(3, g.blocksBroken)
+        assertEquals(1, g.blockCount())
+        assertEquals(3, g.count(EventType.BREAK))
+        assertEquals(3, g.events.first { it.type == EventType.MATCH }.a)
+        // what they turned into fell into the gap and is ordinary tiles now
+        assertTrue(g.tileCount() - g.blockCount() <= 4)
+        assertTrue(g.score >= 60)
+    }
+
+    @Test
+    fun `tiles that come out of blockers can carry a chain on`() {
+        var chains = 0
+        for (seed in 1L..60L) {
+            val g = Game.infinite(Difficulty.NORMAL, 1, seed).apply {
+                skipCountdown(); autoRise = false
+                setBoard("BBBBBB", "BBBBBB", "112134")
+                events.clear()
+            }
+            assertTrue(g.trySwap(0, 2))
+            g.rest()
+            assertEquals(12, g.blocksBroken)
+            if (g.maxChain >= 2) chains++
+        }
+        assertTrue("chains from broken blockers: $chains of 60", chains in 5..59)
+    }
+
+    @Test
+    fun `a surge tile takes its whole row with it`() {
+        val g = quiet(
+            "4.....",
+            "112134",
+        )
+        g.grid[0][1].power = true
+        assertTrue(g.trySwap(0, 2))
+        g.rest()
+        val m = g.events.first { it.type == EventType.MATCH }
+        assertEquals(6, m.a)
+        assertEquals(1, g.count(EventType.POWER))
+        assertEquals("4.....", g.boardString().lines().last())
+        assertEquals(6 * Scoring.PER_TILE + Scoring.comboBonus(6), g.score)
+    }
+
+    @Test
+    fun `a frozen tile cannot be slid until a match beside it sets it free`() {
+        val g = quiet("11213.")
+        g.grid[0][3].frozen = true
+        g.grid[0][4].frozen = true
+        assertFalse(g.grab(0, 4))
+        assertFalse(g.trySwap(0, 4))
+        assertFalse("the frozen 1 will not move either", g.trySwap(0, 2))
+        // free the 1 by hand for the test's sake, make the match, and the 3 beside it stays frozen
+        g.grid[0][3].frozen = false
+        assertTrue(g.trySwap(0, 2))
+        g.rest()
+        assertEquals("...23.", g.boardString().lines().last())
+        assertFalse("the 2 touched the match", g.grid[0][3].frozen)
+        assertTrue("the 3 did not", g.grid[0][4].frozen)
+    }
+
+    @Test
+    fun `chains fill the fever meter, and fever holds the stack and doubles the score`() {
+        val g = Game.infinite(Difficulty.NORMAL, 30, 1L).apply { skipCountdown() }
+        var n = 0
+        while (g.feverFrames == 0) {
+            g.setBoard(".33...", "1131..")
+            assertTrue(g.trySwap(0, 2))
+            do { g.tick() } while (g.active && g.feverFrames == 0)
+            assertTrue(++n < 20)
+        }
+        assertTrue(n >= 2)
+        assertEquals(1, g.count(EventType.FEVER))
+        assertEquals(0, g.fever)
+        while (g.active) g.tick()
+        // during fever: nothing rises, and a plain match of three is worth sixty
+        g.setBoard("1121..")
+        val rows = g.rowsRisen
+        val offset = g.riseOffset
+        val before = g.score
+        assertTrue(g.trySwap(0, 2))
+        while (g.active || g.grid[0][0].kind != 0) g.tick()
+        assertTrue(g.feverFrames > 0)
+        assertEquals(60, g.score - before)
+        assertEquals(rows, g.rowsRisen)
+        repeat(Game.FEVER_FRAMES) { g.tick() }
+        assertEquals(0, g.feverFrames)
+        assertTrue(g.rowsRisen > rows || g.riseOffset > offset)
+    }
+
+    @Test
+    fun `blockers sent to a well come down once it is quiet`() {
+        val g = quiet("123123")
+        g.receiveBlocks(4)
+        g.rest()
+        g.tick()
+        g.rest()
+        assertEquals(4, g.blockCount())
+        assertEquals(0, g.pendingBlocks)
+        assertEquals(1, g.count(EventType.BLOCKS))
+        // they sit on the stack in one row
+        assertEquals(4, (0 until Game.COLS).count { g.grid[1][it].isBlock })
+    }
+
+    @Test
+    fun `Infinite above Easy sends itself blockers once the speed is up, and Easy never does`() {
+        for (d in Difficulty.entries) {
+            val g = Game.infinite(d, 12, 4L)
+            g.skipCountdown()
+            g.autoRise = false
+            repeat(3000) {
+                g.tick()
+                Checks.assertConsistent(g)
+            }
+            if (d == Difficulty.EASY) assertEquals(0, g.blockCount()) else assertTrue(g.blockCount() > 0)
+        }
+    }
+
+    // ------------------------------------------------------------ stage goals
+
+    @Test
+    fun `the four kinds of stage each end on their own goal`() {
+        val goals = (1..Stages.COUNT).map { Stages.get(it).goal }
+        assertEquals(setOf(Goal.LINE, Goal.BREAK, Goal.CHAINS, Goal.SURVIVE), goals.toSet())
+        assertEquals(Goal.LINE, goals[0])
+        assertEquals(Goal.LINE, goals[1])
+
+        // blockers: starts with the stage's number of them, and is won when the last has gone
+        val b = Game.stage(Stages.get(3), 2L)
+        assertEquals(Stages.get(3).target, b.blockCount())
+        b.skipCountdown(); b.autoRise = false
+        b.setBoard("B.....", "1121..")
+        b.tick()
+        assertEquals(Phase.PLAYING, b.phase)
+        assertTrue(b.trySwap(0, 2))
+        while (b.phase == Phase.PLAYING) b.tick()
+        assertEquals(Phase.STAGE_CLEAR, b.phase)
+
+        // chains: won on the chain step that reaches the target
+        val c = Game.stage(Stages.get(5), 2L)
+        c.skipCountdown(); c.autoRise = false
+        var n = 0
+        while (c.phase == Phase.PLAYING) {
+            assertEquals(n, c.chainSteps)
+            c.setBoard(".33...", "1131..")
+            assertTrue(c.trySwap(0, 2))
+            do { c.tick() } while (c.active && c.phase == Phase.PLAYING)
+            c.tick()
+            n++
+            assertTrue(n < 20)
+        }
+        assertEquals(Stages.get(5).target, n)
+        assertEquals(Phase.STAGE_CLEAR, c.phase)
+
+        // survival: won when the time is up, with blockers raining meanwhile
+        val s = Game.stage(Stages.get(7), 2L)
+        s.skipCountdown(); s.autoRise = false
+        var rained = 0
+        while (s.phase == Phase.PLAYING) {
+            s.tick()
+            if (s.blockCount() > 6) { s.setBoard("123123"); rained++ }
+            assertTrue(s.frames <= Stages.get(7).target + 600)
+        }
+        assertEquals(Phase.STAGE_CLEAR, s.phase)
+        assertTrue(s.frames >= Stages.get(7).target)
+        assertTrue(rained > 0)
+    }
+
+    @Test
+    fun `later line stages start with tiles frozen in place`() {
+        assertEquals(0, Stages.get(12).frozen)
+        val def = Stages.get(16)
+        assertTrue(def.frozen > 0)
+        val g = Game.stage(def, 3L)
+        var frozen = 0
+        for (r in 0 until Game.ROWS) for (c in 0 until Game.COLS) if (g.grid[r][c].frozen) frozen++
+        assertEquals(def.frozen, frozen)
+        Checks.assertConsistent(g)
     }
 
     // ------------------------------------------------------------ saving

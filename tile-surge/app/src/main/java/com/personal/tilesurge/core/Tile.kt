@@ -35,8 +35,14 @@ class Tile {
     /** Unique per tile while it is on the board; 0 for an empty cell. */
     var id = 0
 
-    /** 0 = empty, 1..6 = the tile's colour and symbol. */
+    /** 0 = empty, 1..6 = the tile's colour and symbol, [BLOCK] = a blocker. */
     var kind = 0
+
+    /** A surge tile: when it is part of a match, its whole row goes with it. */
+    var power = false
+
+    /** Frozen in place: it cannot be slid until a match beside it (or including it) sets it free. */
+    var frozen = false
     var state = TileState.NORMAL
 
     /** Frames left in the current state, for the states that end on their own. */
@@ -59,6 +65,12 @@ class Tile {
 
     val isEmpty: Boolean get() = kind == 0
 
+    /** A blocker: it never matches and cannot be slid. A match beside it turns it into ordinary tiles. */
+    val isBlock: Boolean get() = kind == BLOCK
+
+    /** At rest and of a kind that can line up with others. */
+    val isMatchable: Boolean get() = isResting && kind != BLOCK
+
     /** Flashing or popping: nothing can move it, and it holds up whatever sits on it. */
     val isClearing: Boolean
         get() = state == TileState.MATCHED || state == TileState.POPPING || state == TileState.POPPED
@@ -77,5 +89,11 @@ class Tile {
         comboSize = 0
         chainIndex = 1
         swapDir = 0
+        power = false
+        frozen = false
+    }
+
+    companion object {
+        const val BLOCK = 7
     }
 }

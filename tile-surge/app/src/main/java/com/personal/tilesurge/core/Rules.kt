@@ -86,6 +86,21 @@ object Scoring {
  * One Stage Clear stage: the stack rises [lines] rows, then the clear line appears,
  * and the stage is won when nothing is left above the line.
  */
+/** What a stage asks for. */
+enum class Goal {
+    /** Bring the clear line up and clear everything above it. */
+    LINE,
+
+    /** Break every blocker on the board. */
+    BREAK,
+
+    /** Make a number of chain steps. */
+    CHAINS,
+
+    /** Last for a number of seconds while blockers rain down. */
+    SURVIVE,
+}
+
 class StageDef(
     val number: Int,
     val kinds: Int,
@@ -93,15 +108,31 @@ class StageDef(
     val lines: Int,
     val startRows: Int,
     val timing: Difficulty,
+    val goal: Goal = Goal.LINE,
+    /** BREAK: blockers to start with. CHAINS: chain steps to make. SURVIVE: frames to last. */
+    val target: Int = 0,
+    /** Tiles of the opening stack that start frozen. */
+    val frozen: Int = 0,
 ) {
     /** Roughly how many tiles have to go: the opening stack and every row down to the line. */
     private val work: Int get() = 6 * (startRows + lines)
 
-    /** Clear the stage within this many frames for three stars (a brisk tile and a half a second). */
-    val threeStarFrames: Int get() = work * 40
+    /** Clear the stage within this many frames for three stars (for a line stage, a brisk tile and a half a second). */
+    val threeStarFrames: Int
+        get() = when (goal) {
+            Goal.LINE -> work * 40
+            Goal.BREAK -> 1500 + target * 150
+            Goal.CHAINS -> 900 + target * 600
+            Goal.SURVIVE -> target
+        }
 
     /** Within this many for two. */
-    val twoStarFrames: Int get() = work * 67
+    val twoStarFrames: Int
+        get() = when (goal) {
+            Goal.LINE -> work * 67
+            Goal.SURVIVE -> target
+            else -> threeStarFrames * 5 / 3
+        }
 
     /** Stars for clearing the stage in [frames]; 0 if it has not been cleared. */
     fun stars(frames: Int): Int = when {
@@ -116,26 +147,44 @@ class StageDef(
 class PuzzleDef(val number: Int, val moves: Int, val rows: List<String>, val answer: List<Int> = emptyList())
 
 object Stages {
-    const val COUNT = 30
+    const val COUNT = 40
 
-    /** Stage [number] (1..[COUNT]). Later stages are faster and longer; the last ten add a sixth tile. */
+    /**
+     * Stage [number] (1..[COUNT]). Later stages are faster and longer, and from 21 on there is a sixth tile.
+     * Most are line stages; every fifth-and-third is a blocker stage, every fifth a chain stage, and
+     * 7, 17, 27 and 37 are survival stages. Line stages from 14 on start with some tiles frozen.
+     */
     fun get(number: Int): StageDef {
         val n = number.coerceIn(1, COUNT)
+        val goal = when {
+            n % 10 == 7 -> Goal.SURVIVE
+            n % 5 == 3 -> Goal.BREAK
+            n % 5 == 0 -> Goal.CHAINS
+            else -> Goal.LINE
+        }
         return StageDef(
             number = n,
             kinds = if (n <= 20) 5 else 6,
-            speedLevel = 1 + ((n - 1) * 4) / 5,
-            lines = 6 + ((n - 1) * 3) / 4,
+            speedLevel = min(26, 1 + ((n - 1) * 4) / 5),
+            lines = min(27, 6 + ((n - 1) * 3) / 4),
             startRows = when {
                 n <= 10 -> 5
                 n <= 20 -> 6
                 else -> 7
             },
             timing = when {
-                n <= 10 -> Difficulty.EASY
-                n <= 20 -> Difficulty.NORMAL
+                n <= 12 -> Difficulty.EASY
+                n <= 26 -> Difficulty.NORMAL
                 else -> Difficulty.HARD
             },
+            goal = goal,
+            target = when (goal) {
+                Goal.LINE -> 0
+                Goal.BREAK -> min(18, 6 + n / 3)
+                Goal.CHAINS -> min(6, 2 + n / 10)
+                Goal.SURVIVE -> (60 + n) * 60
+            },
+            frozen = if (goal == Goal.LINE && n >= 14) min(8, (n - 8) / 3) else 0,
         )
     }
 }

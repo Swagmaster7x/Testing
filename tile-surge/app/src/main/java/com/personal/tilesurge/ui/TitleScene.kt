@@ -19,14 +19,18 @@ class TitleScene(app: App) : Scene(app) {
     internal val puzzleButton = Button("PUZZLE", ButtonStyle.PRIMARY) { app.go(StageSelectScene(app, puzzles = true)) }
     internal val infiniteButton = Button("INFINITE", ButtonStyle.PRIMARY) { app.go(InfiniteSetupScene(app)) }
     internal val timedButton = Button("SCORE ATTACK", ButtonStyle.PRIMARY) { app.go(InfiniteSetupScene(app, timed = true)) }
-    internal val dailyButton = Button("DAILY CHALLENGE", ButtonStyle.PRIMARY) { app.go(PlayScene(app, Setup.Daily(Days.today()))) }
+    internal val dailyButton = Button("DAILY", ButtonStyle.PRIMARY) { app.go(PlayScene(app, Setup.Daily(Days.today()))) }
+    internal val versusButton = Button("VERSUS", ButtonStyle.PRIMARY) { app.go(VersusSetupScene(app)) }
+    internal val missionsButton = Button("MISSIONS") { app.go(MissionsScene(app)) }
+    internal val shopButton = Button("SHOP") { app.go(ShopScene(app)) }
     internal val howButton = Button("HOW TO PLAY") { app.go(PlayScene(app, Setup.Lesson(1))) }
     internal val soundButton = Button("") { toggleSound() }
     internal val musicButton = Button("") { toggleMusic() }
     internal val buzzButton = Button("") { toggleBuzz() }
 
     init {
-        buttons += listOf(continueButton, stageButton, puzzleButton, infiniteButton, timedButton, dailyButton, howButton,
+        buttons += listOf(continueButton, stageButton, puzzleButton, infiniteButton, timedButton, versusButton, dailyButton,
+            missionsButton, shopButton, howButton,
             soundButton, musicButton, buzzButton)
         refresh()
     }
@@ -69,11 +73,17 @@ class TitleScene(app: App) : Scene(app) {
         val today = app.prefs.dailyBest(Days.today())
         val streak = app.prefs.dailyStreak(Days.today(), Days.yesterday())
         dailyButton.note = when {
-            today > 0 && streak > 1 -> "today ${Format.number(today)} · $streak days running"
-            today > 0 -> "today's best ${Format.number(today)}"
-            streak > 0 -> "$streak days running: play today's to keep it going"
-            else -> "the same board for everyone, new every day"
+            today > 0 && streak > 1 -> "${Format.number(today)} · $streak days"
+            today > 0 -> "today ${Format.number(today)}"
+            streak > 0 -> "$streak days running"
+            else -> "new every day"
         }
+        val wins = Difficulty.entries.sumOf { app.prefs.versusWins(it) }
+        versusButton.note = if (wins > 0) (if (wins == 1) "1 win" else "$wins wins") else "beat the computer"
+        val waiting = app.prefs.missionsWaiting(Days.today())
+        missionsButton.note = if (waiting > 0) "$waiting to claim" else "three a day"
+        missionsButton.style = if (waiting > 0) ButtonStyle.SELECTED else ButtonStyle.PLAIN
+        shopButton.note = Format.number(app.prefs.coins) + " coins"
         soundButton.icon = if (app.prefs.sound) Icon.SOUND_ON else Icon.SOUND_OFF
         musicButton.icon = if (app.prefs.music) Icon.MUSIC_ON else Icon.MUSIC_OFF
         buzzButton.icon = if (app.prefs.buzz) Icon.BUZZ_ON else Icon.BUZZ_OFF
@@ -115,7 +125,7 @@ class TitleScene(app: App) : Scene(app) {
 
         // the buttons share whatever height is left between the name and the switches
         val top = logoY + tile + 122f * u
-        val rows = if (continueButton.visible) 5 else 4
+        val rows = if (continueButton.visible) 6 else 5
         val room = togglesTop - 16f * u - top
         val h = minOf(64f * u, (room - gap * (rows - 1)) / rows)
         var y = top + maxOf(0f, (room - (h * rows + gap * (rows - 1))) * 0.4f)
@@ -129,11 +139,16 @@ class TitleScene(app: App) : Scene(app) {
         infiniteButton.set(l, y, mid - gap / 2f, y + h)
         timedButton.set(mid + gap / 2f, y, r, y + h)
         y += h + gap
-        dailyButton.set(l, y, r, y + h)
+        versusButton.set(l, y, mid - gap / 2f, y + h)
+        dailyButton.set(mid + gap / 2f, y, r, y + h)
         y += h + gap
-        howButton.set(l, y, r, y + h)
-        for (b in listOf(continueButton, stageButton, puzzleButton, infiniteButton, timedButton, dailyButton)) b.textUnits = 17f
-        howButton.textUnits = 16f
+        missionsButton.set(l, y, mid - gap / 2f, y + h)
+        shopButton.set(mid + gap / 2f, y, r, y + h)
+        y += h + gap
+        howButton.set(l, y, r, y + minOf(h, 46f * u))
+        for (b in listOf(continueButton, stageButton, puzzleButton, infiniteButton, timedButton, versusButton, dailyButton,
+            missionsButton, shopButton)) b.textUnits = 16f
+        howButton.textUnits = 15f
     }
 
     override fun tick() {

@@ -59,11 +59,14 @@ class Game private constructor(
         /** A column this tall (or taller) is close to the top. */
         const val DANGER_HEIGHT = ROWS - 2
         const val NO_LINE = Int.MIN_VALUE
+        const val FEVER_MAX = 100
+        const val FEVER_FRAMES = 480
+        private const val BLOCK_FIRST = 1200
 
         fun infinite(difficulty: Difficulty, startLevel: Int, seed: Long): Game =
             Game(GameMode.INFINITE, difficulty, difficulty.kinds, startLevel, null, 6, seed)
 
-        private const val SAVE_VERSION = 1
+        private const val SAVE_VERSION = 2
 
         /** The game [saved] by [save], or null if the text is not one this version can read. */
         fun restore(saved: String): Game? = try {
@@ -171,8 +174,66 @@ class Game private constructor(
      * Stage Clear: the clear line runs along the bottom edge of this row. It starts below the well
      * (negative) and comes up with the stack. [NO_LINE] in Infinite mode.
      */
-    var lineRow = if (stage != null) -stage.lines else NO_LINE
+    var lineRow = if (stage != null && stage.goal == Goal.LINE) -stage.lines else NO_LINE
         private set
+
+    /** Which of the incoming tiles are surge tiles. */
+    val incomingPower = BooleanArray(COLS)
+
+    /** Blockers waiting to drop, and frames until the next lot may. */
+    var pendingBlocks = 0
+        private set
+    private var blockWait = 0
+
+    /** Frames until this game sends itself more blockers (Infinite and survival stages). */
+    private var blockClock = BLOCK_FIRST
+
+    /** The fever meter, 0..[FEVER_MAX], and the frames of fever left once it has filled. */
+    var fever = 0
+        private set
+    var feverFrames = 0
+        private set
+
+    /** Chain steps made so far (a x3 chain is two of them). */
+    var chainSteps = 0
+        private set
+
+    /** Blockers broken so far. */
+    var blocksBroken = 0
+        private set
+
+    fun blockCount(): Int {
+        var n = 0
+        for (r in 0 until ROWS) for (c in 0 until COLS) if (grid[r][c].kind == Tile.BLOCK) n++
+        return n
+    }
+
+    /** More blockers on their way into this well (from an opponent, say). */
+    fun receiveBlocks(n: Int) {
+        if (n > 0 && phase != Phase.GAME_OVER) pendingBlocks = min(pendingBlocks + n, 36)
+    }
+
+    /** Versus: an attack first uses up blockers on their way here. Returns what is left of [n] to send on. */
+    fun cancelBlocks(n: Int): Int {
+        val used = min(n, pendingBlocks)
+        pendingBlocks -= used
+        return n - used
+    }
+
+    /** Whether this game sends itself blockers (see [dropBlocks]). Versus switches it off: the rival sends them. */
+    var selfBlocks = true
+
+    /** Versus: the rival's stack reached the top, so this game is won where it stands. */
+    fun win() {
+        if (phase != Phase.PLAYING) return
+        phase = Phase.STAGE_CLEAR
+        grabbedId = 0
+        emit(EventType.STAGE_CLEAR)
+    }
+
+    private fun gain(points: Int) {
+        score += if (feverFrames > 0) points * 2 else points
+    }
 
     /** Set while the player holds the raise button. */
     var raiseHeld = false
@@ -223,6 +284,8 @@ class Game private constructor(
     val events = ArrayList<GameEvent>()
 
     private val marks = Array(ROWS) { BooleanArray(COLS) }
+    private val DR = intArrayOf(1, -1, 0, 0)
+    private val DC = intArrayOf(0, 0, 1, -1)
 
     init {
         if (fixedRows != null) {
@@ -276,6 +339,7 @@ class Game private constructor(
         val t = grid[row][col]
         if (t.kind == 0) return false
         if (t.state != TileState.NORMAL && t.state != TileState.LANDING && t.state != TileState.SWAPPING) return false
+        if (t.isBlock || t.frozen) return false
         grabbedId = t.id
         dragCol = col
         return true
@@ -329,7 +393,8 @@ class Game private constructor(
     }
 
     /** Tiles at rest and plain gaps can be swapped. Anything sliding, hanging, falling or popping cannot. */
-    private fun canSwap(t: Tile): Boolean = t.state == TileState.NORMAL || t.state == TileState.LANDING
+    private fun canSwap(t: Tile): Boolean =
+        (t.state == TileState.NORMAL || t.state == TileState.LANDING) && !t.isBlock && !t.frozen
 
     // ---------------------------------------------------------------- one frame
 
@@ -350,8 +415,10 @@ class Game private constructor(
 
     private fun step() {
         frames++
+        if (feverFrames > 0) feverFrames--
         rise()
         if (phase != Phase.PLAYING) return
+        dropBlocks()
         updateTiles()
         // Gravity before the player's hand: a tile that has just been slid over a gap is already
         // hanging by the time the drag is looked at, so it cannot be carried across.
@@ -394,7 +461,7 @@ class Game private constructor(
         } else {
             // Let go while blocked: forget the rest of the row.
             if (manualRaise && !raiseHeld) manualRaise = false
-            if (autoRise && !settling && stopFrames == 0) {
+            if (autoRise && !settling && stopFrames == 0 && feverFrames == 0) {
                 if (topOccupied) {
                     grace--
                     if (grace <= 0) {
@@ -417,7 +484,7 @@ class Game private constructor(
         riseOffset = if (manual) 0 else riseOffset - ROW_UNITS
         pushRow(manual)
         if (manual) {
-            score += Scoring.PER_RAISED_ROW
+            gain(Scoring.PER_RAISED_ROW)
             // A tap brings up exactly one row; holding carries on with the next.
             manualRaise = raiseHeld
         }
@@ -434,6 +501,7 @@ class Game private constructor(
             val t = recycled[c]
             t.clear()
             t.kind = incoming[c]
+            t.power = incomingPower[c]
             t.id = nextId++
         }
         generateIncoming()
@@ -511,8 +579,52 @@ class Game private constructor(
         emit(EventType.LAND, r, c, kind = t.kind)
     }
 
+    /**
+     * Blockers come down in a row near the top once the board is quiet. This game also sends itself
+     * some from time to time: in Infinite above Easy once the speed is up, and in survival stages.
+     */
+    private fun dropBlocks() {
+        val selfSends = selfBlocks && ((mode == GameMode.INFINITE && difficulty != Difficulty.EASY && level >= 6) || stage?.goal == Goal.SURVIVE)
+        if (selfSends && --blockClock <= 0) {
+            blockClock = max(420, 960 - level * 12)
+            pendingBlocks = min(pendingBlocks + 3 + level / 12, 36)
+        }
+        if (blockWait > 0) blockWait--
+        if (pendingBlocks == 0 || blockWait > 0 || settling) return
+        val row = ROWS - 2
+        val width = min(pendingBlocks, COLS)
+        val start = rng.nextInt(COLS - width + 1)
+        var placed = 0
+        for (c in start until start + width) {
+            if (grid[row][c].kind != 0 || grid[row + 1][c].kind != 0 || grid[row][c].state != TileState.NORMAL) continue
+            val t = grid[row][c]
+            t.clear()
+            t.kind = Tile.BLOCK
+            t.id = nextId++
+            t.state = TileState.FALLING
+            placed++
+        }
+        // no room at the top: whatever could not come down is let off
+        pendingBlocks -= if (placed == 0) width else placed
+        blockWait = 90
+        if (placed > 0) emit(EventType.BLOCKS, a = placed)
+    }
+
     private fun pop(r: Int, c: Int, t: Tile) {
-        score += Scoring.PER_TILE
+        gain(Scoring.PER_TILE)
+        if (t.isBlock) {
+            // A blocker does not vanish: it turns into an ordinary tile, which hangs until the rest of
+            // the group has gone and then settles with the chain mark on it.
+            // Whatever comes out is pure chance, so it quite often lines up with its neighbours:
+            // breaking blockers is how the long chains start.
+            t.kind = 1 + rng.nextInt(kinds)
+            t.state = TileState.HOVERING
+            t.timer = (t.comboSize - t.comboIndex) * difficulty.popFrames + difficulty.hoverFrames
+            t.chaining = true
+            blocksBroken++
+            emit(EventType.BREAK, r, c, t.comboIndex, t.chainIndex, t.kind)
+            return
+        }
         emit(EventType.POP, r, c, t.comboIndex, t.chainIndex, t.kind)
         if (t.comboIndex >= t.comboSize) {
             // The last of its group: it and all the others (whose waits end this same frame) now disappear.
@@ -617,12 +729,12 @@ class Game private constructor(
             var c = 0
             while (c < COLS) {
                 val t = grid[r][c]
-                if (!t.isResting) {
+                if (!t.isMatchable) {
                     c++
                     continue
                 }
                 var end = c + 1
-                while (end < COLS && grid[r][end].isResting && grid[r][end].kind == t.kind) end++
+                while (end < COLS && grid[r][end].isMatchable && grid[r][end].kind == t.kind) end++
                 if (end - c >= 3) for (i in c until end) marks[r][i] = true
                 c = end
             }
@@ -631,12 +743,12 @@ class Game private constructor(
             var r = 0
             while (r < ROWS) {
                 val t = grid[r][c]
-                if (!t.isResting) {
+                if (!t.isMatchable) {
                     r++
                     continue
                 }
                 var end = r + 1
-                while (end < ROWS && grid[end][c].isResting && grid[end][c].kind == t.kind) end++
+                while (end < ROWS && grid[end][c].isMatchable && grid[end][c].kind == t.kind) end++
                 if (end - r >= 3) for (i in r until end) marks[i][c] = true
                 r = end
             }
@@ -652,15 +764,61 @@ class Game private constructor(
         }
         if (count == 0) return
 
-        if (isChain) chain++
+        // A surge tile takes its whole row with it (and so does any surge tile caught up in that).
+        var spread = true
+        while (spread) {
+            spread = false
+            for (r in 0 until ROWS) for (c in 0 until COLS) {
+                val t = grid[r][c]
+                if (!marks[r][c] || !t.power) continue
+                t.power = false
+                emit(EventType.POWER, r, c, kind = t.kind)
+                for (cc in 0 until COLS) {
+                    if (!marks[r][cc] && grid[r][cc].isResting) {
+                        marks[r][cc] = true
+                        if (!grid[r][cc].isBlock) count++
+                        spread = true
+                    }
+                }
+            }
+        }
+        // Blockers touching the match, and blockers touching those, break with it.
+        // Frozen tiles touching it are set free.
+        var blocks = 0
+        var grew = true
+        while (grew) {
+            grew = false
+            for (r in 0 until ROWS) for (c in 0 until COLS) {
+                if (!marks[r][c]) continue
+                for (d in 0 until 4) {
+                    val rr = r + DR[d]
+                    val cc = c + DC[d]
+                    if (rr !in 0 until ROWS || cc !in 0 until COLS) continue
+                    val n = grid[rr][cc]
+                    if (!grid[r][c].isBlock) n.frozen = false
+                    if (!marks[rr][cc] && n.isBlock && n.isResting) {
+                        marks[rr][cc] = true
+                        grew = true
+                    }
+                }
+            }
+        }
+        for (r in 0 until ROWS) for (c in 0 until COLS) if (marks[r][c] && grid[r][c].isBlock) blocks++
+        val group = count + blocks
+
+        if (isChain) {
+            chain++
+            chainSteps++
+        }
         val step = if (isChain) chain else 1
         var index = 0
         var firstRow = 0
         var firstCol = 0
-        // Pop order: top row first, left to right.
-        for (r in ROWS - 1 downTo 0) for (c in 0 until COLS) {
+        // Pop order: the tiles first, top row first and left to right; then the blockers the same way.
+        for (pass in 0..1) for (r in ROWS - 1 downTo 0) for (c in 0 until COLS) {
             if (!marks[r][c]) continue
             val t = grid[r][c]
+            if (t.isBlock != (pass == 1)) continue
             index++
             if (index == 1) {
                 firstRow = r
@@ -669,16 +827,26 @@ class Game private constructor(
             t.state = TileState.MATCHED
             t.timer = difficulty.flashFrames + difficulty.faceFrames
             t.comboIndex = index
-            t.comboSize = count
+            t.comboSize = group
             t.chainIndex = step
+            t.frozen = false
             // A chain stays alive for as long as any tile carries this mark.
             t.chaining = isChain
         }
-        score += Scoring.comboBonus(count)
-        if (isChain) score += Scoring.chainBonus(chain)
+        gain(Scoring.comboBonus(count))
+        if (isChain) gain(Scoring.chainBonus(chain))
         maxCombo = max(maxCombo, count)
         maxChain = max(maxChain, chain)
         if (count >= 4 || isChain) stopFrames = max(stopFrames, stopFor(count, step))
+        // Chains and combos fill the fever meter; when it is full the stack holds still and scores double.
+        if (mode != GameMode.PUZZLE && feverFrames == 0) {
+            fever += (if (isChain) 12 + 10 * min(step, 6) else 0) + (if (count >= 4) 6 * min(count - 3, 6) else 0)
+            if (fever >= FEVER_MAX) {
+                fever = 0
+                feverFrames = FEVER_FRAMES
+                emit(EventType.FEVER)
+            }
+        }
         emit(EventType.MATCH, firstRow, firstCol, count, step)
     }
 
@@ -748,11 +916,20 @@ class Game private constructor(
     }
 
     private fun checkStageClear() {
-        if (mode != GameMode.STAGE || lineRow < 0) return
-        // Let anything still hanging, falling or popping under the line finish first, so the board is not
+        val def = stage ?: return
+        if (mode != GameMode.STAGE || phase != Phase.PLAYING) return
+        // Let anything still hanging, falling or popping finish first, so the board is not
         // frozen mid-pop. Nothing can come back above the line meanwhile: the stack does not rise.
         if (settling) return
-        for (r in lineRow until ROWS) for (c in 0 until COLS) if (grid[r][c].kind != 0) return
+        when (def.goal) {
+            Goal.LINE -> {
+                if (lineRow < 0) return
+                for (r in lineRow until ROWS) for (c in 0 until COLS) if (grid[r][c].kind != 0) return
+            }
+            Goal.BREAK -> if (blockCount() > 0 || pendingBlocks > 0) return
+            Goal.CHAINS -> if (chainSteps < def.target || chain > 1) return
+            Goal.SURVIVE -> if (frames < def.target) return
+        }
         phase = Phase.STAGE_CLEAR
         grabbedId = 0
         emit(EventType.STAGE_CLEAR)
@@ -781,6 +958,28 @@ class Game private constructor(
             t.kind = pickKind(left, below)
             t.id = nextId++
         }
+        // what the stage adds to its opening stack: blockers to break, or tiles frozen in place
+        val def = stage
+        if (def != null) {
+            var blocks = if (def.goal == Goal.BREAK) def.target else 0
+            var ice = def.frozen
+            var tries = 0
+            while ((blocks > 0 || ice > 0) && tries++ < 2000) {
+                val c = rng.nextInt(COLS)
+                val r = rng.nextInt(max(1, heights[c]))
+                val t = grid[r][c]
+                if (t.kind == 0 || t.isBlock || t.frozen) continue
+                if (blocks > 0) {
+                    // never the top of a column: a blocker needs a tile that can be matched beside it
+                    if (r == heights[c] - 1) continue
+                    t.kind = Tile.BLOCK
+                    blocks--
+                } else {
+                    t.frozen = true
+                    ice--
+                }
+            }
+        }
         generateIncoming()
     }
 
@@ -789,6 +988,8 @@ class Game private constructor(
         for (c in 0 until COLS) {
             val left = if (c > 0) incoming[c - 1] else 0
             incoming[c] = pickKind(left, grid[0][c].kind)
+            // now and then a surge tile, once things have got going
+            incomingPower[c] = mode != GameMode.PUZZLE && rowsRisen >= 3 && rng.nextInt(45) == 0
         }
     }
 
@@ -813,11 +1014,14 @@ class Game private constructor(
         out += phase.ordinal; out += countdown; out += frames; out += riseOffset; out += level; out += levelProgress
         out += score; out += chain; out += maxChain; out += maxCombo; out += tilesCleared; out += rowsRisen
         out += stopFrames; out += grace; out += lineRow; out += (if (manualRaise) 1 else 0)
+        out += pendingBlocks; out += blockWait; out += blockClock; out += fever; out += feverFrames; out += chainSteps; out += blocksBroken
+        for (c in 0 until COLS) out += (if (incomingPower[c]) 1 else 0)
         for (c in 0 until COLS) out += incoming[c]
         for (r in 0 until ROWS) for (c in 0 until COLS) {
             val t = grid[r][c]
             out += t.id; out += t.kind; out += t.state.ordinal; out += t.timer; out += (if (t.chaining) 1 else 0)
             out += t.comboIndex; out += t.comboSize; out += t.chainIndex; out += t.swapDir
+            out += (if (t.power) 1 else 0); out += (if (t.frozen) 1 else 0)
         }
         return out.joinToString(",")
     }
@@ -829,11 +1033,14 @@ class Game private constructor(
         phase = Phase.entries[int()]; countdown = int(); frames = int(); riseOffset = int(); level = int(); levelProgress = int()
         score = int(); chain = int(); maxChain = int(); maxCombo = int(); tilesCleared = int(); rowsRisen = int()
         stopFrames = int(); grace = int(); lineRow = int(); manualRaise = int() == 1
+        pendingBlocks = int(); blockWait = int(); blockClock = int(); fever = int(); feverFrames = int(); chainSteps = int(); blocksBroken = int()
+        for (c in 0 until COLS) incomingPower[c] = int() == 1
         for (c in 0 until COLS) incoming[c] = int()
         for (r in 0 until ROWS) for (c in 0 until COLS) {
             val t = grid[r][c]
             t.id = int(); t.kind = int(); t.state = TileState.entries[int()]; t.timer = int(); t.chaining = int() == 1
             t.comboIndex = int(); t.comboSize = int(); t.chainIndex = int(); t.swapDir = int()
+            t.power = int() == 1; t.frozen = int() == 1
         }
         grabbedId = 0
         raiseHeld = false
@@ -864,8 +1071,8 @@ class Game private constructor(
                 val ch = line[c]
                 if (ch == '.') continue
                 val t = grid[r][c]
-                t.kind = ch - '0'
-                require(t.kind in 1..6) { "bad tile '$ch'" }
+                t.kind = if (ch == 'B') Tile.BLOCK else ch - '0'
+                require(t.kind in 1..Tile.BLOCK) { "bad tile '$ch'" }
                 t.id = nextId++
             }
         }
@@ -885,7 +1092,7 @@ class Game private constructor(
         for (r in ROWS - 1 downTo 0) {
             for (c in 0 until COLS) {
                 val k = grid[r][c].kind
-                sb.append(if (k == 0) '.' else '0' + k)
+                sb.append(if (k == 0) '.' else if (k == Tile.BLOCK) 'B' else '0' + k)
             }
             if (r > 0) sb.append('\n')
         }

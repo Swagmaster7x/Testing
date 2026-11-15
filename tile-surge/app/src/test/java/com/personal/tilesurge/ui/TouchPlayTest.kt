@@ -5,6 +5,7 @@ import com.personal.tilesurge.core.Checks
 import com.personal.tilesurge.core.Difficulty
 import com.personal.tilesurge.core.Game
 import com.personal.tilesurge.core.Phase
+import com.personal.tilesurge.core.Stages
 import com.personal.tilesurge.core.Speed
 import com.personal.tilesurge.core.TileState
 import org.junit.Assert.assertEquals
@@ -724,26 +725,20 @@ class TouchPlayTest {
 
     @Test
     fun `the last stage has no next stage`() {
-        val (v, scene) = play(Setup.Stage(30), 3L)
+        // the last stage asks for chains: each of these boards clears three and drops a tile into a second match
+        val (v, scene) = play(Setup.Stage(Stages.COUNT), 3L)
         v.step(Game.COUNTDOWN_FRAMES)
         scene.game.autoRise = false
-        // bring the line into view, then leave nothing above it
-        val f = Fingers(v)
-        f.down(1, scene.raiseRect.centerX(), scene.raiseRect.centerY())
-        scene.game.setBoard("12....")
         var n = 0
-        while (scene.game.lineRow < 1) {
-            // keep the stack short while the rows go by
-            if (scene.game.stackHeight() > 6) scene.game.setBoard("12....")
-            v.step(1)
-            assertTrue(++n < 3600)
+        while (scene.game.phase == Phase.PLAYING) {
+            scene.game.setBoard("2.....", "1.....", "1.....", "1.....", "2.....", "2.....")
+            v.step(240)
+            assertTrue(++n <= Stages.get(Stages.COUNT).target)
         }
-        f.up(1)
-        scene.game.setBoard("121212")
         v.step(150)
         assertEquals(Phase.STAGE_CLEAR, scene.game.phase)
         assertTrue(scene.showsResult)
         assertFalse(scene.nextButton.visible)
-        assertEquals(30, v.app.prefs.stagesCleared)
+        assertEquals(Stages.COUNT, v.app.prefs.stagesCleared)
     }
 }

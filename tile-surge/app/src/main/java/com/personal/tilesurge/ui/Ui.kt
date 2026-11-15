@@ -12,8 +12,20 @@ import com.personal.tilesurge.R
 
 /** The game's colours. */
 object Palette {
-    const val BG_TOP = 0xFF1D1846.toInt()
-    const val BG_BOTTOM = 0xFF0C0A20.toInt()
+    /** The backdrops the shop sells: top and bottom colour of each. */
+    val BACKDROP_NAMES = arrayOf("Indigo", "Ocean", "Forest", "Ember")
+    private val BACKDROPS = arrayOf(
+        intArrayOf(0xFF1D1846.toInt(), 0xFF0C0A20.toInt()),
+        intArrayOf(0xFF0F3552.toInt(), 0xFF06131F.toInt()),
+        intArrayOf(0xFF153D2E.toInt(), 0xFF07140F.toInt()),
+        intArrayOf(0xFF4A1D2A.toInt(), 0xFF170810.toInt()),
+    )
+    var backdrop = 0
+        set(v) {
+            field = v.coerceIn(0, BACKDROPS.size - 1)
+        }
+    val BG_TOP: Int get() = BACKDROPS[backdrop][0]
+    val BG_BOTTOM: Int get() = BACKDROPS[backdrop][1]
     const val WELL = 0xE608071A.toInt()
     const val WELL_LINE = 0x10FFFFFF
     const val PANEL = 0xFF272158.toInt()
@@ -70,6 +82,7 @@ class Ui(context: Context) {
 
     private var bgShader: Shader? = null
     private var bgHeight = 0f
+    private var bgBackdrop = -1
 
     private fun font(context: Context, id: Int): Typeface = try {
         context.resources.getFont(id)
@@ -195,7 +208,8 @@ class Ui(context: Context) {
 
     /** The backdrop behind every screen. */
     fun background(c: Canvas, w: Float, h: Float) {
-        if (bgShader == null || bgHeight != h) {
+        if (bgShader == null || bgHeight != h || bgBackdrop != Palette.backdrop) {
+            bgBackdrop = Palette.backdrop
             bgShader = LinearGradient(0f, 0f, 0f, h, Palette.BG_TOP, Palette.BG_BOTTOM, Shader.TileMode.CLAMP)
             bgHeight = h
         }

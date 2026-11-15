@@ -177,7 +177,7 @@ class NavigationTest {
         v.show(StageSelectScene(v.app))
         assertTrue((v.scene as StageSelectScene).stageButtons.all { it.enabled })
         v.show(TitleScene(v.app))
-        assertEquals("all 30 cleared", (v.scene as TitleScene).stageButton.note)
+        assertEquals("all ${Stages.COUNT} cleared", (v.scene as TitleScene).stageButton.note)
     }
 
     @Test
@@ -186,7 +186,7 @@ class NavigationTest {
         v.show(HowToScene(v.app))
         val s = v.scene as HowToScene
         assertFalse(s.prevButton.enabled)
-        repeat(4) {
+        repeat(6) {
             v.step(400) // let each little demo play right through at least once
             Shots.tap(v, s.nextButton)
             assertTrue(v.scene is HowToScene)
@@ -194,16 +194,14 @@ class NavigationTest {
         assertEquals("GOT IT", s.nextButton.label)
         Shots.tap(v, s.prevButton)
         assertEquals("NEXT", s.nextButton.label)
-        assertTrue(v.back())
-        assertTrue(v.back())
-        assertTrue(v.back())
+        repeat(5) { assertTrue(v.back()) }
         assertTrue(v.scene is HowToScene)
         assertTrue(v.back())
         assertTrue(v.scene is TitleScene)
 
         v.show(HowToScene(v.app))
         val again = v.scene as HowToScene
-        repeat(5) { Shots.tap(v, again.nextButton) }
+        repeat(7) { Shots.tap(v, again.nextButton) }
         assertTrue(v.scene is TitleScene)
     }
 }

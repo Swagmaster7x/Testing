@@ -26,9 +26,42 @@ class TileArt {
     companion object {
         const val KINDS = 6
 
-        val BASE = intArrayOf(0, 0xFFEF4F50.toInt(), 0xFF2EB866.toInt(), 0xFF3A8DEE.toInt(), 0xFFF2AE1C.toInt(), 0xFF9163E8.toInt(), 0xFF27BDC6.toInt())
-        val LIGHT = intArrayOf(0, 0xFFFF8F78.toInt(), 0xFF74E394.toInt(), 0xFF79BEFF.toInt(), 0xFFFFDA6B.toInt(), 0xFFC1A0FF.toInt(), 0xFF82ECE6.toInt())
-        val DARK = intArrayOf(0, 0xFFA3283A.toInt(), 0xFF197546.toInt(), 0xFF1E55AB.toInt(), 0xFFB07006.toInt(), 0xFF5A37AB.toInt(), 0xFF137C89.toInt())
+/** The blocker's place in the sprite list, after the six tiles. */
+        const val BLOCK = 7
+
+        /** The tile sets the shop sells. Each is six base colours; lighter and darker shades are worked out. */
+        val THEME_NAMES = arrayOf("Classic", "Candy", "Neon", "Dusk")
+        private val THEME_BASES = arrayOf(
+            intArrayOf(0xFFEF4F50.toInt(), 0xFF2EB866.toInt(), 0xFF3A8DEE.toInt(), 0xFFF2AE1C.toInt(), 0xFF9163E8.toInt(), 0xFF27BDC6.toInt()),
+            intArrayOf(0xFFFF7FA8.toInt(), 0xFF6FD28E.toInt(), 0xFF6DB6F7.toInt(), 0xFFF7C64F.toInt(), 0xFFBE96F5.toInt(), 0xFF6FD8D4.toInt()),
+            intArrayOf(0xFFFF2E63.toInt(), 0xFF00C853.toInt(), 0xFF2979FF.toInt(), 0xFFFFC400.toInt(), 0xFFD500F9.toInt(), 0xFF00B8D4.toInt()),
+            intArrayOf(0xFFC96B5B.toInt(), 0xFF7FA36B.toInt(), 0xFF5B7FA6.toInt(), 0xFFC9A24B.toInt(), 0xFF8B6FAE.toInt(), 0xFF5FA6A0.toInt()),
+        )
+
+        /** Which tile set is in use. Sprites notice a change the next time they are prepared or stamped. */
+        var theme = 0
+            set(v) {
+                field = v.coerceIn(0, THEME_BASES.size - 1)
+                BASE = shades(0f)
+                LIGHT = shades(0.36f)
+                DARK = shades(-0.34f)
+            }
+
+        private fun shades(amount: Float): IntArray = IntArray(BLOCK + 1) { k ->
+            val base = when (k) {
+                0 -> 0
+                BLOCK -> 0xFF858AA0.toInt()
+                else -> THEME_BASES[theme][k - 1]
+            }
+            if (k == 0) 0 else if (amount >= 0f) Palette.mix(base, 0xFFFFFFFF.toInt(), amount) else Palette.mix(base, 0xFF000000.toInt(), -amount)
+        }
+
+        var BASE = shades(0f)
+            private set
+        var LIGHT = shades(0.36f)
+            private set
+        var DARK = shades(-0.34f)
+            private set
 
         /** The white part of each symbol, in a 100 x 100 box. */
         private val SYMBOL: Array<Path> = Array(KINDS + 1) { symbol(it) }
@@ -136,17 +169,20 @@ class TileArt {
     private val dst = RectF()
 
     private var spriteSize = 0
-    private val sprites = arrayOfNulls<Bitmap>(KINDS + 1)
+    private val sprites = arrayOfNulls<Bitmap>(BLOCK + 1)
+    private var spriteTheme = -1
 
     /** The face gradients for the size last painted with [paintTile]. */
     private var gradientSize = 0f
-    private val gradients = arrayOfNulls<Shader>(KINDS + 1)
+    private val gradients = arrayOfNulls<Shader>(BLOCK + 1)
 
     /** Makes sure the bitmaps match the board's cell size. Cheap to call when nothing changed. */
     fun prepare(cellPx: Int) {
-        if (cellPx == spriteSize || cellPx <= 0) return
+        if (cellPx <= 0 || (cellPx == spriteSize && spriteTheme == theme)) return
         spriteSize = cellPx
-        for (kind in 1..KINDS) {
+        spriteTheme = theme
+        gradients.fill(null)
+        for (kind in 1..BLOCK) {
             sprites[kind]?.recycle()
             val bmp = Bitmap.createBitmap(cellPx, cellPx, Bitmap.Config.ARGB_8888)
             paintTile(Canvas(bmp), kind, 0f, 0f, cellPx.toFloat())
@@ -159,6 +195,7 @@ class TileArt {
      * (the two differ only while a tile squashes as it lands).
      */
     fun stamp(c: Canvas, kind: Int, left: Float, top: Float, width: Float, height: Float, filter: ColorFilter?, alpha: Int = 255) {
+        if (spriteTheme != theme) prepare(spriteSize)
         val bmp = sprites[kind] ?: return
         stamp.colorFilter = filter
         stamp.alpha = alpha
@@ -208,6 +245,16 @@ class TileArt {
         rect.set(l + size * 0.07f, t + size * 0.045f, r - size * 0.07f, t + size * 0.30f)
         c.drawRoundRect(rect, radius * 0.66f, radius * 0.66f, paint)
 
+        if (kind == BLOCK) {
+            // a blocker is a plain slab with two grooves across it
+            paint.color = Palette.withAlpha(DARK[kind], 0.55f)
+            for (i in 1..2) {
+                val y = t + (b - lip - t) * i / 3f
+                rect.set(l + size * 0.14f, y - size * 0.022f, r - size * 0.14f, y + size * 0.022f)
+                c.drawRoundRect(rect, size * 0.02f, size * 0.02f, paint)
+            }
+            return
+        }
         // the symbol: a shadow first, then white, then its tinted detail
         val box = size * 0.60f
         val ox = left + (size - box) / 2f
@@ -252,6 +299,53 @@ class TileArt {
             paint.style = Paint.Style.FILL_AND_STROKE
             paint.strokeWidth = size * 0.02f
             paint.strokeJoin = Paint.Join.ROUND
+        }
+    }
+
+    /** Ice over a frozen tile. */
+    fun drawFrozen(c: Canvas, left: Float, top: Float, w: Float, h: Float) {
+        val pad = w * 0.04f
+        val radius = w * 0.21f
+        paint.shader = null
+        paint.style = Paint.Style.FILL
+        paint.color = 0x8CCFEFFF.toInt()
+        rect.set(left + pad, top + pad, left + w - pad, top + h - pad)
+        c.drawRoundRect(rect, radius, radius, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = w * 0.05f
+        paint.color = 0xE6FFFFFF.toInt()
+        c.drawRoundRect(rect, radius, radius, paint)
+        paint.strokeCap = Paint.Cap.ROUND
+        c.drawLine(left + w * 0.22f, top + h * 0.40f, left + w * 0.40f, top + h * 0.22f, paint)
+        c.drawLine(left + w * 0.60f, top + h * 0.78f, left + w * 0.78f, top + h * 0.60f, paint)
+        paint.style = Paint.Style.FILL
+    }
+
+    /** The glow round a surge tile. [beat] 0..1 makes it throb. */
+    fun drawPower(c: Canvas, left: Float, top: Float, w: Float, h: Float, beat: Float, alpha: Float = 1f) {
+        val pad = w * 0.02f
+        val radius = w * 0.22f
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = w * (0.07f + 0.03f * beat)
+        paint.color = Palette.withAlpha(0xFFFFFFFF.toInt(), alpha * (0.75f + 0.25f * beat))
+        rect.set(left + pad, top + pad, left + w - pad, top + h - pad)
+        c.drawRoundRect(rect, radius, radius, paint)
+        paint.strokeWidth = w * 0.03f
+        paint.color = Palette.withAlpha(Palette.ACCENT, alpha)
+        c.drawRoundRect(rect, radius, radius, paint)
+        // arrows out to both sides: the whole row goes
+        paint.style = Paint.Style.FILL
+        paint.color = Palette.withAlpha(0xFFFFFFFF.toInt(), alpha)
+        val cy = top + h * 0.5f
+        for (side in intArrayOf(-1, 1)) {
+            val x = left + w * 0.5f + side * w * 0.40f
+            scaled.rewind()
+            scaled.moveTo(x + side * w * 0.09f, cy)
+            scaled.lineTo(x - side * w * 0.03f, cy - h * 0.10f)
+            scaled.lineTo(x - side * w * 0.03f, cy + h * 0.10f)
+            scaled.close()
+            c.drawPath(scaled, paint)
         }
     }
 }
