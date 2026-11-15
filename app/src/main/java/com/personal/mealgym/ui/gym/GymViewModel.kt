@@ -74,6 +74,12 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
             val dayExercises = exercises
                 .filter { it.workoutDayId == plan.activeDay?.id }
                 .sortedWith(compareBy<Exercise> { it.groupLabel }.thenBy { it.position })
+            // Every rep range each move has across this person's days, by lower-case name (swaps included).
+            val dayIds = plan.days.map { it.id }.toSet()
+            val ranges = HashMap<String, MutableSet<String>>()
+            exercises.filter { it.workoutDayId in dayIds }.forEach { e ->
+                (e.alternatives + e.name).forEach { ranges.getOrPut(it.lowercase()) { mutableSetOf() } += e.repsText.trim() }
+            }
             val groups = dayExercises.groupBy { it.groupLabel }.map { (label, list) ->
                 GroupUi(
                     label = label,
@@ -83,7 +89,11 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
                         val checked = draft?.checkedSets?.get(e.id).orEmpty()
                         val weight = draft?.weights?.get(e.id).orEmpty()
                         val reps = draft?.reps?.get(e.id).orEmpty()
-                        val last = Progression.lastLogged(lifts[name.lowercase()])
+                        val (last, comparable) = Progression.basisFor(
+                            lifts[name.lowercase()],
+                            plan.activeDay?.id,
+                            sameRangeEverywhere = (ranges[name.lowercase()]?.size ?: 0) <= 1,
+                        )
                         val today = Progression.describe(loggedToday(draft, e.id, checked))
                         ExerciseUi(
                             exercise = e,
@@ -95,7 +105,7 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
                             lastTime = last?.let { Progression.describe(it.sets) }?.let { "Last time: $it" },
                             demo = c.demos.demoFor(name),
                             today = today,
-                            suggestion = if (suggest && last != null) Progression.next(last, e.repsText, unit) else null,
+                            suggestion = if (suggest && comparable && last != null) Progression.next(last, e.repsText, unit) else null,
                             hasHistory = last != null,
                             showTickHint = today == null && (weight.isNotBlank() || reps.isNotBlank()) && checked.size < e.setCount,
                         )
@@ -118,7 +128,24 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
     /** The sets ticked today that had a weight or reps in the boxes at the time, in order. */
     private fun loggedToday(draft: WorkoutDraft?, exerciseId: Long, checked: Set<Int>): List<LiftSet> {
         val values = draft?.setValues?.get(exerciseId).orEmpty()
-        return checked.sorted().mapNotNull { values[it] }.map { LiftSet(it.weight.toDoubleOrNull(), it.reps.toIntOrNull()) }
+        return checked.sorted().mapNotNull { values[it] }.map { LiftSet(weightOf(it.weight), it.reps.toIntOrNull()) }
+    }
+
+    /** A weight of nothing is a bodyweight set, not a lift of zero. */
+    private fun weightOf(text: String?): Double? = text?.toDoubleOrNull()?.takeIf { it > 0 }
+
+    /**
+     * Once every set is ticked there is no "next set" for the boxes to describe, so a change to
+     * them is a correction to the last one: it follows the boxes until the workout is saved.
+     */
+    private fun WorkoutDraft.correctingLastSet(exerciseId: Long): WorkoutDraft {
+        val exercise = ui.value?.groups?.flatMap { it.exercises }?.firstOrNull { it.exercise.id == exerciseId }?.exercise ?: return this
+        val ticked = checkedSets[exerciseId].orEmpty()
+        if (ticked.size < exercise.setCount) return this
+        val last = ticked.max()
+        val now = LoggedValue(weights[exerciseId].orEmpty(), reps[exerciseId].orEmpty())
+        val values = setValues[exerciseId].orEmpty()
+        return copy(setValues = setValues + (exerciseId to if (now.isBlank) values - last else values + (last to now)))
     }
 
     /**
@@ -167,13 +194,13 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
     fun setWeight(exerciseId: Long, text: String) {
         val clean = text.filter { it.isDigit() || it == '.' }.take(6)
         if (!ensureDraft()) return
-        c.workoutDraft.update { d -> d.copy(weights = d.weights + (exerciseId to clean)) }
+        c.workoutDraft.update { d -> d.copy(weights = d.weights + (exerciseId to clean)).correctingLastSet(exerciseId) }
     }
 
     fun setReps(exerciseId: Long, text: String) {
         val clean = text.filter { it.isDigit() }.take(3)
         if (!ensureDraft()) return
-        c.workoutDraft.update { d -> d.copy(reps = d.reps + (exerciseId to clean)) }
+        c.workoutDraft.update { d -> d.copy(reps = d.reps + (exerciseId to clean)).correctingLastSet(exerciseId) }
     }
 
     fun chooseDay(dayId: Long) {
@@ -215,18 +242,28 @@ class GymViewModel(private val c: AppContainer) : MessageViewModel() {
 
     /**
      * What gets saved for one exercise: a row per ticked set, each with the weight and reps it
-     * was ticked at. If none was ticked with the boxes filled in, the boxes are kept as one
-     * note for the exercise, as they always were.
+     * was ticked at. A set ticked with only one of the two written down takes the other from
+     * the boxes as they are at the end (the weight was typed, the sets ticked, the reps added
+     * after). If no set was ticked with anything written down, the boxes are kept as one note
+     * for the exercise, as they always were.
      */
     private fun logsFor(e: ExerciseUi, draft: WorkoutDraft?): List<SetLog> {
         val values = draft?.setValues?.get(e.exercise.id).orEmpty()
+        val boxWeight = weightOf(e.weight)
+        val boxReps = e.reps.toIntOrNull()
         fun row(weight: Double?, reps: Int?, setIndex: Int?) =
             SetLog(sessionId = 0, exerciseId = e.exercise.id, exerciseNameUsed = e.displayName, weight = weight, reps = reps, setIndex = setIndex)
-        val sets = e.checkedSets.sorted().map { i -> row(values[i]?.weight?.toDoubleOrNull(), values[i]?.reps?.toIntOrNull(), i) }
+        val sets = e.checkedSets.sorted().map { i ->
+            val weight = weightOf(values[i]?.weight)
+            val reps = values[i]?.reps?.toIntOrNull()
+            when {
+                weight != null && reps == null -> row(weight, boxReps, i)
+                weight == null && reps != null && values[i]?.weight.isNullOrBlank() -> row(boxWeight, reps, i)
+                else -> row(weight, reps, i)
+            }
+        }
         if (sets.any { it.weight != null || it.reps != null }) return sets
-        val weight = e.weight.toDoubleOrNull()
-        val reps = e.reps.toIntOrNull()
-        return sets + listOfNotNull(if (weight == null && reps == null) null else row(weight, reps, null))
+        return sets + listOfNotNull(if (boxWeight == null && boxReps == null) null else row(boxWeight, boxReps, null))
     }
 
     fun frame(path: String) = c.demos.frame(path)

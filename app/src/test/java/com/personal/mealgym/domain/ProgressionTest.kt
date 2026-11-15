@@ -61,6 +61,42 @@ class ProgressionTest {
     fun judgesByTheHeaviestWeightOfTheDay() {
         // A lighter warm-up set at 12 reps doesn't count as "ready for more".
         assertEquals("135 x 9", next(day(95.0 to 12, 135.0 to 8, 135.0 to 8))!!.text)
+        // With lighter back-off sets after it, the reason doesn't claim "every set".
+        val topSet = next(day(135.0 to 12, 115.0 to 10, 115.0 to 9))!!
+        assertEquals("140 x 8", topSet.text)
+        assertEquals("You hit 12 at your top weight. Time to add weight.", topSet.reason)
+        assertEquals("You hit 12 on every set. Time to add weight.", next(day(135.0 to 12, 135.0 to 12))!!.reason)
+    }
+
+    @Test
+    fun aSmallWeightIsNeverMadeHeavierOrZeroByGoingLighter() {
+        // 2.5 lb with reps well short: there's nothing lighter to go to.
+        val tiny = next(day(2.5 to 4))!!
+        assertEquals("2.5 x 8", tiny.text)
+        assertTrue(tiny.reason, tiny.reason.contains("Stay here"))
+        assertEquals("2 x 8", next(day(2.0 to 4))!!.text)
+        assertEquals("1 x 8", next(day(1.0 to 3), unit = WeightUnit.KG)!!.text)
+        // Where there is something lighter, it's suggested.
+        assertEquals("5 x 8", next(day(7.5 to 4))!!.text)
+    }
+
+    @Test
+    fun anExerciseOnTwoDaysIsJudgedOnItsOwnDay() {
+        // Hip thrusts: 8 to 12 on day 1, 12 to 15 on day 3.
+        val heavy = day(135.0 to 10, 135.0 to 9, date = monday, id = 1).copy(workoutDayId = 1)
+        val light = day(115.0 to 15, 115.0 to 15, date = monday.plusDays(2), id = 2).copy(workoutDayId = 3)
+        val history = listOf(heavy, light)
+        // On day 1 the heavy day is what counts, though the light day is more recent.
+        assertEquals(heavy to true, Progression.basisFor(history, 1, sameRangeEverywhere = false))
+        assertEquals("135 x 10", Progression.next(Progression.basisFor(history, 1, false).first!!, "8–12", WeightUnit.LB)!!.text)
+        assertEquals(light to true, Progression.basisFor(history, 3, sameRangeEverywhere = false))
+        // Never logged on day 2: the latest is shown as "last time", but it isn't a basis for a
+        // target unless the exercise has the same rep range wherever it appears.
+        assertEquals(light to false, Progression.basisFor(history, 2, sameRangeEverywhere = false))
+        assertEquals(light to true, Progression.basisFor(history, 2, sameRangeEverywhere = true))
+        // A workout whose day was since deleted has no day to match.
+        assertEquals(heavy.copy(workoutDayId = null) to true, Progression.basisFor(listOf(heavy.copy(workoutDayId = null)), null, true))
+        assertEquals(null to true, Progression.basisFor(emptyList(), 1, true))
     }
 
     @Test
@@ -132,6 +168,9 @@ class ProgressionTest {
         assertTrue(history.getValue("plank").single().sets.isEmpty())
         assertNull(Progression.lastLogged(history["plank"]))
         assertEquals(monday.plusDays(3), Progression.lastLogged(press)!!.date)
+        // Each workout remembers which day of the plan it was.
+        val onDays = Progression.history(listOf(row(7, 9, "Hip thrust", 135.0, 10, 0, monday).copy(workoutDayId = 4)))
+        assertEquals(4L, onDays.getValue("hip thrust").single().workoutDayId)
     }
 
     @Test

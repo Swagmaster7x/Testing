@@ -398,7 +398,8 @@ private fun CopyDialog(
             Column {
                 Text(target.recipe?.name.orEmpty(), style = MaterialTheme.typography.bodyMedium)
                 days.filter { it.date != target.date }.forEach { day ->
-                    val current = day.slots[target.slot]
+                    // A recipe, or a slot planned as eating out, leftovers or a skip: either is replaced.
+                    val current = day.slots[target.slot]?.name ?: day.offPlan[target.slot]?.displayText()
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -410,7 +411,7 @@ private fun CopyDialog(
                             Text(Dates.shortLabel(day.date))
                             if (current != null) {
                                 Text(
-                                    "Replaces ${current.name}",
+                                    "Replaces $current",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,

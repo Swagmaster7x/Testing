@@ -118,6 +118,18 @@ class CupboardLoopTest {
         tap("Chicken thighs")
         compose.waitUntil(10_000) { "chicken thigh" in cupboard() }
 
+        // Leaving the list and coming back, an untick the same day still takes it back out...
+        compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitForText("Shopping list for this week")
+        tap("Shopping list for this week")
+        waitForText("Week of")
+        scrollTo("Chicken thighs")
+        tap("Chicken thighs")
+        compose.waitUntil(10_000) { "chicken thigh" !in cupboard() }
+        // ...and ticking it again puts it back.
+        tap("Chicken thighs")
+        compose.waitUntil(10_000) { "chicken thigh" in cupboard() }
+
         // Ticking and unticking something that was already there leaves it there.
         scrollTo("In your cupboard: check you have enough")
         val rice = runBlocking { container.meals.shoppingWeek(id, week, both = false).first() }.result.sections
@@ -192,6 +204,12 @@ class CupboardLoopTest {
         waitForText("Uses up ")
         assertTrue(shown("Uses up chicken thighs") || shown("Uses up spinach"))
         shot("loop-3-use-up-first")
+        // It's part of keeping the cupboard up to date: switched off, the list is as it always was.
+        runBlocking { container.settings.setCupboardAuto(false) }
+        compose.waitUntil(10_000) { !shown("Use up first") }
+        runBlocking { container.settings.setCupboardAuto(true) }
+        compose.waitForIdle()
+        scrollTo("Use up first")
         // Bought today: nothing has been sitting.
         runBlocking { container.settings.setCupboard(setOf("chicken thigh", "spinach"), mapOf("chicken thigh" to today.toEpochDay(), "spinach" to today.toEpochDay())) }
         compose.waitUntil(10_000) { !shown("Use up first") }

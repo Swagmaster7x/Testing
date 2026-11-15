@@ -78,8 +78,18 @@ class DayTotalsTest {
         assertEquals(0.1, d(2200, 150), 1e-9)
         assertEquals(0.1, d(1800, 150), 1e-9)
         assertEquals(0.05, d(2000, 135), 1e-9)
-        // Days with nothing counted don't pull the score either way.
-        assertEquals(0.1, DayTotals.distance(listOf(DayTotal(1800, 150, 3, 0), DayTotal(0, 0, 0, 2)), guide), 1e-9)
+        // A meal without figures isn't counted as zero calories: two of three meals are judged
+        // against two thirds of the guide, and each uncounted meal costs a little.
+        val twoOfThree = DayTotal(calories = 1333, protein = 100, counted = 2, uncounted = 1)
+        assertEquals(0.1, DayTotals.distance(listOf(twoOfThree), guide), 1e-3)
+        // The same two meals with a third that has figures and fits the guide scores better...
+        assertTrue(d(2000, 150) < DayTotals.distance(listOf(twoOfThree), guide))
+        // ...and a day made only of recipes without figures is never the "perfect" day.
+        val unknown = DayTotal(0, 0, counted = 0, uncounted = 3)
+        assertEquals(0.3, DayTotals.distance(listOf(unknown), guide), 1e-9)
+        assertTrue(DayTotals.distance(listOf(unknown), guide) > d(2100, 150))
+        // A day with nothing planned costs nothing.
+        assertEquals(0.1, DayTotals.distance(listOf(DayTotal(1800, 150, 3, 0), DayTotal(0, 0, 0, 0)), guide), 1e-9)
         assertEquals("about 2,000 cal and 150 g protein a day", DayTotals.guideText(guide))
     }
 

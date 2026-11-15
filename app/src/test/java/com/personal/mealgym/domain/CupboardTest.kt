@@ -90,13 +90,14 @@ class CupboardTest {
         val items = Cupboard.catalog(bowl.second + salmon.second, staples = setOf("soy sauce"))
         val since = mapOf(
             "chicken breast" to today - 5, // fresh, in a while
-            "broccoli" to today - 3,       // fresh, just long enough
+            "scallion" to today - 3,       // fresh, just long enough
             "salmon" to today - 1,         // fresh, but only yesterday
+            "broccoli" to today - 9,       // frozen: it keeps
             "rice" to today - 30,          // keeps: never "use it up"
-            // scallion and lemon were ticked before dates were kept
+            // lemon was ticked before dates were kept
         )
         val aging = Cupboard.aging(items, cupboard, since, today)
-        assertEquals(listOf("chicken breast" to 5, "broccoli" to 3), aging.map { it.key to it.days })
+        assertEquals(listOf("chicken breast" to 5, "scallion" to 3), aging.map { it.key to it.days })
         assertEquals("Chicken breast", aging.first().name)
         // Something no longer in the cupboard isn't aging, whatever its old date says.
         assertTrue(Cupboard.aging(items, cupboard - "chicken breast", since, today).none { it.key == "chicken breast" })
@@ -106,8 +107,39 @@ class CupboardTest {
         val use = Cupboard.useUp(matches, aging)
         // Only the bowl uses anything that's been sitting; the salmon dinner uses none of it.
         assertEquals(listOf("Chicken rice bowl"), use.map { it.match.recipe.name })
-        assertEquals(listOf("chicken breast", "broccoli"), use.single().items.map { it.key })
+        assertEquals(listOf("chicken breast", "scallion"), use.single().items.map { it.key })
         assertTrue(Cupboard.useUp(matches, emptyList()).isEmpty())
+    }
+
+    @Test
+    fun frozenAndTinnedFoodKeepsEvenInAFreshSection() {
+        val stew = listOf(
+            ing("frozen peas", StoreSection.PRODUCE_FROZEN),
+            ing("tuna in water", StoreSection.PROTEIN),
+            ing("black beans", StoreSection.PROTEIN).copy(unit = "can"),
+            ing("carrots", StoreSection.PRODUCE_FROZEN),
+            ing("frozen broccoli", StoreSection.PRODUCE_FROZEN),
+            ing("broccoli", StoreSection.PRODUCE_FROZEN),
+            ing("rice", StoreSection.CARBS),
+        )
+        val items = Cupboard.catalog(stew, emptySet()).associateBy { it.key }
+        assertTrue(items.getValue("pea").keeps)
+        assertTrue(items.getValue("tuna").keeps)
+        assertTrue(items.getValue("black bean").keeps)
+        assertFalse(items.getValue("carrot").keeps)
+        // One thing to tick for fresh and frozen broccoli: it might be the fresh one.
+        assertFalse(items.getValue("broccoli").keeps)
+        assertTrue(items.getValue("rice").keeps)
+
+        val cupboard = items.keys
+        val since = cupboard.associateWith { 100L }
+        // Only what can go off is "in a while".
+        assertEquals(listOf("broccoli", "carrot"), Cupboard.aging(items.values.toList(), cupboard, since, today = 110).map { it.key })
+        // And only that starts ticked as used up when the recipe is cooked.
+        assertEquals(
+            mapOf("pea" to false, "tuna" to false, "black bean" to false, "carrot" to true, "broccoli" to false, "rice" to false),
+            Cupboard.usedBy(stew, cupboard, emptySet()).associate { it.key to Cupboard.isFresh(it) },
+        )
     }
 
     @Test

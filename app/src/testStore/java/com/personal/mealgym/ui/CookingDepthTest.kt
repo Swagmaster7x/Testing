@@ -128,9 +128,10 @@ class CookingDepthTest {
         // The running timer follows from step to step.
         assertTrue(shown("Step 2 · Lemon-herb chicken thighs"))
         tap("Next")
-        waitForText("Start 20 min timer (up to 25)")
-        tap("Start 20 min timer (up to 25)")
+        waitForText("Start 20 min timer (up to 25 min)")
+        tap("Start 20 min timer (up to 25 min)")
         compose.waitUntil(10_000) { container.cookTimers.timers.value.size == 2 }
+        waitForText("Timers run while the app is open.")
         shot("cooking-3-timers")
         // Stopping one leaves the other.
         compose.onAllNodes(hasContentDescription("Stop this timer")).onFirst().performClick()
@@ -176,5 +177,14 @@ class CookingDepthTest {
         compose.waitUntil(10_000) { runBlocking { container.meals.ratings(id).first() }.values.singleOrNull() == CookRating.FINE }
         assertEquals(1, runBlocking { container.meals.cookLogs(id).first() }.size)
         waitForText("Cooked once")
+        // Unpicking the rating and saving takes it back.
+        compose.onAllNodes(hasContentDescription("More")).onFirst().performClick()
+        tap("I cooked this")
+        waitForText("How was it?")
+        tap("It was fine")
+        waitForText("Saving with none picked takes your rating back.")
+        tap("Save")
+        compose.waitUntil(10_000) { runBlocking { container.meals.ratings(id).first() }.isEmpty() }
+        assertEquals(1, runBlocking { container.meals.cookLogs(id).first() }.size)
     }
 }

@@ -322,6 +322,21 @@ class RepositoryTest {
         meals.setExtraServings(TestPeople.SWAG, mon, MealSlot.DINNER, 4.0)
         assertEquals("4 lb", shopping().getValue("chicken thigh").amountText)
         assertEquals(4.0, meals.planForWeek(TestPeople.SWAG, mon).first().single().extraServings, 0.0)
+        // Guests belong to the occasion: changing the dish, or copying another onto the slot, keeps them.
+        meals.setSlot(TestPeople.SWAG, mon, MealSlot.DINNER, recipes.getValue("D1").id)
+        assertEquals(4.0, meals.planForWeek(TestPeople.SWAG, mon).first().single().extraServings, 0.0)
+        meals.setSlot(TestPeople.SWAG, mon.plusDays(1), MealSlot.DINNER, guisado.id)
+        meals.copyTo(TestPeople.SWAG, listOf(mon, mon.plusDays(2)), MealSlot.DINNER, guisado.id)
+        assertEquals(
+            mapOf(mon.toString() to 4.0, mon.plusDays(1).toString() to 0.0, mon.plusDays(2).toString() to 0.0),
+            meals.planForWeek(TestPeople.SWAG, mon).first().associate { it.date to it.extraServings },
+        )
+        meals.clearSlot(TestPeople.SWAG, mon.plusDays(1), MealSlot.DINNER)
+        meals.clearSlot(TestPeople.SWAG, mon.plusDays(2), MealSlot.DINNER)
+        // Clearing the slot and planning it afresh starts from none.
+        meals.clearSlot(TestPeople.SWAG, mon, MealSlot.DINNER)
+        meals.setSlot(TestPeople.SWAG, mon, MealSlot.DINNER, guisado.id)
+        assertEquals(0.0, meals.planForWeek(TestPeople.SWAG, mon).first().single().extraServings, 0.0)
         // Out of range is pulled back in, and copying a week doesn't copy the guests.
         meals.setExtraServings(TestPeople.SWAG, mon, MealSlot.DINNER, 99.0)
         assertEquals(MealRepository.MAX_EXTRA_SERVINGS, meals.planForWeek(TestPeople.SWAG, mon).first().single().extraServings, 0.0)
@@ -347,6 +362,11 @@ class RepositoryTest {
         meals.logCooked(TestPeople.SWAG, tacos.id, mon, null)
         assertEquals(CookRating.FINE, meals.ratings(TestPeople.SWAG).first()[tacos.id])
         assertEquals(1, meals.cookLogs(TestPeople.SWAG).first().count { it.recipeId == tacos.id })
+        // Taking a rating back leaves the recipe unrated, whenever the rating was given; the cooks stay.
+        meals.logCooked(TestPeople.SWAG, guisado.id, mon.plusDays(6), null, takeBackRating = true)
+        assertEquals(mapOf(tacos.id to CookRating.FINE), meals.ratings(TestPeople.SWAG).first())
+        assertEquals(4, meals.cookLogs(TestPeople.SWAG).first().count { it.recipeId == guisado.id })
+        assertEquals(mapOf(tacos.id to CookRating.LOVED), meals.ratings(TestPeople.ASHLEY).first())
     }
 
     @Test

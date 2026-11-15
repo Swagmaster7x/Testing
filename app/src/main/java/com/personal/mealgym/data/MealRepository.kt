@@ -87,7 +87,21 @@ class MealRepository(
     /** A slot holds a recipe or something off the plan (eating out, leftovers, a skip), never both. */
     suspend fun setSlot(profileId: Long, date: LocalDate, slot: MealSlot, recipeId: Long) = db.withTransaction {
         planDao.clearOffPlan(profileId, Dates.iso(date), slot)
-        planDao.put(MealPlanEntry(date = Dates.iso(date), slot = slot, recipeId = recipeId, profileId = profileId))
+        planDao.putAll(keepingGuests(listOf(MealPlanEntry(date = Dates.iso(date), slot = slot, recipeId = recipeId, profileId = profileId))))
+    }
+
+    /**
+     * Guests belong to the occasion, not the dish: changing what's for Saturday dinner (or
+     * copying something onto it) keeps the extra servings that slot already had.
+     */
+    private suspend fun keepingGuests(entries: List<MealPlanEntry>): List<MealPlanEntry> {
+        if (entries.isEmpty()) return entries
+        val current = entries.groupBy { it.profileId }.flatMap { (profileId, mine) ->
+            planDao.getRange(profileId, mine.minOf { it.date }, mine.maxOf { it.date })
+        }.filter { it.extraServings > 0 }.associateBy { Triple(it.profileId, it.date, it.slot) }
+        return entries.map { e ->
+            current[Triple(e.profileId, e.date, e.slot)]?.takeIf { e.extraServings == 0.0 }?.let { e.copy(extraServings = it.extraServings) } ?: e
+        }
     }
 
     suspend fun clearSlot(profileId: Long, date: LocalDate, slot: MealSlot) = db.withTransaction {
@@ -97,7 +111,7 @@ class MealRepository(
 
     suspend fun copyTo(profileId: Long, dates: Collection<LocalDate>, slot: MealSlot, recipeId: Long) = db.withTransaction {
         dates.forEach { planDao.clearOffPlan(profileId, Dates.iso(it), slot) }
-        planDao.putAll(dates.map { MealPlanEntry(date = Dates.iso(it), slot = slot, recipeId = recipeId, profileId = profileId) })
+        planDao.putAll(keepingGuests(dates.map { MealPlanEntry(date = Dates.iso(it), slot = slot, recipeId = recipeId, profileId = profileId) }))
     }
 
     // Slots planned as eating out, leftovers or a skip. They never reach the shopping list.
@@ -126,9 +140,17 @@ class MealRepository(
 
     /**
      * Notes that a recipe was cooked. Saying so twice on one day is one cook: the second time
-     * only changes the rating, if one is given.
+     * only changes the rating, if one is given. [takeBackRating] is for someone who opened the
+     * sheet with a rating showing and saved it with none: the recipe goes back to unrated.
      */
-    suspend fun logCooked(profileId: Long, recipeId: Long, date: LocalDate, rating: CookRating?) = db.withTransaction {
+    suspend fun logCooked(
+        profileId: Long,
+        recipeId: Long,
+        date: LocalDate,
+        rating: CookRating?,
+        takeBackRating: Boolean = false,
+    ) = db.withTransaction {
+        if (rating == null && takeBackRating) planDao.clearCookRatings(profileId, recipeId)
         val existing = planDao.cookLogOn(profileId, recipeId, Dates.iso(date))
         if (existing == null) {
             planDao.insertCookLog(CookLog(profileId = profileId, recipeId = recipeId, date = Dates.iso(date), rating = rating))
@@ -182,7 +204,7 @@ class MealRepository(
 
     suspend fun putEntries(entries: List<MealPlanEntry>) = db.withTransaction {
         entries.forEach { planDao.clearOffPlan(it.profileId, it.date, it.slot) }
-        planDao.putAll(entries)
+        planDao.putAll(keepingGuests(entries))
     }
 
     fun listKey(profileId: Long, both: Boolean) = if (both) "both" else "p$profileId"

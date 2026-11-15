@@ -84,7 +84,18 @@ fun CookingModeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory
                 modifier = Modifier.fillMaxWidth(),
             )
             // Running timers stay in view on every step, whichever recipe started them.
-            if (timers.isNotEmpty()) TimerStrip(timers, onDismiss = vm::dismissTimer)
+            if (timers.isNotEmpty()) {
+                TimerStrip(timers, onDismiss = vm::dismissTimer)
+                // Unlike the sauna timer, nothing keeps these going once the phone sleeps.
+                if (timers.any { !it.done }) {
+                    Text(
+                        "Timers run while the app is open. This screen keeps the phone awake.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            }
             HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
                 Column(
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),

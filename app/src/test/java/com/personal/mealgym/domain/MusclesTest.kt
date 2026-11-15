@@ -34,6 +34,22 @@ class MusclesTest {
         assertEquals(MuscleGroup.OTHER, Muscles.groupOf("Jump rope"))
     }
 
+    @Test
+    fun namesTypedWithoutHyphensLandInTheSamePlace() {
+        for (name in listOf("Pull-ups", "Pull ups", "Pullups", "Chin ups")) assertEquals(name, MuscleGroup.BACK, Muscles.groupOf(name))
+        for (name in listOf("Push-ups", "Push ups", "Pushups")) assertEquals(name, MuscleGroup.CHEST, Muscles.groupOf(name))
+        assertEquals(MuscleGroup.CORE, Muscles.groupOf("Sit ups"))
+        assertEquals(MuscleGroup.QUADS, Muscles.groupOf("Step ups"))
+        assertEquals(MuscleGroup.SHOULDERS, Muscles.groupOf("Rear delt fly"))
+        assertEquals(MuscleGroup.SHOULDERS, Muscles.groupOf("Reverse fly"))
+        assertEquals(MuscleGroup.SHOULDERS, Muscles.groupOf("Military press"))
+        // A triceps kickback isn't a glute kickback, and a close-grip pulldown is still a pulldown.
+        assertEquals(MuscleGroup.ARMS, Muscles.groupOf("Triceps kickback"))
+        assertEquals(MuscleGroup.GLUTES_HAMS, Muscles.groupOf("Cable glute kickback"))
+        assertEquals(MuscleGroup.BACK, Muscles.groupOf("Close-grip lat pulldown"))
+        assertEquals(MuscleGroup.ARMS, Muscles.groupOf("Close-grip bench press"))
+    }
+
     /** Every exercise and swap the app ships with, in either edition, and everything with form cues. */
     private fun shippedNames(): Set<String> {
         val names = LinkedHashSet<String>()

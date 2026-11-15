@@ -45,6 +45,7 @@ import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.LiftDay
+import com.personal.mealgym.domain.LiftSet
 import com.personal.mealgym.domain.MuscleGroup
 import com.personal.mealgym.domain.Muscles
 import com.personal.mealgym.domain.Progression
@@ -139,17 +140,20 @@ class ExerciseProgressViewModel(c: AppContainer, handle: SavedStateHandle) : Mes
     ) { lifts, s, days, exercises ->
         val history = lifts[name.lowercase()].orEmpty().filter { it.sets.isNotEmpty() }
         val best = Progression.best(history)
-        // The plan's rep range for this move: its own, or the exercise it's a swap for.
+        // The plan's rep range for this move: its own, or the exercise it's a swap for. If it's on
+        // two days with different ranges there is no single "next time", so none is given here;
+        // each day's card on the Gym tab has its own.
         val dayIds = days.map { it.id }.toSet()
-        val planned = exercises.filter { it.workoutDayId in dayIds }.firstOrNull { e ->
-            e.name.equals(name, ignoreCase = true) || e.alternatives.any { it.equals(name, ignoreCase = true) }
-        }
+        val planned = exercises.filter { it.workoutDayId in dayIds }
+            .filter { e -> e.name.equals(name, ignoreCase = true) || e.alternatives.any { it.equals(name, ignoreCase = true) } }
+            .takeIf { matches -> matches.map { it.repsText.trim() }.distinct().size == 1 }
+            ?.first()
         ExerciseProgressUi(
             name = name,
             days = history.reversed(),
             trend = Progression.trend(history),
             bestDay = best?.second,
-            best = best?.let { (set, _) -> Progression.describe(listOf(set)) },
+            best = best?.let { (set, _) -> bestText(set, s.weightUnit) },
             byWeight = (best?.first?.weight ?: 0.0) > 0,
             unit = s.weightUnit,
             next = if (s.suggestLifts && planned != null) history.lastOrNull()?.let { Progression.next(it, planned.repsText, s.weightUnit) } else null,
@@ -270,7 +274,7 @@ fun ExerciseProgressScreen(nav: AppNavigator, vm: ExerciseProgressViewModel = vi
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Best", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            listOfNotNull(state.best?.let { withUnit(it, state) }, state.bestDay?.let(Dates::monthDay)).joinToString(" · "),
+                            listOfNotNull(state.best, state.bestDay?.let(Dates::monthDay)).joinToString(" · "),
                             style = MaterialTheme.typography.headlineSmall,
                         )
                         Text(
@@ -315,7 +319,13 @@ fun ExerciseProgressScreen(nav: AppNavigator, vm: ExerciseProgressViewModel = vi
     }
 }
 
-private fun withUnit(text: String, state: ExerciseProgressUi): String = if (state.byWeight) "$text ${state.unit.label}" else text
+/** "140 lb x 8", "140 lb" or "12 reps": the unit sits with the weight, not after the reps. */
+private fun bestText(set: LiftSet, unit: WeightUnit): String? = when {
+    set.weight != null && set.reps != null -> "${Progression.weightText(set.weight)} ${unit.label} x ${set.reps}"
+    set.weight != null -> "${Progression.weightText(set.weight)} ${unit.label}"
+    set.reps != null -> "${set.reps} reps"
+    else -> null
+}
 
 /**
  * A plain line through one point per workout, spaced by date. The highest and lowest values
@@ -330,7 +340,8 @@ private fun TrendChart(points: List<Pair<LocalDate, Double>>, byWeight: Boolean,
     val span = (high - low).takeIf { it > 0.0 } ?: 1.0
     val first = points.first().first
     val days = (points.last().first.toEpochDay() - first.toEpochDay()).coerceAtLeast(1)
-    fun value(v: Double) = if (byWeight) "${Math.round(v)} ${unit.label}" else "${Math.round(v)} reps"
+    // Half-plate weights (62.5 kg, 137.5 lb) are shown as they are, not rounded up.
+    fun value(v: Double) = if (byWeight) "${Progression.weightText(v)} ${unit.label}" else "${Math.round(v)} reps"
     val summary = "Trend: ${value(points.first().second)} on ${Dates.monthDay(first)}, " +
         "${value(points.last().second)} on ${Dates.monthDay(points.last().first)}. Highest ${value(high)}."
 

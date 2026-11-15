@@ -120,7 +120,8 @@ class CupboardViewModel(private val c: AppContainer) : MessageViewModel() {
         val ingredients = mine.flatMap { RecipeSwaps.ingredientsFor(it.recipe, it.ingredients) }
         val items = Cupboard.catalog(ingredients, staples)
         val matches = Cupboard.match(mine.map { it.recipe to it.ingredients }, cupboard, staples)
-        val aging = Cupboard.aging(items, cupboard, since, today.toEpochDay())
+        // Part of keeping the cupboard up to date: without that switch the list is as it always was.
+        val aging = if (auto) Cupboard.aging(items, cupboard, since, today.toEpochDay()) else emptyList()
         CupboardUi(
             items = items,
             have = cupboard,
@@ -215,7 +216,8 @@ fun CupboardScreen(nav: AppNavigator, vm: CupboardViewModel = viewModel(factory 
                     )
                     SwitchRow(
                         title = "Keep it up to date",
-                        body = "Ticking something off the shopping list puts it here, and cooking a recipe offers to take out what it used up.",
+                        body = "Ticking something off the shopping list puts it here, cooking a recipe offers to take out what it used up, " +
+                            "and the recipes start with what to use up first.",
                         checked = state.auto,
                         onChange = vm::setAuto,
                     )

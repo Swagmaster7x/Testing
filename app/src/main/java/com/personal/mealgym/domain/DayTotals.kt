@@ -58,12 +58,27 @@ object DayTotals {
 
     fun guideText(targets: Targets): String = "about ${"%,d".format(targets.calories)} cal and ${targets.proteinGrams} g protein a day"
 
+    /** What one meal without figures costs a fill, so recipes that can be counted are preferred. */
+    private const val UNCOUNTED_COST = 0.1
+
     /**
      * How far a set of days is from the guide; lower is closer. Calories count in both
      * directions, protein only when it falls short, since the guide's protein is a floor.
+     *
+     * A meal without figures isn't treated as zero calories: the day is judged on the meals that
+     * can be counted, against their share of the guide (two of three meals against two thirds
+     * of it). Each uncounted meal also costs a little, so a day of recipes with no figures
+     * never looks like a perfect one.
      */
-    fun distance(days: Collection<DayTotal>, targets: Targets): Double = days.filter { !it.isEmpty }.sumOf { day ->
-        abs(day.calories - targets.calories).toDouble() / targets.calories +
-            0.5 * max(0, targets.proteinGrams - day.protein).toDouble() / targets.proteinGrams.coerceAtLeast(1)
+    fun distance(days: Collection<DayTotal>, targets: Targets): Double = days.sumOf { day ->
+        val meals = day.counted + day.uncounted
+        val judged = if (day.counted == 0) {
+            0.0
+        } else {
+            val share = day.counted.toDouble() / meals
+            abs(day.calories - targets.calories * share) / targets.calories +
+                0.5 * max(0.0, targets.proteinGrams * share - day.protein) / targets.proteinGrams.coerceAtLeast(1)
+        }
+        judged + UNCOUNTED_COST * day.uncounted
     }
 }

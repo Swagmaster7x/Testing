@@ -240,10 +240,22 @@ private fun EatingOutChooser(
                 items(place.picks, key = { it.name }) { pick ->
                     ListItem(
                         modifier = Modifier.clickable {
-                            onChoose(OffPlanChoice(OffPlanKind.EATING_OUT, "${place.name}: ${pick.name}", place.key, pick.calories, pick.protein))
+                            // A side or one bowl ingredient isn't the whole meal, so it's planned without figures.
+                            val counted = !pick.part
+                            onChoose(
+                                OffPlanChoice(
+                                    OffPlanKind.EATING_OUT, "${place.name}: ${pick.name}", place.key,
+                                    pick.calories.takeIf { counted }, pick.protein.takeIf { counted },
+                                ),
+                            )
                         },
                         headlineContent = { Text(pick.name) },
-                        supportingContent = pick.about?.let { about -> { Text(about) } },
+                        supportingContent = {
+                            Column {
+                                pick.about?.let { Text(it) }
+                                if (pick.part) Text("Part of a meal: not added to the day's total")
+                            }
+                        },
                     )
                 }
                 item {

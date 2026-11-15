@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -142,11 +143,14 @@ class PlanDepthTest {
         waitForText("Just mark it as eating out")
         waitForText("Or pick a place to choose from its better picks")
         tap("Chipotle")
-        waitForText("Something else at Chipotle")
+        waitForText("Figures are approximate and go towards the day's total")
         shot("plan-3-eating-out-picks")
-        tap("Chicken")
-        waitForText("Chipotle: Chicken")
-        waitForText("About 180 cal, 32 g protein")
+        // The bowl is a whole meal, so its rough figures count towards the day.
+        val bowl = "A bowl: chicken, black beans, fajita veggies, salsa, lettuce and half rice"
+        waitForText("Part of a meal: not added to the day's total")
+        tap(bowl)
+        waitForText("Chipotle: $bowl")
+        waitForText("About 460 cal, 43 g protein")
 
         tap("+ Add")
         waitForText("Leftovers")
@@ -158,20 +162,33 @@ class PlanDepthTest {
         compose.waitUntil(10_000) { runBlocking { container.meals.weekOffPlan(id, week) }.size == 3 }
         waitForText("Skipping this meal")
         // Leftovers are planned but have no figures; the skip plans nothing.
-        waitForText("About 180 cal, 32 g protein, plus 1 meal without figures")
+        waitForText("About 460 cal, 43 g protein, plus 1 meal without figures")
         shot("plan-4-off-plan-day")
 
         val planned = runBlocking { container.meals.weekOffPlan(id, week) }.sortedBy { it.slot.ordinal }
         assertEquals(listOf(OffPlanKind.EATING_OUT, OffPlanKind.LEFTOVERS, OffPlanKind.SKIP), planned.map { it.kind })
         assertEquals("chipotle", planned[0].restaurantKey)
-        assertEquals(180, planned[0].calories)
-        assertEquals(32, planned[0].protein)
+        assertEquals(460, planned[0].calories)
+        assertEquals(43, planned[0].protein)
 
         // Tapping it offers the place's page, a change, or clearing it; never "Open recipe".
-        tap("Chipotle: Chicken")
+        tap("Chipotle: $bowl")
         waitForText("See this place's better picks")
         assertTrue(!shown("Open recipe"))
         assertTrue(!shown("Cooking for guests"))
+        // Changing it to one ingredient of a bowl: planned, but not counted as if it were the meal.
+        tap("Change")
+        waitForText("Skip this meal")
+        // The tile behind the picker says "Eating out" too; the chip is the one in the sheet on top.
+        compose.onAllNodesWithText("Eating out").onLast().performClick()
+        waitForText("Just mark it as eating out")
+        tap("Chipotle")
+        waitForText("Figures are approximate and go towards the day's total")
+        tap("Black beans")
+        waitForText("Chipotle: Black beans")
+        compose.waitUntil(10_000) { runBlocking { container.meals.weekOffPlan(id, week) }.any { it.title == "Chipotle: Black beans" && it.calories == null } }
+        tap("Chipotle: Black beans")
+        waitForText("See this place's better picks")
         tap("Clear this slot")
         compose.waitUntil(10_000) { runBlocking { container.meals.weekOffPlan(id, week) }.size == 2 }
 

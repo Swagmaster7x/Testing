@@ -177,8 +177,11 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
 
     /** "I cooked it", with how it went if they said. [onDone] runs once it's noted. */
     fun logCooked(rating: CookRating?, usedUp: Set<String> = emptySet(), onDone: () -> Unit = {}) {
+        // A rating was showing and was deliberately unpicked.
+        val takenBack = rating == null && (state.value as? RecipeState.Loaded)?.ui?.rating != null
         viewModelScope.launch {
-            c.meals.logCooked(profileId, id, c.today.value, rating)
+            // The clock, not the app's "today": nothing on this screen keeps that ticking past midnight.
+            c.meals.logCooked(profileId, id, LocalDate.now(), rating, takeBackRating = takenBack)
             if (usedUp.isNotEmpty()) c.settings.setInCupboard(usedUp, have = false)
             onDone()
         }
@@ -279,13 +282,20 @@ class ShoppingViewModel(private val c: AppContainer) : MessageViewModel() {
             if (!c.settings.cupboardAuto.first()) return@launch
             // "X or Y" lines: whichever is listed first stands for what was bought.
             val key = Cupboard.options(item.name).firstOrNull() ?: return@launch
+            val today = LocalDate.now().toEpochDay()
             if (checked) {
                 if (key !in c.settings.cupboard.first()) {
                     addedHere += key
-                    c.settings.setInCupboard(key, true, c.today.value.toEpochDay())
+                    c.settings.setInCupboard(key, true, today)
                 }
-            } else if (addedHere.remove(key)) {
-                c.settings.setInCupboard(key, false)
+            } else {
+                // Take back what a tick put in: one from this visit, or one dated today (the list was
+                // left and reopened). Not if another ticked line is the same food ("broccoli" and
+                // "frozen broccoli"), and never something that was in the cupboard before today.
+                val stillTicked = week.result.sections.flatMap { it.items }
+                    .any { it.key != item.key && it.key in week.checkedKeys && Cupboard.options(it.name).firstOrNull() == key }
+                val addedToday = c.settings.cupboardSince.first()[key] == today
+                if (!stillTicked && (addedHere.remove(key) || addedToday)) c.settings.setInCupboard(key, false)
             }
         }
     }

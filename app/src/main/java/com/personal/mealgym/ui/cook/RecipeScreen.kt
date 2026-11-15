@@ -418,7 +418,7 @@ fun CookedSheet(
                     CookRating.LOVED -> "Fill my week will pick it more often."
                     CookRating.FINE -> "It stays in the mix as it is."
                     CookRating.NOT_AGAIN -> "Fill my week will stop picking it. You can still plan it yourself."
-                    null -> "Optional. It only steers what Fill my week picks for you."
+                    null -> if (current == null) "Optional. It only steers what Fill my week picks for you." else "Saving with none picked takes your rating back."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

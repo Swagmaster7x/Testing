@@ -43,6 +43,11 @@ data class MenuPick(
     val note: String? = null,
     /** [Avoid] names for the main ingredients we know about. */
     val has: List<String> = emptyList(),
+    /**
+     * One part of a meal, not a meal: a bowl ingredient or a side. Its figures are shown, but
+     * planning a meal as just this doesn't add them to the day as if it were the whole meal.
+     */
+    val part: Boolean = false,
 ) {
     /**
      * Main ingredients only, from our notes and the item's name. Never the restaurant's full

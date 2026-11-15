@@ -20,6 +20,8 @@ data class LiftDay(
     val feeling: Feeling,
     val sets: List<LiftSet>,
     val ticked: Int,
+    /** The workout day it belonged to, when that day still exists. */
+    val workoutDayId: Long? = null,
 )
 
 /** The reps the plan asks for: "8–12" is 8 to 12, "10 each arm" is 10 to 10. */
@@ -129,13 +131,22 @@ object Progression {
 
         if (last.feeling == Feeling.ROUGH) return Suggestion(top, lowest, "Last time was rough. Match it before adding more.")
         if (range == null) return Suggestion(top, lowest + 1, "One more rep than last time.")
+        // Lighter warm-up or back-off sets aren't judged, so the reason only says "every set" when that's true.
+        val oneWeight = sets.all { it.weight == top }
         return when {
             top != null && highest < range.low - 1 -> {
-                val lighter = max(increment(top, unit), top - increment(top, unit))
-                Suggestion(lighter, range.low, "Last time fell short of ${range.low} reps. Go a little lighter.")
+                val lighter = top - increment(top, unit)
+                if (lighter > 0) {
+                    Suggestion(lighter, range.low, "Last time fell short of ${range.low} reps. Go a little lighter.")
+                } else {
+                    Suggestion(top, range.low, "Last time fell short of ${range.low} reps. Stay here and build up to it.")
+                }
             }
-            lowest >= range.high && top != null ->
-                Suggestion(top + increment(top, unit), range.low, "You hit ${range.high} on every set. Time to add weight.")
+            lowest >= range.high && top != null -> Suggestion(
+                top + increment(top, unit),
+                range.low,
+                (if (oneWeight) "You hit ${range.high} on every set." else "You hit ${range.high} at your top weight.") + " Time to add weight.",
+            )
             lowest >= range.high ->
                 Suggestion(null, lowest + 1, "You're past ${range.high} reps. Add weight or a harder version when it feels easy.")
             else -> Suggestion(top, min(range.high, lowest + 1), "Add a rep before adding weight.")
@@ -177,12 +188,26 @@ object Progression {
                     feeling = ordered.first().feeling,
                     sets = ordered.filter { it.weight != null || it.reps != null }.map { LiftSet(it.weight, it.reps) },
                     ticked = ordered.count { it.setIndex != null },
+                    workoutDayId = ordered.first().workoutDayId,
                 )
             }.sortedWith(compareBy<LiftDay> { it.date }.thenBy { it.sessionId })
         }
 
     /** The last workout where something was written down for the exercise. */
     fun lastLogged(days: List<LiftDay>?): LiftDay? = days?.lastOrNull { it.sets.isNotEmpty() }
+
+    /**
+     * The log to go on for an exercise on one workout day. The same exercise can be on two days
+     * with different rep ranges (hip thrusts for 8 to 12 one day and 12 to 15 another), and a
+     * heavy day mustn't be judged against a light day's range. So: the last time it was logged
+     * on [dayId] if there is one; otherwise the last time anywhere, but only as a basis for a
+     * suggestion when [sameRangeEverywhere] (second of the pair).
+     */
+    fun basisFor(days: List<LiftDay>?, dayId: Long?, sameRangeEverywhere: Boolean): Pair<LiftDay?, Boolean> {
+        val here = lastLogged(days?.filter { dayId != null && it.workoutDayId == dayId })
+        if (here != null) return here to true
+        return lastLogged(days) to sameRangeEverywhere
+    }
 
     fun week(weekStart: LocalDate, sessionDates: List<LocalDate>, planned: Int, logged: List<LoggedSet>): WeekSummary {
         val end = weekStart.plusDays(6)

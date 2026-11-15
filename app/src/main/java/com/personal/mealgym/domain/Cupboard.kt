@@ -6,7 +6,13 @@ import com.personal.mealgym.data.db.StoreSection
 import java.util.concurrent.ConcurrentHashMap
 
 /** Something that can be ticked as "in my cupboard". [key] is what's stored. */
-data class CupboardItem(val key: String, val name: String, val section: StoreSection)
+data class CupboardItem(
+    val key: String,
+    val name: String,
+    val section: StoreSection,
+    /** Frozen, tinned or dried: it sits in a "fresh" store section but won't go off in a week. */
+    val keeps: Boolean = false,
+)
 
 /** How well one recipe fits what's in the cupboard. */
 data class CupboardMatch(
@@ -134,7 +140,14 @@ object Cupboard {
                 // Shown as the recipes write it; of "egg" and "eggs", the fuller one reads better in a list.
                 val name = plain(part).replaceFirstChar { it.uppercase() }
                 val known = items[k]
-                if (known == null || name.length > known.name.length) items[k] = CupboardItem(k, name, known?.section ?: ing.storeSection)
+                // "Broccoli" and "frozen broccoli" are one thing to tick; it only counts as keeping if every form does.
+                val keeps = keeps(ing) && (known?.keeps ?: true)
+                items[k] = CupboardItem(
+                    key = k,
+                    name = if (known == null || name.length > known.name.length) name else known.name,
+                    section = known?.section ?: ing.storeSection,
+                    keeps = keeps,
+                )
             }
         }
         return items.values.sortedWith(compareBy<CupboardItem> { ShoppingList.sectionOrder.indexOf(it.section) }.thenBy { it.name })
@@ -142,6 +155,13 @@ object Cupboard {
 
     /** Sections whose food doesn't keep: meat, fish, dairy and fresh produce. */
     private val fresh = setOf(StoreSection.PROTEIN, StoreSection.PRODUCE_FROZEN)
+
+    /** Things in those sections that do keep: the freezer, tins, jars and packets. */
+    private val keeping = Regex("\\b(?:frozen|canned|tinned|dried|jarred|pickled|powder|jerky|whey|shake)\\b|in water|in oil")
+    private val keepingUnits = setOf("can", "cans", "jar", "jars", "tin", "tins")
+
+    private fun keeps(ing: Ingredient): Boolean =
+        ing.storeSection !in fresh || keeping.containsMatchIn(ing.name.lowercase()) || ing.unit?.lowercase()?.trim() in keepingUnits
 
     /** Days before fresh food counts as "been there a while". */
     const val AGING_DAYS = 3
@@ -151,7 +171,7 @@ object Cupboard {
      * with no date (ticked before the app kept one) are left out rather than guessed at.
      */
     fun aging(items: List<CupboardItem>, cupboard: Set<String>, since: Map<String, Long>, today: Long): List<AgingItem> =
-        items.filter { it.key in cupboard && it.section in fresh }
+        items.filter { it.key in cupboard && isFresh(it) }
             .mapNotNull { item -> since[item.key]?.let { AgingItem(item.key, item.name, (today - it).toInt()) } }
             .filter { it.days >= AGING_DAYS }
             .sortedWith(compareByDescending<AgingItem> { it.days }.thenBy { it.name })
@@ -180,11 +200,11 @@ object Cupboard {
     fun usedBy(ingredients: List<Ingredient>, cupboard: Set<String>, staples: Set<String>): List<CupboardItem> =
         ingredients.filterNot { ShoppingList.isAlwaysHave(it.name, staples) }.mapNotNull { ing ->
             val part = parts(ing.name).firstOrNull { key(it) in cupboard } ?: return@mapNotNull null
-            CupboardItem(key(part), plain(part).replaceFirstChar { it.uppercase() }, ing.storeSection)
+            CupboardItem(key(part), plain(part).replaceFirstChar { it.uppercase() }, ing.storeSection, keeps(ing))
         }.distinctBy { it.key }
 
-    /** Whether something is fresh enough to assume it's used up when cooked. */
-    fun isFresh(item: CupboardItem): Boolean = item.section in fresh
+    /** Whether something is fresh enough to go off, and so to assume it's used up when cooked. */
+    fun isFresh(item: CupboardItem): Boolean = item.section in fresh && !item.keeps
 
     /**
      * Recipes ranked by how much of each is already in the cupboard: ready-to-cook first, then

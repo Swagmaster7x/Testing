@@ -300,6 +300,8 @@ data class LoggedSet(
     val setIndex: Int?,
     val date: String,
     val feeling: Feeling,
+    /** The workout day it was done on; the same exercise can sit on two days with different rep ranges. */
+    val workoutDayId: Long? = null,
 )
 
 @Serializable

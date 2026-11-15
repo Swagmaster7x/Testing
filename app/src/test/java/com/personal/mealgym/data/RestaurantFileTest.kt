@@ -67,6 +67,21 @@ class RestaurantFileTest {
     }
 
     @Test
+    fun sidesAndBowlIngredientsAreMarkedAsPartOfAMeal() {
+        val chipotle = places.single { it.key == "chipotle" }
+        // Sold by the ingredient: each one is a part, and there's a whole bowl to pick instead.
+        assertEquals(listOf(false, true, true, true, true, true, true), chipotle.picks.map { it.part })
+        val bowl = chipotle.picks.first()
+        assertEquals(460 to 43, bowl.calories to bowl.protein)
+        // Nothing marked as a whole meal is too small to be one.
+        for (p in places) for (pick in p.picks.filter { !it.part && it.calories != null }) {
+            assertTrue("${p.name}: ${pick.name}", pick.calories!! >= 100)
+        }
+        // Every place has at least one thing that counts as a meal.
+        for (p in places) assertTrue(p.name, p.picks.any { !it.part })
+    }
+
+    @Test
     fun flagsAreRealAvoidNames() {
         val names = Avoid.entries.map { it.name }.toSet()
         for (p in places) for (pick in p.picks) {

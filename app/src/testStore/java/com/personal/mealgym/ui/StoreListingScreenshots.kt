@@ -85,14 +85,16 @@ class StoreListingScreenshots {
             // day today's screenshot lands on shows "Last time" and what to try next.
             val days = container.db.workoutDao().getDays(alex)
             val exercises = container.db.workoutDao().allExercises()
-            val logs = days.mapNotNull { day ->
-                exercises.filter { it.workoutDayId == day.id }.minWithOrNull(compareBy<Exercise> { it.groupLabel }.thenBy { it.position })
-            }.flatMap { first ->
-                val top = Progression.repRange(first.repsText)?.high ?: 10
-                (0 until 3).map { set -> SetLog(sessionId = 0, exerciseId = null, exerciseNameUsed = first.name, weight = 135.0, reps = top, setIndex = set) }
+            // One workout per day of the plan, in order and ending on the last, so the cycle is back
+            // where a new person starts. Each lift is judged on its own day's history.
+            days.sortedBy { it.dayOrder }.forEachIndexed { i, day ->
+                val first = exercises.filter { it.workoutDayId == day.id }.minWithOrNull(compareBy<Exercise> { it.groupLabel }.thenBy { it.position })
+                val top = first?.let { Progression.repRange(it.repsText)?.high } ?: 10
+                val logs = (0 until 3).map { set ->
+                    SetLog(sessionId = 0, exerciseId = null, exerciseNameUsed = first?.name ?: "Warm-up", weight = 135.0, reps = top, setIndex = set)
+                }
+                container.gym.saveSession(alex, today.minusDays(14L - i), day, Feeling.GREAT, null, logs)
             }
-            // Filed under the last day of the cycle, so today's workout is unchanged by it.
-            container.gym.saveSession(alex, today.minusDays(7), days.maxBy { it.dayOrder }, Feeling.GREAT, null, logs)
         }
     }
 

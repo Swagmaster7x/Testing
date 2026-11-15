@@ -174,6 +174,9 @@ interface PlanDao {
     @Query("UPDATE CookLog SET rating = :rating WHERE id = :id")
     suspend fun setCookRating(id: Long, rating: CookRating?)
 
+    @Query("UPDATE CookLog SET rating = NULL WHERE profileId = :profileId AND recipeId = :recipeId")
+    suspend fun clearCookRatings(profileId: Long, recipeId: Long)
+
     @Query("SELECT * FROM CookLog WHERE profileId = :profileId ORDER BY date DESC, id DESC")
     fun observeCookLogs(profileId: Long): Flow<List<CookLog>>
 
@@ -245,7 +248,7 @@ interface WorkoutDao {
 
     /** Every logged set on one side with its workout's date, oldest first. */
     @Query(
-        "SELECT s.id, s.sessionId, s.exerciseNameUsed, s.weight, s.reps, s.setIndex, w.date, w.feeling " +
+        "SELECT s.id, s.sessionId, s.exerciseNameUsed, s.weight, s.reps, s.setIndex, w.date, w.feeling, w.workoutDayId " +
             "FROM SetLog s JOIN WorkoutSession w ON w.id = s.sessionId " +
             "WHERE s.profileId = :profileId ORDER BY w.date, s.sessionId, s.id",
     )

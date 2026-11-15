@@ -153,44 +153,58 @@
    "search": "Chipotle nutrition",
    "picks": [
     {
+     "name": "A bowl: chicken, black beans, fajita veggies, salsa, lettuce and half rice",
+     "about": "about 460 cal, 43 g protein",
+     "note": "A full meal built from the parts below.",
+     "has": [
+      "POULTRY"
+     ]
+    },
+    {
      "name": "Chicken",
      "about": "about 180 cal, 32 g protein a serving",
      "note": "The best protein for the calories on the line.",
      "has": [
       "POULTRY"
-     ]
+     ],
+     "part": true
     },
     {
      "name": "Steak",
      "about": "about 150 cal, 21 g protein a serving",
      "has": [
       "BEEF"
-     ]
+     ],
+     "part": true
     },
     {
      "name": "Sofritas (braised tofu)",
      "about": "about 150 cal, 8 g protein a serving",
      "has": [
       "SOY"
-     ]
+     ],
+     "part": true
     },
     {
      "name": "Black beans",
      "about": "about 130 cal, 8 g protein a serving",
      "note": "Fiber and protein together.",
-     "has": []
+     "has": [],
+     "part": true
     },
     {
      "name": "Fajita veggies",
      "about": "about 20 cal a serving",
      "note": "Always worth adding.",
-     "has": []
+     "has": [],
+     "part": true
     },
     {
      "name": "Brown rice",
      "about": "about 210 cal, 4 g protein a serving",
      "note": "Ask for half if you want room for beans.",
-     "has": []
+     "has": [],
+     "part": true
     }
    ],
    "tips": [
@@ -346,7 +360,8 @@
      "name": "Plain baked potato",
      "about": "about 270 cal, 7 g protein",
      "note": "A far better side than fries. Go easy on the toppings.",
-     "has": []
+     "has": [],
+     "part": true
     }
    ],
    "tips": [
@@ -532,7 +547,8 @@
      "has": [
       "SOY",
       "GLUTEN"
-     ]
+     ],
+     "part": true
     }
    ],
    "tips": [
@@ -593,7 +609,8 @@
     {
      "name": "Green beans, as your side",
      "note": "The lightest side on the menu.",
-     "has": []
+     "has": [],
+     "part": true
     }
    ],
    "tips": [
@@ -635,7 +652,8 @@
      "has": [
       "PORK"
      ],
-     "note": "Cooked with pork for flavor."
+     "note": "Cooked with pork for flavor.",
+     "part": true
     },
     {
      "name": "Green Beans, regular",
@@ -644,7 +662,8 @@
       "PORK",
       "POULTRY"
      ],
-     "note": "Cooked with meat for flavor."
+     "note": "Cooked with meat for flavor.",
+     "part": true
     }
    ],
    "tips": [

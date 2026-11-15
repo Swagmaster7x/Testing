@@ -54,8 +54,25 @@ class StepTimersTest {
         assertEquals("1 hr", StepTime(3600).label)
         assertEquals("1 hr 30 min", StepTime(5400).label)
         assertEquals("15 min timer", StepTime(900).buttonText)
-        assertEquals("20 min timer (up to 25)", StepTime(1200, 1500).buttonText)
-        assertEquals("30 sec timer (up to 45)", StepTime(30, 45).buttonText)
+        assertEquals("20 min timer (up to 25 min)", StepTime(1200, 1500).buttonText)
+        assertEquals("30 sec timer (up to 45 sec)", StepTime(30, 45).buttonText)
+        // A range that crosses into the next unit still reads right.
+        assertEquals("1 hr timer (up to 1 hr 15 min)", StepTimers.find("Simmer for 60 to 75 minutes.").single().buttonText)
+        assertEquals("45 sec timer (up to 1 min 30 sec)", StepTimers.find("Warm for 45 to 90 seconds.").single().buttonText)
+    }
+
+    @Test
+    fun timesWrittenOtherWaysAreReadWhole() {
+        // Hours and minutes together are one time, not two.
+        assertEquals(listOf(5400 to null), times("Bake for 1 hour 30 minutes."))
+        assertEquals(listOf(4500 to null), times("Roast for 1 hour and 15 minutes."))
+        // Fractions and decimals aren't read as their last digit.
+        assertEquals(listOf(5400 to null), times("Simmer for 1 1/2 hours."))
+        assertEquals(listOf(1800 to null), times("Rest for 1/2 hour."))
+        assertEquals(listOf(150 to null), times("Cook 2.5 minutes a side."))
+        assertEquals("2 min 30 sec", StepTime(150).label)
+        // A fraction that belongs to an amount, not the time.
+        assertEquals(listOf(300 to null), times("Add 1/2 cup of stock and cook 5 minutes."))
     }
 
     @Test
