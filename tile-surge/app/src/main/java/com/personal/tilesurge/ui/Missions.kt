@@ -19,6 +19,8 @@ class Run(
     val stageCleared: Boolean = false,
     val puzzleSolved: Boolean = false,
     val versusWon: Boolean = false,
+    /** The rest of a game that was carried on after a continue: it is not a new game. */
+    val carriedOn: Boolean = false,
 )
 
 /** No Android code here, so the plain unit tests can check it. */
@@ -60,14 +62,17 @@ object Missions {
             MissionKind.PUZZLES -> before + (if (run.puzzleSolved) 1 else 0)
             MissionKind.TIMED_SCORE -> if (run.timed) maxOf(before, run.score) else before
             MissionKind.BLOCKS -> before + run.blocks
-            MissionKind.GAMES -> before + 1
+            MissionKind.GAMES -> before + (if (run.carriedOn) 0 else 1)
         }
         return minOf(now, m.target)
     }
 
     /** What the shop charges. The first of each is free. */
-    val THEME_PRICES = intArrayOf(0, 150, 300, 300)
-    val BACKDROP_PRICES = intArrayOf(0, 100, 100, 100)
+    val THEME_PRICES = intArrayOf(0, 150, 300, 300, 450, 600)
+    val BACKDROP_PRICES = intArrayOf(0, 100, 100, 100, 200, 200)
     const val COINS_PER_STAR = 5
     const val COINS_PER_PUZZLE = 10
+
+    /** Carrying on once after the stack has reached the top, in Infinite. */
+    const val CONTINUE_PRICE = 100
 }

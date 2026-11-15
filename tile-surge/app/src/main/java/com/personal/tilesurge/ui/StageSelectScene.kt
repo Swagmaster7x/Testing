@@ -78,7 +78,7 @@ class StageSelectScene(app: App, private val puzzles: Boolean = false) : Scene(a
         val cx = safe.centerX()
         ui.text(c, if (puzzles) "PUZZLE" else "STAGE CLEAR", cx, titleY, 26f * u, Palette.TEXT)
         val about = if (puzzles) {
-            "The board does not rise. Clear every tile\nin the moves you are given."
+            "The board does not rise. Clear every tile in the\nmoves given. From 31 on: ice and surge tiles."
         } else {
             "Most stages: clear every tile above the line.\nOthers ask for blockers, chains, or holding out."
         }

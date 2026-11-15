@@ -13,12 +13,14 @@ import com.personal.tilesurge.R
 /** The game's colours. */
 object Palette {
     /** The backdrops the shop sells: top and bottom colour of each. */
-    val BACKDROP_NAMES = arrayOf("Indigo", "Ocean", "Forest", "Ember")
+    val BACKDROP_NAMES = arrayOf("Indigo", "Ocean", "Forest", "Ember", "Midnight", "Plum")
     private val BACKDROPS = arrayOf(
         intArrayOf(0xFF1D1846.toInt(), 0xFF0C0A20.toInt()),
         intArrayOf(0xFF0F3552.toInt(), 0xFF06131F.toInt()),
         intArrayOf(0xFF153D2E.toInt(), 0xFF07140F.toInt()),
         intArrayOf(0xFF4A1D2A.toInt(), 0xFF170810.toInt()),
+        intArrayOf(0xFF14161F.toInt(), 0xFF040407.toInt()),
+        intArrayOf(0xFF3D1B52.toInt(), 0xFF140820.toInt()),
     )
     var backdrop = 0
         set(v) {

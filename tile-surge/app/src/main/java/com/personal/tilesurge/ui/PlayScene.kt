@@ -84,6 +84,17 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     var coinsEarned = 0
         private set
 
+    /** Missions this round finished, for the result panel. */
+    var missionsDone: List<String> = emptyList()
+        private set
+
+    /** Infinite: the one continue has been bought, and what the game had come to by then (already counted). */
+    private var continued = false
+    private var countedTiles = 0
+    private var countedBlocks = 0
+    private var countedSteps = 0
+    private var countedCoins = 0
+
     /** The stage's goal, if this is a stage. */
     private val stageDef = (setup as? Setup.Stage)?.let { Stages.get(it.number) }
 
@@ -165,9 +176,11 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     internal val nextButton = Button("NEXT STAGE", ButtonStyle.PRIMARY) { nextStage() }
     internal val againButton = Button("PLAY AGAIN") { if (setup is Setup.Lesson) app.go(HowToScene(app)) else restart() }
     internal val menuButton = Button("MENU") { quit() }
+    internal val continueButton = Button("CONTINUE", ButtonStyle.SELECTED) { carryOn() }
+        .apply { note = "${Missions.CONTINUE_PRICE} coins" }
 
     init {
-        buttons += listOf(pauseButton, resumeButton, restartButton, quitButton, nextButton, againButton, menuButton)
+        buttons += listOf(pauseButton, resumeButton, restartButton, quitButton, nextButton, continueButton, againButton, menuButton)
         startRival()
         // a game picked up again waits on its pause panel until the player is ready
         showPanel(if (resumed != null) Panel.PAUSED else Panel.NONE)
@@ -191,11 +204,12 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         val s = setup as? Setup.Versus ?: return
         val g = Game.infinite(Difficulty.NORMAL, VERSUS_LEVEL, game.seed + 1).also { it.selfBlocks = false }
         rival = g
-        bot = Bot(g, when (s.difficulty) {
-            Difficulty.EASY -> 60
-            Difficulty.NORMAL -> 34
-            Difficulty.HARD -> 18
-        })
+        // Easy dawdles and lets turns go by; Hard is quick and goes looking for chains
+        bot = when (s.difficulty) {
+            Difficulty.EASY -> Bot(g, 60, slip = 25)
+            Difficulty.NORMAL -> Bot(g, 34)
+            Difficulty.HARD -> Bot(g, 20, chains = true)
+        }
         sent = 0
     }
 
@@ -337,10 +351,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         val gap = 10f * u
         val shown = when (panel) {
             Panel.PAUSED -> listOf(resumeButton, restartButton, quitButton)
-            Panel.RESULT -> listOf(nextButton, againButton, menuButton).filter { it.visible }
+            Panel.RESULT -> listOf(nextButton, continueButton, againButton, menuButton).filter { it.visible }
             Panel.NONE -> emptyList()
         }
-        val head = if (panel == Panel.RESULT) 196f * u + (if (coinsEarned > 0) 20f * u else 0f) else 64f * u
+        val head = if (panel == Panel.RESULT) 196f * u + (if (coinsEarned > 0) 20f * u else 0f) + (if (missionsDone.isNotEmpty()) 20f * u else 0f) else 64f * u
         val ph = head + shown.size * (bh + gap) + 14f * u
         val cx = safe.centerX()
         val cy = safe.centerY()
@@ -369,6 +383,9 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             else -> "NEXT STAGE"
         }
         againButton.visible = p == Panel.RESULT
+        // Infinite: once a game, the top half of the well can be swept away for coins
+        continueButton.visible = p == Panel.RESULT && setup is Setup.Infinite && game.phase == Phase.GAME_OVER &&
+            !continued && app.prefs.coins >= Missions.CONTINUE_PRICE
         menuButton.visible = p == Panel.RESULT
         // The main action is whatever moves the player on.
         againButton.style = if (nextButton.visible) ButtonStyle.PLAIN else ButtonStyle.PRIMARY
@@ -404,6 +421,17 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     }
 
     private fun resume() = showPanel(Panel.NONE)
+
+    private fun carryOn() {
+        if (continued || app.prefs.coins < Missions.CONTINUE_PRICE || !game.revive()) return
+        app.prefs.addCoins(-Missions.CONTINUE_PRICE)
+        continued = true
+        endFrames = 0
+        coinsEarned = 0
+        missionsDone = emptyList()
+        showPanel(Panel.NONE)
+        showBanner("CARRY ON!")
+    }
 
     private fun restart() {
         app.prefs.clearSavedGame()
@@ -451,6 +479,12 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         idle = 0
         hintCell = -1
         coinsEarned = 0
+        missionsDone = emptyList()
+        continued = false
+        countedTiles = 0
+        countedBlocks = 0
+        countedSteps = 0
+        countedCoins = 0
         bestAtStart = recordToBeat()
         showPanel(Panel.NONE)
     }
@@ -672,16 +706,27 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             }
             is Setup.Puzzle -> if (cleared && firstSolve) Missions.COINS_PER_PUZZLE else 0
             is Setup.Versus -> if (cleared) 15 + 10 * s.difficulty.ordinal else 0
-            else -> minOf(50, game.score / 400)
+            else -> minOf(50, game.score / 400) - countedCoins
         }
+        countedCoins += coinsEarned
         app.prefs.addCoins(coinsEarned)
         if (s is Setup.Versus && cleared) app.prefs.recordVersusWin(s.difficulty)
-        app.prefs.finishRun(Days.today(), Run(
-            tiles = game.tilesCleared, bestChain = game.maxChain, bestCombo = game.maxCombo, blocks = game.blocksBroken,
-            chainSteps = game.chainSteps, score = game.score, timed = s is Setup.Timed || s is Setup.Daily,
+        val day = Days.today()
+        val list = Missions.forDay(day)
+        val was = list.indices.map { app.prefs.missionProgress(day, it) }
+        app.prefs.finishRun(day, Run(
+            tiles = game.tilesCleared - countedTiles, bestChain = game.maxChain, bestCombo = game.maxCombo,
+            blocks = game.blocksBroken - countedBlocks, chainSteps = game.chainSteps - countedSteps, score = game.score,
+            timed = s is Setup.Timed || s is Setup.Daily,
             stageCleared = s is Setup.Stage && cleared, puzzleSolved = s is Setup.Puzzle && cleared,
-            versusWon = s is Setup.Versus && cleared,
+            versusWon = s is Setup.Versus && cleared, carriedOn = continued,
         ))
+        countedTiles = game.tilesCleared
+        countedBlocks = game.blocksBroken
+        countedSteps = game.chainSteps
+        missionsDone = list.indices
+            .filter { was[it] < list[it].target && app.prefs.missionProgress(day, it) >= list[it].target }
+            .map { list[it].text }
     }
 
     /** A lesson moves on when its goal is met, and starts over if the player has used up the board without meeting it. */
@@ -1219,7 +1264,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 fingertip(c, from + (to - from) * k, board.cellTop(game, l.fromRow) + board.cell * 0.66f, fade)
             }
         }
-        if (game.phase == Phase.PLAYING && !app.prefs.hintSeen && panel == Panel.NONE && l == null) {
+        if (game.phase == Phase.PLAYING && !app.prefs.hintSeen && panel == Panel.NONE && l == null && bannerAge >= BANNER_FRAMES) {
             val text = "Slide a tile sideways to swap it"
             val y = board.top + board.height * 0.24f
             val size = ui.fitSize(text, 14f * u, board.width - 36f * u, ui.semi)
@@ -1365,7 +1410,15 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             ui.text(c, labels[i], x, r.top + 154f * u, ui.fitSize(labels[i], 9.5f * u, colW - 6f * u, ui.semi), Palette.TEXT_DIM, face = ui.semi)
             ui.text(c, values[i], x, r.top + 172f * u, ui.fitSize(values[i], 16f * u, colW - 6f * u), Palette.TEXT)
         }
-        if (coinsEarned > 0) ui.text(c, "+$coinsEarned COINS", cx, r.top + 198f * u, 13f * u, Palette.ACCENT)
+        var y = r.top + 198f * u
+        if (coinsEarned > 0) {
+            ui.text(c, "+$coinsEarned COINS", cx, y, 13f * u, Palette.ACCENT)
+            y += 20f * u
+        }
+        if (missionsDone.isNotEmpty()) {
+            val text = if (missionsDone.size == 1) "MISSION DONE: " + missionsDone[0] else "${missionsDone.size} MISSIONS DONE"
+            ui.text(c, text, cx, y, ui.fitSize(text, 12f * u, r.width() - 28f * u, ui.semi), Palette.GOOD, face = ui.semi)
+        }
     }
 
     private companion object {

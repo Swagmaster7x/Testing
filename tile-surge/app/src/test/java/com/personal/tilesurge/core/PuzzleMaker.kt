@@ -44,8 +44,56 @@ class PuzzleMaker {
         }
     }
 
+    /** The second set: the same search, on boards with frozen tiles and a surge tile in them. Run with MAKE_PUZZLES=2. */
+    @Test
+    fun makeIceAndSurge() {
+        Assume.assumeTrue(System.getenv("MAKE_PUZZLES") == "2")
+        val rng = Rng(20261115)
+        // (moves, how many, kinds, tiles, frozen, surge, odd tiles only a surge can take)
+        val plan = listOf(
+            intArrayOf(1, 2, 2, 6, 1, 0, 0), intArrayOf(2, 3, 2, 9, 2, 0, 0), intArrayOf(1, 2, 2, 6, 0, 1, 2),
+            intArrayOf(2, 3, 3, 6, 0, 1, 2), intArrayOf(2, 2, 3, 9, 2, 0, 0), intArrayOf(3, 3, 3, 9, 2, 0, 0),
+            intArrayOf(2, 2, 3, 6, 1, 1, 2), intArrayOf(3, 3, 3, 9, 1, 1, 2),
+        )
+        var number = Puzzles.all.count { p -> p.rows.none { line -> line.any { it in 'a'..'u' } } } + 1
+        val seen = HashSet<String>()
+        for (p in plan) {
+            val (moves, want, kinds, tiles, frozen) = p
+            val surge = p[5]
+            val odd = p[6]
+            var made = 0
+            var tries = 0
+            while (made < want && tries++ < 300000) {
+                val b = random(rng, kinds, tiles, odd) ?: continue
+                val at = b.indices.filter { b[it] != 0 }.toMutableList()
+                repeat(frozen) { val i = at.removeAt(rng.nextInt(at.size)); b[i] = b[i] or Flat.FROZEN }
+                repeat(surge) { val i = at.removeAt(rng.nextInt(at.size)); b[i] = b[i] or Flat.SURGE }
+                val start = b.copyOf()
+                if (Flat.settle(b.copyOf()) != 0) continue
+                if (Flat.fewest(start, moves - 1) != -1) continue
+                val sols = Flat.solutions(start.copyOf(), moves, 40)
+                if (sols.isEmpty()) continue
+                if (sols.map { it[0] }.distinct().size > 2) continue
+                // the ice has to matter: without it the board would be easier
+                if (frozen > 0) {
+                    val plain = IntArray(start.size) { start[it] and Flat.FROZEN.inv() }
+                    val easier = Flat.fewest(plain, moves - 1) != -1 || Flat.solutions(plain, moves, 40).size > sols.size
+                    if (!easier) continue
+                }
+                val rows = Flat.rows(start)
+                if (!seen.add(rows.joinToString("/"))) continue
+                val def = PuzzleDef(number, moves, rows)
+                if (!Flat.realGameClears(def, sols[0])) continue
+                println("        PuzzleDef($number, $moves, listOf(${rows.joinToString(", ") { "\"$it\"" }}), listOf(${sols[0].joinToString(", ")})),")
+                number++
+                made++
+            }
+            println("// moves=$moves kinds=$kinds tiles=$tiles frozen=$frozen surge=$surge made=$made tries=$tries")
+        }
+    }
+
     /** [tiles] tiles of [kinds] kinds (at least three of each), dropped into random columns. */
-    private fun random(rng: Rng, kinds: Int, tiles: Int): IntArray? {
+    private fun random(rng: Rng, kinds: Int, tiles: Int, odd: Int = 0): IntArray? {
         val bag = ArrayList<Int>()
         for (k in 1..kinds) repeat(3) { bag += k }
         while (bag.size < tiles) {
@@ -53,6 +101,7 @@ class PuzzleMaker {
             repeat(3) { bag += k }
         }
         if (bag.size != tiles) return null
+        repeat(odd) { bag += 1 + rng.nextInt(kinds) }
         val b = IntArray(Flat.W * Flat.H)
         val h = IntArray(Flat.W)
         // keep it compact: three or four columns side by side

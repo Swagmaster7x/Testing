@@ -95,5 +95,14 @@ class Tile {
 
     companion object {
         const val BLOCK = 7
+
+        /** The kind a character on a written-out board stands for (see Game.setBoard); 0 for a gap or anything else. */
+        fun kindOf(ch: Char): Int = when (ch) {
+            in '1'..'6' -> ch - '0'
+            'B' -> BLOCK
+            in 'a'..'f' -> ch - 'a' + 1
+            in 'p'..'u' -> ch - 'p' + 1
+            else -> 0
+        }
     }
 }

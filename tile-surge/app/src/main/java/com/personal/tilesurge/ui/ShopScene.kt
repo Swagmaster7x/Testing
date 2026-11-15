@@ -62,21 +62,22 @@ class ShopScene(app: App) : Scene(app) {
         val l = colLeft + 20f * u
         val r = colRight - 20f * u
         val gap = 10f * u
-        val w = (r - l - gap) / 2f
+        val cols = 3
+        val w = (r - l - gap * (cols - 1)) / cols
         val h = 58f * u
         themesY = safe.top + 86f * u
         for ((i, b) in themeButtons.withIndex()) {
-            val x = l + (i % 2) * (w + gap)
-            val y = themesY + 62f * u + (i / 2) * (h + gap)
+            val x = l + (i % cols) * (w + gap)
+            val y = themesY + 62f * u + (i / cols) * (h + gap)
             b.set(x, y, x + w, y + h)
-            b.textUnits = 16f
+            b.textUnits = 14f
         }
         backdropsY = themesY + 62f * u + 2 * (h + gap) + 26f * u
         for ((i, b) in backdropButtons.withIndex()) {
-            val x = l + (i % 2) * (w + gap)
-            val y = backdropsY + 20f * u + (i / 2) * (h + gap)
+            val x = l + (i % cols) * (w + gap)
+            val y = backdropsY + 20f * u + (i / cols) * (h + gap)
             b.set(x, y, x + w, y + h)
-            b.textUnits = 16f
+            b.textUnits = 14f
         }
     }
 

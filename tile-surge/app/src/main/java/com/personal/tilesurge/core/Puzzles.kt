@@ -39,6 +39,22 @@ object Puzzles {
         PuzzleDef(28, 4, listOf(".4....", ".42...", ".11.1.", ".2324.", "22323."), listOf(15, 2, 1, 3)),
         PuzzleDef(29, 4, listOf("..4...", "..131.", "..433.", "..2212", "..1411"), listOf(10, 2, 14, 2)),
         PuzzleDef(30, 4, listOf("...4..", "24.1..", "14.2..", "1213..", "3131.."), listOf(0, 14, 3, 1)),
+        // The second set, with ice and surge tiles: a..f is a frozen tile of kind 1..6, p..u a surge tile.
+        PuzzleDef(31, 1, listOf("...1..", "...b..", ".2.211"), listOf(2)),
+        PuzzleDef(32, 1, listOf(".12...", ".a122."), listOf(6)),
+        PuzzleDef(33, 1, listOf("...2..", "..21..", "..12..", ".21q.."), listOf(14)),
+        PuzzleDef(34, 1, listOf(".2....", ".1....", ".1....", ".21q12"), listOf(1)),
+        PuzzleDef(35, 2, listOf("...2..", "..21..", "..12b.", "..21b."), listOf(8, 4)),
+        PuzzleDef(36, 2, listOf("..2...", "..2b..", ".b11..", ".122.."), listOf(20, 21)),
+        PuzzleDef(37, 2, listOf("..1...", "..a...", "1.b1..", "2.211."), listOf(1, 0)),
+        PuzzleDef(38, 2, listOf("..2...", ".a2...", ".113..", ".23c.."), listOf(9, 1)),
+        PuzzleDef(39, 2, listOf("..32..", "..b1..", "..12..", ".c31.."), listOf(8, 2)),
+        PuzzleDef(40, 3, listOf("...1..", "...a..", ".3.2..", ".c.3..", ".221.."), listOf(13, 3, 2)),
+        PuzzleDef(41, 3, listOf("..1...", "..a...", "..b3..", "..12..", "..23.3"), listOf(8, 1, 3)),
+        PuzzleDef(42, 3, listOf(".1....", ".33...", ".3bb..", ".112.."), listOf(3, 18, 0)),
+        PuzzleDef(43, 3, listOf("...2..", ".2.1..", ".2.3..", ".c31..", ".23p.."), listOf(0, 14, 1)),
+        PuzzleDef(44, 3, listOf(".r23..", "3221..", "321a.."), listOf(12, 0, 9)),
+        PuzzleDef(45, 3, listOf("...3..", "...2..", "...1..", "..c123", "..2r12"), listOf(2, 1, 3)),
     )
 
     val COUNT: Int get() = all.size

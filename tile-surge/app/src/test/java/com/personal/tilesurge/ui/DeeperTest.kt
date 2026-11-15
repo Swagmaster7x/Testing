@@ -42,6 +42,14 @@ class DeeperTest {
     }
 
     /** Fills [g] to the top with tiles that make no match and cannot be moved, so its time runs out. */
+    private fun topOut(v: GameView, g: Game) {
+        jam(g)
+        g.autoRise = true
+        var n = 0
+        while (g.phase == Phase.PLAYING && n++ < 6000) v.step(1)
+        v.step(150)
+    }
+
     private fun jam(g: Game) {
         val rows = Array(Game.ROWS) { if (it % 2 == 0) "123123" else "231231" }
         g.setBoard(*rows)
@@ -196,6 +204,93 @@ class DeeperTest {
         chains.game.setBoard("2.....", "1.....", "1.....", "1.....", "2.....", "2.....")
         v.step(240)
         assertEquals(Phase.STAGE_CLEAR, chains.game.phase)
+    }
+
+    @Test
+    fun `a finished mission is announced on the result panel`() {
+        Days.now = { LocalDate.of(2026, 11, 13) }
+        val v = view { TitleScene(it) }
+        val day = Days.today()
+        val list = Missions.forDay(day)
+        // all but done beforehand, so that one more game of any kind finishes "Finish 3 games"
+        val games = list.indexOfFirst { it.kind == MissionKind.GAMES }
+        assertTrue(games >= 0)
+        repeat(2) { v.app.prefs.finishRun(day, Run(0, 1, 0, 0, 0, 0)) }
+        val scene = start(v, Setup.Infinite(Difficulty.EASY, 1))
+        topOut(v, scene.game)
+        assertEquals(Phase.GAME_OVER, scene.game.phase)
+        assertTrue(scene.showsResult)
+        assertEquals(listOf(list[games].text), scene.missionsDone)
+        Shots.save(v, "86-mission-done")
+        v.show(TitleScene(v.app))
+        assertEquals("1 to claim", (v.scene as TitleScene).missionsButton.note)
+    }
+
+    @Test
+    fun `Infinite can be carried on once for coins, and the game is counted once`() {
+        val v = view { TitleScene(it) }
+        val scene = start(v, Setup.Infinite(Difficulty.EASY, 1))
+        scene.game.setBoard("111...")
+        v.step(200)
+        topOut(v, scene.game)
+        assertTrue(scene.showsResult)
+        // no coins, no offer
+        assertFalse(scene.continueButton.visible)
+        assertEquals(1, v.app.prefs.stat("games"))
+        assertEquals(3, v.app.prefs.stat("tiles"))
+
+        v.app.prefs.addCoins(250)
+        Shots.tap(v, scene.againButton)
+        v.step(Game.COUNTDOWN_FRAMES)
+        scene.game.autoRise = false
+        scene.game.setBoard("222...")
+        v.step(200)
+        topOut(v, scene.game)
+        assertTrue(scene.continueButton.visible)
+        Shots.save(v, "86-continue-offer")
+        Shots.tap(v, scene.continueButton)
+        assertEquals(150, v.app.prefs.coins)
+        assertEquals(Phase.PLAYING, scene.game.phase)
+        assertFalse(scene.showsResult)
+        assertTrue(scene.game.stackHeight() <= Game.ROWS / 2)
+        v.step(30)
+        Shots.save(v, "86-continued")
+        // the tiles thaw nothing by themselves: clear some, then top out again
+        scene.game.setBoard("333...")
+        v.step(200)
+        topOut(v, scene.game)
+        assertTrue(scene.showsResult)
+        assertFalse(scene.continueButton.visible)
+        assertEquals(150, v.app.prefs.coins)
+        assertEquals(2, v.app.prefs.stat("games"))
+        assertEquals(9, v.app.prefs.stat("tiles"))
+    }
+
+    @Test
+    fun `the puzzles with ice and surge tiles show them and can be solved by touch`() {
+        val v = view { TitleScene(it) }
+        v.app.prefs.recordPuzzle(32)
+        val scene = start(v, Setup.Puzzle(33))
+        val g = scene.game
+        assertTrue(g.grid[0][3].power)
+        Shots.save(v, "86-surge-puzzle")
+        // the answer: swap row 2, columns 2 and 3
+        val f = Fingers(v)
+        val y = scene.board.cellTop(g, 2) + scene.board.cell / 2f
+        f.down(0, scene.board.cellLeft(2) + scene.board.cell / 2f, y)
+        f.move(0, scene.board.cellLeft(3) + scene.board.cell / 2f, y)
+        v.step(12)
+        f.up(0)
+        v.step(500)
+        assertEquals(Phase.STAGE_CLEAR, g.phase)
+        assertEquals(33, v.app.prefs.puzzlesSolved)
+        val ice = start(v, Setup.Puzzle(32))
+        assertTrue(ice.game.grid[0][1].frozen)
+        assertFalse(ice.game.grab(0, 1))
+        Shots.save(v, "86-ice-puzzle")
+        v.show(StageSelectScene(v.app, puzzles = true))
+        assertEquals(45, (v.scene as StageSelectScene).stageButtons.size)
+        Shots.save(v, "86-puzzle-list")
     }
 
     // ------------------------------------------------------------ the chain hint

@@ -141,7 +141,7 @@ class Prefs(context: Context) {
     fun finishRun(day: Int, run: Run) {
         missionDay(day)
         val e = sp.edit()
-        e.putInt("stat_games", stat("games") + 1)
+        if (!run.carriedOn) e.putInt("stat_games", stat("games") + 1)
         e.putInt("stat_tiles", stat("tiles") + run.tiles)
         e.putInt("stat_blocks", stat("blocks") + run.blocks)
         e.putInt("stat_chain_steps", stat("chain_steps") + run.chainSteps)

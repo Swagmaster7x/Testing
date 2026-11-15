@@ -51,10 +51,12 @@ class ModesTest {
 
     @Test
     fun `every puzzle can be solved with its answer in the real game, and not in fewer moves`() {
-        assertEquals(30, Puzzles.COUNT)
+        assertEquals(45, Puzzles.COUNT)
         var last = 0
         for (def in Puzzles.all) {
             assertEquals(def.moves, def.answer.size)
+            // the second set (ice and surge tiles) starts gently again
+            if (def.number == 31) last = 0
             assertTrue("puzzle ${def.number} gets easier", def.moves >= last)
             last = def.moves
             val start = Flat.parse(def.rows)
@@ -64,7 +66,7 @@ class ModesTest {
             Checks.assertConsistent(Game.puzzle(def))
         }
         // no two alike
-        assertEquals(30, Puzzles.all.map { it.rows }.toSet().size)
+        assertEquals(45, Puzzles.all.map { it.rows }.toSet().size)
     }
 
     @Test

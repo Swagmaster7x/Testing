@@ -9,11 +9,25 @@ object Flat {
     const val W = Game.COLS
     const val H = Game.ROWS
 
+    /** A cell is its kind (1..6) plus these: frozen tiles cannot be swapped, surge tiles take their row with them. */
+    const val FROZEN = 16
+    const val SURGE = 32
+    private fun kind(v: Int) = v and 15
+
+    private fun cell(ch: Char): Int = Tile.kindOf(ch) + (if (ch in 'a'..'f') FROZEN else 0) + (if (ch in 'p'..'u') SURGE else 0)
+
+    private fun char(v: Int): Char = when {
+        v == 0 -> '.'
+        v and FROZEN != 0 -> 'a' + (kind(v) - 1)
+        v and SURGE != 0 -> 'p' + (kind(v) - 1)
+        else -> '0' + v
+    }
+
     fun parse(rows: List<String>): IntArray {
         val b = IntArray(W * H)
         for ((i, line) in rows.withIndex()) {
             val r = rows.size - 1 - i
-            for (c in 0 until W) if (line[c] != '.') b[r * W + c] = line[c] - '0'
+            for (c in 0 until W) b[r * W + c] = cell(line[c])
         }
         return b
     }
@@ -21,15 +35,16 @@ object Flat {
     fun rows(b: IntArray): List<String> {
         var top = 0
         for (i in b.indices) if (b[i] != 0) top = maxOf(top, i / W)
-        return (top downTo 0).map { r -> (0 until W).joinToString("") { c -> if (b[r * W + c] == 0) "." else b[r * W + c].toString() } }
+        return (top downTo 0).map { r -> (0 until W).joinToString("") { c -> char(b[r * W + c]).toString() } }
     }
 
     fun count(b: IntArray): Int = b.count { it != 0 }
 
-    /** Swaps (r, c) with the cell to its right. False if both are empty. */
+    /** Swaps (r, c) with the cell to its right. False if both are empty or either is frozen. */
     fun swap(b: IntArray, r: Int, c: Int): Boolean {
         val i = r * W + c
         if (b[i] == 0 && b[i + 1] == 0) return false
+        if ((b[i] or b[i + 1]) and FROZEN != 0) return false
         val t = b[i]; b[i] = b[i + 1]; b[i + 1] = t
         return true
     }
@@ -53,16 +68,38 @@ object Flat {
             mark.fill(false)
             var any = false
             for (r in 0 until H) for (c in 0 until W) {
-                val v = b[r * W + c]
+                val v = kind(b[r * W + c])
                 if (v == 0) continue
-                if (c + 2 < W && b[r * W + c + 1] == v && b[r * W + c + 2] == v) {
+                if (c + 2 < W && kind(b[r * W + c + 1]) == v && kind(b[r * W + c + 2]) == v) {
                     mark[r * W + c] = true; mark[r * W + c + 1] = true; mark[r * W + c + 2] = true; any = true
                 }
-                if (r + 2 < H && b[(r + 1) * W + c] == v && b[(r + 2) * W + c] == v) {
+                if (r + 2 < H && kind(b[(r + 1) * W + c]) == v && kind(b[(r + 2) * W + c]) == v) {
                     mark[r * W + c] = true; mark[(r + 1) * W + c] = true; mark[(r + 2) * W + c] = true; any = true
                 }
             }
             if (!any) return rounds
+            // a surge tile takes its row, and any surge tile caught up in that takes its own
+            var spread = true
+            while (spread) {
+                spread = false
+                for (i in b.indices) if (mark[i] && b[i] and SURGE != 0) {
+                    b[i] = b[i] and SURGE.inv()
+                    val r = i / W
+                    for (c in 0 until W) if (b[r * W + c] != 0 && !mark[r * W + c]) {
+                        mark[r * W + c] = true
+                        spread = true
+                    }
+                }
+            }
+            // whatever is frozen next to a clearing tile thaws
+            for (i in b.indices) if (mark[i]) {
+                val r = i / W
+                val c = i % W
+                if (r > 0) b[i - W] = b[i - W] and FROZEN.inv()
+                if (r < H - 1) b[i + W] = b[i + W] and FROZEN.inv()
+                if (c > 0) b[i - 1] = b[i - 1] and FROZEN.inv()
+                if (c < W - 1) b[i + 1] = b[i + 1] and FROZEN.inv()
+            }
             for (i in b.indices) if (mark[i]) b[i] = 0
             rounds++
         }
@@ -70,7 +107,11 @@ object Flat {
 
     private fun dead(b: IntArray): Boolean {
         val n = IntArray(8)
-        for (v in b) n[v]++
+        // a surge tile can take odd tiles with it, so nothing is hopeless while one is left
+        for (v in b) {
+            if (v and SURGE != 0) return false
+            n[kind(v)]++
+        }
         for (k in 1..7) if (n[k] == 1 || n[k] == 2) return true
         return false
     }
@@ -88,7 +129,7 @@ object Flat {
         for (r in 0..top) for (c in 0 until W - 1) {
             if (b[r * W + c] == b[r * W + c + 1]) continue
             val next = b.copyOf()
-            swap(next, r, c)
+            if (!swap(next, r, c)) continue
             settle(next)
             path += r * W + c
             solutions(next, depth - 1, limit, path, out)

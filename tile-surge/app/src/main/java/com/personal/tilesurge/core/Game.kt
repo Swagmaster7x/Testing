@@ -108,7 +108,7 @@ class Game private constructor(
          * It rises only if [raise] is allowed and the player raises it.
          */
         fun fixed(rows: List<String>, moves: Int, raise: Boolean, seed: Long): Game {
-            val kinds = maxOf(Difficulty.NORMAL.kinds, rows.maxOf { line -> line.maxOf { if (it == '.') 0 else it - '0' } })
+            val kinds = maxOf(Difficulty.NORMAL.kinds, rows.maxOf { line -> line.maxOf { ch -> Tile.kindOf(ch).let { if (it == Tile.BLOCK) 0 else it } } })
             return Game(GameMode.PUZZLE, Difficulty.NORMAL, kinds, 1, null, 1, seed,
                 moveLimit = moves, fixedRows = rows, raiseAllowed = raise)
         }
@@ -229,6 +229,26 @@ class Game private constructor(
         phase = Phase.STAGE_CLEAR
         grabbedId = 0
         emit(EventType.STAGE_CLEAR)
+    }
+
+    /**
+     * A second go after the stack has reached the top: the top half of the well is swept away and play carries on.
+     * False if the game is not over.
+     */
+    fun revive(): Boolean {
+        if (phase != Phase.GAME_OVER) return false
+        for (r in ROWS / 2 until ROWS) for (c in 0 until COLS) grid[r][c].clear()
+        for (r in 0 until ROWS / 2) for (c in 0 until COLS) {
+            val t = grid[r][c]
+            if (t.kind != 0 && !t.isResting) t.clear()
+        }
+        pendingBlocks = 0
+        chain = 1
+        stopFrames = 180
+        grace = graceMax
+        phase = Phase.PLAYING
+        refreshFlags()
+        return true
     }
 
     private fun gain(points: Int) {
@@ -1059,7 +1079,8 @@ class Game private constructor(
     }
 
     /**
-     * Replaces the board. Rows are given top first; each character is a tile kind `1`..`6` or `.` for a gap.
+     * Replaces the board. Rows are given top first; each character is a tile kind `1`..`6`, `.` for a gap,
+     * `B` for a blocker, `a`..`f` for a frozen tile of kind 1..6, or `p`..`u` for a surge tile of kind 1..6.
      * Rows not given are left empty.
      */
     fun setBoard(vararg rows: String) {
@@ -1071,8 +1092,10 @@ class Game private constructor(
                 val ch = line[c]
                 if (ch == '.') continue
                 val t = grid[r][c]
-                t.kind = if (ch == 'B') Tile.BLOCK else ch - '0'
+                t.kind = Tile.kindOf(ch)
                 require(t.kind in 1..Tile.BLOCK) { "bad tile '$ch'" }
+                t.frozen = ch in 'a'..'f'
+                t.power = ch in 'p'..'u'
                 t.id = nextId++
             }
         }

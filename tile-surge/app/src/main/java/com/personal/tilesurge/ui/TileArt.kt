@@ -30,12 +30,14 @@ class TileArt {
         const val BLOCK = 7
 
         /** The tile sets the shop sells. Each is six base colours; lighter and darker shades are worked out. */
-        val THEME_NAMES = arrayOf("Classic", "Candy", "Neon", "Dusk")
+        val THEME_NAMES = arrayOf("Classic", "Candy", "Neon", "Dusk", "Ice", "Gold")
         private val THEME_BASES = arrayOf(
             intArrayOf(0xFFEF4F50.toInt(), 0xFF2EB866.toInt(), 0xFF3A8DEE.toInt(), 0xFFF2AE1C.toInt(), 0xFF9163E8.toInt(), 0xFF27BDC6.toInt()),
             intArrayOf(0xFFFF7FA8.toInt(), 0xFF6FD28E.toInt(), 0xFF6DB6F7.toInt(), 0xFFF7C64F.toInt(), 0xFFBE96F5.toInt(), 0xFF6FD8D4.toInt()),
             intArrayOf(0xFFFF2E63.toInt(), 0xFF00C853.toInt(), 0xFF2979FF.toInt(), 0xFFFFC400.toInt(), 0xFFD500F9.toInt(), 0xFF00B8D4.toInt()),
             intArrayOf(0xFFC96B5B.toInt(), 0xFF7FA36B.toInt(), 0xFF5B7FA6.toInt(), 0xFFC9A24B.toInt(), 0xFF8B6FAE.toInt(), 0xFF5FA6A0.toInt()),
+            intArrayOf(0xFFE46A9A.toInt(), 0xFF3FB9A0.toInt(), 0xFF3F7FE0.toInt(), 0xFF9FB8D8.toInt(), 0xFF7A6AE0.toInt(), 0xFF35B8E0.toInt()),
+            intArrayOf(0xFFD9534A.toInt(), 0xFF8AA83A.toInt(), 0xFF3F86A8.toInt(), 0xFFE0A820.toInt(), 0xFF9A5AA8.toInt(), 0xFFC98A3A.toInt()),
         )
 
         /** Which tile set is in use. Sprites notice a change the next time they are prepared or stamped. */

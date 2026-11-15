@@ -13,7 +13,13 @@ class Bot(
     private val thinkFrames: Int,
     private val raiseBelow: Int = 6,
     private val hands: Hands = DirectHands(game),
+    /** Looks for a swap that sets off a chain before settling for a plain match. */
+    private val chains: Boolean = false,
+    /** Out of a hundred turns to think, how many it lets go by without doing anything. */
+    private val slip: Int = 0,
 ) {
+    private val rng = Rng(game.seed xor 0x5DEECE66DL)
+
 
     /** How the bot touches the game: straight into the engine, or through the screen like a finger. */
     interface Hands {
@@ -48,6 +54,7 @@ class Bot(
     private val base = Array(Game.ROWS) { IntArray(Game.COLS) }
     private val k = Array(Game.ROWS) { IntArray(Game.COLS) }
     private val e = Array(Game.ROWS) { IntArray(Game.COLS) }
+    private val gone = Array(Game.ROWS) { BooleanArray(Game.COLS) }
 
     /** Call once before every [Game.tick]. */
     fun act() {
@@ -76,6 +83,7 @@ class Bot(
 
         if (--wait > 0) return
         wait = thinkFrames
+        if (slip > 0 && rng.nextInt(100) < slip) return
         val move = findMove()
         if (move == null) {
             // Nothing to do: ask for another row now and then, if there is room for one.
@@ -122,7 +130,8 @@ class Bot(
                     cc = nc
                     val matched = matchesAfterSettling()
                     if (matched > 0) {
-                        val value = matched * 100 - step
+                        // one that plans ahead plays the clear out and counts what falls into place after it
+                        val value = matched * 100 - step + (if (chains) followOn() else 0)
                         if (best == null || value > best.value) best = Move(r, c, cc, value)
                     }
                     // Over a gap the tile drops: it cannot be carried any further.
@@ -158,6 +167,46 @@ class Bot(
             if (inRow || inCol) count++
         }
         return count
+    }
+
+    /**
+     * What a clear is worth beyond its own tiles: takes the matched tiles out of [e], lets the rest fall, and
+     * counts the matches that follow, round after round. Each further round is a chain step, worth a great deal.
+     */
+    private fun followOn(): Int {
+        var value = 0
+        var rounds = 0
+        while (rounds < 8) {
+            var any = false
+            for (r in 0 until Game.ROWS) for (c in 0 until Game.COLS) {
+                val v = e[r][c]
+                gone[r][c] = v > 0 &&
+                    (run(r, c, 0, 1, v) + run(r, c, 0, -1, v) + 1 >= 3 || run(r, c, 1, 0, v) + run(r, c, -1, 0, v) + 1 >= 3)
+                if (gone[r][c]) any = true
+            }
+            if (!any) break
+            var count = 0
+            for (r in 0 until Game.ROWS) for (c in 0 until Game.COLS) if (gone[r][c]) {
+                e[r][c] = 0
+                count++
+            }
+            if (rounds > 0) value += 700 * rounds + count * 100
+            rounds++
+            for (c in 0 until Game.COLS) {
+                var write = 0
+                for (r in 0 until Game.ROWS) {
+                    val v = e[r][c]
+                    if (v < 0) {
+                        write = r + 1
+                    } else if (v > 0) {
+                        e[r][c] = 0
+                        e[write][c] = v
+                        write++
+                    }
+                }
+            }
+        }
+        return value
     }
 
     private fun run(r: Int, c: Int, dr: Int, dc: Int, v: Int): Int {
