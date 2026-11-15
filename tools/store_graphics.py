@@ -24,7 +24,7 @@ SCREENS = [
     ("listing-2-plan", "Plan the week,\nor fill it in one tap", "iron"),
     ("listing-4-shopping", "One shopping list\nfor the whole household", "iron"),
     ("listing-3-recipe", "Recipes with real portions\nand protein swaps", "iron"),
-    ("listing-5-gym", "Log every set,\nwith form tips for each move", "iron"),
+    ("listing-5-gym", "Log every set,\nsee what to try next", "iron"),
     ("listing-6-glam-today", "15 looks,\nor design your own", "glam"),
 ]
 

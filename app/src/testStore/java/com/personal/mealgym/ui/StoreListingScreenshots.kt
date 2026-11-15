@@ -14,9 +14,13 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.personal.mealgym.MainActivity
 import com.personal.mealgym.MealGymApp
 import com.personal.mealgym.Opening
+import com.personal.mealgym.data.db.Exercise
+import com.personal.mealgym.data.db.Feeling
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Profile
+import com.personal.mealgym.data.db.SetLog
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.Progression
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -76,6 +80,19 @@ class StoreListingScreenshots {
                 meals.setSlot(sam, ws.plusDays(i.toLong()), MealSlot.DINNER, r.getValue(key).id)
             }
             container.settings.setShoppingBoth(alex, true)
+
+            // Last week Alex hit the top of the rep range on the first lift of every day, so whichever
+            // day today's screenshot lands on shows "Last time" and what to try next.
+            val days = container.db.workoutDao().getDays(alex)
+            val exercises = container.db.workoutDao().allExercises()
+            val logs = days.mapNotNull { day ->
+                exercises.filter { it.workoutDayId == day.id }.minWithOrNull(compareBy<Exercise> { it.groupLabel }.thenBy { it.position })
+            }.flatMap { first ->
+                val top = Progression.repRange(first.repsText)?.high ?: 10
+                (0 until 3).map { set -> SetLog(sessionId = 0, exerciseId = null, exerciseNameUsed = first.name, weight = 135.0, reps = top, setIndex = set) }
+            }
+            // Filed under the last day of the cycle, so today's workout is unchanged by it.
+            container.gym.saveSession(alex, today.minusDays(7), days.maxBy { it.dayOrder }, Feeling.GREAT, null, logs)
         }
     }
 

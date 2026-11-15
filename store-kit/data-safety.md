@@ -37,7 +37,7 @@ Mark each of these as **Collected** and **Shared**, **processed ephemerally: No*
 Leave every other type unticked. In particular, the app does **not** collect:
 
 - Personal info (names typed for each person stay on the phone)
-- Health and fitness (meal plans, workouts, sets, sauna times and the optional setup answers
+- Health and fitness (meal plans and their calorie and protein totals, workouts, sets with weight and reps, sauna times and the optional setup answers
   such as goal, sex, age, height, weight and allergies stay on the phone)
 
 Google's form counts data as "collected" only when it is sent off the device. The setup

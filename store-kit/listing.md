@@ -32,60 +32,51 @@ A PLAN BUILT FROM YOUR ANSWERS
 • Get an estimated daily calorie and protein guide, a workout plan for the gym or home, and a first week of meals sized to fit.
 • Allergies and foods you don't eat are kept off your plan and out of your suggestions.
 
-COOK FROM YOUR CUPBOARD
-• Tick what's in your fridge and cupboards and see what you can make right now.
-• Recipes that are nearly there show exactly what's missing, and one tap plans them.
+A WEEK THAT ADDS UP
+• Breakfast, lunch and dinner for each day, plus an optional snack. See what each planned day comes to beside your guide.
+• "Fill my week" plans the empty slots for you, aiming for your guide and favouring recipes you loved.
+• Not cooking? Mark a meal as eating out, leftovers or skipped. Having guests? Add servings and the shopping list follows.
+• Meal-prep recipes fill several days in one go. "Repeat last week" copies a week you liked.
 
 180 RECIPES FROM AROUND THE WORLD
 • Healthy, high-protein dishes from Asia, Africa, Europe, the Middle East, the Caribbean and the Americas, made with ordinary supermarket ingredients.
-• Vegetarian, fish and egg dishes alongside chicken, beef and pork, each with approximate calories and protein per serving.
+• Vegetarian, fish and egg dishes alongside chicken, beef and pork, each with approximate calories and protein.
+• Filter by protein or cuisine, mark favourites, add your own.
 
 WHEN YOU'RE CRAVING TAKEOUT
-• Pick from a dozen popular fast-food and coffee chains and see the better choices on the menu, with approximate calories and protein and tips for ordering.
+• See the better choices at a dozen popular fast-food and coffee chains, with approximate calories and protein and tips for ordering.
 • Or make it at home: lighter home versions of restaurant favorites, grilled or baked.
 
-PLAN THE WEEK
-• Breakfast, lunch and dinner for each day, plus an optional snack.
-• Pick from the recipe library or add your own.
-• "Fill my week" plans the empty slots for you from the recipes you like.
-• Meal-prep recipes fill several days in one go. "Repeat last week" copies a week you liked.
-• Filter by protein, cuisine or "Not chicken", mark favourites, and hide recipes for a while.
+SHOP, STOCK AND COOK
+• The shopping list builds itself from your plan, grouped by store section, with amounts added up across recipes.
+• What you tick off goes into your cupboard. Tick what's already in the house, and see what you can make right now and what to use up first.
+• Step-by-step cooking mode with big text, the screen kept on, and a timer for every time a step mentions.
+• Cook for more or fewer: the amounts scale. "Make it with..." swaps the main protein.
+• Say how it went when you've cooked it, and the app plans around your taste.
 
-SHOP ONCE
-• The shopping list builds itself from your plan, grouped by store section.
-• Amounts are added up across recipes and follow your portion size.
-• Tick off what you always have in the pantry and it stays off the list.
-• Share the list as text with anyone.
-
-COOK
-• Step-by-step cooking mode with big text, and the screen stays on.
-• "Make it with..." swaps the main protein, and the shopping list follows.
-
-TRAIN
+TRAIN AND PROGRESS
 • Starter plans: Full body 3 days, Upper / lower 4 days, Glute focus 3 days, or At home 3 days with no equipment. Or build your own.
-• Tick off sets, swap a machine when the gym is busy, and note weight and reps ("Last time: 135 x 8").
+• Log every set. Next time the app suggests what to try ("Try 140 x 8") from what you did and your plan's rep range.
+• New bests are called out, each exercise has its own trend, and the week shows your sets by muscle group.
 • A rest timer, written form tips for every exercise, and a quick "How did it go?" after each workout.
 • Missed a day? The plan just moves on to the next session. No streaks, no guilt.
 • A sauna timer that keeps running with the screen off.
 
 FOR THE WHOLE HOUSEHOLD
 • Everyone on the phone gets their own plan, gym days and history.
-• One shared shopping list covers everyone's meals.
-• Send your meal plan to another phone as a file.
+• One shared shopping list and cupboard cover everyone's meals.
 
 YOUR LOOK
-• 15 looks to choose from, from dark fantasy and Y2K glam to deep sea, cherry blossom, neon arcade and track day.
-• Or make your own: pick your colours, heading font, corners, day or night, and extras like sparkles.
-• Each person on the phone picks their own.
+• 15 looks to choose from, from dark fantasy and Y2K glam to deep sea, cherry blossom and neon arcade, or make your own.
 
 PRIVATE BY DESIGN
 • No account and no sign-in. Your answers, plans, workouts and history stay on your phone.
 • Export a backup file whenever you like.
-• No food logging, no weigh-ins and no streaks. The calorie guide is a guide, not a scoreboard.
+• No food logging, no weigh-ins and no streaks. Totals are for the meals you planned, and the guide is a guide, not a scoreboard.
 
 The free version shows a small banner on some screens (never during a workout or while cooking). A one-time "Remove ads" purchase turns them off for good.
 
-Meal & Gym is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide is an estimate for healthy adults. Allergen information comes from ingredient names, so always check food labels. Restaurant figures are approximate and menus change, so check the restaurant's own nutrition and allergen information; the app is not affiliated with any restaurant. Check with a doctor before starting a new eating or training plan.
+Meal & Gym is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide and its lifting suggestions are estimates for healthy adults. Allergen information comes from ingredient names, so always check food labels. Restaurant figures are approximate and menus change, so check the restaurant's own nutrition and allergen information; the app is not affiliated with any restaurant. Check with a doctor before starting a new eating or training plan.
 ```
 
 ## Other listing fields

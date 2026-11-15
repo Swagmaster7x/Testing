@@ -19,7 +19,10 @@ can create.
 | People | Swag and Ashley, built in | Anyone: a short questionnaire on first launch builds their plan; add more in Settings > People |
 | Plan builder | None (their plans are their own) | Daily calorie and protein guide, workout plan, meal sizes and a first week of meals from the setup answers; redo in Settings > My plan |
 | Allergies | Not asked | Nine allergens plus beef, pork and poultry kept off the plan; allergens listed on each recipe |
-| Cupboard | Cook > What can I make from my cupboard? | The same |
+| Cupboard | Cook > What can I make from my cupboard? Kept up to date from the shopping list and cooking once "Keep it up to date" is switched on there | The same, with "Keep it up to date" on from the start |
+| Gym progress | Each ticked set keeps its weight and reps; Gym > Lifting progress has the week, bests and a trend per exercise. "Suggest what to lift next" is a switch in Settings, off to begin with | The same, with suggestions on from the start |
+| Plan | Eating out, leftovers or a skip in any slot; servings for guests. "Day totals" is a switch in Settings, off to begin with | The same, with day totals beside the guide and "Fill my week" aiming for it |
+| Cooking | Step timers, servings scaling, "I cooked it" with a rating | The same |
 | Starter plans | Your own workout days | Full body 3 days, Upper / lower 4 days, Glute focus 3 days, At home 3 days, or empty |
 | Recipes | 186, including the coffee-shop orders and daily guide | 181 shared recipes and snacks from around the world |
 | Eating out | Cook > What are you craving? Better picks at 12 chains, and recipes that taste like them | The same |
