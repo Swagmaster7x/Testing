@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /** One kitchen timer. It stays in the list as [done] until it's dismissed, so a finished one isn't missed. */
 data class CookTimer(
@@ -40,12 +42,13 @@ data class CookTimer(
 class CookTimerController(private val context: Context, private val scope: CoroutineScope) {
     private val _timers = MutableStateFlow<List<CookTimer>>(emptyList())
     val timers: StateFlow<List<CookTimer>> = _timers.asStateFlow()
-    private val jobs = HashMap<Long, Job>()
-    private var nextId = 1L
+    // Started and stopped from the screen, finished from the timer's own coroutine.
+    private val jobs = ConcurrentHashMap<Long, Job>()
+    private val nextId = AtomicLong(1)
 
     /** Buzzes at the end; [chime] also plays a sound. Returns the timer's id. */
     fun start(label: String, seconds: Int, chime: Boolean, now: Long = System.currentTimeMillis()): Long {
-        val id = synchronized(this) { nextId++ }
+        val id = nextId.getAndIncrement()
         _timers.update { it + CookTimer(id, label, seconds, now + seconds * 1000L) }
         jobs[id] = scope.launch {
             delay(seconds * 1000L)
