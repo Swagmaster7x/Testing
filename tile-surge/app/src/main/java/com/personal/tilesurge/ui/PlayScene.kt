@@ -72,6 +72,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private var bot: Bot? = null
     val rivalBoard = BoardRenderer(ui, app.art)
 
+    /** Wide screens: the computer's well is shown full size beside the player's. */
+    var rivalBeside = false
+        private set
+
     /** Versus: blockers sent across so far. */
     var sent = 0
         private set
@@ -253,56 +257,78 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         val gap = 8f * u
         val pauseW = 46f * u
         pauseButton.set(r - pauseW, hudTop, r, hudTop + hudH)
-        // versus: the computer's well, small, sits to the left of the readouts
-        var cl = l
-        var hudBottom = hudTop + hudH
-        if (rival != null) {
-            val mini = floor(7f * u)
-            rivalBoard.place(l + 4f * u, hudTop + 4f * u, mini, prepare = false)
-            cl = rivalBoard.right + 4f * u + gap
-            hudBottom = rivalBoard.bottom + 4f * u
-        }
-        val cardsW = r - cl - pauseW - gap * 3
+        val cardsW = r - l - pauseW - gap * 3
         val w0 = cardsW * 0.42f
         val w1 = cardsW * 0.27f
-        cards[0].set(cl, hudTop, cl + w0, hudTop + hudH)
+        cards[0].set(l, hudTop, l + w0, hudTop + hudH)
         cards[1].set(cards[0].right + gap, hudTop, cards[0].right + gap + w1, hudTop + hudH)
         cards[2].set(cards[1].right + gap, hudTop, r - pauseW - gap, hudTop + hudH)
 
         val raiseH = 60f * u
         val raiseBottom = safe.bottom - 22f * u
-        val areaTop = hudBottom + 24f * u
+        val areaTop = hudTop + hudH + 24f * u
         val areaBottom = raiseBottom - raiseH - 16f * u
-        val cell = floor(minOf((r - l - 8f * u) / Game.COLS, (areaBottom - areaTop) / Game.ROWS))
+        var cell = floor(minOf((r - l - 8f * u) / Game.COLS, (areaBottom - areaTop) / Game.ROWS))
+        // versus: the computer's well stands beside this one, a quarter of the size, and this one gives up a little width for it
+        val versus = rival != null
+        val between = 18f * u
+        if (versus) cell = floor(minOf(cell, (r - l - 8f * u - between) / (Game.COLS * 1.25f)))
+        val small = floor(cell / 4f)
         val bw = cell * Game.COLS
         val bh = cell * Game.ROWS
-        val left = floor(safe.centerX() - bw / 2f)
+        val pairW = if (versus) bw + between + small * Game.COLS else bw
+        val left = floor(safe.centerX() - pairW / 2f)
         // sit the well on the raise button, and take up any slack above it
         val top = floor(areaBottom - bh - (areaBottom - areaTop - bh) * 0.35f)
         board.place(left, top, cell)
+        if (versus) rivalBoard.place(board.right + between, top, small, prepare = false)
+        rivalBeside = false
         val raiseTop = board.bottom + 16f * u
-        raiseRect.set(left - 4f * u, raiseTop, left + bw + 4f * u, raiseTop + raiseH)
+        raiseRect.set(left - 4f * u, raiseTop, left + pairW + 4f * u, raiseTop + raiseH)
     }
 
-    /** A tablet or a wide window: readouts to the left of the well, the raise button to the right. */
+    /**
+     * A tablet or a wide window: readouts to the left of the well, the raise button to the right.
+     * Versus: the computer's well goes at the far left, as big as the player's if there is room for two.
+     */
     private fun layoutWide() {
         val cell = floor(minOf((safe.height() - 28f * u) / Game.ROWS, safe.width() * 0.46f / Game.COLS))
         val bw = cell * Game.COLS
-        val left = floor(safe.centerX() - bw / 2f)
         val top = floor(safe.centerY() - cell * Game.ROWS / 2f)
+        val gap = 16f * u
+        var left = floor(safe.centerX() - bw / 2f)
+        var sideW = minOf(150f * u, left - safe.left - 28f * u)
+        // versus: is there room for a second well of a decent size, left of the readouts?
+        var twin = 0f
+        if (rival != null) {
+            val side = minOf(sideW, 130f * u)
+            val room = safe.width() - 24f * u - bw - 2 * side - 3 * gap - 8f * u
+            val c = floor(minOf(cell, room / Game.COLS))
+            if (c >= cell * 0.5f) {
+                twin = c
+                sideW = side
+                val total = c * Game.COLS + gap + sideW + gap + bw + gap + sideW
+                left = floor(safe.centerX() - total / 2f + c * Game.COLS + gap + sideW + gap)
+            }
+        }
         board.place(left, top, cell)
-        val sideW = minOf(150f * u, left - safe.left - 28f * u)
-        val sl = left - 16f * u - sideW
+        val sl = left - gap - sideW
         val cardH = 56f * u
-        val gap = 8f * u
+        val cardGap = 8f * u
         pauseButton.set(sl, top, sl + 46f * u, top + cardH)
         for (i in 0 until 3) {
-            val t = top + (cardH + gap) * (i + 1)
+            val t = top + (cardH + cardGap) * (i + 1)
             cards[i].set(sl, t, sl + sideW, t + cardH)
         }
-        val rl = board.right + 16f * u
+        val rl = board.right + gap
         raiseRect.set(rl, board.bottom - 110f * u, rl + sideW, board.bottom + 4f * u)
-        if (rival != null) rivalBoard.place(rl + 4f * u, top + 22f * u, floor(minOf(9f * u, (sideW - 8f * u) / Game.COLS)), prepare = false)
+        rivalBeside = twin > 0f
+        if (twin > 0f) {
+            // bottoms level, so the two stacks can be compared at a glance
+            rivalBoard.place(sl - gap - twin * Game.COLS, board.bottom - twin * Game.ROWS, twin, prepare = false)
+        } else if (rival != null) {
+            rivalBoard.place(rl + 4f * u, top + 22f * u, floor(minOf(9f * u, (sideW - 8f * u) / Game.COLS)), prepare = false)
+        }
     }
 
     private fun layoutPanel() {
@@ -1067,15 +1093,19 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         val s = setup as Setup.Versus
         rivalBoard.draw(c, g, clock, if (g.phase == Phase.GAME_OVER) Game.ROWS else 0)
         val name = "CPU · " + s.difficulty.label.uppercase()
-        if (wide) {
-            ui.text(c, name, rivalBoard.left + rivalBoard.width / 2f, rivalBoard.top - 14f * u, 10.5f * u, Palette.TEXT_DIM, face = ui.semi)
-        } else {
-            val x = cards[0].left
-            val y = cards[0].bottom + 20f * u
-            ui.icon(c, Icon.BACK, x + 7f * u, y, 14f * u, Palette.TEXT_DIM)
-            ui.text(c, name, x + 18f * u, y, 12f * u, Palette.TEXT_DIM, Paint.Align.LEFT, ui.semi)
-            val wins = app.prefs.versusWins(s.difficulty)
-            if (wins > 0) ui.text(c, "WINS $wins", pauseButton.rect.right, y, 12f * u, Palette.ACCENT, Paint.Align.RIGHT, ui.semi)
+        val wins = app.prefs.versusWins(s.difficulty)
+        val x = rivalBoard.left + rivalBoard.width / 2f
+        when {
+            rivalBeside -> ui.outlinedText(c, name, x, rivalBoard.top + 16f * u, 12f * u, Palette.TEXT_DIM, Palette.PANEL_DARK, 4f * u)
+            wide -> ui.text(c, name, x, rivalBoard.top - 14f * u, 10.5f * u, Palette.TEXT_DIM, face = ui.semi)
+            else -> {
+                val w = rivalBoard.width + 14f * u
+                val y = rivalBoard.bottom + 20f * u
+                ui.text(c, "CPU", x, y, 11f * u, Palette.TEXT_DIM, face = ui.semi)
+                val level = s.difficulty.label.uppercase()
+                ui.text(c, level, x, y + 15f * u, ui.fitSize(level, 11f * u, w, ui.semi), Palette.TEXT_DIM, face = ui.semi)
+                if (wins > 0) ui.text(c, "WINS $wins", x, y + 34f * u, ui.fitSize("WINS $wins", 11f * u, w, ui.semi), Palette.ACCENT, face = ui.semi)
+            }
         }
     }
 

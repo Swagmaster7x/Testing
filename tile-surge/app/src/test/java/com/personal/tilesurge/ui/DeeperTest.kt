@@ -299,7 +299,6 @@ class DeeperTest {
         // the computer is playing its own well meanwhile
         v.step(600)
         assertTrue(rival.frames > 600)
-        Shots.save(v, "94-versus")
     }
 
     @Test
@@ -341,13 +340,55 @@ class DeeperTest {
     }
 
     @Test
-    fun `versus fits a wide screen too`() {
+    fun `the computer's well is a good size on every shape of screen`() {
+        // a phone held upright: beside the player's well, a quarter of its size, and the tiles are still easy to hold
+        val tall = view { PlayScene(it, Setup.Versus(Difficulty.NORMAL), 4L) }
+        tall.step(600)
+        val t = tall.play
+        assertFalse(t.rivalBeside)
+        assertTrue(t.rivalBoard.left > t.board.right)
+        assertTrue(t.rivalBoard.right <= tall.width - 12f)
+        assertEquals(t.board.top, t.rivalBoard.top)
+        assertTrue(t.rivalBoard.cell >= t.board.cell / 4f - 1f)
+        assertTrue(t.board.cell >= 40f * 2)
+        assertTrue(t.raiseRect.right >= t.rivalBoard.right)
+        Shots.save(tall, "94-versus")
+
+        // a small old phone
+        val small = Shots.view(480, 800) { PlayScene(it, Setup.Versus(Difficulty.NORMAL), 4L) }
+        small.step(300)
+        assertTrue(small.play.rivalBoard.right <= small.width)
+        assertTrue(small.play.rivalBoard.left > small.play.board.right)
+        Shots.save(small, "94-versus-small")
+
+        // a tablet on its side: two full wells
         val v = Shots.view(1600, 1000) { PlayScene(it, Setup.Versus(Difficulty.EASY), 4L) }
         v.step(600)
         val scene = v.play
-        assertTrue(scene.rivalBoard.left >= scene.board.right)
-        assertTrue(scene.rivalBoard.bottom <= scene.raiseRect.top)
+        assertTrue(scene.rivalBeside)
+        assertEquals(scene.board.cell, scene.rivalBoard.cell)
+        assertEquals(scene.board.bottom, scene.rivalBoard.bottom)
+        assertTrue(scene.rivalBoard.left >= 12f)
+        assertTrue(scene.rivalBoard.right < scene.pauseButton.rect.left)
+        assertTrue(scene.raiseRect.right <= v.width - 12f)
         Shots.save(v, "97-versus-wide")
+
+        // a phone on its side
+        val phone = Shots.view(1560, 720) { PlayScene(it, Setup.Versus(Difficulty.EASY), 4L) }
+        phone.step(600)
+        assertTrue(phone.play.rivalBeside)
+        assertEquals(phone.play.board.cell, phone.play.rivalBoard.cell)
+        Shots.save(phone, "97-versus-phone-sideways")
+
+        // nearly square: no room for two, so the computer's well goes small above the raise button
+        val square = Shots.view(1050, 1000) { PlayScene(it, Setup.Versus(Difficulty.EASY), 4L) }
+        square.step(300)
+        val q = square.play
+        assertFalse(q.rivalBeside)
+        assertTrue(q.rivalBoard.left >= q.board.right)
+        assertTrue(q.rivalBoard.bottom <= q.raiseRect.top)
+        assertTrue(q.rivalBoard.right <= square.width)
+        Shots.save(square, "97-versus-square")
     }
 
     @Test
