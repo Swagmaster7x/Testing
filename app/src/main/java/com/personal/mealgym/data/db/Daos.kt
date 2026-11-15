@@ -46,6 +46,8 @@ interface ProfileDao {
     @Query("DELETE FROM WorkoutSession WHERE profileId = :id") suspend fun deleteSessions(id: Long)
     @Query("DELETE FROM SaunaLog WHERE profileId = :id") suspend fun deleteSauna(id: Long)
     @Query("DELETE FROM SupplementLog WHERE profileId = :id") suspend fun deleteSupplements(id: Long)
+    @Query("DELETE FROM OffPlanMeal WHERE profileId = :id") suspend fun deleteOffPlan(id: Long)
+    @Query("DELETE FROM CookLog WHERE profileId = :id") suspend fun deleteCookLogs(id: Long)
     @Query("DELETE FROM ShoppingCheck WHERE listKey = :listKey") suspend fun deleteShoppingChecks(listKey: String)
     @Query("UPDATE Recipe SET onlyForProfileId = NULL WHERE onlyForProfileId = :id") suspend fun releaseRecipes(id: Long)
 }
@@ -144,9 +146,40 @@ interface PlanDao {
     @Query("DELETE FROM MealPlanEntry WHERE profileId = :profileId AND date = :date AND slot = :slot")
     suspend fun clear(profileId: Long, date: String, slot: MealSlot)
 
+    @Query("UPDATE MealPlanEntry SET extraServings = :extra WHERE profileId = :profileId AND date = :date AND slot = :slot")
+    suspend fun setExtraServings(profileId: Long, date: String, slot: MealSlot, extra: Double)
+
+    // Slots planned as eating out, leftovers or a skip.
+    @Query("SELECT * FROM OffPlanMeal WHERE profileId = :profileId AND date BETWEEN :start AND :end")
+    fun observeOffPlan(profileId: Long, start: String, end: String): Flow<List<OffPlanMeal>>
+
+    @Query("SELECT * FROM OffPlanMeal WHERE profileId = :profileId AND date BETWEEN :start AND :end")
+    suspend fun getOffPlan(profileId: Long, start: String, end: String): List<OffPlanMeal>
+
+    @Query("SELECT * FROM OffPlanMeal WHERE profileId = :profileId AND date <= :end ORDER BY date DESC")
+    fun observeOffPlanUpTo(profileId: Long, end: String): Flow<List<OffPlanMeal>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putOffPlan(meal: OffPlanMeal)
+
+    @Query("DELETE FROM OffPlanMeal WHERE profileId = :profileId AND date = :date AND slot = :slot")
+    suspend fun clearOffPlan(profileId: Long, date: String, slot: MealSlot)
+
+    // "Cooked it".
+    @Insert suspend fun insertCookLog(log: CookLog): Long
+
+    @Query("SELECT * FROM CookLog WHERE profileId = :profileId ORDER BY date DESC, id DESC")
+    fun observeCookLogs(profileId: Long): Flow<List<CookLog>>
+
     // Backup
     @Query("SELECT * FROM MealPlanEntry") suspend fun all(): List<MealPlanEntry>
     @Query("DELETE FROM MealPlanEntry") suspend fun deleteAll()
+    @Query("SELECT * FROM OffPlanMeal") suspend fun allOffPlan(): List<OffPlanMeal>
+    @Query("SELECT * FROM CookLog") suspend fun allCookLogs(): List<CookLog>
+    @Insert suspend fun insertOffPlan(meals: List<OffPlanMeal>)
+    @Insert suspend fun insertCookLogs(logs: List<CookLog>)
+    @Query("DELETE FROM OffPlanMeal") suspend fun deleteAllOffPlan()
+    @Query("DELETE FROM CookLog") suspend fun deleteAllCookLogs()
 }
 
 @Dao
@@ -203,6 +236,14 @@ interface WorkoutDao {
             "GROUP BY exerciseNameUsed)",
     )
     fun observeLatestLogs(profileId: Long): Flow<List<SetLog>>
+
+    /** Every logged set on one side with its workout's date, oldest first. */
+    @Query(
+        "SELECT s.id, s.sessionId, s.exerciseNameUsed, s.weight, s.reps, s.setIndex, w.date, w.feeling " +
+            "FROM SetLog s JOIN WorkoutSession w ON w.id = s.sessionId " +
+            "WHERE s.profileId = :profileId ORDER BY w.date, s.sessionId, s.id",
+    )
+    fun observeLoggedSets(profileId: Long): Flow<List<LoggedSet>>
 
     // Backup
     @Query("SELECT * FROM WorkoutDay") suspend fun allDays(): List<WorkoutDay>

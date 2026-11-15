@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.personal.mealgym.BuildConfig
 import com.personal.mealgym.data.db.ProteinTag
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -63,6 +64,10 @@ data class AppSettings(
     val filter: LibraryFilter = LibraryFilter(),
     /** Shopping list shows everyone's meals on this phone. */
     val shoppingBoth: Boolean = false,
+    /** "Try 140 x 8" on gym cards, worked out from last time. Off in the personal app until switched on. */
+    val suggestLifts: Boolean = BuildConfig.STORE,
+    /** What each planned day adds up to, on Plan and Today. Off in the personal app until switched on. */
+    val dayTotals: Boolean = BuildConfig.STORE,
 )
 
 /** Which side this phone opens to. */
@@ -85,6 +90,10 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val activeProfile = longPreferencesKey("active_profile")
         val adsRemoved = booleanPreferencesKey("ads_removed")
         val cupboard = stringSetPreferencesKey("cupboard")
+
+        /** "key=epochDay" for cupboard items whose arrival date is known (bought, or ticked since version 6). */
+        val cupboardSince = stringSetPreferencesKey("cupboard_since")
+        val cupboardAuto = booleanPreferencesKey("cupboard_auto")
     }
 
     private fun name(base: String, profileId: Long) = if (profileId == Profiles.FIRST) base else "p${profileId}_$base"
@@ -141,6 +150,8 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
                 notChicken = p[bool("filter_not_chicken", id)] ?: false,
             ),
             shoppingBoth = p[bool("shopping_both", id)] ?: false,
+            suggestLifts = p[bool("suggest_lifts", id)] ?: defaults.suggestLifts,
+            dayTotals = p[bool("day_totals", id)] ?: defaults.dayTotals,
         )
     }
 
@@ -162,6 +173,10 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
 
     suspend fun setShoppingBoth(profileId: Long, both: Boolean) = store.edit { it[bool("shopping_both", profileId)] = both }
 
+    suspend fun setSuggestLifts(profileId: Long, on: Boolean) = store.edit { it[bool("suggest_lifts", profileId)] = on }
+
+    suspend fun setDayTotals(profileId: Long, on: Boolean) = store.edit { it[bool("day_totals", profileId)] = on }
+
     suspend fun setFilter(profileId: Long, filter: LibraryFilter) = store.edit { p ->
         p.setOrRemove(string("filter_protein", profileId), filter.protein?.name)
         p.setOrRemove(string("filter_cuisine", profileId), filter.cuisine)
@@ -171,12 +186,46 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
     /** What's ticked in "My cupboard" (plain food names). One cupboard for the household. */
     val cupboard: Flow<Set<String>> = store.data.map { it[Shared.cupboard] ?: emptySet() }
 
-    suspend fun setInCupboard(key: String, have: Boolean) = store.edit { p ->
+    /**
+     * The day (epoch day) each cupboard item went in, where known. Items ticked before the app
+     * kept dates have none.
+     */
+    val cupboardSince: Flow<Map<String, Long>> = store.data.map { p -> decodeSince(p[Shared.cupboardSince]) }
+
+    /** Ticking a shopping item puts it in the cupboard, and cooking offers to take things out. */
+    val cupboardAuto: Flow<Boolean> = store.data.map { it[Shared.cupboardAuto] ?: BuildConfig.STORE }
+
+    suspend fun setCupboardAuto(on: Boolean) = store.edit { it[Shared.cupboardAuto] = on }
+
+    /** [today] is remembered as the day the item went in, so the oldest fresh food can be suggested first. */
+    suspend fun setInCupboard(key: String, have: Boolean, today: Long? = null) = setInCupboard(listOf(key), have, today)
+
+    suspend fun setInCupboard(keys: Collection<String>, have: Boolean, today: Long? = null) = store.edit { p ->
         val current = p[Shared.cupboard] ?: emptySet()
-        p[Shared.cupboard] = if (have) current + key else current - key
+        val since = decodeSince(p[Shared.cupboardSince]).toMutableMap()
+        if (have) {
+            // Something already there keeps its earlier date.
+            if (today != null) keys.filter { it !in current }.forEach { since[it] = today }
+            p[Shared.cupboard] = current + keys
+        } else {
+            keys.forEach { since.remove(it) }
+            p[Shared.cupboard] = current - keys.toSet()
+        }
+        p[Shared.cupboardSince] = encodeSince(since)
     }
 
-    suspend fun setCupboard(keys: Set<String>) = store.edit { it[Shared.cupboard] = keys }
+    suspend fun setCupboard(keys: Set<String>, since: Map<String, Long> = emptyMap()) = store.edit { p ->
+        p[Shared.cupboard] = keys
+        p[Shared.cupboardSince] = encodeSince(since.filterKeys { it in keys })
+    }
+
+    private fun decodeSince(raw: Set<String>?): Map<String, Long> = raw.orEmpty().mapNotNull { entry ->
+        val at = entry.lastIndexOf('=')
+        val day = entry.substring(at + 1).toLongOrNull()
+        if (at <= 0 || day == null) null else entry.substring(0, at) to day
+    }.toMap()
+
+    private fun encodeSince(since: Map<String, Long>): Set<String> = since.map { (key, day) -> "$key=$day" }.toSet()
 
     suspend fun setPantryStaples(items: Set<String>) = store.edit { it[Shared.pantryStaples] = items }
 
@@ -200,6 +249,8 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         p[bool("chime", id)] = settings.chime
         p[bool("creatine_reminder", id)] = settings.creatineReminder
         p[bool("shopping_both", id)] = settings.shoppingBoth
+        p[bool("suggest_lifts", id)] = settings.suggestLifts
+        p[bool("day_totals", id)] = settings.dayTotals
         p.setOrRemove(string("filter_protein", id), settings.filter.protein?.name)
         p.setOrRemove(string("filter_cuisine", id), settings.filter.cuisine)
         p[bool("filter_not_chicken", id)] = settings.filter.notChicken
@@ -214,6 +265,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val PER_PERSON = listOf(
             "training_weekdays", "show_nutrition", "show_half_plate_tip", "weight_unit", "motion", "chime",
             "creatine_reminder", "filter_protein", "filter_cuisine", "filter_not_chicken", "shopping_both",
+            "suggest_lifts", "day_totals",
         )
     }
 }

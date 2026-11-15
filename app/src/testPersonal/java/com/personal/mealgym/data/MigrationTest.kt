@@ -7,6 +7,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.personal.mealgym.data.db.AppDatabase
+import com.personal.mealgym.data.db.CookLog
+import com.personal.mealgym.data.db.CookRating
+import com.personal.mealgym.data.db.OffPlanKind
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.data.db.MealSlot
 import com.personal.mealgym.data.db.Profile
@@ -91,7 +95,10 @@ class MigrationTest {
 
     private fun openWithRoom(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5,
+                AppDatabase.MIGRATION_5_6,
+            )
             .allowMainThreadQueries()
             .build()
 
@@ -101,7 +108,7 @@ class MigrationTest {
         val room = openWithRoom()
         // Opening runs the migration and then Room's schema check; it throws if anything differs.
         val db = room.openHelper.writableDatabase
-        assertEquals(5, db.version)
+        assertEquals(6, db.version)
 
         fun single(sql: String): String = db.query(sql).use { c ->
             c.moveToFirst()
@@ -180,6 +187,54 @@ class MigrationTest {
         db.profileDao().setPlanAnswers(2, "{\"goal\":\"BUILD\"}")
         assertEquals("{\"goal\":\"BUILD\"}", db.profileDao().all()[1].planAnswers)
         assertTrue(db.profileDao().all()[1].snackSlot)
+        db.close()
+    }
+
+    @Test
+    fun version6KeepsLiftingNotesAndPlansAndAddsTheNewTables() = runBlocking {
+        // A phone on version 5 with a planned meal and one lifting note.
+        createFromSchema(5).apply {
+            execSQL(
+                "INSERT INTO Profile (id, name, themeKey, snackSlot, portion, tipsStyle, weekBadges, templateKey) VALUES " +
+                    "(1, 'Swag', 'IRON', 0, 1.0, 'FILL_UP', 0, 'upper-lower-4')",
+            )
+            execSQL(
+                "INSERT INTO Recipe (id, seedKey, name, mealType, cuisineTags, servings, servingSizeText, nutritionText, steps, " +
+                    "volumeTip, isMealPrep, isUserCreated, isFavorite, isHidden, proteinSwaps) VALUES " +
+                    "(1, 'L1', 'Pollo guisado', 'LUNCH', '[]', 4, '1 portion', '~620 cal', '[]', NULL, 1, 0, 0, 0, '[]')",
+            )
+            execSQL("INSERT INTO MealPlanEntry (id, date, slot, recipeId, profileId) VALUES (1, '2026-11-09', 'LUNCH', 1, 1)")
+            execSQL(
+                "INSERT INTO WorkoutSession (id, date, workoutDayId, dayOrder, dayName, feeling, note, profileId) " +
+                    "VALUES (1, '2026-11-09', NULL, 1, 'Upper Body', 'GREAT', NULL, 1)",
+            )
+            execSQL(
+                "INSERT INTO SetLog (id, sessionId, exerciseId, exerciseNameUsed, weight, reps, profileId) " +
+                    "VALUES (1, 1, NULL, 'Barbell bench press', 135.0, 8, 1)",
+            )
+            close()
+        }
+        val db = openWithRoom()
+        val entry = db.planDao().getRange(1, "2026-11-09", "2026-11-09").single()
+        assertEquals(0.0, entry.extraServings, 0.0)
+        // The old note is still the latest, with no set number, and shows up with its date.
+        val note = db.workoutDao().observeLatestLogs(1).first().single()
+        assertEquals(null, note.setIndex)
+        val logged = db.workoutDao().observeLoggedSets(1).first().single()
+        assertEquals("2026-11-09", logged.date)
+        assertEquals(135.0, logged.weight!!, 0.0)
+
+        // The new tables work.
+        db.planDao().setExtraServings(1, "2026-11-09", MealSlot.LUNCH, 2.0)
+        assertEquals(2.0, db.planDao().getRange(1, "2026-11-09", "2026-11-09").single().extraServings, 0.0)
+        db.planDao().putOffPlan(OffPlanMeal(profileId = 1, date = "2026-11-10", slot = MealSlot.DINNER, kind = OffPlanKind.EATING_OUT, title = "Tacos"))
+        db.planDao().putOffPlan(OffPlanMeal(profileId = 1, date = "2026-11-10", slot = MealSlot.DINNER, kind = OffPlanKind.SKIP))
+        assertEquals(listOf(OffPlanKind.SKIP), db.planDao().getOffPlan(1, "2026-11-10", "2026-11-10").map { it.kind })
+        db.planDao().insertCookLog(CookLog(profileId = 1, recipeId = 1, date = "2026-11-09", rating = CookRating.LOVED))
+        assertEquals(CookRating.LOVED, db.planDao().observeCookLogs(1).first().single().rating)
+        // Deleting the recipe takes its cook log with it.
+        db.recipeDao().delete(1)
+        assertTrue(db.planDao().observeCookLogs(1).first().isEmpty())
         db.close()
     }
 

@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-/** There is deliberately no table for body weight, calorie totals or goals. */
+/** There is deliberately no table for body weight or for food eaten: the app plans, it doesn't track. */
 @Database(
     entities = [
         Recipe::class,
@@ -23,8 +23,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Profile::class,
         Meta::class,
         SupplementLog::class,
+        OffPlanMeal::class,
+        CookLog::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -42,7 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** [onCreated] runs once, when the database file is first created (first launch). */
         fun build(context: Context, onCreated: () -> Unit = {}): AppDatabase =
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "mealgym.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .addCallback(
                     object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) = onCreated()
@@ -145,6 +147,35 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `Profile` ADD COLUMN `planAnswers` TEXT")
+            }
+        }
+
+        /**
+         * Version 6 makes room for the deeper gym log, plan and cooking mode: which set a
+         * lifting note belongs to, extra servings on a planned meal, slots planned as eating
+         * out, leftovers or a skip, and a note of what was cooked. Everything already there is
+         * kept as it is: older lifting notes simply have no set number.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `SetLog` ADD COLUMN `setIndex` INTEGER")
+                db.execSQL("ALTER TABLE `MealPlanEntry` ADD COLUMN `extraServings` REAL NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `OffPlanMeal` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`profileId` INTEGER NOT NULL, `date` TEXT NOT NULL, `slot` TEXT NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`title` TEXT, `restaurantKey` TEXT, `calories` INTEGER, `protein` INTEGER)",
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_OffPlanMeal_profileId_date_slot` " +
+                        "ON `OffPlanMeal` (`profileId`, `date`, `slot`)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `CookLog` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`profileId` INTEGER NOT NULL, `recipeId` INTEGER NOT NULL, `date` TEXT NOT NULL, `rating` TEXT, " +
+                        "FOREIGN KEY(`recipeId`) REFERENCES `Recipe`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_CookLog_recipeId` ON `CookLog` (`recipeId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_CookLog_profileId` ON `CookLog` (`profileId`)")
             }
         }
     }

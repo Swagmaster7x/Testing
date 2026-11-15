@@ -107,6 +107,8 @@ class PlanTransfer(
                 }
                 entries += MealPlanEntry(date = meal.date, slot = meal.slot, recipeId = recipeId, profileId = profileId)
             }
+            // An imported meal replaces whatever that slot held, including "Eating out" or a skip.
+            entries.forEach { db.planDao().clearOffPlan(it.profileId, it.date, it.slot) }
             db.planDao().putAll(entries)
         }
         return PlanImportResult(profileId, entries.size, newRecipes)

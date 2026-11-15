@@ -4,6 +4,8 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.room.withTransaction
 import com.personal.mealgym.data.db.AppDatabase
+import com.personal.mealgym.data.db.CookLog
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.Exercise
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealPlanEntry
@@ -41,6 +43,12 @@ data class BackupSettings(
     val filterCuisine: String? = null,
     val filterNotChicken: Boolean = false,
     val shoppingBoth: Boolean = false,
+    /** Null in files from before these existed: the edition's default applies. */
+    val suggestLifts: Boolean? = null,
+    val dayTotals: Boolean? = null,
+    /** Shared by everyone, like the cupboard itself. */
+    val cupboardSince: Map<String, Long> = emptyMap(),
+    val cupboardAuto: Boolean? = null,
 ) {
     fun toSettings(profileId: Long) = AppSettings(
         profileId = profileId,
@@ -54,6 +62,8 @@ data class BackupSettings(
         creatineReminder = creatineReminder,
         filter = LibraryFilter(filterProtein, filterCuisine, filterNotChicken),
         shoppingBoth = shoppingBoth,
+        suggestLifts = suggestLifts ?: AppSettings(profileId).suggestLifts,
+        dayTotals = dayTotals ?: AppSettings(profileId).dayTotals,
     )
 
     companion object {
@@ -70,6 +80,8 @@ data class BackupSettings(
             filterCuisine = s.filter.cuisine,
             filterNotChicken = s.filter.notChicken,
             shoppingBoth = s.shoppingBoth,
+            suggestLifts = s.suggestLifts,
+            dayTotals = s.dayTotals,
         )
     }
 }
@@ -99,10 +111,13 @@ data class BackupFile(
     val setLogs: List<SetLog>,
     val saunaLogs: List<SaunaLog>,
     val supplementLogs: List<SupplementLog> = emptyList(),
+    /** Version 4: slots planned as eating out, leftovers or a skip, and what was cooked. */
+    val offPlanMeals: List<OffPlanMeal> = emptyList(),
+    val cookLogs: List<CookLog> = emptyList(),
 ) {
     companion object {
         const val APP_ID = "com.personal.mealgym"
-        const val FORMAT_VERSION = 3
+        const val FORMAT_VERSION = 4
     }
 }
 
@@ -125,7 +140,11 @@ class BackupManager(
         val profiles = db.profileDao().all()
         return BackupFile(
             exportedAt = LocalDateTime.now().withNano(0).toString(),
-            settings = BackupSettings.of(settings.current(Profiles.FIRST)).copy(cupboard = settings.cupboard.first().sorted()),
+            settings = BackupSettings.of(settings.current(Profiles.FIRST)).copy(
+                cupboard = settings.cupboard.first().sorted(),
+                cupboardSince = settings.cupboardSince.first(),
+                cupboardAuto = settings.cupboardAuto.first(),
+            ),
             sideSettings = profiles.filter { it.id != Profiles.FIRST }
                 .associate { it.id.toString() to BackupSettings.of(settings.current(it.id)).copy(pantryStaples = emptyList()) },
             profiles = profiles,
@@ -139,6 +158,8 @@ class BackupManager(
             setLogs = workoutDao.allSetLogs(),
             saunaLogs = db.saunaDao().all(),
             supplementLogs = db.supplementDao().all(),
+            offPlanMeals = db.planDao().allOffPlan(),
+            cookLogs = db.planDao().allCookLogs(),
         )
     }
 
@@ -161,6 +182,8 @@ class BackupManager(
             db.saunaDao().deleteAll()
             db.supplementDao().deleteAll()
             db.planDao().deleteAll()
+            db.planDao().deleteAllOffPlan()
+            db.planDao().deleteAllCookLogs()
             recipeDao.deleteAllRecipes()
             workoutDao.deleteAllSessions()
             workoutDao.deleteAllDays()
@@ -177,9 +200,14 @@ class BackupManager(
             workoutDao.insertSetLogs(file.setLogs)
             db.saunaDao().insertAll(file.saunaLogs)
             db.supplementDao().insertAll(file.supplementLogs)
+            db.planDao().insertOffPlan(file.offPlanMeals)
+            // A cook log whose recipe isn't in the file has nothing to point at.
+            val recipeIds = file.recipes.map { it.id }.toSet()
+            db.planDao().insertCookLogs(file.cookLogs.filter { it.recipeId in recipeIds })
         }
         settings.replace(file.settings.toSettings(Profiles.FIRST), includePantry = true)
-        settings.setCupboard(file.settings.cupboard.toSet())
+        settings.setCupboard(file.settings.cupboard.toSet(), file.settings.cupboardSince)
+        file.settings.cupboardAuto?.let { settings.setCupboardAuto(it) }
         file.sideSettings.forEach { (id, s) ->
             id.toLongOrNull()?.let { settings.replace(s.toSettings(it), includePantry = false) }
         }
@@ -198,7 +226,10 @@ class BackupManager(
         val ids = fromFile.map { it.id }.toSet()
         val missing = builtIn.values.filter { it.id !in ids }
         val all = fromFile + missing
-        val used = (file.mealPlan.map { it.profileId } + file.workoutDays.map { it.profileId } + file.workoutSessions.map { it.profileId })
+        val used = (
+            file.mealPlan.map { it.profileId } + file.workoutDays.map { it.profileId } +
+                file.workoutSessions.map { it.profileId } + file.offPlanMeals.map { it.profileId }
+            )
             .toSet() - all.map { it.id }.toSet()
         return all + used.sorted().map { Profile(it, if (it == Profiles.FIRST) "Me" else "Person $it", Profile.THEME_IRON) }
     }

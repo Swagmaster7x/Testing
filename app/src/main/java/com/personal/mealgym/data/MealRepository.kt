@@ -2,6 +2,9 @@ package com.personal.mealgym.data
 
 import androidx.room.withTransaction
 import com.personal.mealgym.data.db.AppDatabase
+import com.personal.mealgym.data.db.CookLog
+import com.personal.mealgym.data.db.CookRating
+import com.personal.mealgym.data.db.OffPlanMeal
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.data.db.MealSlot
@@ -81,13 +84,55 @@ class MealRepository(
 
     fun planUpTo(profileId: Long, date: LocalDate): Flow<List<MealPlanEntry>> = planDao.observeUpTo(profileId, Dates.iso(date))
 
-    suspend fun setSlot(profileId: Long, date: LocalDate, slot: MealSlot, recipeId: Long) =
+    /** A slot holds a recipe or something off the plan (eating out, leftovers, a skip), never both. */
+    suspend fun setSlot(profileId: Long, date: LocalDate, slot: MealSlot, recipeId: Long) = db.withTransaction {
+        planDao.clearOffPlan(profileId, Dates.iso(date), slot)
         planDao.put(MealPlanEntry(date = Dates.iso(date), slot = slot, recipeId = recipeId, profileId = profileId))
+    }
 
-    suspend fun clearSlot(profileId: Long, date: LocalDate, slot: MealSlot) = planDao.clear(profileId, Dates.iso(date), slot)
+    suspend fun clearSlot(profileId: Long, date: LocalDate, slot: MealSlot) = db.withTransaction {
+        planDao.clear(profileId, Dates.iso(date), slot)
+        planDao.clearOffPlan(profileId, Dates.iso(date), slot)
+    }
 
-    suspend fun copyTo(profileId: Long, dates: Collection<LocalDate>, slot: MealSlot, recipeId: Long) =
+    suspend fun copyTo(profileId: Long, dates: Collection<LocalDate>, slot: MealSlot, recipeId: Long) = db.withTransaction {
+        dates.forEach { planDao.clearOffPlan(profileId, Dates.iso(it), slot) }
         planDao.putAll(dates.map { MealPlanEntry(date = Dates.iso(it), slot = slot, recipeId = recipeId, profileId = profileId) })
+    }
+
+    // Slots planned as eating out, leftovers or a skip. They never reach the shopping list.
+
+    fun offPlanForWeek(profileId: Long, weekStart: LocalDate): Flow<List<OffPlanMeal>> =
+        planDao.observeOffPlan(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6)))
+
+    fun offPlanUpTo(profileId: Long, date: LocalDate): Flow<List<OffPlanMeal>> = planDao.observeOffPlanUpTo(profileId, Dates.iso(date))
+
+    suspend fun weekOffPlan(profileId: Long, weekStart: LocalDate): List<OffPlanMeal> =
+        planDao.getOffPlan(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6)))
+
+    suspend fun setOffPlan(meal: OffPlanMeal) = db.withTransaction {
+        planDao.clear(meal.profileId, meal.date, meal.slot)
+        planDao.putOffPlan(meal.copy(id = 0, title = meal.title?.trim()?.takeIf { it.isNotEmpty() }))
+    }
+
+    /** Cooking for guests that meal: [extra] servings on top of the person's own, bought with the rest. */
+    suspend fun setExtraServings(profileId: Long, date: LocalDate, slot: MealSlot, extra: Double) =
+        planDao.setExtraServings(profileId, Dates.iso(date), slot, extra.coerceIn(0.0, MAX_EXTRA_SERVINGS))
+
+    // "Cooked it"
+
+    suspend fun logCooked(profileId: Long, recipeId: Long, date: LocalDate, rating: CookRating?) =
+        planDao.insertCookLog(CookLog(profileId = profileId, recipeId = recipeId, date = Dates.iso(date), rating = rating))
+
+    fun cookLogs(profileId: Long): Flow<List<CookLog>> = planDao.observeCookLogs(profileId)
+
+    /** What one person last said about each recipe they've cooked. */
+    fun ratings(profileId: Long): Flow<Map<Long, CookRating>> = cookLogs(profileId).map { logs ->
+        // Newest first, so the first rated entry per recipe is the latest opinion.
+        val latest = LinkedHashMap<Long, CookRating>()
+        for (log in logs) log.rating?.let { latest.putIfAbsent(log.recipeId, it) }
+        latest
+    }
 
     /**
      * Puts a meal-prep recipe in [date]'s slot and in the next empty same slots of that week,
@@ -95,10 +140,8 @@ class MealRepository(
      */
     suspend fun fillBatch(profileId: Long, date: LocalDate, slot: MealSlot, recipe: Recipe): Int {
         val weekEnd = Dates.weekStart(date).plusDays(6)
-        val taken = planDao.getRange(profileId, Dates.iso(date), Dates.iso(weekEnd))
-            .filter { it.slot == slot }
-            .map { it.date }
-            .toSet()
+        val taken = planDao.getRange(profileId, Dates.iso(date), Dates.iso(weekEnd)).filter { it.slot == slot }.map { it.date }.toSet() +
+            planDao.getOffPlan(profileId, Dates.iso(date), Dates.iso(weekEnd)).filter { it.slot == slot && it.date != Dates.iso(date) }.map { it.date }
         val targets = mutableListOf(date)
         var d = date.plusDays(1)
         while (targets.size < recipe.slotsPerCook && !d.isAfter(weekEnd)) {
@@ -112,11 +155,10 @@ class MealRepository(
     /** Copies last week's meals into this week's empty slots. Returns how many were copied. */
     suspend fun repeatLastWeek(profileId: Long, weekStart: LocalDate): Int {
         val lastWeek = planDao.getRange(profileId, Dates.iso(weekStart.minusDays(7)), Dates.iso(weekStart.minusDays(1)))
-        val filled = planDao.getRange(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6)))
-            .map { it.date to it.slot }
-            .toSet()
+        val filled = planDao.getRange(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6))).map { it.date to it.slot }.toSet() +
+            planDao.getOffPlan(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6))).map { it.date to it.slot }
         val copies = lastWeek
-            .map { it.copy(id = 0, date = Dates.iso(Dates.parse(it.date).plusDays(7))) }
+            .map { it.copy(id = 0, date = Dates.iso(Dates.parse(it.date).plusDays(7)), extraServings = 0.0) }
             .filter { (it.date to it.slot) !in filled }
         planDao.putAll(copies)
         return copies.size
@@ -125,7 +167,10 @@ class MealRepository(
     suspend fun weekEntries(profileId: Long, weekStart: LocalDate): List<MealPlanEntry> =
         planDao.getRange(profileId, Dates.iso(weekStart), Dates.iso(weekStart.plusDays(6)))
 
-    suspend fun putEntries(entries: List<MealPlanEntry>) = planDao.putAll(entries)
+    suspend fun putEntries(entries: List<MealPlanEntry>) = db.withTransaction {
+        entries.forEach { planDao.clearOffPlan(it.profileId, it.date, it.slot) }
+        planDao.putAll(entries)
+    }
 
     fun listKey(profileId: Long, both: Boolean) = if (both) "both" else "p$profileId"
 
@@ -181,6 +226,8 @@ class MealRepository(
     suspend fun setActiveSwap(id: Long, swap: Int?) = recipeDao.setActiveSwap(id, swap)
 
     companion object {
+        const val MAX_EXTRA_SERVINGS = 12.0
+
         /**
          * Counts portions per recipe across the plan (each person's lunches and dinners use their
          * own portion size) with any "Make it with..." swap applied.
@@ -194,7 +241,8 @@ class MealRepository(
             val ordered = entries.sortedWith(compareBy<MealPlanEntry> { it.date }.thenBy { it.slot.ordinal }.thenBy { it.profileId })
             val portions = LinkedHashMap<Long, Double>()
             for (e in ordered) {
-                portions[e.recipeId] = (portions[e.recipeId] ?: 0.0) + Portions.forSlot(portionOf(e.profileId), e.slot)
+                // The person's own share, plus anyone extra they're cooking for that meal.
+                portions[e.recipeId] = (portions[e.recipeId] ?: 0.0) + Portions.forSlot(portionOf(e.profileId), e.slot) + e.extraServings
             }
             return portions.mapNotNull { (id, amount) ->
                 byId[id]?.let { PlannedRecipe(it.recipe, RecipeSwaps.ingredientsFor(it.recipe, it.ingredients), amount) }

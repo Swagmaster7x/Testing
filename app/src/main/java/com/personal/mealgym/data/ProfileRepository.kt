@@ -72,6 +72,8 @@ class ProfileRepository(
             dao.deleteWorkoutDays(id)
             dao.deleteSauna(id)
             dao.deleteSupplements(id)
+            dao.deleteOffPlan(id)
+            dao.deleteCookLogs(id)
             dao.deleteShoppingChecks("p$id")
             dao.releaseRecipes(id)
             dao.delete(id)

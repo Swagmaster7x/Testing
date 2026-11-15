@@ -26,6 +26,12 @@ enum class StoreSection { PROTEIN, PRODUCE_FROZEN, CARBS, PANTRY }
 @Serializable
 enum class Feeling { GREAT, FINE, ROUGH }
 
+/** A planned slot that isn't a recipe from the library. */
+enum class OffPlanKind { EATING_OUT, LEFTOVERS, SKIP }
+
+/** How a cooked recipe went down. Steers "Fill my week" for that person. */
+enum class CookRating { LOVED, FINE, NOT_AGAIN }
+
 /**
  * One person in the app: their own look, meal plan, gym days and history. What used to be
  * hard-wired for Swag or Ashley is now a setting on the profile.
@@ -155,6 +161,44 @@ data class MealPlanEntry(
     val slot: MealSlot,
     val recipeId: Long,
     @ColumnInfo(defaultValue = "1") val profileId: Long = 1,
+    /** Cooking for more people that meal (guests): servings on top of this person's own. */
+    @ColumnInfo(defaultValue = "0") val extraServings: Double = 0.0,
+)
+
+/**
+ * A slot planned as something other than a recipe: eating out, leftovers, or skipping it.
+ * It keeps the week honest and never reaches the shopping list. [calories] and [protein] are
+ * rough figures for the day's total, when the person picked something that has them.
+ */
+@Serializable
+@Entity(indices = [Index(value = ["profileId", "date", "slot"], unique = true)])
+data class OffPlanMeal(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val profileId: Long,
+    val date: String,
+    val slot: MealSlot,
+    val kind: OffPlanKind,
+    /** What it is, in words: "Chipotle: Chicken". */
+    val title: String? = null,
+    val restaurantKey: String? = null,
+    val calories: Int? = null,
+    val protein: Int? = null,
+)
+
+/** "Cooked it": one row each time a person cooks a recipe, with how it went if they said. */
+@Serializable
+@Entity(
+    foreignKeys = [
+        ForeignKey(entity = Recipe::class, parentColumns = ["id"], childColumns = ["recipeId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("recipeId"), Index("profileId")],
+)
+data class CookLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val profileId: Long,
+    val recipeId: Long,
+    val date: String,
+    val rating: CookRating? = null,
 )
 
 /**
@@ -222,7 +266,12 @@ data class WorkoutSession(
     @ColumnInfo(defaultValue = "1") val profileId: Long = 1,
 )
 
-/** Optional per-exercise lifting note; drives "Last time: 135 x 8". Weight on the bar only. */
+/**
+ * What was lifted. A row with a [setIndex] is one ticked set (0 is the first), with the weight
+ * and reps that were in the boxes when it was ticked, if any. A row without one is the older
+ * single note for the whole exercise. Either way it drives "Last time: 135 x 8". Weight on the
+ * bar only.
+ */
 @Serializable
 @Entity(
     foreignKeys = [
@@ -238,6 +287,19 @@ data class SetLog(
     val weight: Double? = null,
     val reps: Int? = null,
     @ColumnInfo(defaultValue = "1") val profileId: Long = 1,
+    val setIndex: Int? = null,
+)
+
+/** A logged set with the day it was done, for progress over time. */
+data class LoggedSet(
+    val id: Long,
+    val sessionId: Long,
+    val exerciseNameUsed: String,
+    val weight: Double?,
+    val reps: Int?,
+    val setIndex: Int?,
+    val date: String,
+    val feeling: Feeling,
 )
 
 @Serializable
