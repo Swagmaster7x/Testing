@@ -48,6 +48,25 @@ object Format {
     fun number(n: Int): String = String.format(Locale.US, "%,d", n)
 }
 
+/** One player's fingers: which of them is holding a tile in [board], and which is on the raise button at [raiseRect]. */
+private class Hand(val board: BoardRenderer, val raiseRect: RectF, private val source: () -> Game) {
+    val game: Game get() = source()
+    var boardFinger = -1
+    var raiseFinger = -1
+    var fingerX = 0f
+    var fingerY = 0f
+
+    /** A finger was put down on the well during READY; it picks up whatever is under it at GO. */
+    var waitingForGo = false
+
+    /** Where on the tile the finger took hold, sideways from its middle. The tile keeps that grip as it is dragged. */
+    var gripOffset = 0f
+
+    /** The finger has lifted but the tile is still on its way to where it was dropped. */
+    var lettingGo = false
+    var lettingGoFrames = 0
+}
+
 /** The game itself: the well, the readouts above it, the raise button below it, and the pause and result panels. */
 class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null, resumed: Game? = null) : Scene(app) {
 
@@ -78,6 +97,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
 
     /** Versus: blockers sent across so far. */
     var sent = 0
+        private set
+
+    /** Two players: blockers the second player has sent. */
+    var sent2 = 0
         private set
 
     /** Coins this round paid, shown on the result panel. */
@@ -121,20 +144,12 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private val panelRect = RectF()
 
     // ---- touch
-    private var boardFinger = -1
-    private var raiseFinger = -1
-    private var fingerX = 0f
-    private var fingerY = 0f
-
-    /** A finger was put down on the well during READY; it picks up whatever is under it at GO. */
-    private var waitingForGo = false
-
-    /** Where on the tile the finger took hold, sideways from its middle. The tile keeps that grip as it is dragged. */
-    private var gripOffset = 0f
-
-    /** The finger has lifted but the tile is still on its way to where it was dropped. */
-    private var lettingGo = false
-    private var lettingGoFrames = 0
+/** The second player's raise button (two players only). */
+    val raiseRect2 = RectF()
+    private val duel = setup is Setup.Duel
+    private val hand = Hand(board, raiseRect) { game }
+    private val hand2 = Hand(rivalBoard, raiseRect2) { rival ?: game }
+    private val hands: List<Hand> = if (duel) listOf(hand, hand2) else listOf(hand)
 
     // ---- effects
     private class Spark(var x: Float, var y: Float, var vx: Float, var vy: Float, var life: Int, val span: Int, val color: Int, val size: Float)
@@ -195,15 +210,18 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             is Setup.Daily -> Game.timed(Setup.DAILY_DIFFICULTY, Setup.DAILY_LEVEL, Setup.dailySeed(s.day))
             is Setup.Puzzle -> Game.puzzle(Puzzles.get(s.number))
             is Setup.Lesson -> Lessons.all[s.number - 1].let { Game.fixed(it.rows, 0, it.raise, s.number.toLong()) }
-            is Setup.Versus -> Game.infinite(Difficulty.NORMAL, VERSUS_LEVEL, seed).also { it.selfBlocks = false }
+            is Setup.Versus, is Setup.Duel -> Game.infinite(Difficulty.NORMAL, VERSUS_LEVEL, seed).also { it.selfBlocks = false }
         }
     }
 
     /** Versus: sets the computer up with a well of its own. Its skill is how often it gets to think. */
     private fun startRival() {
-        val s = setup as? Setup.Versus ?: return
+        if (setup !is Setup.Versus && !duel) return
         val g = Game.infinite(Difficulty.NORMAL, VERSUS_LEVEL, game.seed + 1).also { it.selfBlocks = false }
         rival = g
+        sent = 0
+        sent2 = 0
+        val s = setup as? Setup.Versus ?: return
         // Easy dawdles and lets turns go by; Hard is quick and goes looking for chains
         bot = when (s.difficulty) {
             Difficulty.EASY -> Bot(g, 60, slip = 25)
@@ -221,8 +239,21 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         g.tick()
         for (e in g.events) {
             when (e.type) {
-                EventType.MATCH -> game.receiveBlocks(g.cancelBlocks(attack(e.a, e.b)))
+                EventType.MATCH -> {
+                    val n = g.cancelBlocks(attack(e.a, e.b))
+                    game.receiveBlocks(n)
+                    sent2 += n
+                    if (duel) app.sound.play(if (e.b >= 2) Sfx.CHAIN else Sfx.MATCH, volume = 0.7f)
+                }
                 EventType.GAME_OVER -> game.win()
+                EventType.GO -> hand2.waitingForGo = false
+                // the second player's well gets the sparks and the noises that matter most
+                EventType.POP -> if (duel) {
+                    burst(rivalBoard.cellLeft(e.col) + rivalBoard.cell / 2f, rivalBoard.cellTop(g, e.row) + rivalBoard.cell / 2f, TileArt.LIGHT[e.kind], 7)
+                    app.sound.play(Sfx.POP, rate = 2f.pow(((e.a - 1) * 2 + (e.b - 1) * 3).coerceAtMost(12) / 12f), volume = 0.9f)
+                }
+                EventType.SWAP -> if (duel) app.sound.play(Sfx.SWAP, volume = 0.8f)
+                EventType.BLOCKS -> if (duel) app.sound.play(Sfx.THUD)
                 else -> Unit
             }
         }
@@ -234,7 +265,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         is Setup.Stage -> app.prefs.bestStageFrames(s.number)
         is Setup.Timed -> app.prefs.bestTimed(s.difficulty)
         is Setup.Daily -> app.prefs.dailyBest(s.day)
-        is Setup.Puzzle, is Setup.Lesson, is Setup.Versus -> 0
+        is Setup.Puzzle, is Setup.Lesson, is Setup.Versus, is Setup.Duel -> 0
     }
 
     /** Keeps the score if it is a record for whatever is being played. */
@@ -297,6 +328,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         board.place(left, top, cell)
         if (versus) rivalBoard.place(board.right + between, top, small, prepare = false)
         rivalBeside = false
+        raiseRect2.setEmpty()
         val raiseTop = board.bottom + 16f * u
         raiseRect.set(left - 4f * u, raiseTop, left + pairW + 4f * u, raiseTop + raiseH)
     }
@@ -306,6 +338,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
      * Versus: the computer's well goes at the far left, as big as the player's if there is room for two.
      */
     private fun layoutWide() {
+        if (duel) {
+            layoutDuel()
+            return
+        }
         val cell = floor(minOf((safe.height() - 28f * u) / Game.ROWS, safe.width() * 0.46f / Game.COLS))
         val bw = cell * Game.COLS
         val top = floor(safe.centerY() - cell * Game.ROWS / 2f)
@@ -343,6 +379,33 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         } else if (rival != null) {
             rivalBoard.place(rl + 4f * u, top + 22f * u, floor(minOf(9f * u, (sideW - 8f * u) / Game.COLS)), prepare = false)
         }
+    }
+
+    /** Two players: a well and a raise button each, the readouts between them. The first player has the right. */
+    private fun layoutDuel() {
+        val gap = 14f * u
+        val side = 110f * u
+        val mid = 120f * u
+        val cell = floor(minOf((safe.height() - 28f * u) / Game.ROWS, (safe.width() - 24f * u - 2 * side - mid - 4 * gap) / (2 * Game.COLS)))
+        val bw = cell * Game.COLS
+        val top = floor(safe.centerY() - cell * Game.ROWS / 2f)
+        val bottom = top + cell * Game.ROWS
+        var x = floor(safe.centerX() - (2 * side + 2 * bw + mid + 4 * gap) / 2f)
+        raiseRect2.set(x, bottom - 110f * u, x + side, bottom + 4f * u)
+        x += side + gap
+        rivalBoard.place(x, top, cell, prepare = false)
+        x += bw + gap
+        val cardH = 56f * u
+        pauseButton.set(x + mid / 2f - 23f * u, top, x + mid / 2f + 23f * u, top + cardH)
+        for (i in 0 until 3) {
+            val t = top + (cardH + 8f * u) * (i + 1)
+            cards[i].set(x, t, x + mid, t + cardH)
+        }
+        x += mid + gap
+        board.place(x, top, cell)
+        x += bw + gap
+        raiseRect.set(x, bottom - 110f * u, x + side, bottom + 4f * u)
+        rivalBeside = true
     }
 
     private fun layoutPanel() {
@@ -458,7 +521,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             is Setup.Infinite -> InfiniteSetupScene(app)
             is Setup.Timed -> InfiniteSetupScene(app, timed = true)
             is Setup.Daily, is Setup.Lesson -> TitleScene(app)
-            is Setup.Versus -> VersusSetupScene(app)
+            is Setup.Versus, is Setup.Duel -> VersusSetupScene(app)
         })
     }
 
@@ -503,20 +566,26 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     // ------------------------------------------------------------ touch
 
     private fun dropFingers() {
-        boardFinger = -1
-        raiseFinger = -1
-        lettingGo = false
-        waitingForGo = false
-        game.release()
-        game.raiseHeld = false
+        for (h in hands) {
+            h.boardFinger = -1
+            h.raiseFinger = -1
+            h.lettingGo = false
+            h.waitingForGo = false
+            h.game.release()
+            h.game.raiseHeld = false
+        }
         releaseButtons()
     }
 
-    private fun onBoard(x: Float, y: Float): Boolean =
-        x >= board.left - 14f * u && x <= board.right + 14f * u && y >= board.top - 8f * u && y <= board.bottom + 6f * u
+    private fun onBoard(h: Hand, x: Float, y: Float): Boolean {
+        val b = h.board
+        return x >= b.left - 14f * u && x <= b.right + 14f * u && y >= b.top - 8f * u && y <= b.bottom + 6f * u
+    }
 
-    private fun onRaise(x: Float, y: Float, slack: Float): Boolean =
-        x >= raiseRect.left - slack && x <= raiseRect.right + slack && y >= raiseRect.top - slack && y <= raiseRect.bottom + slack
+    private fun onRaise(h: Hand, x: Float, y: Float, slack: Float): Boolean {
+        val r = h.raiseRect
+        return x >= r.left - slack && x <= r.right + slack && y >= r.top - slack && y <= r.bottom + slack
+    }
 
     override fun onTouch(e: MotionEvent): Boolean {
         if (panel != Panel.NONE) return touchButtons(e)
@@ -526,63 +595,76 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 val id = e.getPointerId(i)
                 val x = e.getX(i)
                 val y = e.getY(i)
-                when {
-                    pauseButton.hit(x, y, 8f * u) -> {
-                        app.sound.play(Sfx.TAP)
-                        pause()
-                    }
-                    game.raiseAllowed && onRaise(x, y, 8f * u) -> if (raiseFinger == -1) {
-                        raiseFinger = id
-                        app.buzz()
-                    }
-                    // One finger at a time holds a tile. While one is holding, another touch takes over only
-                    // if it lands squarely on a tile, so two thumbs can hand over to each other, but a palm
-                    // on an empty part of the well, or a thumb that just misses RAISE, knocks nothing loose.
-                    onBoard(x, y) -> {
-                        val free = boardFinger == -1
-                        if (grabAt(x, y, forgiving = free)) {
-                            // a new hold; it takes over from any tile that was held or still travelling
-                            boardFinger = id
-                            fingerX = x
-                            fingerY = y
-                            lettingGo = false
-                            waitingForGo = false
-                        } else if (free && game.phase == Phase.COUNTDOWN) {
-                            boardFinger = id
-                            fingerX = x
-                            fingerY = y
-                            waitingForGo = true
-                        }
-                    }
+                if (pauseButton.hit(x, y, 8f * u)) {
+                    app.sound.play(Sfx.TAP)
+                    pause()
+                } else {
+                    // each player's fingers are their own: a touch belongs to whoever's well or button it lands on
+                    for (h in hands) if (fingerDown(h, id, x, y)) break
                 }
             }
             MotionEvent.ACTION_MOVE -> {
                 for (i in 0 until e.pointerCount) {
                     val id = e.getPointerId(i)
-                    if (id == boardFinger) {
-                        fingerX = e.getX(i)
-                        fingerY = e.getY(i)
+                    for (h in hands) {
+                        if (id == h.boardFinger) {
+                            h.fingerX = e.getX(i)
+                            h.fingerY = e.getY(i)
+                        }
+                        // sliding well off the raise button lets go of it
+                        if (id == h.raiseFinger && !onRaise(h, e.getX(i), e.getY(i), 44f * u)) h.raiseFinger = -1
                     }
-                    // sliding well off the raise button lets go of it
-                    if (id == raiseFinger && !onRaise(e.getX(i), e.getY(i), 44f * u)) raiseFinger = -1
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex
                 val id = e.getPointerId(i)
-                if (id == boardFinger) {
-                    fingerX = e.getX(i)
-                    boardFinger = -1
-                    waitingForGo = false
-                    if (game.grabbedId != 0) {
-                        // Let the tile finish its trip to where the finger left it, then let go.
-                        lettingGo = true
-                        lettingGoFrames = 30
+                for (h in hands) {
+                    if (id == h.boardFinger) {
+                        h.fingerX = e.getX(i)
+                        h.boardFinger = -1
+                        h.waitingForGo = false
+                        if (h.game.grabbedId != 0) {
+                            // Let the tile finish its trip to where the finger left it, then let go.
+                            h.lettingGo = true
+                            h.lettingGoFrames = 30
+                        }
                     }
+                    if (id == h.raiseFinger) h.raiseFinger = -1
                 }
-                if (id == raiseFinger) raiseFinger = -1
             }
             MotionEvent.ACTION_CANCEL -> dropFingers()
+        }
+        return true
+    }
+
+    /** A finger has come down at [x], [y]. True if it landed on [h]'s raise button or well. */
+    private fun fingerDown(h: Hand, id: Int, x: Float, y: Float): Boolean {
+        val g = h.game
+        if (g.raiseAllowed && onRaise(h, x, y, 8f * u)) {
+            if (h.raiseFinger == -1) {
+                h.raiseFinger = id
+                app.buzz()
+            }
+            return true
+        }
+        if (!onBoard(h, x, y)) return false
+        // One finger at a time holds a tile. While one is holding, another touch takes over only
+        // if it lands squarely on a tile, so two thumbs can hand over to each other, but a palm
+        // on an empty part of the well, or a thumb that just misses RAISE, knocks nothing loose.
+        val free = h.boardFinger == -1
+        if (grabAt(h, x, y, forgiving = free)) {
+            // a new hold; it takes over from any tile that was held or still travelling
+            h.boardFinger = id
+            h.fingerX = x
+            h.fingerY = y
+            h.lettingGo = false
+            h.waitingForGo = false
+        } else if (free && g.phase == Phase.COUNTDOWN) {
+            h.boardFinger = id
+            h.fingerX = x
+            h.fingerY = y
+            h.waitingForGo = true
         }
         return true
     }
@@ -592,56 +674,60 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
      * a tile picks that tile up too.
      * False if there was nothing there to pick up (and whatever was held before is still held).
      */
-    private fun grabAt(x: Float, y: Float, forgiving: Boolean = true): Boolean {
-        val colF = (x - board.left) / board.cell
-        val rowF = board.rowAt(game, y)
+    private fun grabAt(h: Hand, x: Float, y: Float, forgiving: Boolean = true): Boolean {
+        val g = h.game
+        val b = h.board
+        val colF = (x - b.left) / b.cell
+        val rowF = b.rowAt(g, y)
         val col = floor(colF).toInt()
         val row = floor(rowF).toInt()
-        if (!game.grab(row, col)) {
+        if (!g.grab(row, col)) {
             if (!forgiving) return false
             // A tile that cannot be held just now (it is popping, or falling) is not a near miss of its neighbour.
-            if (row in 0 until Game.ROWS && col in 0 until Game.COLS && game.grid[row][col].kind != 0) return false
+            if (row in 0 until Game.ROWS && col in 0 until Game.COLS && g.grid[row][col].kind != 0) return false
             val fy = rowF - row
             val fx = colF - col
             // just above a tile (the stack keeps moving up under the finger), just below the bottom row, or just beside one
-            val found = (fy < 0.40f && game.grab(row - 1, col)) ||
-                (row == -1 && fy > 0.55f && game.grab(0, col)) ||
-                (fx < 0.30f && game.grab(row, col - 1)) ||
-                (fx > 0.70f && game.grab(row, col + 1))
+            val found = (fy < 0.40f && g.grab(row - 1, col)) ||
+                (row == -1 && fy > 0.55f && g.grab(0, col)) ||
+                (fx < 0.30f && g.grab(row, col - 1)) ||
+                (fx > 0.70f && g.grab(row, col + 1))
             if (!found) return false
         }
-        val at = game.locate(game.grabbedId)
+        val at = g.locate(g.grabbedId)
         if (at < 0) return false
-        val centre = board.cellLeft(at % Game.COLS) + board.cell / 2f
-        gripOffset = (x - centre).coerceIn(-board.cell * 0.75f, board.cell * 0.75f)
+        val centre = b.cellLeft(at % Game.COLS) + b.cell / 2f
+        h.gripOffset = (x - centre).coerceIn(-b.cell * 0.75f, b.cell * 0.75f)
         return true
     }
 
     /** Works out which column the finger is asking for and tells the game. */
-    private fun steerHeldTile() {
-        val id = game.grabbedId
+    private fun steerHeldTile(h: Hand) {
+        val g = h.game
+        val b = h.board
+        val id = g.grabbedId
         if (id == 0) {
-            lettingGo = false
+            h.lettingGo = false
             return
         }
-        val at = game.locate(id)
+        val at = g.locate(id)
         if (at < 0) return
         val col = at % Game.COLS
-        val centre = board.cellLeft(col) + board.cell / 2f
+        val centre = b.cellLeft(col) + b.cell / 2f
         // Where the middle of the tile would be if it followed the finger exactly.
-        val wanted = fingerX - gripOffset
+        val wanted = h.fingerX - h.gripOffset
         // It has to go a little more than half a cell before the tile steps across, so a tile
         // does not flutter on a boundary and a wobbly press does not move anything.
-        val reach = board.cell * 0.56f
+        val reach = b.cell * 0.56f
         val target = when {
-            wanted > centre + reach -> maxOf(col + 1, board.colAt(wanted))
-            wanted < centre - reach -> minOf(col - 1, board.colAt(wanted))
+            wanted > centre + reach -> maxOf(col + 1, b.colAt(wanted))
+            wanted < centre - reach -> minOf(col - 1, b.colAt(wanted))
             else -> col
         }.coerceIn(0, Game.COLS - 1)
-        game.dragTo(target)
-        if (lettingGo && (target == col || --lettingGoFrames <= 0)) {
-            game.release()
-            lettingGo = false
+        g.dragTo(target)
+        if (h.lettingGo && (target == col || --h.lettingGoFrames <= 0)) {
+            g.release()
+            h.lettingGo = false
         }
     }
 
@@ -651,10 +737,17 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         clock++
         if (panel == Panel.PAUSED) return
         if (panel == Panel.NONE) {
-            steerHeldTile()
-            game.raiseHeld = raiseFinger != -1
+            // two players need the screen on its side; until it is, the game waits
+            if (duel && !wide && (game.phase == Phase.PLAYING || game.phase == Phase.COUNTDOWN)) {
+                pause()
+                return
+            }
+            for (h in hands) {
+                steerHeldTile(h)
+                h.game.raiseHeld = h.raiseFinger != -1
+            }
         } else {
-            game.raiseHeld = false
+            for (h in hands) h.game.raiseHeld = false
         }
         if (game.phase == Phase.COUNTDOWN && game.countdown == Game.COUNTDOWN_FRAMES) app.sound.play(Sfx.READY)
         game.tick()
@@ -682,7 +775,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     /** Looks for a chain the player could start, once the board has sat untouched for a few seconds. */
     private fun tickHint() {
         if (!hintsWanted) return
-        if (game.phase != Phase.PLAYING || panel != Panel.NONE || boardFinger != -1 || game.active) {
+        if (game.phase != Phase.PLAYING || panel != Panel.NONE || hand.boardFinger != -1 || game.active) {
             idle = 0
             hintCell = -1
             return
@@ -697,7 +790,8 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     /** The round is over: pay its coins, and add it to the missions and the lifetime figures. */
     private fun countRun(firstSolve: Boolean = false) {
         val s = setup
-        if (s is Setup.Lesson) return
+        // lessons are not games, and a game between two people is nobody's record
+        if (s is Setup.Lesson || s is Setup.Duel) return
         val cleared = game.phase == Phase.STAGE_CLEAR
         coinsEarned = when (s) {
             is Setup.Stage -> {
@@ -773,13 +867,14 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     goAge = 0
                     app.sound.play(Sfx.GO)
                     // a finger that was already resting on a tile takes hold of it now
-                    if (waitingForGo) {
-                        waitingForGo = false
-                        if (boardFinger != -1 && !grabAt(fingerX, fingerY)) boardFinger = -1
+                    if (hand.waitingForGo) {
+                        hand.waitingForGo = false
+                        if (hand.boardFinger != -1 && !grabAt(hand, hand.fingerX, hand.fingerY)) hand.boardFinger = -1
                     }
                     // say what this round is asking for
                     val def = stageDef
                     when {
+                        duel -> Unit
                         rival != null -> showBanner("FIRST TO THE TOP LOSES")
                         def == null -> Unit
                         def.goal == Goal.BREAK -> showBanner("BREAK EVERY BLOCKER")
@@ -951,25 +1046,28 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         ui.background(c, width, height)
         drawReadouts(c)
 
-        val alarm = when {
-            game.phase != Phase.PLAYING -> 0f
-            game.topOccupied -> 0.55f + 0.45f * sin(clock * 0.38f)
-            game.stackHeight() >= Game.DANGER_HEIGHT -> 0.22f + 0.22f * sin(clock * 0.2f)
-            else -> 0f
-        }
+        val alarm = alarmOf(game)
         val grey = if (game.phase == Phase.GAME_OVER) minOf(Game.ROWS, endFrames / 3) else 0
         c.save()
         if (shake > 0) c.translate(sin(clock * 1.9f) * shake * 0.45f * u, cos(clock * 2.3f) * shake * 0.35f * u)
         board.draw(c, game, clock, grey, alarm)
-        drawWellExtras(c)
+        drawWellExtras(c, game, board, true)
         drawMeter(c)
         drawEffects(c)
         c.restore()
-        drawRaise(c)
+        drawRaise(c, hand)
         pauseButton.draw(c, ui)
         drawRival(c)
         drawCallouts(c)
         if (panel != Panel.NONE) drawPanel(c)
+    }
+
+    /** 0..1: how red a well's frame should be. */
+    private fun alarmOf(g: Game): Float = when {
+        g.phase != Phase.PLAYING -> 0f
+        g.topOccupied -> 0.55f + 0.45f * sin(clock * 0.38f)
+        g.stackHeight() >= Game.DANGER_HEIGHT -> 0.22f + 0.22f * sin(clock * 0.2f)
+        else -> 0f
     }
 
     private fun drawReadouts(c: Canvas) {
@@ -999,6 +1097,11 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                     game.lineRow < 0 -> readout(c, cards[2], "LINE IN", countText.of(game.linesToGo), null)
                     else -> readout(c, cards[2], "TO CLEAR", countText.of(tilesAboveLine()), null)
                 }
+            }
+            is Setup.Duel -> {
+                readout(c, cards[0], "TIME", timeText.of(game.seconds), null)
+                readout(c, cards[1], "P2 SENT", levelText.of(sent2), null)
+                readout(c, cards[2], "P1 SENT", countText.of(sent), null)
             }
             is Setup.Versus -> {
                 readout(c, cards[0], "TIME", timeText.of(game.seconds), null)
@@ -1077,7 +1180,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     }
 
     /** What sits on the well besides tiles: blockers on their way, the hint, a surge going off, and the fever bar. */
-    private fun drawWellExtras(c: Canvas) {
+    private fun drawWellExtras(c: Canvas, game: Game, board: BoardRenderer, hint: Boolean) {
         // blockers waiting to drop, lined up along the top
         val waiting = game.pendingBlocks
         if (waiting > 0 && game.phase == Phase.PLAYING) {
@@ -1100,7 +1203,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             ui.fill.color = Palette.withAlpha(0xFFFFFFFF.toInt(), 0.85f * k)
             c.drawRect(board.left, maxOf(board.top, y - grow), board.right, minOf(board.bottom, y + board.cell + grow), ui.fill)
         }
-        if (hintCell >= 0 && panel == Panel.NONE) {
+        if (hint && hintCell >= 0 && panel == Panel.NONE) {
             val row = hintCell / Game.COLS
             val col = hintCell % Game.COLS
             val x = board.cellLeft(col)
@@ -1135,8 +1238,19 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     /** Versus: the computer's well, and whose it is. */
     private fun drawRival(c: Canvas) {
         val g = rival ?: return
+        val grey = if (g.phase == Phase.GAME_OVER) Game.ROWS else 0
+        if (duel) {
+            // the second player's well is a full one, with everything the first has
+            rivalBoard.draw(c, g, clock, grey, alarmOf(g))
+            drawWellExtras(c, g, rivalBoard, false)
+            drawRaise(c, hand2)
+            for ((b, name) in listOf(rivalBoard to "PLAYER 2", board to "PLAYER 1")) {
+                ui.outlinedText(c, name, b.left + b.width / 2f, b.top + 16f * u, 12f * u, Palette.TEXT_DIM, Palette.PANEL_DARK, 4f * u)
+            }
+            return
+        }
         val s = setup as Setup.Versus
-        rivalBoard.draw(c, g, clock, if (g.phase == Phase.GAME_OVER) Game.ROWS else 0)
+        rivalBoard.draw(c, g, clock, grey)
         val name = "CPU · " + s.difficulty.label.uppercase()
         val wins = app.prefs.versusWins(s.difficulty)
         val x = rivalBoard.left + rivalBoard.width / 2f
@@ -1178,22 +1292,23 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         }
     }
 
-    private fun drawRaise(c: Canvas) {
-        if (!game.raiseAllowed) {
+    private fun drawRaise(c: Canvas, h: Hand) {
+        val g = h.game
+        if (!g.raiseAllowed) {
             // no raise button here; a puzzle says what is wanted instead
             val s = setup
             if (s is Setup.Puzzle) {
                 val moves = Puzzles.get(s.number).moves
                 ui.text(c, "Clear every tile in " + (if (moves == 1) "one move" else "$moves moves"),
-                    raiseRect.centerX(), raiseRect.centerY() - 8f * u, 15f * u, Palette.TEXT, face = ui.semi)
-                ui.text(c, "each cell a tile slides is a move", raiseRect.centerX(), raiseRect.centerY() + 14f * u,
+                    h.raiseRect.centerX(), h.raiseRect.centerY() - 8f * u, 15f * u, Palette.TEXT, face = ui.semi)
+                ui.text(c, "each cell a tile slides is a move", h.raiseRect.centerX(), h.raiseRect.centerY() + 14f * u,
                     11.5f * u, Palette.TEXT_DIM, face = ui.semi)
             }
             return
         }
-        val r = raiseRect
-        val held = raiseFinger != -1 && panel == Panel.NONE
-        val blocked = game.phase != Phase.PLAYING || game.topOccupied
+        val r = h.raiseRect
+        val held = h.raiseFinger != -1 && panel == Panel.NONE
+        val blocked = g.phase != Phase.PLAYING || g.topOccupied
         val alpha = if (blocked) 0.45f else 1f
         val lip = 5f * u
         val down = if (held) lip else 0f
@@ -1224,6 +1339,9 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
     private fun drawCallouts(c: Canvas) {
         val cx = board.left + board.width / 2f
         val cy = board.top + board.height * 0.42f
+        if (duel && game.phase == Phase.COUNTDOWN) {
+            ui.outlinedText(c, "READY", rivalBoard.left + rivalBoard.width / 2f, cy, 40f * u, Palette.TEXT, Palette.PANEL_DARK, 8f * u)
+        }
         if (game.phase == Phase.COUNTDOWN) {
             ui.outlinedText(c, "READY", cx, cy, 40f * u, Palette.TEXT, Palette.PANEL_DARK, 8f * u)
         } else if (goAge < GO_FRAMES) {
@@ -1250,7 +1368,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
             ui.text(c, banner, cx, y, size, Palette.withAlpha(Palette.ACCENT_LIGHT, a))
         }
         val l = lesson
-        if (l != null && lessonDone == 0 && panel == Panel.NONE && boardFinger == -1 && raiseFinger == -1 && !game.active) {
+        if (l != null && lessonDone == 0 && panel == Panel.NONE && hand.boardFinger == -1 && hand.raiseFinger == -1 && !game.active) {
             // a ghost of a finger shows the move, over and over
             val t = (clock % 100) / 100f
             if (l.raise) {
@@ -1264,7 +1382,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 fingertip(c, from + (to - from) * k, board.cellTop(game, l.fromRow) + board.cell * 0.66f, fade)
             }
         }
-        if (game.phase == Phase.PLAYING && !app.prefs.hintSeen && panel == Panel.NONE && l == null && bannerAge >= BANNER_FRAMES) {
+        if (game.phase == Phase.PLAYING && !app.prefs.hintSeen && panel == Panel.NONE && l == null && !duel && bannerAge >= BANNER_FRAMES) {
             val text = "Slide a tile sideways to swap it"
             val y = board.top + board.height * 0.24f
             val size = ui.fitSize(text, 14f * u, board.width - 36f * u, ui.semi)
@@ -1295,6 +1413,10 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
         val cx = r.centerX()
         if (panel == Panel.PAUSED) {
             ui.text(c, "PAUSED", cx, r.top + 34f * u, 26f * u, Palette.TEXT)
+            if (duel && !wide) {
+                ui.text(c, "Turn the screen sideways for two players", cx, r.top + 54f * u,
+                    ui.fitSize("Turn the screen sideways for two players", 11f * u, r.width() - 24f * u, ui.semi), Palette.ACCENT, face = ui.semi)
+            }
         } else {
             drawResult(c, r, cx)
         }
@@ -1383,6 +1505,14 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 labels = arrayOf("SENT", "BEST COMBO", "BEST CHAIN")
                 values = arrayOf(sent.toString(), game.maxCombo.toString(), "×" + game.maxChain)
             }
+            is Setup.Duel -> {
+                title = if (cleared) "PLAYER 1 WINS!" else "PLAYER 2 WINS!"
+                bigLabel = "TWO PLAYERS"
+                big = Format.clock(game.frames)
+                bestLine = if (cleared) "the well on the right" else "the well on the left"
+                labels = arrayOf("P2 SENT", "SPEED", "P1 SENT")
+                values = arrayOf(sent2.toString(), game.level.toString(), sent.toString())
+            }
             is Setup.Lesson -> {
                 ui.text(c, "YOU'RE READY!", cx, r.top + 34f * u, 26f * u, Palette.GOOD)
                 ui.paragraph(c, "Slide, match, chain, raise: that is the whole game.\nStage Clear is a good place to start. In each stage a line comes up from below; clear every tile above it.",
@@ -1390,7 +1520,7 @@ class PlayScene(app: App, val setup: Setup, private val fixedSeed: Long? = null,
                 return
             }
         }
-        val titleColor = if (cleared) Palette.GOOD else Palette.TEXT
+        val titleColor = if (cleared || duel) Palette.GOOD else Palette.TEXT
         ui.text(c, title, cx, r.top + 34f * u, ui.fitSize(title, 26f * u, r.width() - 32f * u), titleColor)
         if (stars >= 0) {
             for (i in 0 until 3) {

@@ -12,6 +12,8 @@ class VersusSetupScene(app: App) : Scene(app) {
     internal val choices = Difficulty.entries.map { d -> Button(d.label.uppercase()) { choose(d) } }
     internal val startButton = Button("START", ButtonStyle.PRIMARY) { app.go(PlayScene(app, Setup.Versus(difficulty))) }
 
+    internal val duelButton = Button("TWO PLAYERS") { app.go(PlayScene(app, Setup.Duel())) }
+
     private var titleY = 0f
     private var sectionY = 0f
     private var rulesY = 0f
@@ -20,6 +22,7 @@ class VersusSetupScene(app: App) : Scene(app) {
         buttons += backButton
         buttons += choices
         buttons += startButton
+        buttons += duelButton
         refresh()
     }
 
@@ -54,10 +57,16 @@ class VersusSetupScene(app: App) : Scene(app) {
             b.textUnits = 16f
         }
         rulesY = by + 62f * u + 30f * u
-        val startH = 68f * u
-        val startTop = minOf(safe.top + safe.height() * 0.76f, safe.bottom - 34f * u - startH)
+        val startH = 64f * u
+        val duelH = 56f * u
+        val startTop = minOf(safe.top + safe.height() * 0.70f, safe.bottom - 30f * u - startH - 12f * u - duelH)
         startButton.set(l, startTop, r, startTop + startH)
         startButton.textUnits = 26f
+        duelButton.set(l, startTop + startH + 12f * u, r, startTop + startH + 12f * u + duelH)
+        duelButton.textUnits = 17f
+        // two wells and two raise buttons need the screen on its side
+        val sideways = safe.width() > safe.height() * 0.95f
+        duelButton.note = if (sideways) "one screen, a well each" else "turn the screen sideways first"
     }
 
     override fun onBack(): Boolean {

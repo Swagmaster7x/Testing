@@ -20,6 +20,9 @@ sealed class Setup {
 
     /** Against the computer: whoever's stack reaches the top first loses. [difficulty] is how good the computer is. */
     class Versus(val difficulty: Difficulty) : Setup()
+
+    /** Two people on one screen held sideways, a well each. */
+    class Duel : Setup()
     class Lesson(val number: Int) : Setup()
 
     /** One line of text that says what this is, for a game saved part-way; null for things not worth saving. */
@@ -28,7 +31,7 @@ sealed class Setup {
         is Stage -> "S,$number"
         is Timed -> "T,${difficulty.ordinal},$startLevel"
         is Daily -> "D,$day"
-        is Puzzle, is Lesson, is Versus -> null
+        is Puzzle, is Lesson, is Versus, is Duel -> null
     }
 
     companion object {

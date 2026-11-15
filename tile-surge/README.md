@@ -31,11 +31,13 @@ Kotlin, drawn on a plain Android `Canvas`, no libraries. Minimum Android 8 (API 
 
 **Daily Challenge** is a two-minute Score Attack on a board that is the same for everyone that day and changes at midnight. It keeps your best for the day and counts the days in a row you have played.
 
-**Versus** is a game against the computer on Easy, Normal or Hard (how fast it thinks). You each have a well; its well is shown small beside the readouts. Clearing four or more at once, or making a chain, drops blockers into the other well (one for each tile past three, plus the chain step). Blockers on their way to you are cancelled by your own clears first. Whoever's stack reaches the top loses.
+**Versus** is a game against the computer on Easy, Normal or Hard. Easy thinks slowly and lets turns go by; Hard thinks fast and plays each clear out in its head, preferring ones that chain. You each have a well: on an upright phone the computer's stands beside yours at a quarter of the size, and on a screen held sideways the two are the same size. Clearing four or more at once, or making a chain, drops blockers into the other well (one for each tile past three, plus the chain step). Blockers on their way to you are cancelled by your own clears first. Whoever's stack reaches the top loses.
 
-**Missions** are three small goals a day (clear 300 tiles, make a ×4 chain, ...) that pay **coins**; stages pay 5 coins for each new star, puzzles 10 the first time, scored games up to 50, and a Versus win 15 to 35. The **Shop** sells three more tile colour sets and three more backdrops for them. The Missions screen also keeps lifetime figures and nine badges. Everything stays on the phone.
+**Two Players** (on the Versus screen) is the same game between two people on one screen held sideways: a well and a RAISE button each, player 1 on the right. Nothing is recorded or paid for these games.
 
-**Puzzle** has 30 boards that do not rise. Clear every tile in the moves given (one to four); each cell a tile slides is a move. They open in order.
+**Missions** are three small goals a day (clear 300 tiles, make a ×4 chain, ...) that pay **coins**; stages pay 5 coins for each new star, puzzles 10 the first time, scored games up to 50, and a Versus win 15 to 35. The **Shop** sells five more tile colour sets and five more backdrops for them. In Infinite, 100 coins also buy one **continue** per game: the top half of the well is swept away and play carries on. The Missions screen also keeps lifetime figures and nine badges. Everything stays on the phone.
+
+**Puzzle** has 45 boards that do not rise. Clear every tile in the moves given (one to four); each cell a tile slides is a move. They open in order. Puzzles 31 to 45 have frozen tiles and surge tiles in them.
 
 **How to Play** is four short hands-on lessons (slide, fall, chain, raise) with a ghost finger showing each move. They open by themselves the first time the game is started. Seven pages of rules with self-playing boards are one tap further on.
 
@@ -133,9 +135,9 @@ All times are frames at 60 a second.
 - **Upright on phones, either way up on tablets.** On tablets and wide windows the readouts move to the left of the well and RAISE to the right.
 
 - **Stars.** Three for clearing a stage at about a tile and a half a second, two at just under one a second, one for clearing it at all.
-- **Puzzles are made by a tool, not by hand.** `PuzzleMaker` (in the tests; run with `MAKE_PUZZLES=1`) tries random boards and keeps those whose shortest answer is exactly the length wanted. The 30 it chose are in `core/Puzzles.kt`, each with one answer.
+- **Puzzles are made by a tool, not by hand.** `PuzzleMaker` (in the tests; run with `MAKE_PUZZLES=1`, or `2` for the ice-and-surge set) tries random boards and keeps those whose shortest answer is exactly the length wanted. The 45 it chose are in `core/Puzzles.kt`, each with one answer.
 - **The tune** is sixteen bars written for the game and built from tones in code, like the sound effects. Nobody has listened to it yet: it was checked only as numbers. It has its own off switch.
 
 ## Not in this version
 
-Two players against each other (Versus is against the computer only), online scores for the daily challenge (it is the same board for everyone, but scores stay on the phone), and ads.
+Two players on two phones, online scores for the daily challenge (it is the same board for everyone, but scores stay on the phone), and ads.

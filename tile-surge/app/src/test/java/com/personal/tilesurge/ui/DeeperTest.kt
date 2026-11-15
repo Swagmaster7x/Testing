@@ -486,6 +486,114 @@ class DeeperTest {
         Shots.save(square, "97-versus-square")
     }
 
+    // ------------------------------------------------------------ two players
+
+    @Test
+    fun `two players share a sideways screen, each with their own well, fingers and raise button`() {
+        val v = Shots.view(1560, 720) { VersusSetupScene(it) }
+        val setup = v.scene as VersusSetupScene
+        assertEquals("one screen, a well each", setup.duelButton.note)
+        v.step(5)
+        Shots.save(v, "93-versus-setup-sideways")
+        Shots.tap(v, setup.duelButton)
+        val scene = v.play
+        val p1 = scene.game
+        val p2 = scene.rival!!
+        // a well each, the same size, side by side, with a raise button at each end
+        assertEquals(scene.board.cell, scene.rivalBoard.cell)
+        assertTrue(scene.rivalBoard.right < scene.board.left)
+        assertTrue(scene.raiseRect2.right <= scene.rivalBoard.left)
+        assertTrue(scene.raiseRect.left >= scene.board.right)
+        assertTrue(scene.raiseRect2.left >= 0f && scene.raiseRect.right <= v.width)
+        assertTrue(scene.board.cell >= 40f * 1.1f)
+        v.step(Game.COUNTDOWN_FRAMES)
+        p1.autoRise = false
+        p2.autoRise = false
+        p1.setBoard("112134")
+        p2.setBoard("334356")
+        Shots.save(v, "97-two-players")
+
+        // both slide a tile at the same moment, each with a finger of their own
+        fun x(b: BoardRenderer, col: Int) = b.cellLeft(col) + b.cell / 2f
+        val f = Fingers(v)
+        f.down(0, x(scene.board, 3), scene.board.cellTop(p1, 0) + scene.board.cell / 2f)
+        f.down(1, x(scene.rivalBoard, 3), scene.rivalBoard.cellTop(p2, 0) + scene.rivalBoard.cell / 2f)
+        f.move(0, x(scene.board, 2), scene.board.cellTop(p1, 0) + scene.board.cell / 2f)
+        f.move(1, x(scene.rivalBoard, 2), scene.rivalBoard.cellTop(p2, 0) + scene.rivalBoard.cell / 2f)
+        v.step(12)
+        f.up(0)
+        f.up(1)
+        v.step(200)
+        assertEquals(3, p1.tilesCleared)
+        assertEquals(3, p2.tilesCleared)
+
+        // each raise button raises its own well only
+        f.down(2, scene.raiseRect2.centerX(), scene.raiseRect2.centerY())
+        v.step(40)
+        assertTrue(p2.rowsRisen >= 2)
+        assertEquals(0, p1.rowsRisen)
+        f.up(2)
+        // a row that was on its way when the button was let go still finishes coming up
+        v.step(30)
+        f.down(3, scene.raiseRect.centerX(), scene.raiseRect.centerY())
+        val before = p2.rowsRisen
+        v.step(40)
+        assertTrue(p1.rowsRisen >= 2)
+        assertEquals(before, p2.rowsRisen)
+        f.up(3)
+
+        // a clear of five on the left drops two blockers on the right, and the other way about
+        // (the rows the raise buttons brought up may have sent a blocker or two already)
+        v.step(300)
+        p1.setBoard("12....")
+        val sent2 = scene.sent2
+        p2.setBoard("11111.")
+        v.step(3)
+        assertEquals(sent2 + 2, scene.sent2)
+        v.step(200)
+        assertEquals(2, p1.blockCount() + p1.pendingBlocks)
+        val sent = scene.sent
+        p1.setBoard("22222.")
+        v.step(3)
+        assertEquals(sent + 2, scene.sent)
+
+        // the left well tops out: the right-hand player wins, and nothing is paid or recorded
+        v.step(200)
+        topOut(v, p2)
+        assertEquals(Phase.STAGE_CLEAR, p1.phase)
+        assertTrue(scene.showsResult)
+        Shots.save(v, "97-two-players-result")
+        assertEquals(0, scene.coinsEarned)
+        assertEquals(0, v.app.prefs.stat("games"))
+        Shots.tap(v, scene.againButton)
+        v.step(Game.COUNTDOWN_FRAMES)
+        topOut(v, scene.game)
+        assertEquals(Phase.GAME_OVER, scene.game.phase)
+        assertEquals(Phase.PLAYING, scene.rival!!.phase)
+        assertTrue(scene.showsResult)
+    }
+
+    @Test
+    fun `two players on an upright phone are asked to turn it, and the computer's well cannot be touched`() {
+        val v = view { VersusSetupScene(it) }
+        assertEquals("turn the screen sideways first", (v.scene as VersusSetupScene).duelButton.note)
+        Shots.tap(v, (v.scene as VersusSetupScene).duelButton)
+        v.step(5)
+        assertTrue(v.play.isPaused)
+        Shots.save(v, "97-two-players-upright")
+
+        // against the computer, a finger on its well moves nothing
+        val scene = start(v, Setup.Versus(Difficulty.EASY))
+        val g = scene.rival!!
+        val f = Fingers(v)
+        val b = scene.rivalBoard
+        f.down(0, b.cellLeft(2) + b.cell / 2f, b.cellTop(g, 0) + b.cell / 2f)
+        v.step(2)
+        assertEquals(0, g.grabbedId.coerceAtMost(0))
+        assertEquals(0, scene.game.grabbedId)
+        f.up(0)
+    }
+
     @Test
     fun `the title has room for everything, and forty stages fit their screen`() {
         val v = view { TitleScene(it) }
