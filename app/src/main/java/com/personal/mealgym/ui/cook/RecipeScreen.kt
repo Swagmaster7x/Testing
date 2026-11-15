@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -60,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +73,8 @@ import com.personal.mealgym.R
 import com.personal.mealgym.data.db.CookRating
 import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.BuildConfig
+import com.personal.mealgym.domain.Cupboard
+import com.personal.mealgym.domain.CupboardItem
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.Foods
 import com.personal.mealgym.domain.StepTimers
@@ -156,10 +161,12 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
     }
 
     if (cooked && loaded != null) {
+        val fromCupboard by vm.fromCupboard.collectAsStateWithLifecycle()
         CookedSheet(
             recipeName = loaded.ui.recipe.name,
             current = loaded.ui.rating,
-            onSave = { rating -> cooked = false; vm.logCooked(rating) },
+            fromCupboard = fromCupboard,
+            onSave = { rating, usedUp -> cooked = false; vm.logCooked(rating, usedUp) },
             onDismiss = { cooked = false },
         )
     }
@@ -373,19 +380,23 @@ private val portionTypes = setOf(MealType.LUNCH, MealType.DINNER, MealType.SOUP)
 
 /**
  * "I cooked it": how did it go? The answer steers Fill my week for this person (loved recipes
- * come up more, "Not again" stops being picked). [extra] holds anything else to settle at the
- * same time, such as what was used up from the cupboard.
+ * come up more, "Not again" stops being picked). When the cupboard is kept up to date,
+ * [fromCupboard] lists what the recipe took from it, so the used-up things can leave it:
+ * fresh food starts ticked, things that keep (rice, tins, spices) don't.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CookedSheet(
     recipeName: String,
     current: CookRating?,
-    onSave: (CookRating?) -> Unit,
+    onSave: (CookRating?, Set<String>) -> Unit,
     onDismiss: () -> Unit,
-    extra: @Composable () -> Unit = {},
+    fromCupboard: List<CupboardItem> = emptyList(),
 ) {
     var rating by rememberSaveable { mutableStateOf(current) }
+    // What's ticked as used up; null until the person changes the suggestion.
+    var chosen by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    val usedUp = chosen?.toSet() ?: fromCupboard.filter(Cupboard::isFresh).map { it.key }.toSet()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp).verticalScroll(rememberScrollState()),
@@ -412,8 +423,27 @@ fun CookedSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            extra()
-            AppButton(onClick = { onSave(rating) }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
+            if (fromCupboard.isNotEmpty()) {
+                Text("Used up?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
+                Text(
+                    "Ticked things leave My cupboard. Untick anything you still have some of.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                fromCupboard.forEach { item ->
+                    val ticked = item.key in usedUp
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().toggleable(value = ticked, role = Role.Checkbox) { on ->
+                            chosen = (if (on) usedUp + item.key else usedUp - item.key).toList()
+                        },
+                    ) {
+                        Checkbox(checked = ticked, onCheckedChange = null, modifier = Modifier.padding(end = 12.dp, top = 8.dp, bottom = 8.dp))
+                        Text(item.name, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+            AppButton(onClick = { onSave(rating, usedUp.intersect(fromCupboard.map { it.key }.toSet())) }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Not now") }
         }
     }

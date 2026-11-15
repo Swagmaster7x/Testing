@@ -403,6 +403,29 @@ class RepositoryTest {
     }
 
     @Test
+    fun theCupboardRemembersWhenThingsWentIn() = runBlocking {
+        settings.setInCupboard("egg", have = true) // no date: ticked the old way
+        settings.setInCupboard(listOf("chicken thigh", "spinach"), have = true, today = 20_000)
+        // Already there: ticking it again later keeps the earlier date.
+        settings.setInCupboard("chicken thigh", have = true, today = 20_005)
+        settings.setInCupboard("egg", have = true, today = 20_005)
+        assertEquals(setOf("egg", "chicken thigh", "spinach"), settings.cupboard.first())
+        assertEquals(mapOf("chicken thigh" to 20_000L, "spinach" to 20_000L), settings.cupboardSince.first())
+        // Taking something out forgets its date; putting it back starts again.
+        settings.setInCupboard("spinach", have = false)
+        assertEquals(mapOf("chicken thigh" to 20_000L), settings.cupboardSince.first())
+        settings.setInCupboard("spinach", have = true, today = 20_009)
+        assertEquals(20_009L, settings.cupboardSince.first()["spinach"])
+        // Clearing the cupboard clears the dates.
+        settings.setCupboard(emptySet())
+        assertTrue(settings.cupboardSince.first().isEmpty())
+        // The personal edition leaves the cupboard to be ticked by hand unless switched on.
+        assertFalse(settings.cupboardAuto.first())
+        settings.setCupboardAuto(true)
+        assertTrue(settings.cupboardAuto.first())
+    }
+
+    @Test
     fun deletingAPersonTakesTheirOffPlanMealsAndCookLogs() = runBlocking {
         meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.SKIP).copy(profileId = TestPeople.ASHLEY))
         meals.setOffPlan(out(mon, MealSlot.LUNCH, OffPlanKind.SKIP))

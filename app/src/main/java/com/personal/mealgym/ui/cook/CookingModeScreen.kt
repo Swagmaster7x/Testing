@@ -158,10 +158,12 @@ fun CookingModeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory
         }
 
         if (cooked) {
+            val fromCupboard by vm.fromCupboard.collectAsStateWithLifecycle()
             CookedSheet(
                 recipeName = ui.recipe.name,
                 current = ui.rating,
-                onSave = { rating -> cooked = false; vm.logCooked(rating, onDone = nav::back) },
+                fromCupboard = fromCupboard,
+                onSave = { rating, usedUp -> cooked = false; vm.logCooked(rating, usedUp, onDone = nav::back) },
                 onDismiss = { cooked = false },
             )
         }

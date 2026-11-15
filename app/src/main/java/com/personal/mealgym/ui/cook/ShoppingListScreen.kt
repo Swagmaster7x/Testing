@@ -48,6 +48,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
     val offset by vm.weekOffset.collectAsStateWithLifecycle()
     val both by vm.both.collectAsStateWithLifecycle()
     val cupboard by vm.cupboard.collectAsStateWithLifecycle()
+    val auto by vm.cupboardAuto.collectAsStateWithLifecycle()
     val people by vm.peopleCount.collectAsStateWithLifecycle()
     val allLabel = if (people > 2) "Everyone" else "Both of us"
     val context = LocalContext.current
@@ -109,6 +110,15 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
+            if (auto && w.result.sections.isNotEmpty()) {
+                item {
+                    Text(
+                        "What you tick off goes into My cupboard.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (w.result.sections.isEmpty()) {
                 item {
                     EmptyState(
@@ -122,7 +132,7 @@ fun ShoppingListScreen(nav: AppNavigator, vm: ShoppingViewModel = viewModel(fact
                 items(section.items, key = { "i-${it.key}" }) { item ->
                     val checked = item.key in w.checkedKeys
                     val inCupboard = Cupboard.options(item.name).any { it in cupboard }
-                    ShoppingRow(item, checked, inCupboard) { vm.toggle(w, item.key, !checked) }
+                    ShoppingRow(item, checked, inCupboard) { vm.toggle(w, item, !checked) }
                 }
             }
             if (w.result.skippedAlwaysHave.isNotEmpty()) {

@@ -17,9 +17,17 @@ data class CupboardMatch(
     val total: Int,
     /** 0 to 1, weighted so the main protein counts for more than a garnish. */
     val coverage: Double,
+    /** The cupboard items (by key) this recipe would use. */
+    val uses: Set<String> = emptySet(),
 ) {
     val ready: Boolean get() = missing.isEmpty()
 }
+
+/** Fresh food that has been in the cupboard a while. */
+data class AgingItem(val key: String, val name: String, val days: Int)
+
+/** A recipe that would use up something that's been sitting, and what. */
+data class UseUp(val match: CupboardMatch, val items: List<AgingItem>)
 
 /**
  * "What can I make with what I have?" Ingredients are compared by a plain food name, so
@@ -132,6 +140,52 @@ object Cupboard {
         return items.values.sortedWith(compareBy<CupboardItem> { ShoppingList.sectionOrder.indexOf(it.section) }.thenBy { it.name })
     }
 
+    /** Sections whose food doesn't keep: meat, fish, dairy and fresh produce. */
+    private val fresh = setOf(StoreSection.PROTEIN, StoreSection.PRODUCE_FROZEN)
+
+    /** Days before fresh food counts as "been there a while". */
+    const val AGING_DAYS = 3
+
+    /**
+     * Fresh things that went into the cupboard at least [AGING_DAYS] ago, oldest first. Items
+     * with no date (ticked before the app kept one) are left out rather than guessed at.
+     */
+    fun aging(items: List<CupboardItem>, cupboard: Set<String>, since: Map<String, Long>, today: Long): List<AgingItem> =
+        items.filter { it.key in cupboard && it.section in fresh }
+            .mapNotNull { item -> since[item.key]?.let { AgingItem(item.key, item.name, (today - it).toInt()) } }
+            .filter { it.days >= AGING_DAYS }
+            .sortedWith(compareByDescending<AgingItem> { it.days }.thenBy { it.name })
+
+    /**
+     * The recipes that would use up the most of what's been sitting longest, among those that
+     * need at most three things bought. Up to [limit].
+     */
+    fun useUp(matches: List<CupboardMatch>, aging: List<AgingItem>, limit: Int = 3): List<UseUp> {
+        val byKey = aging.associateBy { it.key }
+        return matches.filter { it.missing.size <= 3 }
+            .mapNotNull { m -> m.uses.mapNotNull { byKey[it] }.takeIf { it.isNotEmpty() }?.let { UseUp(m, it.sortedByDescending { a -> a.days }) } }
+            .sortedWith(
+                compareByDescending<UseUp> { u -> u.items.sumOf { it.days } }
+                    .thenByDescending { it.match.ready }
+                    .thenByDescending { it.match.coverage }
+                    .thenBy { it.match.recipe.name.lowercase() },
+            )
+            .take(limit)
+    }
+
+    /**
+     * The cupboard items one recipe uses (staples aside), so cooking it can offer to take the
+     * used-up ones out. Each is the cupboard's own key with the recipe's name for it.
+     */
+    fun usedBy(ingredients: List<Ingredient>, cupboard: Set<String>, staples: Set<String>): List<CupboardItem> =
+        ingredients.filterNot { ShoppingList.isAlwaysHave(it.name, staples) }.mapNotNull { ing ->
+            val part = parts(ing.name).firstOrNull { key(it) in cupboard } ?: return@mapNotNull null
+            CupboardItem(key(part), plain(part).replaceFirstChar { it.uppercase() }, ing.storeSection)
+        }.distinctBy { it.key }
+
+    /** Whether something is fresh enough to assume it's used up when cooked. */
+    fun isFresh(item: CupboardItem): Boolean = item.section in fresh
+
     /**
      * Recipes ranked by how much of each is already in the cupboard: ready-to-cook first, then
      * the fewest things to buy. Recipes with nothing from the cupboard are left out, as are
@@ -149,7 +203,14 @@ object Cupboard {
         val usesCupboard = ingredients.any { ing -> options(ing.name).any { it in cupboard } }
         if (!usesCupboard) return@mapNotNull null
         val total = ingredients.sumOf(::weight)
-        CupboardMatch(recipe, missing, have.size, ingredients.size, if (total == 0.0) 0.0 else have.sumOf(::weight) / total)
+        CupboardMatch(
+            recipe = recipe,
+            missing = missing,
+            haveCount = have.size,
+            total = ingredients.size,
+            coverage = if (total == 0.0) 0.0 else have.sumOf(::weight) / total,
+            uses = ingredients.flatMap { options(it.name) }.filter { it in cupboard }.toSet(),
+        )
     }.sortedWith(
         compareByDescending<CupboardMatch> { it.ready }
             .thenByDescending { it.coverage }

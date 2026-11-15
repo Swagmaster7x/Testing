@@ -20,6 +20,9 @@ import com.personal.mealgym.data.db.ProteinTag
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.data.db.StoreSection
 import com.personal.mealgym.domain.Avoid
+import com.personal.mealgym.domain.Cupboard
+import com.personal.mealgym.domain.CupboardItem
+import com.personal.mealgym.domain.ShoppingItem
 import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.Foods
 import com.personal.mealgym.domain.answers
@@ -31,6 +34,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -172,12 +176,30 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
     fun dismissTimer(id: Long) = c.cookTimers.dismiss(id)
 
     /** "I cooked it", with how it went if they said. [onDone] runs once it's noted. */
-    fun logCooked(rating: CookRating?, onDone: () -> Unit = {}) {
+    fun logCooked(rating: CookRating?, usedUp: Set<String> = emptySet(), onDone: () -> Unit = {}) {
         viewModelScope.launch {
             c.meals.logCooked(profileId, id, c.today.value, rating)
+            if (usedUp.isNotEmpty()) c.settings.setInCupboard(usedUp, have = false)
             onDone()
         }
     }
+
+    /**
+     * What this recipe takes from the cupboard, offered as "Used up?" when it's cooked. Empty
+     * unless the cupboard is being kept up to date.
+     */
+    val fromCupboard: StateFlow<List<CupboardItem>> = combine(
+        c.meals.recipe(id),
+        c.settings.cupboard,
+        c.settings.settings(profileId),
+        c.settings.cupboardAuto,
+    ) { r, cupboard, s, auto ->
+        if (!auto || r == null) {
+            emptyList()
+        } else {
+            Cupboard.usedBy(RecipeSwaps.ingredientsFor(r.recipe, r.ingredients.sortedBy { it.position }), cupboard, s.pantryStaples)
+        }
+    }.stateInVm(emptyList())
 
     fun setHidden(hidden: Boolean) {
         viewModelScope.launch {
@@ -241,8 +263,31 @@ class ShoppingViewModel(private val c: AppContainer) : MessageViewModel() {
         weekOffset.value = offset
     }
 
-    fun toggle(week: ShoppingWeek, key: String, checked: Boolean) {
-        viewModelScope.launch { c.meals.setChecked(week.listKey, week.weekStart, key, checked) }
+    /** "Keep it up to date" on the cupboard: ticked items go into it. */
+    val cupboardAuto: StateFlow<Boolean> = c.settings.cupboardAuto.stateInVm(false)
+
+    /** Cupboard items this screen put there, so unticking a slip takes it back out (and nothing else). */
+    private val addedHere = mutableSetOf<String>()
+
+    /**
+     * Ticks an item off. With the cupboard kept up to date, buying something puts it in the
+     * cupboard with today's date; unticking takes out only what the tick put in.
+     */
+    fun toggle(week: ShoppingWeek, item: ShoppingItem, checked: Boolean) {
+        viewModelScope.launch {
+            c.meals.setChecked(week.listKey, week.weekStart, item.key, checked)
+            if (!c.settings.cupboardAuto.first()) return@launch
+            // "X or Y" lines: whichever is listed first stands for what was bought.
+            val key = Cupboard.options(item.name).firstOrNull() ?: return@launch
+            if (checked) {
+                if (key !in c.settings.cupboard.first()) {
+                    addedHere += key
+                    c.settings.setInCupboard(key, true, c.today.value.toEpochDay())
+                }
+            } else if (addedHere.remove(key)) {
+                c.settings.setInCupboard(key, false)
+            }
+        }
     }
 
     fun uncheckAll(week: ShoppingWeek) {

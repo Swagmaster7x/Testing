@@ -49,8 +49,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.db.MealSlot
+import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.Recipe
+import com.personal.mealgym.domain.AgingItem
 import com.personal.mealgym.domain.Cupboard
+import com.personal.mealgym.domain.UseUp
 import com.personal.mealgym.domain.CupboardItem
 import com.personal.mealgym.domain.CupboardMatch
 import com.personal.mealgym.domain.Dates
@@ -70,6 +73,7 @@ import com.personal.mealgym.ui.components.DetailTopBar
 import com.personal.mealgym.ui.components.EmptyState
 import com.personal.mealgym.ui.components.SectionHeader
 import com.personal.mealgym.ui.label
+import com.personal.mealgym.ui.settings.SwitchRow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -83,6 +87,11 @@ data class CupboardUi(
     val matches: List<CupboardMatch>,
     val slots: List<MealSlot>,
     val today: LocalDate,
+    /** Fresh things that have been in a while, and the recipes that would use them up. */
+    val aging: List<AgingItem> = emptyList(),
+    val useUp: List<UseUp> = emptyList(),
+    /** Ticking the shopping list adds here, and cooking offers to take things out. */
+    val auto: Boolean = false,
 ) {
     val ready: List<CupboardMatch> get() = matches.filter { it.ready }
     val almost: List<CupboardMatch> get() = matches.filter { !it.ready && it.missing.size <= 3 }
@@ -101,25 +110,38 @@ class CupboardViewModel(private val c: AppContainer) : MessageViewModel() {
         c.settings.settings(profileId),
         c.settings.cupboard,
         c.meals.conflictsFor(profileId),
-        combine(c.profile(profileId), c.today) { p, d -> p to d },
-    ) { recipes, settings, cupboard, conflicts, (profile, today) ->
+        combine(c.profile(profileId), c.today, c.settings.cupboardSince, c.settings.cupboardAuto) { p, d, since, auto -> Extra(p, d, since, auto) },
+    ) { recipes, settings, cupboard, conflicts, (profile, today, since, auto) ->
         val mine = recipes.filter { r ->
             !r.recipe.isHidden && r.recipe.id !in conflicts &&
                 (r.recipe.onlyForProfileId == null || r.recipe.onlyForProfileId == profileId)
         }
         val staples = settings.pantryStaples
         val ingredients = mine.flatMap { RecipeSwaps.ingredientsFor(it.recipe, it.ingredients) }
+        val items = Cupboard.catalog(ingredients, staples)
+        val matches = Cupboard.match(mine.map { it.recipe to it.ingredients }, cupboard, staples)
+        val aging = Cupboard.aging(items, cupboard, since, today.toEpochDay())
         CupboardUi(
-            items = Cupboard.catalog(ingredients, staples),
+            items = items,
             have = cupboard,
-            matches = Cupboard.match(mine.map { it.recipe to it.ingredients }, cupboard, staples),
+            matches = matches,
             slots = Sides.slotsFor(profile),
             today = today,
+            aging = aging,
+            useUp = Cupboard.useUp(matches, aging),
+            auto = auto,
         )
     }.stateInVm(null)
 
+    private data class Extra(val profile: Profile, val today: LocalDate, val since: Map<String, Long>, val auto: Boolean)
+
+    /** The day is kept with the tick, so what's been in longest can be suggested first. */
     fun toggle(item: CupboardItem, have: Boolean) {
-        viewModelScope.launch { c.settings.setInCupboard(item.key, have) }
+        viewModelScope.launch { c.settings.setInCupboard(item.key, have, c.today.value.toEpochDay()) }
+    }
+
+    fun setAuto(on: Boolean) {
+        viewModelScope.launch { c.settings.setCupboardAuto(on) }
     }
 
     fun clear() {
@@ -190,6 +212,12 @@ fun CupboardScreen(nav: AppNavigator, vm: CupboardViewModel = viewModel(factory 
                         "Tick what's in your fridge and cupboards. Pantry staples from Settings already count.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SwitchRow(
+                        title = "Keep it up to date",
+                        body = "Ticking something off the shopping list puts it here, and cooking a recipe offers to take out what it used up.",
+                        checked = state.auto,
+                        onChange = vm::setAuto,
                     )
                     OutlinedTextField(
                         value = query,
@@ -299,13 +327,34 @@ private fun androidx.compose.foundation.lazy.LazyListScope.recipes(
             MatchCard(match, onOpen = { onOpen(match) }, onPlan = { onPlan(match) })
         }
     }
-    group("Ready to cook", state.ready)
-    group("Almost there", state.almost)
-    group("Needs a shop", state.further)
+    // What's been sitting longest comes first, with the recipes that would use it.
+    if (state.useUp.isNotEmpty()) {
+        item(key = "t-use-up") { SectionHeader("Use up first") }
+        item(key = "use-up-note") {
+            Text(
+                "In your cupboard a while: " + state.aging.take(6).joinToString(", ") { "${it.name.lowercase()} (${it.days} days)" } + ".",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        items(state.useUp, key = { "u-${it.match.recipe.id}" }) { use ->
+            MatchCard(
+                use.match,
+                onOpen = { onOpen(use.match) },
+                onPlan = { onPlan(use.match) },
+                usesUp = use.items.joinToString(", ") { it.name.lowercase() },
+            )
+        }
+    }
+    // Anything already suggested above isn't listed a second time.
+    val above = state.useUp.map { it.match.recipe.id }.toSet()
+    group("Ready to cook", state.ready.filter { it.recipe.id !in above })
+    group("Almost there", state.almost.filter { it.recipe.id !in above })
+    group("Needs a shop", state.further.filter { it.recipe.id !in above })
 }
 
 @Composable
-private fun MatchCard(match: CupboardMatch, onOpen: () -> Unit, onPlan: () -> Unit) {
+private fun MatchCard(match: CupboardMatch, onOpen: () -> Unit, onPlan: () -> Unit, usesUp: String? = null) {
     ElevatedCard(onClick = onOpen, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 4.dp)) {
             Text(match.recipe.name, style = MaterialTheme.typography.titleMedium)
@@ -316,6 +365,14 @@ private fun MatchCard(match: CupboardMatch, onOpen: () -> Unit, onPlan: () -> Un
             ) {
                 Badge(match.recipe.mealType.label)
                 Badge(if (match.ready) "You have everything" else "You have ${match.haveCount} of ${match.total}")
+            }
+            if (usesUp != null) {
+                Text(
+                    "Uses up $usesUp",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 6.dp, end = 8.dp),
+                )
             }
             if (!match.ready) {
                 Text(

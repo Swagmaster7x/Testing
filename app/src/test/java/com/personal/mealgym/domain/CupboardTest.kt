@@ -84,6 +84,59 @@ class CupboardTest {
     }
 
     @Test
+    fun whatHasBeenInLongestIsSuggestedFirst() {
+        val today = 20_000L
+        val cupboard = setOf("chicken breast", "rice", "broccoli", "scallion", "salmon", "lemon")
+        val items = Cupboard.catalog(bowl.second + salmon.second, staples = setOf("soy sauce"))
+        val since = mapOf(
+            "chicken breast" to today - 5, // fresh, in a while
+            "broccoli" to today - 3,       // fresh, just long enough
+            "salmon" to today - 1,         // fresh, but only yesterday
+            "rice" to today - 30,          // keeps: never "use it up"
+            // scallion and lemon were ticked before dates were kept
+        )
+        val aging = Cupboard.aging(items, cupboard, since, today)
+        assertEquals(listOf("chicken breast" to 5, "broccoli" to 3), aging.map { it.key to it.days })
+        assertEquals("Chicken breast", aging.first().name)
+        // Something no longer in the cupboard isn't aging, whatever its old date says.
+        assertTrue(Cupboard.aging(items, cupboard - "chicken breast", since, today).none { it.key == "chicken breast" })
+
+        val matches = Cupboard.match(listOf(salmon, bowl), cupboard, staples = setOf("soy sauce"))
+        assertEquals(setOf("chicken breast", "rice", "broccoli", "scallion"), matches.single { it.recipe.id == 1L }.uses)
+        val use = Cupboard.useUp(matches, aging)
+        // Only the bowl uses anything that's been sitting; the salmon dinner uses none of it.
+        assertEquals(listOf("Chicken rice bowl"), use.map { it.match.recipe.name })
+        assertEquals(listOf("chicken breast", "broccoli"), use.single().items.map { it.key })
+        assertTrue(Cupboard.useUp(matches, emptyList()).isEmpty())
+    }
+
+    @Test
+    fun useUpSkipsRecipesThatNeedABigShopAndStopsAtThree() {
+        fun recipe(id: Long, vararg extra: String) = Recipe(id = id, name = "Recipe $id", mealType = MealType.DINNER) to
+            (listOf(ing("chicken breast", StoreSection.PROTEIN)) + extra.map { ing(it, StoreSection.PRODUCE_FROZEN) })
+        val recipes = listOf(
+            recipe(1, "kale", "leek", "fennel bulb", "shallot"), // four things to buy
+            recipe(2), recipe(3, "kale"), recipe(4, "kale", "leek"), recipe(5, "kale", "leek", "shallot"),
+        )
+        val matches = Cupboard.match(recipes, setOf("chicken breast"), emptySet())
+        val use = Cupboard.useUp(matches, listOf(AgingItem("chicken breast", "Chicken breast", 4)))
+        assertEquals(listOf(2L, 3L, 4L), use.map { it.match.recipe.id })
+    }
+
+    @Test
+    fun cookingKnowsWhatItTookFromTheCupboard() {
+        val used = Cupboard.usedBy(bowl.second, cupboard = setOf("chicken breast", "rice", "scallion", "lemon"), staples = setOf("soy sauce"))
+        assertEquals(listOf("chicken breast", "rice", "scallion"), used.map { it.key })
+        assertEquals(listOf("Chicken breast", "Rice", "Scallions"), used.map { it.name })
+        // Fresh food is assumed used up; rice isn't.
+        assertEquals(listOf(true, false, true), used.map(Cupboard::isFresh))
+        // An "X or Y" line counts as whichever one is there.
+        val either = listOf(ing("chicken breast or thighs", StoreSection.PROTEIN))
+        assertEquals(listOf("chicken thigh"), Cupboard.usedBy(either, setOf("chicken thigh"), emptySet()).map { it.key })
+        assertTrue(Cupboard.usedBy(bowl.second, emptySet(), emptySet()).isEmpty())
+    }
+
+    @Test
     fun staplesAloneAreNotAMatch() {
         assertTrue(Cupboard.match(listOf(bowl), cupboard = emptySet(), staples = setOf("soy sauce")).isEmpty())
         assertTrue(Cupboard.match(listOf(bowl), cupboard = setOf("lemon"), staples = emptySet()).isEmpty())
