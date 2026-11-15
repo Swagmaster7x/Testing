@@ -45,6 +45,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -144,6 +145,8 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
                             onSwap = { name -> vm.swap(ex.exercise.id, name) },
                             onWeight = { vm.setWeight(ex.exercise.id, it) },
                             onReps = { vm.setReps(ex.exercise.id, it) },
+                            onProgress = { nav.exerciseProgress(ex.displayName) },
+                            onUseSuggestion = { ex.suggestion?.let { vm.useSuggestion(ex.exercise.id, it) } },
                         )
                     }
                 }
@@ -159,6 +162,9 @@ fun GymScreen(nav: AppNavigator, vm: GymViewModel = viewModel(factory = AppViewM
                 }
             }
 
+            item {
+                OutlinedButton(onClick = nav::progress, modifier = Modifier.fillMaxWidth()) { Text("Lifting progress") }
+            }
             item {
                 OutlinedButton(onClick = nav::sauna, modifier = Modifier.fillMaxWidth()) {
                     Icon(painterResource(R.drawable.ic_timer), contentDescription = null, modifier = Modifier.padding(end = 8.dp).size(18.dp))
@@ -293,6 +299,8 @@ private fun ExerciseCard(
     onSwap: (String?) -> Unit,
     onWeight: (String) -> Unit,
     onReps: (String) -> Unit,
+    onProgress: () -> Unit,
+    onUseSuggestion: () -> Unit,
 ) {
     val e = ex.exercise
     OutlinedCard(Modifier.fillMaxWidth()) {
@@ -308,6 +316,23 @@ private fun ExerciseCard(
                     ex.lastTime?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
                 }
                 DemoThumb(ex.demo, loadFrame, onDemo)
+            }
+
+            ex.suggestion?.let { next ->
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                            Text("Try ${next.text}", style = MaterialTheme.typography.titleSmall)
+                            Text(next.reason, style = MaterialTheme.typography.bodySmall)
+                        }
+                        TextButton(onClick = onUseSuggestion) { Text("Use") }
+                    }
+                }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -375,6 +400,19 @@ private fun ExerciseCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            // Each set ticked with the boxes filled in keeps its own weight and reps.
+            ex.today?.let { Text("Today: $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary) }
+            if (ex.showTickHint) {
+                Text(
+                    "Tick a set to log it at this weight and reps. Change the boxes between sets if they differ.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (ex.hasHistory) {
+                TextButton(onClick = onProgress, contentPadding = PaddingValues(horizontal = 4.dp)) { Text("See progress") }
             }
         }
     }

@@ -127,6 +127,8 @@ class SettingsViewModel(private val c: AppContainer) : MessageViewModel() {
     fun setMotion(on: Boolean) = launch { c.settings.setMotion(profileId, on) }
     fun setChime(on: Boolean) = launch { c.settings.setChime(profileId, on) }
     fun setCreatineReminder(on: Boolean) = launch { c.settings.setCreatineReminder(profileId, on) }
+    fun setSuggestLifts(on: Boolean) = launch { c.settings.setSuggestLifts(profileId, on) }
+    fun setDayTotals(on: Boolean) = launch { c.settings.setDayTotals(profileId, on) }
 
     /** Opens someone else's screens on this phone from now on. */
     fun switchTo(id: Long) = c.chooseSide(id)
@@ -375,6 +377,14 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                         }
                     }
                 }
+            }
+            item {
+                SwitchRow(
+                    title = "Suggest what to lift next",
+                    body = "\"Try 140 x 8\" on each exercise, worked out from what you logged last time and the plan's rep range.",
+                    checked = s.suggestLifts,
+                    onChange = vm::setSuggestLifts,
+                )
             }
             item { TextButton(onClick = nav::editWorkouts, contentPadding = PaddingValues(0.dp)) { Text("Edit workouts") } }
 

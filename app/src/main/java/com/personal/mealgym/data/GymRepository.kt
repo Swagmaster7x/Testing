@@ -4,12 +4,15 @@ import androidx.room.withTransaction
 import com.personal.mealgym.data.db.AppDatabase
 import com.personal.mealgym.data.db.Exercise
 import com.personal.mealgym.data.db.Feeling
+import com.personal.mealgym.data.db.LoggedSet
 import com.personal.mealgym.data.db.SaunaLog
 import com.personal.mealgym.data.db.SetLog
 import com.personal.mealgym.data.db.SupplementLog
 import com.personal.mealgym.data.db.WorkoutDay
 import com.personal.mealgym.data.db.WorkoutSession
 import com.personal.mealgym.domain.Dates
+import com.personal.mealgym.domain.LiftDay
+import com.personal.mealgym.domain.Progression
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -28,6 +31,12 @@ class GymRepository(private val db: AppDatabase) {
     fun sessions(profileId: Long): Flow<List<WorkoutSession>> = workoutDao.observeSessions(profileId)
 
     fun saunaLogs(profileId: Long): Flow<List<SaunaLog>> = saunaDao.observeAll(profileId)
+
+    /** Every logged set with its date, oldest first: the raw material for progress and the weekly summary. */
+    fun loggedSets(profileId: Long): Flow<List<LoggedSet>> = workoutDao.observeLoggedSets(profileId)
+
+    /** Each exercise's history by lower-case name, so a swap keeps its own. */
+    fun lifts(profileId: Long): Flow<Map<String, List<LiftDay>>> = loggedSets(profileId).map(Progression::history)
 
     /** Latest weight/reps note keyed by lower-case exercise name, so a swap keeps its own history. */
     fun latestLogs(profileId: Long): Flow<Map<String, SetLog>> =

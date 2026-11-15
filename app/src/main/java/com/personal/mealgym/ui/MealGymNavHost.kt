@@ -42,6 +42,8 @@ import com.personal.mealgym.ui.cook.ShoppingListScreen
 import com.personal.mealgym.ui.cravings.CravingsScreen
 import com.personal.mealgym.ui.cravings.RestaurantScreen
 import com.personal.mealgym.ui.gym.DemoScreen
+import com.personal.mealgym.ui.gym.ExerciseProgressScreen
+import com.personal.mealgym.ui.gym.ProgressScreen
 import com.personal.mealgym.ui.gym.GymScreen
 import com.personal.mealgym.ui.gym.WorkoutEditScreen
 import com.personal.mealgym.ui.history.HistoryScreen
@@ -76,6 +78,8 @@ object Routes {
     const val SETUP = "setup"
     const val CRAVINGS = "cravings"
     const val RESTAURANT = "restaurant/{key}"
+    const val PROGRESS = "progress"
+    const val EXERCISE_PROGRESS = "progress/{name}"
 
     /** Screens that may show a banner ad in the store edition. */
     val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY, CUPBOARD, CRAVINGS, RESTAURANT)
@@ -86,6 +90,7 @@ object Routes {
     fun demo(exerciseName: String) = "demo/" + android.net.Uri.encode(exerciseName)
     fun person(id: Long = 0) = "person/$id"
     fun restaurant(key: String) = "restaurant/" + android.net.Uri.encode(key)
+    fun exerciseProgress(name: String) = "progress/" + android.net.Uri.encode(name)
 }
 
 /** Every way one screen can open another. */
@@ -117,6 +122,8 @@ class AppNavigator(private val nav: NavHostController) {
     fun setup() = nav.navigate(Routes.SETUP) { launchSingleTop = true }
     fun cravings() = nav.navigate(Routes.CRAVINGS) { launchSingleTop = true }
     fun restaurant(key: String) = nav.navigate(Routes.restaurant(key))
+    fun progress() = nav.navigate(Routes.PROGRESS) { launchSingleTop = true }
+    fun exerciseProgress(name: String) = nav.navigate(Routes.exerciseProgress(name))
 }
 
 private data class Tab(val route: String, val label: String, val icon: @Composable () -> Painter)
@@ -219,6 +226,10 @@ fun MealGymNavHost(
             composable(Routes.CRAVINGS) { CravingsScreen(navigator) }
             composable(Routes.RESTAURANT, arguments = listOf(navArgument("key") { type = NavType.StringType })) {
                 RestaurantScreen(navigator)
+            }
+            composable(Routes.PROGRESS) { ProgressScreen(navigator) }
+            composable(Routes.EXERCISE_PROGRESS, arguments = listOf(navArgument("name") { type = NavType.StringType })) {
+                ExerciseProgressScreen(navigator)
             }
         }
     }

@@ -13,6 +13,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 
+/** The weight and reps that were in the boxes when a set was ticked. */
+@Serializable
+data class LoggedValue(val weight: String = "", val reps: String = "") {
+    val isBlank: Boolean get() = weight.isBlank() && reps.isBlank()
+}
+
 /** The workout being done right now: ticked sets, swaps and optional weight/reps notes. */
 @Serializable
 data class WorkoutDraft(
@@ -26,6 +32,8 @@ data class WorkoutDraft(
     val swaps: Map<Long, String> = emptyMap(),
     val weights: Map<Long, String> = emptyMap(),
     val reps: Map<Long, String> = emptyMap(),
+    /** Exercise id -> set number -> what was lifted for that set, for sets ticked with the boxes filled in. */
+    val setValues: Map<Long, Map<Int, LoggedValue>> = emptyMap(),
 )
 
 /**
