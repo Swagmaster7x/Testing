@@ -26,7 +26,7 @@ object Alerts {
         }
         // The app plays its own sound and buzz at the end, so this channel stays quiet to avoid doubling up.
         val done = NotificationChannel(CHANNEL_DONE, "Timer finished", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "Tells you the sauna timer has finished."
+            description = "Tells you the sauna timer or a cooking timer has finished."
             setSound(null, null)
             enableVibration(false)
         }

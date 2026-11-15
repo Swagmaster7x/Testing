@@ -168,6 +168,12 @@ interface PlanDao {
     // "Cooked it".
     @Insert suspend fun insertCookLog(log: CookLog): Long
 
+    @Query("SELECT * FROM CookLog WHERE profileId = :profileId AND recipeId = :recipeId AND date = :date ORDER BY id DESC LIMIT 1")
+    suspend fun cookLogOn(profileId: Long, recipeId: Long, date: String): CookLog?
+
+    @Query("UPDATE CookLog SET rating = :rating WHERE id = :id")
+    suspend fun setCookRating(id: Long, rating: CookRating?)
+
     @Query("SELECT * FROM CookLog WHERE profileId = :profileId ORDER BY date DESC, id DESC")
     fun observeCookLogs(profileId: Long): Flow<List<CookLog>>
 

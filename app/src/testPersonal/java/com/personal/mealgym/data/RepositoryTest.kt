@@ -342,6 +342,11 @@ class RepositoryTest {
         assertEquals(mapOf(guisado.id to CookRating.LOVED, tacos.id to CookRating.NOT_AGAIN), meals.ratings(TestPeople.SWAG).first())
         assertEquals(mapOf(tacos.id to CookRating.LOVED), meals.ratings(TestPeople.ASHLEY).first())
         assertEquals(3, meals.cookLogs(TestPeople.SWAG).first().count { it.recipeId == guisado.id })
+        // Saying it twice on one day is one cook; a second rating replaces the first, and none leaves it.
+        meals.logCooked(TestPeople.SWAG, tacos.id, mon, CookRating.FINE)
+        meals.logCooked(TestPeople.SWAG, tacos.id, mon, null)
+        assertEquals(CookRating.FINE, meals.ratings(TestPeople.SWAG).first()[tacos.id])
+        assertEquals(1, meals.cookLogs(TestPeople.SWAG).first().count { it.recipeId == tacos.id })
     }
 
     @Test

@@ -10,7 +10,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.personal.mealgym.AppContainer
 import com.personal.mealgym.data.LibraryFilter
+import com.personal.mealgym.cook.CookTimer
 import com.personal.mealgym.data.ShoppingWeek
+import com.personal.mealgym.data.db.CookRating
 import com.personal.mealgym.data.db.Ingredient
 import com.personal.mealgym.data.db.MealPlanEntry
 import com.personal.mealgym.data.db.MealType
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.roundToInt
 
 // ---------- Recipe list ----------
 
@@ -86,7 +89,16 @@ data class RecipeUi(
     val portion: Double = 1.0,
     /** "Like the chili at Wendy's": the restaurant food this is a home version of. */
     val inspirations: List<String> = emptyList(),
+    /** How much is being cooked compared with the recipe as written (2.0 is double). [ingredients] are already scaled. */
+    val scale: Double = 1.0,
+    /** How many times this person has cooked it, when they last did, and what they last said about it. */
+    val cooked: Int = 0,
+    val lastCooked: LocalDate? = null,
+    val rating: CookRating? = null,
 ) {
+    /** How many servings the scaled recipe makes. */
+    val scaledServings: Int get() = (recipe.servings * scale).roundToInt().coerceAtLeast(1)
+
     /** Coffee-shop orders and the like: nothing to cook or buy. */
     val isOrderOnly: Boolean get() = recipe.steps.isEmpty() && ingredients.isEmpty()
 }
@@ -101,14 +113,34 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
     private val id: Long = handle.get<Long>("id") ?: 0L
     val profileId = c.currentProfileId()
 
-    val state: StateFlow<RecipeState> = combine(c.meals.recipe(id), c.settings.settings(profileId), c.profile(profileId)) { r, s, person ->
+    /** Cooking mode opens at whatever size the recipe page was showing. */
+    private val scale = MutableStateFlow((handle.get<Float>("scale") ?: 1f).toDouble().coerceIn(0.5, 4.0))
+
+    fun setScale(value: Double) {
+        scale.value = value.coerceIn(0.5, 4.0)
+    }
+
+    val state: StateFlow<RecipeState> = combine(
+        c.meals.recipe(id),
+        c.settings.settings(profileId),
+        c.profile(profileId),
+        scale,
+        c.meals.cookLogs(profileId),
+    ) { r, s, person, size, cookLogs ->
+        chime = s.chime
         if (r == null) {
             RecipeState.Missing
         } else {
+            val mine = cookLogs.filter { it.recipeId == id }
             RecipeState.Loaded(
                 RecipeUi(
                     recipe = r.recipe,
-                    ingredients = RecipeSwaps.ingredientsFor(r.recipe, r.ingredients.sortedBy { it.position }),
+                    ingredients = RecipeSwaps.ingredientsFor(r.recipe, r.ingredients.sortedBy { it.position })
+                        .map { ing -> if (size == 1.0) ing else ing.copy(quantity = ing.quantity?.times(size)) },
+                    scale = size,
+                    cooked = mine.size,
+                    lastCooked = mine.firstOrNull()?.let { Dates.parse(it.date) },
+                    rating = mine.firstNotNullOfOrNull { it.rating },
                     showNutrition = s.showNutrition,
                     showHalfPlateTip = s.showHalfPlateTip,
                     freeVolumeFoods = c.freeVolumeFoods,
@@ -125,6 +157,26 @@ class RecipeViewModel(private val c: AppContainer, handle: SavedStateHandle) : M
 
     fun setFavorite(favorite: Boolean) {
         viewModelScope.launch { c.meals.setFavorite(id, favorite) }
+    }
+
+    private var chime = false
+
+    /** Kitchen timers started from steps, for this recipe or any other; they outlive the screen. */
+    val timers: StateFlow<List<CookTimer>> = c.cookTimers.timers
+
+    fun startTimer(stepNumber: Int, seconds: Int) {
+        val name = (state.value as? RecipeState.Loaded)?.ui?.recipe?.name.orEmpty()
+        c.cookTimers.start("Step $stepNumber · $name", seconds, chime)
+    }
+
+    fun dismissTimer(id: Long) = c.cookTimers.dismiss(id)
+
+    /** "I cooked it", with how it went if they said. [onDone] runs once it's noted. */
+    fun logCooked(rating: CookRating?, onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            c.meals.logCooked(profileId, id, c.today.value, rating)
+            onDone()
+        }
     }
 
     fun setHidden(hidden: Boolean) {

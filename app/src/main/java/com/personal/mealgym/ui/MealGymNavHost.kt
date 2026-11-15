@@ -64,7 +64,7 @@ object Routes {
     const val COOK = "cook"
     const val GYM = "gym"
     const val RECIPE = "recipe/{id}"
-    const val COOKING = "cooking/{id}"
+    const val COOKING = "cooking/{id}?scale={scale}"
     const val RECIPE_EDIT = "recipe-edit/{id}"
     const val SHOPPING = "shopping"
     const val SAUNA = "sauna"
@@ -85,7 +85,7 @@ object Routes {
     val withBanner = setOf(PLAN, COOK, RECIPE, HISTORY, CUPBOARD, CRAVINGS, RESTAURANT)
 
     fun recipe(id: Long) = "recipe/$id"
-    fun cooking(id: Long) = "cooking/$id"
+    fun cooking(id: Long, scale: Double = 1.0) = "cooking/$id?scale=$scale"
     fun recipeEdit(id: Long = 0) = "recipe-edit/$id"
     fun demo(exerciseName: String) = "demo/" + android.net.Uri.encode(exerciseName)
     fun person(id: Long = 0) = "person/$id"
@@ -108,7 +108,7 @@ class AppNavigator(private val nav: NavHostController) {
     }
 
     fun recipe(id: Long) = nav.navigate(Routes.recipe(id))
-    fun cooking(id: Long) = nav.navigate(Routes.cooking(id))
+    fun cooking(id: Long, scale: Double = 1.0) = nav.navigate(Routes.cooking(id, scale))
     fun editRecipe(id: Long = 0) = nav.navigate(Routes.recipeEdit(id))
     fun shopping() = nav.navigate(Routes.SHOPPING) { launchSingleTop = true }
     fun sauna() = nav.navigate(Routes.SAUNA) { launchSingleTop = true }
@@ -203,7 +203,13 @@ fun MealGymNavHost(
             composable(Routes.RECIPE, arguments = listOf(navArgument("id") { type = NavType.LongType })) {
                 RecipeScreen(navigator)
             }
-            composable(Routes.COOKING, arguments = listOf(navArgument("id") { type = NavType.LongType })) {
+            composable(
+                Routes.COOKING,
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("scale") { type = NavType.FloatType; defaultValue = 1f },
+                ),
+            ) {
                 CookingModeScreen(navigator)
             }
             composable(Routes.RECIPE_EDIT, arguments = listOf(navArgument("id") { type = NavType.LongType })) {

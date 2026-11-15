@@ -124,8 +124,18 @@ class MealRepository(
 
     // "Cooked it"
 
-    suspend fun logCooked(profileId: Long, recipeId: Long, date: LocalDate, rating: CookRating?) =
-        planDao.insertCookLog(CookLog(profileId = profileId, recipeId = recipeId, date = Dates.iso(date), rating = rating))
+    /**
+     * Notes that a recipe was cooked. Saying so twice on one day is one cook: the second time
+     * only changes the rating, if one is given.
+     */
+    suspend fun logCooked(profileId: Long, recipeId: Long, date: LocalDate, rating: CookRating?) = db.withTransaction {
+        val existing = planDao.cookLogOn(profileId, recipeId, Dates.iso(date))
+        if (existing == null) {
+            planDao.insertCookLog(CookLog(profileId = profileId, recipeId = recipeId, date = Dates.iso(date), rating = rating))
+        } else if (rating != null) {
+            planDao.setCookRating(existing.id, rating)
+        }
+    }
 
     fun cookLogs(profileId: Long): Flow<List<CookLog>> = planDao.observeCookLogs(profileId)
 

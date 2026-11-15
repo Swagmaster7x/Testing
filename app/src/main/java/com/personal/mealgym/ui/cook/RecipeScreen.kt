@@ -4,6 +4,9 @@ package com.personal.mealgym.ui.cook
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,8 +31,15 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.SnackbarHost
@@ -50,14 +60,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.R
+import com.personal.mealgym.data.db.CookRating
 import com.personal.mealgym.data.db.MealType
 import com.personal.mealgym.BuildConfig
+import com.personal.mealgym.domain.Dates
 import com.personal.mealgym.domain.Foods
+import com.personal.mealgym.domain.StepTimers
 import com.personal.mealgym.domain.Portions
 import com.personal.mealgym.data.db.Recipe
 import com.personal.mealgym.ui.AppNavigator
@@ -80,6 +95,7 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
     val state by vm.state.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
+    var cooked by rememberSaveable { mutableStateOf(false) }
     val loaded = state as? RecipeState.Loaded
     val snackbar = remember { SnackbarHostState() }
     vm.ShowMessages(snackbar)
@@ -105,6 +121,9 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
                         Box {
                             IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                if (!loaded.ui.isOrderOnly) {
+                                    DropdownMenuItem(text = { Text("I cooked this") }, onClick = { menu = false; cooked = true })
+                                }
                                 DropdownMenuItem(
                                     text = { Text(if (r.isHidden) "Show again" else "Hide for now") },
                                     onClick = { menu = false; vm.setHidden(!r.isHidden) },
@@ -128,11 +147,21 @@ fun RecipeScreen(nav: AppNavigator, vm: RecipeViewModel = viewModel(factory = Ap
             is RecipeState.Loaded -> RecipeContent(
                 ui = s.ui,
                 padding = padding,
-                onCook = { nav.cooking(s.ui.recipe.id) },
+                onCook = { nav.cooking(s.ui.recipe.id, s.ui.scale) },
                 onShopping = nav::shopping,
                 onSwap = { index -> vm.chooseSwap(index) { id -> nav.recipe(id) } },
+                onScale = vm::setScale,
             )
         }
+    }
+
+    if (cooked && loaded != null) {
+        CookedSheet(
+            recipeName = loaded.ui.recipe.name,
+            current = loaded.ui.rating,
+            onSave = { rating -> cooked = false; vm.logCooked(rating) },
+            onDismiss = { cooked = false },
+        )
     }
 
     if (confirmDelete && loaded != null) {
@@ -156,6 +185,7 @@ private fun RecipeContent(
     onCook: () -> Unit,
     onShopping: () -> Unit,
     onSwap: (Int?) -> Unit,
+    onScale: (Double) -> Unit,
 ) {
     val recipe = ui.recipe
     var bulkOpen by rememberSaveable { mutableStateOf(false) }
@@ -221,6 +251,17 @@ private fun RecipeContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (ui.cooked > 0) {
+                    Text(
+                        listOfNotNull(
+                            if (ui.cooked == 1) "Cooked once" else "Cooked ${ui.cooked} times",
+                            ui.lastCooked?.let { "last on ${Dates.monthDay(it)}" },
+                            ui.rating?.let { if (it == CookRating.NOT_AGAIN) "${it.label}: Fill my week skips it" else it.label },
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (ui.portion != 1.0 && recipe.mealType in portionTypes) {
                     Text(
                         "Your portion: about ${Portions.words(ui.portion)}.",
@@ -242,6 +283,37 @@ private fun RecipeContent(
             }
         }
         if (ui.ingredients.isNotEmpty()) item { SectionHeader("Ingredients") }
+        // Cook more or less than the recipe is written for. The steps keep their original wording.
+        val sizes = StepTimers.scaleChoices(recipe.servings)
+        if (ui.ingredients.isNotEmpty() && sizes.size > 1) {
+            item {
+                Column(Modifier.padding(bottom = 6.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    ) {
+                        Text("Servings", style = MaterialTheme.typography.labelLarge)
+                        sizes.forEach { (multiplier, servings) ->
+                            FilterChip(
+                                selected = ui.scale == multiplier,
+                                onClick = { onScale(multiplier) },
+                                label = { Text("$servings") },
+                                modifier = Modifier.semantics { contentDescription = "Cook $servings servings" },
+                            )
+                        }
+                    }
+                    if (ui.scale != 1.0) {
+                        Text(
+                            "Amounts are for ${ui.scaledServings} servings. The steps still mention the amounts for ${recipe.servings}. " +
+                                "To buy for more people, open the meal on Plan and add guests.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
         itemsIndexed(ui.ingredients, key = { _, i -> "ing-${i.id}" }) { _, ingredient ->
             Row(Modifier.padding(vertical = 3.dp)) {
                 Text("•", modifier = Modifier.width(16.dp), color = MaterialTheme.colorScheme.primary)
@@ -298,6 +370,54 @@ private fun RecipeContent(
 }
 
 private val portionTypes = setOf(MealType.LUNCH, MealType.DINNER, MealType.SOUP)
+
+/**
+ * "I cooked it": how did it go? The answer steers Fill my week for this person (loved recipes
+ * come up more, "Not again" stops being picked). [extra] holds anything else to settle at the
+ * same time, such as what was used up from the cupboard.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CookedSheet(
+    recipeName: String,
+    current: CookRating?,
+    onSave: (CookRating?) -> Unit,
+    onDismiss: () -> Unit,
+    extra: @Composable () -> Unit = {},
+) {
+    var rating by rememberSaveable { mutableStateOf(current) }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(
+            Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("How was it?", style = MaterialTheme.typography.headlineSmall)
+            Text(recipeName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                CookRating.entries.forEachIndexed { index, r ->
+                    SegmentedButton(
+                        selected = rating == r,
+                        onClick = { rating = if (rating == r) null else r },
+                        shape = SegmentedButtonDefaults.itemShape(index, CookRating.entries.size),
+                    ) { Text(r.label, maxLines = 1) }
+                }
+            }
+            Text(
+                when (rating) {
+                    CookRating.LOVED -> "Fill my week will pick it more often."
+                    CookRating.FINE -> "It stays in the mix as it is."
+                    CookRating.NOT_AGAIN -> "Fill my week will stop picking it. You can still plan it yourself."
+                    null -> "Optional. It only steers what Fill my week picks for you."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            extra()
+            AppButton(onClick = { onSave(rating) }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Not now") }
+        }
+    }
+}
 
 /** Ashley's Side: one tip for this recipe, the rest a tap away. */
 @Composable
