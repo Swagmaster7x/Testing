@@ -558,7 +558,7 @@ fun SettingsScreen(nav: AppNavigator, vm: SettingsViewModel = viewModel(factory 
                             "The free version shows ads from Google AdMob, which can use your phone's advertising ID; where the law requires it you're asked first. " +
                             NOT_ADVICE
                     } else {
-                        "Meal & Gym works offline. Nothing leaves this phone unless you export a backup or share a shopping list. " +
+                        "Yoked works offline. Nothing leaves this phone unless you export a backup or share a shopping list. " +
                             "Exercise photos and instructions come from free-exercise-db, which is in the public domain."
                     },
                     style = MaterialTheme.typography.bodySmall,

@@ -1,6 +1,6 @@
 # Google Play kit for the store edition
 
-Everything needed to publish the store edition of Meal & Gym, apart from the accounts only you
+Everything needed to publish the store edition of Yoked, apart from the accounts only you
 can create.
 
 | File | What it's for |

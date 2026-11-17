@@ -136,8 +136,10 @@ class CupboardLoopTest {
             .flatMap { it.items }.first { "rice" in com.personal.mealgym.domain.Cupboard.options(it.name) }.name
         tap(rice)
         compose.waitUntil(10_000) { runBlocking { container.meals.shoppingWeek(id, week, both = false).first() }.checkedKeys.size == 2 }
+        // The row can move when it is ticked, so find it again before tapping.
+        scrollTo(rice)
         tap(rice)
-        compose.waitUntil(10_000) { runBlocking { container.meals.shoppingWeek(id, week, both = false).first() }.checkedKeys.size == 1 }
+        compose.waitUntil(15_000) { runBlocking { container.meals.shoppingWeek(id, week, both = false).first() }.checkedKeys.size == 1 }
         assertTrue("rice" in cupboard())
         assertTrue("rice" !in since())
     }

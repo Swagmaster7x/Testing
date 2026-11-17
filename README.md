@@ -1,10 +1,12 @@
-# Meal & Gym
+# Yoked
+
+**Name and logo.** The app is called Yoked (it was "Meal & Gym" until version 6; package names, application IDs and backup files still say `mealgym`, so existing installs and backups keep working). The logo is original artwork: the outlines of a male and a female bodybuilder with sparkles around them. It is drawn by `tools/logo.py` (needs `shapely` and `pillow`), which writes the launcher icon, the one-colour themed icon and the in-app mark, and a preview sheet at `store-kit/graphics/logo-preview.png`.
 
 A personal Android app (one phone, no accounts, fully offline) that plans the week's meals, shows the recipes, builds the shopping list, says which gym day it is, and runs a sauna timer. Built from [SPEC.md](SPEC.md).
 
 Kotlin, Jetpack Compose, Material 3, Room, DataStore. Minimum Android 8 (API 26), targets Android 17 (API 37).
 
-**Look:** a dark-fantasy theme inspired by the mood of Berserk. It uses original artwork only (no characters, symbols or text from the manga): black iron and blood red when the phone is in dark mode, aged parchment and ink in light mode, headings in Cinzel, cut-corner "armour plate" cards, and an original broadsword-and-red-moon app icon. The colours, fonts and shapes live in `ui/theme/Theme.kt`.
+**Look:** a dark-fantasy theme inspired by the mood of Berserk. It uses original artwork only (no characters, symbols or text from the manga): black iron and blood red when the phone is in dark mode, aged parchment and ink in light mode, headings in Cinzel, cut-corner "armour plate" cards, and an original broadsword emblem. The colours, fonts and shapes live in `ui/theme/Theme.kt`.
 
 ## Version 2 ([SPEC-V2.md](SPEC-V2.md))
 

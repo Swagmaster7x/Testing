@@ -7,12 +7,13 @@ the long pole, so start it as soon as you can.
 
 - **Package name.** The store edition builds as `com.mealgym.app` unless you set another. Once
   the first upload is in Play Console the package name is permanent. Pick one you own, e.g.
-  `com.yourname.mealgym` (lower case, dots, no spaces), and set it in step 4.
+  `com.yourname.yoked` (lower case, dots, no spaces), and set it in step 4.
 - **Free.** An app with ads and a "Remove ads" purchase must be published as **Free**. A free app
   can never be changed to paid.
 
-The display name can change later. Search Play for "Meal & Gym" first; if something similar
-exists, pick a different name (it goes in `store.appName` and the listing title).
+The display name can change later. Other fitness apps already use "Yoke" or "Yoked" in their
+names (see the note in `listing.md`), so search Play for "Yoked" just before launch; if a close
+match has appeared, pick a different name (it goes in `store.appName` and the listing title).
 
 ## 1. Google Play developer account (personal)
 
@@ -32,7 +33,7 @@ shown.
 
 1. Go to admob.google.com and sign in with the same Google account. Fill in payment and tax
    details (AdMob pays monthly once your balance passes its payment threshold, US$100 in the US).
-2. **Apps > Add app > Android**, answer "not published yet", name it Meal & Gym. Copy the
+2. **Apps > Add app > Android**, answer "not published yet", name it Yoked. Copy the
    **App ID** (`ca-app-pub-…~…`).
 3. In that app, **Ad units > Add ad unit > Banner**, name it "Banner". Copy the **ad unit ID**
    (`ca-app-pub-…/…`).
@@ -46,9 +47,9 @@ shown.
 
 1. Open `privacy-policy.html`, replace `[Your name or business name]` and `[support email]`.
 2. Put it on a public web address that isn't a PDF and doesn't need a sign-in. Two easy options:
-   - **GitHub Pages:** create a new *public* repository (e.g. `mealgym-privacy`), upload the file
+   - **GitHub Pages:** create a new *public* repository (e.g. `yoked-privacy`), upload the file
      as `index.html`, then Settings > Pages > Deploy from branch `main`. The address is
-     `https://<your-github-name>.github.io/mealgym-privacy/`.
+     `https://<your-github-name>.github.io/yoked-privacy/`.
    - **Google Sites:** paste the text into a new site and publish it.
 3. Keep the address; it goes in Play Console, AdMob and step 4.
 
@@ -70,11 +71,11 @@ shown.
 3. Add your store settings to `~/.gradle/gradle.properties` (your home folder, so they stay out of
    the repository) or to the repository's `gradle.properties`:
 
-       store.applicationId=com.yourname.mealgym
-       store.appName=Meal & Gym
+       store.applicationId=com.yourname.yoked
+       store.appName=Yoked
        store.admobAppId=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
        store.admobBannerId=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
-       store.privacyPolicyUrl=https://<your-github-name>.github.io/mealgym-privacy/
+       store.privacyPolicyUrl=https://<your-github-name>.github.io/yoked-privacy/
        store.versionCode=1
        store.versionName=1.0.0
 

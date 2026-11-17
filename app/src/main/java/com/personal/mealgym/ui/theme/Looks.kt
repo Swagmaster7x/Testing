@@ -158,7 +158,7 @@ object Looks {
         type = TypeStyle.CARVED,
         corners = Corners.CUT,
         backdrop = Backdrop.EMBER,
-        icon = R.drawable.ic_launcher_monochrome,
+        icon = R.drawable.ic_look_sword,
     )
 
     val Glam = Look(

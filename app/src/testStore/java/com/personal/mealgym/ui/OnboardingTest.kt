@@ -81,7 +81,8 @@ class OnboardingTest {
 
     @Test
     fun answersBecomeAPlan() {
-        waitForText("Welcome to Meal & Gym")
+        waitForText("Welcome to Yoked")
+        shot("onboarding-0-welcome")
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Maya")
         tap("Next")
 
@@ -164,7 +165,7 @@ class OnboardingTest {
 
     @Test
     fun under18GetsAPlanButNoNumbers() {
-        waitForText("Welcome to Meal & Gym")
+        waitForText("Welcome to Yoked")
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Sam")
         tap("Next")
         waitForText("What are you aiming for?")

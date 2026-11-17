@@ -59,7 +59,7 @@ android {
         create("personal") {
             dimension = "edition"
             applicationId = "com.personal.mealgym"
-            resValue("string", "app_name", "Meal & Gym")
+            resValue("string", "app_name", "Yoked")
             buildConfigField("boolean", "STORE", "false")
             buildConfigField("String", "BANNER_AD_UNIT", "\"\"")
             buildConfigField("String", "PRIVACY_POLICY_URL", "\"\"")
@@ -71,7 +71,7 @@ android {
             applicationId = storeProperty("store.applicationId", "com.mealgym.app")
             versionCode = storeProperty("store.versionCode", "1").toInt()
             versionName = storeProperty("store.versionName", "1.0.0")
-            resValue("string", "app_name", storeProperty("store.appName", "Meal & Gym"))
+            resValue("string", "app_name", storeProperty("store.appName", "Yoked"))
             buildConfigField("boolean", "STORE", "true")
             buildConfigField("String", "BANNER_AD_UNIT", "\"${storeProperty("store.admobBannerId", testBannerUnitId)}\"")
             buildConfigField("String", "PRIVACY_POLICY_URL", "\"${storeProperty("store.privacyPolicyUrl", "")}\"")

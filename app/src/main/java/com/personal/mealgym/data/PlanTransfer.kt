@@ -81,7 +81,7 @@ class PlanTransfer(
 
     fun decode(text: String): PlanFile {
         val file = json.decodeFromString(PlanFile.serializer(), text)
-        require(file.app == BackupFile.APP_ID && file.kind == PlanFile.KIND) { "This file isn't a Meal & Gym meal plan." }
+        require(file.app == BackupFile.APP_ID && file.kind == PlanFile.KIND) { "This file isn't a Yoked meal plan." }
         return file
     }
 

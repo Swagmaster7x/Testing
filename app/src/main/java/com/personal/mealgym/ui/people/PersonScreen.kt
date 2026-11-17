@@ -3,6 +3,8 @@
 package com.personal.mealgym.ui.people
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
@@ -38,6 +42,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
@@ -45,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.personal.mealgym.AppContainer
+import com.personal.mealgym.R
 import com.personal.mealgym.data.WeightUnit
 import com.personal.mealgym.data.db.Profile
 import com.personal.mealgym.data.db.Recipe
@@ -74,6 +82,7 @@ import com.personal.mealgym.ui.theme.CustomLook
 import com.personal.mealgym.ui.theme.Looks
 import com.personal.mealgym.ui.theme.MealGymTheme
 import com.personal.mealgym.ui.theme.ThemedBackground
+import java.time.DayOfWeek
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,7 +91,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.DayOfWeek
 
 /** A person being set up or edited. */
 data class PersonDraft(
@@ -322,8 +330,20 @@ fun FirstPersonScreen(vm: PersonViewModel = viewModel(factory = AppViewModels.Fa
                     .verticalScroll(scroll)
                     .padding(horizontal = 16.dp, vertical = 24.dp),
             ) {
+                if (step == SetupStep.YOU) {
+                    // The app's mark, on the same dark tile as the launcher icon so it reads on any look.
+                    Image(
+                        painterResource(R.drawable.ic_logo_mark),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(bottom = 16.dp)
+                            .size(76.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFF120F0D)),
+                    )
+                }
                 Text(
-                    if (step == SetupStep.YOU) "Welcome to Meal & Gym" else step.title,
+                    if (step == SetupStep.YOU) "Welcome to Yoked" else step.title,
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
@@ -409,7 +429,7 @@ private fun AppNavigator.backOnMain() {
 }
 
 const val NOT_ADVICE =
-    "Meal & Gym is a planner, not medical, nutrition or fitness advice. Check with a doctor before starting a new eating or training plan."
+    "Yoked is a planner, not medical, nutrition or fitness advice. Check with a doctor before starting a new eating or training plan."
 
 /** One page of setup, with Back and Next (or the finishing button) underneath. */
 @Composable

@@ -13,10 +13,14 @@ pages. Leave it that way.
 
 ## App name (30 characters max)
 
-    Meal & Gym: Planner & Gym Log
+    Yoked: Meal Planner & Gym Log
 
-Search Play for "Meal & Gym" first. If another app already uses a very similar name, pick
-something else here and set the same name in `store.appName` (see the launch checklist).
+That is 29 characters. Other fitness apps already use this word: "Yoke: Gym Trainer AI & Planner"
+is on Google Play, and "Yoked: AI Trainer" and "Yoked - Body Scanner" are on the App Store. None
+of them is a meal planner and none is titled exactly like this, but search Play for "Yoked" once
+more just before launch. If a close match has appeared, change the title here and set the same
+name in `store.appName` (see the launch checklist). Keep the words after the colon: they are what
+sets this listing apart and what people search for.
 
 ## Short description (80 characters max)
 
@@ -25,7 +29,7 @@ something else here and set the same name in `store.appName` (see the launch che
 ## Full description (4,000 characters max)
 
 ```
-Meal & Gym puts your week's meals, your shopping list and your gym log in one place, and builds the plan for you.
+Yoked puts your week's meals, your shopping list and your gym log in one place, and builds the plan for you.
 
 A PLAN BUILT FROM YOUR ANSWERS
 • Tell it your goal, a few details, the cuisines you like and what you can't eat. Every question is optional.
@@ -76,7 +80,7 @@ PRIVATE BY DESIGN
 
 The free version shows a small banner on some screens (never during a workout or while cooking). A one-time "Remove ads" purchase turns them off for good.
 
-Meal & Gym is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide and its lifting suggestions are estimates for healthy adults. Allergen information comes from ingredient names, so always check food labels. Restaurant figures are approximate and menus change, so check the restaurant's own nutrition and allergen information; the app is not affiliated with any restaurant. Check with a doctor before starting a new eating or training plan.
+Yoked is a planner, not medical, nutrition or fitness advice. Its calorie and protein guide and its lifting suggestions are estimates for healthy adults. Allergen information comes from ingredient names, so always check food labels. Restaurant figures are approximate and menus change, so check the restaurant's own nutrition and allergen information; the app is not affiliated with any restaurant. Check with a doctor before starting a new eating or training plan.
 ```
 
 ## Other listing fields

@@ -602,7 +602,7 @@ def main():
     for name, lines in cues.items():
         assert len(lines) == 3, name
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"source": "Form cues written for Meal & Gym", "exercises": {}, "cues": dict(sorted(cues.items()))}
+    payload = {"source": "Form cues written for Yoked", "exercises": {}, "cues": dict(sorted(cues.items()))}
     OUT.write_text(json.dumps(payload, indent=1, ensure_ascii=False) + "\n")
     print(f"Wrote {OUT.relative_to(ROOT)}: cues for {len(cues)} exercise names")
 

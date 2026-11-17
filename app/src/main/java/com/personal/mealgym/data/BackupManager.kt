@@ -167,7 +167,7 @@ class BackupManager(
 
     fun decode(text: String): BackupFile {
         val file = json.decodeFromString(BackupFile.serializer(), text)
-        require(file.app == BackupFile.APP_ID) { "This file isn't a Meal & Gym backup." }
+        require(file.app == BackupFile.APP_ID) { "This file isn't a Yoked backup." }
         require(file.formatVersion <= BackupFile.FORMAT_VERSION) { "This backup was made by a newer version of the app." }
         return file
     }

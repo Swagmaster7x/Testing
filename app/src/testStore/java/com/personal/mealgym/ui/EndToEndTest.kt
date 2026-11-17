@@ -67,7 +67,7 @@ class EndToEndTest {
 
     @Test
     fun firstLaunchWithALookOfYourOwn() {
-        waitForText("Welcome to Meal & Gym")
+        waitForText("Welcome to Yoked")
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Rae")
         scrollTo(hasText("Create your own"))
         compose.onAllNodesWithText("Create your own").onFirst().performClick()

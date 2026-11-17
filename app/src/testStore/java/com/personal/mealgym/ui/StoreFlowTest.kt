@@ -51,7 +51,7 @@ class StoreFlowTest {
 
     @Test
     fun firstLaunchSetsUpThePersonAndTheirStarterPlan() {
-        waitForText("Welcome to Meal & Gym")
+        waitForText("Welcome to Yoked")
         assertEquals(Opening.FirstPerson, container.opening.value)
         shot("store-00-welcome")
 

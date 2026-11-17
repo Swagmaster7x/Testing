@@ -86,7 +86,7 @@ class StoreGraphics {
                             Spacer(Modifier.width(48.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "Meal & Gym",
+                                    "Yoked",
                                     style = MaterialTheme.typography.displayMedium.copy(fontSize = 64.sp, lineHeight = 70.sp),
                                     color = MaterialTheme.colorScheme.onBackground,
                                 )
@@ -98,7 +98,7 @@ class StoreGraphics {
                                 )
                                 Spacer(Modifier.height(28.dp))
                                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                    LookChip(Looks.Iron, "Dark fantasy", R.drawable.ic_launcher_monochrome)
+                                    LookChip(Looks.Iron, "Dark fantasy", R.drawable.ic_look_sword)
                                     LookChip(Looks.Glam, "Y2K glam", R.drawable.ic_star)
                                 }
                             }
