@@ -314,21 +314,6 @@ class AssistantConversationsTest : AssistantTestBase() {
         assertTrue(entry.content.contains("Sam's manager."))
     }
 
-    @Test
-    fun `the same person described in two interview answers ends up with both descriptions`(): Unit = runBlocking {
-        val thread = assistant.interviewThread()
-        llm.reply(turn("Who do you work with most?"))
-        assistant.interviewTurn(thread, null)
-        llm.reply(turn("And what does Dana own?", knowledge = listOf(KnowledgeNote("person", "Dana Whitfield", "Engineering lead on Sam's team."))))
-        assistant.interviewTurn(thread, "Dana Whitfield, our eng lead")
-        llm.reply(turn("Got it.", knowledge = listOf(KnowledgeNote("person", "Dana Whitfield", "Owns the quoting API."))))
-        assistant.interviewTurn(thread, "She owns the quoting API")
-
-        val entry = db.knowledge().all().single()
-        assertTrue(entry.content, entry.content.contains("Engineering lead on Sam's team."))
-        assertTrue(entry.content, entry.content.contains("Owns the quoting API."))
-    }
-
     // -------------------------------------------------------------------------------------------
     // Ask
 

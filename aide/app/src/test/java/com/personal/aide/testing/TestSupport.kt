@@ -123,7 +123,7 @@ class FakeLlm : Llm {
         usage: LlmUsage = LlmUsage(inputTokens = 1_000, outputTokens = 200),
         pieces: List<String> = listOf(text),
     ) {
-        script.addLast { _, onText ->
+        enqueue { _, onText ->
             pieces.forEach { onText?.invoke(it) }
             LlmResponse(text, model, usage)
         }
@@ -131,12 +131,16 @@ class FakeLlm : Llm {
 
     /** The next call fails the way [AnthropicLlm][com.personal.aide.ai.AnthropicLlm] reports failures. */
     fun fail(kind: LlmException.Kind, message: String = "Claude is busy right now. Try again in a moment.") {
-        script.addLast { _, _ -> throw LlmException(kind, message) }
+        enqueue { _, _ -> throw LlmException(kind, message) }
     }
 
     /** The next call is handled by [block], which sees the request before answering. */
     fun answer(block: suspend (LlmRequest) -> String) {
-        script.addLast { request, _ -> LlmResponse(block(request), "claude-opus-5-5", LlmUsage(inputTokens = 1_000, outputTokens = 200)) }
+        enqueue { request, _ -> LlmResponse(block(request), "claude-opus-5-5", LlmUsage(inputTokens = 1_000, outputTokens = 200)) }
+    }
+
+    private fun enqueue(step: suspend (LlmRequest, ((String) -> Unit)?) -> LlmResponse) {
+        synchronized(script) { script.addLast(step) }
     }
 
     override suspend fun complete(request: LlmRequest, onText: ((String) -> Unit)?): LlmResponse {
