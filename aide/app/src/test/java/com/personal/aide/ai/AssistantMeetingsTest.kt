@@ -80,7 +80,7 @@ class AssistantMeetingsTest : AssistantTestBase() {
         assertEquals("", saved.error)
         assertEquals(now, saved.summarizedAt)
         assertEquals("claude-opus-5-5", saved.model)
-        assertEquals(46, saved.wordCount)
+        assertEquals(47, saved.wordCount)
         assertEquals(listOf("Dana Whitfield", "Marcus Lee"), saved.attendees)
 
         val analysis = ContextBlocks.analysisOf(saved)!!

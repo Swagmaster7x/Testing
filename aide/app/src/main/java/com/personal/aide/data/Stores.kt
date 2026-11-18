@@ -132,8 +132,8 @@ class TaskStore(private val dao: TaskDao, private val now: () -> Long = System::
     suspend fun setDone(taskId: Long, done: Boolean) {
         val task = dao.get(taskId) ?: return
         dao.update(
-            if (done) task.copy(status = TaskStatus.DONE, completedAt = now())
-            else task.copy(status = TaskStatus.OPEN, completedAt = null),
+            if (done) task.copy(status = TaskStatus.DONE, completedAt = now(), kept = true)
+            else task.copy(status = TaskStatus.OPEN, completedAt = null, kept = true),
         )
     }
 
@@ -143,7 +143,7 @@ class TaskStore(private val dao: TaskDao, private val now: () -> Long = System::
     }
 
     suspend fun restore(taskId: Long) {
-        dao.get(taskId)?.let { dao.update(it.copy(status = TaskStatus.OPEN, completedAt = null)) }
+        dao.get(taskId)?.let { dao.update(it.copy(status = TaskStatus.OPEN, completedAt = null, kept = true)) }
     }
 
     /** Settles whose a task is. Answering the assistant's "unclear" is not a correction; overruling it is. */
@@ -155,6 +155,7 @@ class TaskStore(private val dao: TaskDao, private val now: () -> Long = System::
                 ownership = ownership,
                 owner = if (ownership == Ownership.MINE) "" else owner.trim().ifEmpty { task.owner },
                 edited = task.edited || overruled,
+                kept = true,
             ),
         )
     }
@@ -167,11 +168,19 @@ class TaskStore(private val dao: TaskDao, private val now: () -> Long = System::
                 before.dueDay != updated.dueDay ||
                 (before.ownership != Ownership.UNCLEAR && before.ownership != updated.ownership)
             )
-        dao.update(updated.copy(title = updated.title.trim(), details = updated.details.trim(), edited = before.edited || corrected))
+        val saved = updated.copy(
+            title = updated.title.trim(),
+            details = updated.details.trim(),
+            edited = before.edited || corrected,
+            suggestedTitle = before.suggestedTitle,
+            kept = before.kept,
+        )
+        // Opening the editor and saving it as it was changes nothing, including whether a new summary may replace it.
+        dao.update(if (saved == before) saved else saved.copy(kept = true))
     }
 
     suspend fun planFor(taskId: Long, day: Long?) {
-        dao.get(taskId)?.let { dao.update(it.copy(plannedDay = day)) }
+        dao.get(taskId)?.let { dao.update(it.copy(plannedDay = day, kept = true)) }
     }
 
     /** Puts each task on the day a week plan gave it. Tasks that have gone, or are done, are skipped. */
@@ -180,7 +189,7 @@ class TaskStore(private val dao: TaskDao, private val now: () -> Long = System::
             val day = Days.parseIso(dayPlan.day) ?: continue
             for (id in dayPlan.taskIds) {
                 val task = dao.get(id) ?: continue
-                if (task.status == TaskStatus.OPEN) dao.update(task.copy(plannedDay = day))
+                if (task.status == TaskStatus.OPEN) dao.update(task.copy(plannedDay = day, kept = true))
             }
         }
     }

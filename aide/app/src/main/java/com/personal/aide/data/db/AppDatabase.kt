@@ -1,6 +1,7 @@
 package com.personal.aide.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -38,8 +39,10 @@ class Converters {
         InsightEntity::class,
         UsageEntity::class,
     ],
-    version = 1,
+    // 2: tasks remember the assistant's original wording and whether the user has acted on them.
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {

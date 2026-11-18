@@ -15,8 +15,8 @@ android {
         applicationId = "com.personal.aide"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -24,6 +24,8 @@ android {
     sourceSets {
         getByName("test").kotlin.srcDir("src/sharedTest/java")
         getByName("androidTest").kotlin.srcDir("src/sharedTest/java")
+        // The database's past shapes, so the upgrade from each one can be tested. Debug builds only.
+        getByName("debug").assets.srcDir("$projectDir/schemas")
     }
 
     signingConfigs {

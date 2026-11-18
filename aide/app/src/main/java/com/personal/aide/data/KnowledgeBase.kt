@@ -49,7 +49,10 @@ class KnowledgeBase(private val dao: KnowledgeDao, private val now: () -> Long =
         }
         val merged = when {
             replace -> cleanContent
+            // Already said.
             existing.content.contains(cleanContent, ignoreCase = true) -> existing.content
+            // The new text repeats everything that was there and adds to it.
+            cleanContent.contains(existing.content.trim(), ignoreCase = true) -> cleanContent
             else -> existing.content.trimEnd() + "\n" + cleanContent
         }
         dao.update(
@@ -62,7 +65,20 @@ class KnowledgeBase(private val dao: KnowledgeDao, private val now: () -> Long =
         return existing.id
     }
 
-    suspend fun saveNotes(notes: List<KnowledgeNote>, origin: KnowledgeOrigin, meetingId: Long? = null) {
-        for (note in notes) save(knowledgeTypeOf(note.type), note.title, note.content, origin, meetingId)
+    /**
+     * Saves a batch of notes from the assistant. [mayReplace] says, for an entry's folded title,
+     * whether the assistant had that entry's full text in front of it when it wrote the note. Only
+     * then is its note the whole new text; a note about an entry it never saw is added to what is
+     * there, so nothing the assistant didn't read can be lost.
+     */
+    suspend fun saveNotes(
+        notes: List<KnowledgeNote>,
+        origin: KnowledgeOrigin,
+        meetingId: Long? = null,
+        mayReplace: (key: String) -> Boolean = { false },
+    ) {
+        for (note in notes) {
+            save(knowledgeTypeOf(note.type), note.title, note.content, origin, meetingId, replace = mayReplace(knowledgeKey(note.title)))
+        }
     }
 }

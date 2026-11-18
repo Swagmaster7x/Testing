@@ -110,6 +110,8 @@ class Assistant(
             if (meeting.attendees.isNotEmpty()) append("Invited, according to the calendar: ").append(meeting.attendees.joinToString(", ")).append('\n')
             append("</meeting>")
         }
+        // The entries whose full text goes with the request; the assistant may rewrite these and only these.
+        val shownInFull = ContextBlocks.pickKnowledge(entries, transcript, KNOWLEDGE_BUDGET, focusIsLongText = true).mapTo(HashSet()) { it.key }
         val request = LlmRequest(
             feature = "meeting_summary",
             system = listOf(SystemPart(Prompts.identity(profile) + "\n\n" + Prompts.profileBlock(profile))),
@@ -144,9 +146,12 @@ class Assistant(
             db.withTransaction {
                 // The user may have renamed or rated the meeting while the summary was being written.
                 val current = meetings.get(meetingId) ?: return@withTransaction SummaryResult.Missing
+                val named = current.titleIsAuto && analysis.title.isNotBlank()
                 meetings.update(
                     current.copy(
-                        title = if (current.titleIsAuto && analysis.title.isNotBlank()) analysis.title.trim().take(80) else current.title,
+                        title = if (named) analysis.title.trim().take(80) else current.title,
+                        // Once it has a real name it keeps it, whoever gave it.
+                        titleIsAuto = current.titleIsAuto && !named,
                         status = MeetingStatus.READY,
                         attendees = current.attendees.ifEmpty { analysis.attendees.map { it.trim() }.filter { it.isNotEmpty() }.distinct() },
                         meetingType = analysis.meetingType.trim(),
@@ -159,7 +164,7 @@ class Assistant(
                     ),
                 )
                 saveActionItems(meetingId, analysis)
-                knowledge.saveNotes(analysis.knowledge, KnowledgeOrigin.MEETING, meetingId)
+                knowledge.saveNotes(analysis.knowledge, KnowledgeOrigin.MEETING, meetingId) { key -> key in shownInFull }
                 saveQuestions(meetingId, analysis, maxQuestions)
                 SummaryResult.Done
             }
@@ -175,8 +180,13 @@ class Assistant(
     private suspend fun saveActionItems(meetingId: Long, analysis: MeetingAnalysis) {
         val tasks = db.tasks()
         tasks.deleteUntouchedAiTasks(meetingId)
-        // What survived was done, corrected or thrown out by the user; don't bring those back.
-        val kept = tasks.forMeeting(meetingId).mapTo(HashSet()) { knowledgeKey(it.title) }
+        // What survived was done, changed, settled or thrown out by the user; don't bring those back,
+        // whether under the wording they have now or the one the assistant first gave them.
+        val kept = HashSet<String>()
+        for (task in tasks.forMeeting(meetingId)) {
+            kept += knowledgeKey(task.title)
+            if (task.suggestedTitle.isNotBlank()) kept += knowledgeKey(task.suggestedTitle)
+        }
         val time = now()
         val fresh = analysis.actionItems.mapNotNull { item ->
             val title = item.title.trim()
@@ -193,6 +203,7 @@ class Assistant(
                 meetingId = meetingId,
                 createdAt = time,
                 evidence = item.evidence.trim(),
+                suggestedTitle = title,
             )
         }
         if (fresh.isNotEmpty()) tasks.insertAll(fresh)
@@ -280,6 +291,7 @@ class Assistant(
             InterviewTurn.serializer(),
         )
         settings.updateProfile { it.merge(turn.profile) }
+        // The interview never shows the assistant the knowledge base, so what it learns is added, never swapped in.
         knowledge.saveNotes(turn.knowledge, KnowledgeOrigin.ONBOARDING)
         val reply = turn.reply.trim().ifEmpty { if (turn.done) "Thanks, that's what I need to get started." else "Tell me a bit more?" }
         chat.insertMessage(ChatMessageEntity(threadId = threadId, role = "assistant", text = reply, createdAt = now()))

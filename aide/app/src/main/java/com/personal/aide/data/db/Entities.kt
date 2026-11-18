@@ -1,5 +1,6 @@
 package com.personal.aide.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -101,6 +102,10 @@ data class TaskEntity(
     val evidence: String = "",
     /** The user changed an assistant-made task; counted when judging the assistant. */
     val edited: Boolean = false,
+    /** The wording the assistant first gave it, so the same action item is recognised when a meeting is summarized again. */
+    @ColumnInfo(defaultValue = "") val suggestedTitle: String = "",
+    /** The user has acted on this task (settled whose it is, planned it, changed it), so a fresh summary must leave it be. */
+    @ColumnInfo(defaultValue = "0") val kept: Boolean = false,
 )
 
 enum class KnowledgeType { PERSON, PROJECT, TERM, DECISION, PROCESS, ORG, FACT }

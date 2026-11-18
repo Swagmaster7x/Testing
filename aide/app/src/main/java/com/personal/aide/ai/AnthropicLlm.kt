@@ -11,6 +11,7 @@ import com.anthropic.errors.OverloadedException
 import com.anthropic.errors.PaymentRequiredException
 import com.anthropic.errors.PermissionDeniedException
 import com.anthropic.errors.RateLimitException
+import com.anthropic.errors.SseException
 import com.anthropic.errors.UnauthorizedException
 import com.anthropic.helpers.BetaMessageAccumulator
 import com.anthropic.models.beta.messages.BetaCacheControlEphemeral
@@ -122,7 +123,12 @@ class AnthropicLlm(
                 }
             }
         }
-        return accumulator.message()
+        return try {
+            accumulator.message()
+        } catch (e: IllegalStateException) {
+            // The connection closed cleanly but the reply never finished.
+            throw LlmException(LlmException.Kind.OFFLINE, "The connection to Claude dropped before the reply finished. Try again.", e)
+        }
     }
 
     internal fun buildParams(request: LlmRequest, chosen: AideModel): MessageCreateParams {
@@ -197,6 +203,21 @@ class AnthropicLlm(
     private fun translate(error: Exception, chosen: AideModel): LlmException {
         val (kind, message) = when (error) {
             is LlmException -> return error
+            // An error sent after the stream opened arrives with HTTP 200; its type says what it is.
+            is SseException -> when (error.type().map { it.toString() }.orElse("")) {
+                "overloaded_error", "api_error", "timeout_error" ->
+                    LlmException.Kind.OVERLOADED to "Claude is busy right now. Try again in a moment."
+                "rate_limit_error" ->
+                    LlmException.Kind.RATE_LIMITED to "Claude is rate-limiting this key. Give it a minute and try again."
+                "authentication_error" ->
+                    LlmException.Kind.BAD_KEY to "Claude rejected the API key. Check it in Settings."
+                "billing_error" ->
+                    LlmException.Kind.BILLING to "Your Claude account needs credit. Add some in the Claude Console, then try again."
+                "permission_error", "not_found_error" ->
+                    LlmException.Kind.MODEL_UNAVAILABLE to "Your account can't use ${chosen.label}. Pick another model in Settings."
+                else ->
+                    LlmException.Kind.OTHER to "Claude stopped with an error: ${error.apiMessage().orElse("unknown")}"
+            }
             is UnauthorizedException ->
                 LlmException.Kind.BAD_KEY to "Claude rejected the API key. Check it in Settings."
             is PaymentRequiredException ->

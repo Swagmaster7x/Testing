@@ -55,7 +55,7 @@ interface TaskDao {
     suspend fun forMeeting(meetingId: Long): List<TaskEntity>
 
     /** Clears the way for a fresh summary: only assistant-made tasks nobody has touched go. */
-    @Query("DELETE FROM tasks WHERE meetingId = :meetingId AND origin = 'AI' AND status = 'OPEN' AND edited = 0")
+    @Query("DELETE FROM tasks WHERE meetingId = :meetingId AND origin = 'AI' AND status = 'OPEN' AND edited = 0 AND kept = 0")
     suspend fun deleteUntouchedAiTasks(meetingId: Long)
 
     @Query("DELETE FROM tasks") suspend fun deleteAll()
