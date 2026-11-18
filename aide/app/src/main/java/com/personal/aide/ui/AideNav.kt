@@ -255,6 +255,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onAsk = { prompt -> nav.navigate(Routes.ask(prompt = prompt)) },
                         onSettings = { nav.navigate(Routes.SETTINGS) },
                         onQuestions = { nav.navigate(Routes.QUESTIONS) },
+                        onOpenTasks = { nav.toTab(Routes.TASKS) },
                         onPlan = vm::planDay,
                         onRatePlan = vm::ratePlan,
                         onToggle = vm::setDone,

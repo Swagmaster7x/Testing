@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,17 +47,17 @@ class KeystoreSecretStore(context: Context) : SecretStore {
     override suspend fun setApiKey(key: String?) = withContext(Dispatchers.IO) {
         val clean = key?.trim().orEmpty()
         if (clean.isEmpty()) {
-            prefs.edit().remove(CIPHERTEXT).remove(IV).apply()
+            prefs.edit { remove(CIPHERTEXT).remove(IV) }
             state.value = false
             return@withContext
         }
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val encrypted = cipher.doFinal(clean.toByteArray(Charsets.UTF_8))
-        prefs.edit()
-            .putString(CIPHERTEXT, Base64.encodeToString(encrypted, Base64.NO_WRAP))
-            .putString(IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
-            .apply()
+        prefs.edit {
+            putString(CIPHERTEXT, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            putString(IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+        }
         state.value = true
     }
 

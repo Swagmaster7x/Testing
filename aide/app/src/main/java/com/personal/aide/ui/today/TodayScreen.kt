@@ -79,6 +79,7 @@ class TodayActions(
     val onAsk: (String?) -> Unit = {},
     val onSettings: () -> Unit = {},
     val onQuestions: () -> Unit = {},
+    val onOpenTasks: () -> Unit = {},
     val onPlan: () -> Unit = {},
     val onRatePlan: (Int) -> Unit = {},
     val onToggle: (TaskEntity, Boolean) -> Unit = { _, _ -> },
@@ -242,6 +243,8 @@ fun TodayScreen(state: TodayState, actions: TodayActions) {
                         if (state.board.review.size == 1) "1 task from your meetings needs an owner." else "${state.board.review.size} tasks from your meetings need an owner.",
                         tone = Tone.INFO,
                         icon = AideIcons.Tasks,
+                        action = "Sort",
+                        onAction = actions.onOpenTasks,
                     )
                 }
             }

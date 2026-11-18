@@ -31,6 +31,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -122,7 +123,7 @@ fun TaskSheet(
     var title by remember { mutableStateOf(task?.title.orEmpty()) }
     var details by remember { mutableStateOf(task?.details.orEmpty()) }
     var dueDay by remember { mutableStateOf(task?.dueDay ?: defaultDay.takeIf { task == null }) }
-    var priority by remember { mutableStateOf(task?.priority ?: 1) }
+    var priority by remember { mutableIntStateOf(task?.priority ?: 1) }
     var ownership by remember { mutableStateOf(task?.ownership ?: Ownership.MINE) }
     var owner by remember { mutableStateOf(task?.owner.orEmpty()) }
     var plannedToday by remember { mutableStateOf(task?.plannedDay == today) }

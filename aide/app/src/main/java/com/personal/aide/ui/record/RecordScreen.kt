@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -129,7 +128,8 @@ fun RecordScreen(state: RecorderState, segments: List<SegmentEntity>, now: Long,
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
                         Days.clock(state.elapsed(now)),
-                        style = MaterialTheme.typography.displaySmall.copy(fontFamily = FontFamily.Monospace),
+                        // Equal-width digits, so the clock doesn't jiggle as it counts.
+                        style = MaterialTheme.typography.displaySmall.copy(fontFeatureSettings = "tnum"),
                     )
                     LevelMeter(level = state.level, active = !paused)
                     Text(
@@ -216,7 +216,7 @@ fun SegmentRow(segment: SegmentEntity, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             Days.clock(segment.offsetMs),
-            style = MaterialTheme.typography.labelMedium.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.width(42.dp).padding(top = 4.dp),
         )
