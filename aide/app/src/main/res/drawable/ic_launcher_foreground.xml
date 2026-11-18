@@ -1,0 +1,8 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- A four-point spark (the assistant) with a smaller one beside it, inside the adaptive icon's safe zone. -->
+    <path android:fillColor="#FFF4B860"
+        android:pathData="M50,30l5.6,17.4 17.4,5.6 -17.4,5.6 -5.6,17.4 -5.6,-17.4 -17.4,-5.6 17.4,-5.6z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M71,61l2.7,7.3 7.3,2.7 -7.3,2.7 -2.7,7.3 -2.7,-7.3 -7.3,-2.7 7.3,-2.7z" />
+</vector>
