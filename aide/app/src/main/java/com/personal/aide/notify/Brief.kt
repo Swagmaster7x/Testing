@@ -56,16 +56,19 @@ object Brief {
 
     private const val WORK_NAME = "morning_brief"
 
+    /** Turns the daily reminder on or off, or moves it to a new time. */
     fun schedule(context: Context, enabled: Boolean, minutesAfterMidnight: Int) {
-        val manager = WorkManager.getInstance(context)
-        if (!enabled) {
-            manager.cancelUniqueWork(WORK_NAME)
-            return
+        runCatching {
+            val manager = WorkManager.getInstance(context)
+            if (!enabled) {
+                manager.cancelUniqueWork(WORK_NAME)
+                return
+            }
+            val request = PeriodicWorkRequestBuilder<BriefWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(delayUntil(minutesAfterMidnight, LocalDateTime.now()).toMillis(), TimeUnit.MILLISECONDS)
+                .build()
+            manager.enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request)
         }
-        val request = PeriodicWorkRequestBuilder<BriefWorker>(24, TimeUnit.HOURS)
-            .setInitialDelay(delayUntil(minutesAfterMidnight, LocalDateTime.now()).toMillis(), TimeUnit.MILLISECONDS)
-            .build()
-        manager.enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, request)
     }
 }
 

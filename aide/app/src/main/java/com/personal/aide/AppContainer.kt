@@ -1,6 +1,7 @@
 package com.personal.aide
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.personal.aide.ai.AnthropicLlm
@@ -42,6 +43,8 @@ class AppContainer(
     newTranscriber: (() -> Transcriber)? = null,
     val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
 ) {
+    val appContext: Context get() = app
+
     val llm: Llm = llm ?: AnthropicLlm(apiKey = { secrets.apiKey() }, model = { settings.current().model })
     val deviceAgenda = DeviceAgenda(app) { settings.current().calendarEnabled }
     val agenda: Agenda = agenda ?: deviceAgenda

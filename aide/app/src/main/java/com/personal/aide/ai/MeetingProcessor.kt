@@ -44,7 +44,8 @@ class MeetingProcessor(
         scope.launch {
             try {
                 val result = oneAtATime.withLock { assistant.summarizeMeeting(meetingId, force) }
-                announce(meetingId, result)
+                // Telling the user is a courtesy; a problem posting the notification must not take the app down.
+                runCatching { announce(meetingId, result) }
             } finally {
                 _inProgress.update { it - meetingId }
             }

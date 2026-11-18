@@ -153,6 +153,15 @@ class Recorder(
         writes.trySend { meetings.addSegment(meetingId, SegmentKind.FLAG, "", offset) }
     }
 
+    /** Names the meeting being recorded. */
+    fun rename(title: String) {
+        val clean = title.trim()
+        val meetingId = _state.value.meetingId ?: return
+        if (clean.isEmpty() || clean == _state.value.title) return
+        _state.update { it.copy(title = clean) }
+        writes.trySend { meetings.rename(meetingId, clean) }
+    }
+
     fun stop() = finish(error = null)
 
     fun clearError() = _state.update { it.copy(error = null) }

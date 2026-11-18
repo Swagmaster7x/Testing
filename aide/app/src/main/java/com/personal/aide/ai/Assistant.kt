@@ -38,6 +38,7 @@ import com.personal.aide.domain.priorityOf
 import com.personal.aide.domain.transcriptText
 import com.personal.aide.domain.wordCount
 import com.personal.aide.domain.workStats
+import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
 import java.time.ZoneId
@@ -138,26 +139,37 @@ class Assistant(
             throw e
         }
 
-        // The user may have renamed or rated the meeting while the summary was being written.
-        val current = meetings.get(meetingId) ?: return SummaryResult.Missing
-        meetings.update(
-            current.copy(
-                title = if (current.titleIsAuto && analysis.title.isNotBlank()) analysis.title.trim().take(80) else current.title,
-                status = MeetingStatus.READY,
-                attendees = current.attendees.ifEmpty { analysis.attendees.map { it.trim() }.filter { it.isNotEmpty() }.distinct() },
-                meetingType = analysis.meetingType.trim(),
-                tldr = analysis.tldr.trim(),
-                analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), analysis),
-                error = "",
-                wordCount = words,
-                summarizedAt = now(),
-                model = response.model,
-            ),
-        )
-        saveActionItems(meetingId, analysis)
-        knowledge.saveNotes(analysis.knowledge, KnowledgeOrigin.MEETING, meetingId)
-        saveQuestions(meetingId, analysis, maxQuestions)
-        return SummaryResult.Done
+        // Everything the notes produce is saved together or not at all.
+        return try {
+            db.withTransaction {
+                // The user may have renamed or rated the meeting while the summary was being written.
+                val current = meetings.get(meetingId) ?: return@withTransaction SummaryResult.Missing
+                meetings.update(
+                    current.copy(
+                        title = if (current.titleIsAuto && analysis.title.isNotBlank()) analysis.title.trim().take(80) else current.title,
+                        status = MeetingStatus.READY,
+                        attendees = current.attendees.ifEmpty { analysis.attendees.map { it.trim() }.filter { it.isNotEmpty() }.distinct() },
+                        meetingType = analysis.meetingType.trim(),
+                        tldr = analysis.tldr.trim(),
+                        analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), analysis),
+                        error = "",
+                        wordCount = words,
+                        summarizedAt = now(),
+                        model = response.model,
+                    ),
+                )
+                saveActionItems(meetingId, analysis)
+                knowledge.saveNotes(analysis.knowledge, KnowledgeOrigin.MEETING, meetingId)
+                saveQuestions(meetingId, analysis, maxQuestions)
+                SummaryResult.Done
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val failure = LlmException(LlmException.Kind.OTHER, "The notes were written but couldn't be saved. Try again.", e)
+            meetings.get(meetingId)?.let { meetings.update(it.copy(status = MeetingStatus.FAILED, error = failure.message.orEmpty())) }
+            SummaryResult.Failed(failure)
+        }
     }
 
     private suspend fun saveActionItems(meetingId: Long, analysis: MeetingAnalysis) {
@@ -210,7 +222,7 @@ class Assistant(
     }
 
     /** Writes a follow-up email for a summarized meeting, streaming it to [onText]. */
-    suspend fun draftFollowUp(meetingId: Long, onText: (String) -> Unit): String {
+    suspend fun draftFollowUp(meetingId: Long, onText: (String) -> Unit): String = job {
         val meeting = db.meetings().get(meetingId)
             ?: throw LlmException(LlmException.Kind.OTHER, "That meeting no longer exists.")
         val profile = settings.currentProfile()
@@ -229,7 +241,7 @@ class Assistant(
             ),
             onText,
         )
-        return response.text.trim()
+        response.text.trim()
     }
 
     // ---------------------------------------------------------------------------------------
@@ -245,7 +257,7 @@ class Assistant(
      * assistant speaks next from wherever the conversation stands (the opening question, or a
      * retry after a failed call). Returns true when the assistant considers the interview done.
      */
-    suspend fun interviewTurn(threadId: Long, answer: String?): Boolean {
+    suspend fun interviewTurn(threadId: Long, answer: String?): Boolean = job {
         val chat = db.chat()
         answer?.trim()?.takeIf { it.isNotEmpty() }?.let {
             chat.insertMessage(ChatMessageEntity(threadId = threadId, role = "user", text = it, createdAt = now()))
@@ -272,7 +284,7 @@ class Assistant(
         val reply = turn.reply.trim().ifEmpty { if (turn.done) "Thanks, that's what I need to get started." else "Tell me a bit more?" }
         chat.insertMessage(ChatMessageEntity(threadId = threadId, role = "assistant", text = reply, createdAt = now()))
         chat.thread(threadId)?.let { chat.updateThread(it.copy(updatedAt = now())) }
-        return turn.done
+        turn.done
     }
 
     // ---------------------------------------------------------------------------------------
@@ -314,13 +326,15 @@ class Assistant(
         val context = askContext(focus, thread.meetingId, entries.map { it.id }.filterNot { it in shown }.toSet())
         val messages = mergeTurns(earlier.takeLast(MAX_HISTORY) + LlmMessage(LlmMessage.Role.USER, "$context\n\n$clean"))
         return try {
-            val response = call(
-                LlmRequest(feature = "ask", system = system, messages = messages, maxTokens = 16_000, effort = Effort.LOW),
-                onText,
-            )
-            val text = response.text.trim()
-            chat.insertMessage(ChatMessageEntity(threadId = threadId, role = "assistant", text = text, createdAt = now()))
-            text
+            job {
+                val response = call(
+                    LlmRequest(feature = "ask", system = system, messages = messages, maxTokens = 16_000, effort = Effort.LOW),
+                    onText,
+                )
+                val text = response.text.trim()
+                chat.insertMessage(ChatMessageEntity(threadId = threadId, role = "assistant", text = text, createdAt = now()))
+                text
+            }
         } catch (e: LlmException) {
             chat.insertMessage(
                 ChatMessageEntity(threadId = threadId, role = "assistant", text = e.message.orEmpty(), createdAt = now(), failed = true),
@@ -394,7 +408,7 @@ class Assistant(
     // Plans and reviews
 
     /** Chooses what the user should do on [day] and remembers the plan for that day. */
-    suspend fun planDay(day: Long): DayPlan {
+    suspend fun planDay(day: Long): DayPlan = job {
         val zone = zone()
         val profile = settings.currentProfile()
         val (mine, waiting, titles) = openWork()
@@ -418,11 +432,11 @@ class Assistant(
         db.insights().upsert(
             InsightEntity(kind = InsightKind.DAY_PLAN, periodStart = day, json = AideJson.encodeToString(DayPlan.serializer(), plan), createdAt = now()),
         )
-        return plan
+        plan
     }
 
     /** Lays the open tasks out over the rest of the week containing [today]. Nothing moves until the user applies it. */
-    suspend fun planWeek(today: Long): WeekPlan {
+    suspend fun planWeek(today: Long): WeekPlan = job {
         val zone = zone()
         val profile = settings.currentProfile()
         val (mine, waiting, titles) = openWork()
@@ -450,11 +464,11 @@ class Assistant(
         db.insights().upsert(
             InsightEntity(kind = InsightKind.WEEK_PLAN, periodStart = weekStart, json = AideJson.encodeToString(WeekPlan.serializer(), plan), createdAt = now()),
         )
-        return plan
+        plan
     }
 
     /** The assistant's read of how the week starting [weekStart] went, with the numbers it was judged on. */
-    suspend fun reviewWeek(weekStart: Long): WeekReview {
+    suspend fun reviewWeek(weekStart: Long): WeekReview = job {
         val zone = zone()
         val today = Days.today(zone, now())
         val profile = settings.currentProfile()
@@ -501,7 +515,7 @@ class Assistant(
         db.insights().upsert(
             InsightEntity(kind = InsightKind.WEEK_REVIEW, periodStart = weekStart, json = AideJson.encodeToString(WeekReview.serializer(), review), createdAt = now()),
         )
-        return review
+        review
     }
 
     private fun planRequest(feature: String, profile: WorkProfile, body: String, schema: kotlinx.serialization.json.JsonObject) = LlmRequest(
@@ -588,6 +602,20 @@ class Assistant(
             }
             throw e
         }
+    }
+
+    /**
+     * Runs one of the assistant's jobs so that whatever goes wrong inside it, short of being
+     * cancelled, reaches the caller as an [LlmException] with something to show the user.
+     */
+    private suspend fun <T> job(block: suspend () -> T): T = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: LlmException) {
+        throw e
+    } catch (e: Exception) {
+        throw LlmException(LlmException.Kind.OTHER, "Something went wrong inside Aide: ${e.message ?: e.javaClass.simpleName}", e)
     }
 
     private suspend fun <T> callForJson(request: LlmRequest, serializer: KSerializer<T>): Pair<T, LlmResponse> {

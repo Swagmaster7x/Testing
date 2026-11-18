@@ -41,6 +41,8 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
     private var sessionStart = 0L
     private var heardThisSession = false
     private var failures = 0
+    /** Sessions in a row that ended at once with nothing heard. */
+    private var quietStreak = 0
     private var muted = false
 
     private val restart = Runnable { listen() }
@@ -57,6 +59,7 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
         }
         running = true
         failures = 0
+        quietStreak = 0
         pending = ""
         lastFinal = ""
         enhanced = Build.VERSION.SDK_INT >= 33
@@ -178,8 +181,13 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
         commitPending()
         val quick = SystemClock.elapsedRealtime() - sessionStart < QUICK_FAILURE_MS && !heardThisSession
         when (error) {
-            // Nobody spoke, or nothing recognizable was said: normal in a meeting. Keep listening.
-            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> again(SHORT_DELAY_MS)
+            // Nobody spoke, or nothing recognizable was said: normal in a meeting. Keep listening. A
+            // recognizer that gives up the instant it starts is slowed down so it can't spin, but a
+            // quiet room never ends the recording.
+            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                quietStreak = if (quick) (quietStreak + 1).coerceAtMost(5) else 0
+                again((SHORT_DELAY_MS shl quietStreak).coerceAtMost(MAX_QUIET_DELAY_MS))
+            }
 
             SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
                 fatal("Aide needs the microphone permission to transcribe. Allow it in the phone's settings for this app.")
@@ -223,6 +231,7 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
     private fun heard() {
         heardThisSession = true
         failures = 0
+        quietStreak = 0
     }
 
     private fun again(delayMs: Long) {
@@ -280,6 +289,7 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
 
     private companion object {
         const val SHORT_DELAY_MS = 120L
+        const val MAX_QUIET_DELAY_MS = 2_000L
         const val QUICK_FAILURE_MS = 1_500L
         const val MAX_FAILURES = 25
         const val SILENCE_MS = 6_000L

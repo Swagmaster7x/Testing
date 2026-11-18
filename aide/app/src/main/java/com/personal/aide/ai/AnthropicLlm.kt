@@ -72,8 +72,8 @@ class AnthropicLlm(
         val key = apiKey()?.trim().orEmpty()
         if (key.isEmpty()) throw LlmException(LlmException.Kind.NO_KEY, "Add your Claude API key in Settings first.")
         val chosen = model()
-        val params = buildParams(request, chosen)
         val message = try {
+            val params = buildParams(request, chosen)
             runInterruptible(Dispatchers.IO) { stream(clientFor(key), params, onText) }
         } catch (e: CancellationException) {
             throw e
