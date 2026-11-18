@@ -6,6 +6,10 @@ This is a separate app from Yoked (the project at the root of this repository). 
 
 Kotlin, Jetpack Compose, Material 3, Room, DataStore, the official Anthropic SDK. Minimum Android 8 (API 26); live transcription is at its best on Android 13 and later.
 
+![The welcome, Today, recording, meeting notes, Tasks, Insights, Ask and Knowledge screens](docs/screens.png)
+
+The screens above are rendered from the app's own code with a sample week of data (`./gradlew recordRoborazziDebug`).
+
 ## What it does
 
 - **Live transcription.** Tap Record and put the phone on the table. Words appear as people speak, using the phone's own speech recognizer (the one behind voice typing), on the device where the phone supports that. No audio is ever saved. You can pause, type a note ("Dana owns the rate feed"), or flag a moment as important; notes are trusted over what was heard. Recording carries on with the screen locked, behind a notification with Pause and Stop.
