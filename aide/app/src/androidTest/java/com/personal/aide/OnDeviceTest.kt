@@ -595,9 +595,11 @@ class OnDeviceTest {
         @Suppress("DEPRECATION") // Still answers for the app's own services, which is all that is asked.
         fun keptAlive() = activity.getRunningServices(50).any { it.service.className == WorkService::class.java.name && it.foreground }
         val db = AppDatabase.inMemory(app)
+        // Built here, not on the main thread: finding the test server's address counts as network use.
+        val claude = llm()
         lateinit var container: AppContainer
         instrumentation.runOnMainSync {
-            container = AppContainer(app, db = db, secrets = MemorySecretStore("sk-ant-test"), llm = llm())
+            container = AppContainer(app, db = db, secrets = MemorySecretStore("sk-ant-test"), llm = claude)
             (app as AideApp).container = container
         }
         try {
