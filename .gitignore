@@ -17,3 +17,6 @@ keystore.properties
 *.jks
 upload-keystore*
 __pycache__/
+
+# Scratch checkouts made by Claude Code helper agents; never part of the project.
+.claude/worktrees/
