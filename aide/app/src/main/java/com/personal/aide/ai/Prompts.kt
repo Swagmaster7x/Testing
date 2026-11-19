@@ -85,6 +85,8 @@ Write up this meeting for $name.
 
 $source
 
+Some of $name's meetings are regular fixtures. Where the recurring meetings they keep are listed, decide whether this is an occurrence of one of them. If it is, read its earlier notes as the previous instalment: say what has moved since, report what was said about each earlier action item, and don't write an earlier action item up again as a new one unless what was committed to has changed.
+
 For the knowledge base: you can see what is already saved. Add an entry only for something that will matter beyond this meeting. When the meeting adds to or changes an existing entry, return it under the same title with its complete, updated text.
 
 $questions
@@ -142,6 +144,37 @@ Review $name's week from the material above and tell them how they are doing.
 They want an honest read from a colleague they trust, not encouragement. Credit what went well by pointing at the specific thing. Name what slipped without softening it. Look for patterns: the kind of task that keeps getting pushed, commitments made in meetings that never got picked up, people who have been waiting a while. Where an earlier review is included, say whether its suggestions were acted on.
 
 The numbers were counted by the app from $name's task list and meetings. Quote them as given; don't recompute or estimate others. If the week has too little in it to judge, say that plainly instead of stretching.
+        """.trim()
+    }
+
+    fun progressTask(profile: WorkProfile): String {
+        val name = whoFor(profile)
+        return """
+Bring $name's record of their own work up to date from the material above.
+
+First, the wins log: pick out what $name accomplished that would be worth citing in a performance review. A win is something they did or drove that had a result: a decision they got made, a deliverable shipped, a problem unblocked, a commitment kept under pressure. Most finished tasks are not wins, and that is fine; a short log of real ones is worth more than a long one. Don't log anything that is already in the log, and don't credit $name with what someone else did.
+
+Then, their goals: for each one, say where it stands on the evidence in front of you and what would move it. Be straight about a goal nothing has been done for. If the material says nothing about a goal, say that; don't infer progress from silence.
+        """.trim()
+    }
+
+    fun selfReviewTask(profile: WorkProfile): String {
+        val name = whoFor(profile)
+        return """
+Draft the self-review $name will hand in for this period, in the first person.
+
+It should read as their own honest account: what they set out to do, what they achieved against each goal with the evidence, what they would point to as strengths, where they fell short or want to grow, and what they intend next. Build it from the wins log, the goals and the numbers above. Use the specifics (names, dates, figures) and claim nothing the material doesn't support; where a goal has little to show, say so plainly and say what they will do about it, since a reviewer trusts a self-review that admits a gap.
+
+Format: plain text they can paste into a form. Put each section heading on its own line starting with "# " (Summary, then one section per goal, then Strengths, Areas to develop, Next period). Use "- " for lists. Around 400 to 600 words.
+        """.trim()
+    }
+
+    fun agendaTask(profile: WorkProfile, person: String): String {
+        val name = whoFor(profile)
+        return """
+Suggest an agenda for $name's next one-to-one conversation with $person, from the material above.
+
+Put first whatever is most at risk of slipping: things $person has owed $name for a while, things $name owes them, decisions waiting on the two of them. Then anything from recent meetings that was left open between them. Keep it to what the two of them can actually settle in half an hour. If there is little on record between them, give a short agenda and say so; don't invent topics.
         """.trim()
     }
 

@@ -56,6 +56,8 @@ data class MeetingsState(
     val summarizing: Set<Long> = emptySet(),
     val today: Long = Days.today(),
     val recording: Boolean = false,
+    /** The names of the recurring meetings, by id. */
+    val series: Map<Long, String> = emptyMap(),
 )
 
 class MeetingsViewModel(container: AppContainer) : ViewModel() {
@@ -65,9 +67,9 @@ class MeetingsViewModel(container: AppContainer) : ViewModel() {
         container.db.meetings().observeAll(),
         container.db.tasks().observeAll(),
         query,
-        container.processor.inProgress,
+        combine(container.processor.inProgress, container.db.series().observeAll()) { busy, series -> busy to series.associate { it.id to it.name } },
         container.recorder.state,
-    ) { meetings, tasks, query, summarizing, recorder ->
+    ) { meetings, tasks, query, (summarizing, series), recorder ->
         val shown = if (query.isBlank()) {
             meetings
         } else {
@@ -87,6 +89,7 @@ class MeetingsViewModel(container: AppContainer) : ViewModel() {
             summarizing = summarizing,
             today = Days.today(),
             recording = recorder.active,
+            series = series,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MeetingsState())
 
@@ -179,6 +182,7 @@ fun MeetingsScreen(
                         summarizing = meeting.id in state.summarizing,
                         onClick = { onOpen(meeting.id) },
                         actionCount = state.actionCounts[meeting.id] ?: 0,
+                        series = meeting.seriesId?.let { state.series[it] },
                     )
                 }
             }

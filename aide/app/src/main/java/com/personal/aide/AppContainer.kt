@@ -16,8 +16,10 @@ import com.personal.aide.data.KnowledgeBase
 import com.personal.aide.data.MeetingStore
 import com.personal.aide.data.QuestionStore
 import com.personal.aide.data.SecretStore
+import com.personal.aide.data.SeriesStore
 import com.personal.aide.data.SettingsStore
 import com.personal.aide.data.TaskStore
+import com.personal.aide.data.WinStore
 import com.personal.aide.data.db.AppDatabase
 import com.personal.aide.notify.Notifications
 import com.personal.aide.transcribe.AndroidSpeechTranscriber
@@ -55,7 +57,9 @@ class AppContainer(
     val tasks = TaskStore(db.tasks())
     val questions = QuestionStore(db.questions(), knowledge)
     val backup = Backup(db, settings)
-    val assistant = Assistant(db, settings, this.llm, knowledge, this.agenda)
+    val series = SeriesStore(db.series(), db.meetings())
+    val wins = WinStore(db.wins())
+    val assistant = Assistant(db, settings, this.llm, knowledge, this.agenda, series = series, wins = wins)
 
     val processor = MeetingProcessor(scope, assistant, db, settings, secrets) { meetingId, result ->
         // Someone looking at the app can see the summary arrive; anyone else gets a notification.
@@ -74,7 +78,11 @@ class AppContainer(
         settings = settings,
         newTranscriber = newTranscriber ?: { AndroidSpeechTranscriber(app) },
         keepAlive = { on -> if (on) RecordingService.start(app) },
-        onFinished = { meetingId -> processor.onRecordingSaved(meetingId) },
+        onFinished = { meetingId ->
+            // A second recording of the same repeating calendar event makes the two a series.
+            runCatching { series.linkByCalendar(meetingId) }
+            processor.onRecordingSaved(meetingId)
+        },
         beforeStart = { recovery.join() },
     )
 

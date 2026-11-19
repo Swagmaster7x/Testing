@@ -152,7 +152,10 @@ class OnboardingViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun setCalendar(on: Boolean) {
-        viewModelScope.launch { container.settings.setCalendarEnabled(on) }
+        viewModelScope.launch {
+            container.settings.setCalendarEnabled(on)
+            com.personal.aide.notify.Reminders.sync(container)
+        }
     }
 
     fun finish() {

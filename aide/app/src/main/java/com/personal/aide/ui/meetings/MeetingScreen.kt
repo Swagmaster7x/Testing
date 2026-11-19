@@ -2,6 +2,7 @@
 
 package com.personal.aide.ui.meetings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -14,9 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +41,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -52,6 +57,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,11 +66,14 @@ import com.personal.aide.data.db.MeetingEntity
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
+import com.personal.aide.data.db.SeriesEntity
 import com.personal.aide.data.db.TaskEntity
+import com.personal.aide.data.db.TaskStatus
 import com.personal.aide.ui.components.AideCard
 import com.personal.aide.ui.components.AideIcons
 import com.personal.aide.ui.components.AssistantText
 import com.personal.aide.ui.components.Banner
+import com.personal.aide.ui.components.Bullet
 import com.personal.aide.ui.components.BulletSection
 import com.personal.aide.ui.components.Pill
 import com.personal.aide.ui.components.QuestionCard
@@ -97,6 +107,11 @@ class MeetingActions(
     val onCloseFollowUp: () -> Unit = {},
     val onCopy: (String) -> Unit = {},
     val onShareText: (String) -> Unit = {},
+    val onOpenSeries: (Long) -> Unit = {},
+    val onOpenPerson: (String) -> Unit = {},
+    /** The recurring meeting to put this one in, or null to take it out. */
+    val onSetSeries: (Long?) -> Unit = {},
+    val onNewSeries: (String) -> Unit = {},
 )
 
 @Composable
@@ -108,6 +123,7 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
     var deleting by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<TaskEntity?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var choosingSeries by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -122,6 +138,9 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; renaming = true })
+                            if (meeting.status != MeetingStatus.RECORDING) {
+                                DropdownMenuItem(text = { Text("Recurring meeting…") }, onClick = { menu = false; choosingSeries = true })
+                            }
                             if (state.hasKey && meeting.status != MeetingStatus.RECORDING && !state.summarizing) {
                                 DropdownMenuItem(
                                     text = { Text(if (meeting.status == MeetingStatus.READY) "Write the notes again" else "Write the notes") },
@@ -179,6 +198,16 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
         )
     }
     state.followUp?.let { FollowUpSheet(it, actions) }
+    if (choosingSeries && meeting != null) {
+        SeriesDialog(
+            current = state.series,
+            all = state.allSeries,
+            suggestion = meeting.title,
+            onDismiss = { choosingSeries = false },
+            onChoose = { actions.onSetSeries(it); choosingSeries = false },
+            onNew = { actions.onNewSeries(it); choosingSeries = false },
+        )
+    }
 }
 
 @Composable
@@ -214,8 +243,18 @@ private fun NotesTab(state: MeetingDetailState, meeting: MeetingEntity, actions:
                 if (meeting.attendees.isNotEmpty() || meeting.meetingType.isNotBlank()) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (meeting.meetingType.isNotBlank()) Pill(meeting.meetingType.replaceFirstChar { it.uppercase() }, tone = Tone.INFO)
-                        for (person in meeting.attendees.take(12)) Pill(person)
+                        for (person in meeting.attendees.take(12)) {
+                            Pill(person, Modifier.clip(RoundedCornerShape(50)).clickable(onClickLabel = "Open $person") { actions.onOpenPerson(person) })
+                        }
                     }
+                }
+                state.series?.let { series ->
+                    Pill(
+                        series.name + if (state.occurrence > 0) " · no. ${state.occurrence}" else "",
+                        Modifier.clip(RoundedCornerShape(50)).clickable(onClickLabel = "Open the recurring meeting") { actions.onOpenSeries(series.id) },
+                        tone = Tone.INFO,
+                        icon = AideIcons.Loop,
+                    )
                 }
             }
         }
@@ -232,6 +271,9 @@ private fun NotesTab(state: MeetingDetailState, meeting: MeetingEntity, actions:
                     Spacer(Modifier.height(6.dp))
                     Text(meeting.tldr, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
+            }
+            if (state.series != null && (analysis.sinceLastTime.isNotEmpty() || state.earlier.isNotEmpty())) {
+                item(key = "since") { SinceLastTimeCard(analysis.sinceLastTime, state.earlier, actions) }
             }
             if (analysis.keyPoints.isNotEmpty()) item(key = "points") { AideCard { BulletSection("Key points", analysis.keyPoints) } }
             if (analysis.decisions.isNotEmpty()) item(key = "decisions") { AideCard { BulletSection("Decisions", analysis.decisions, tone = Tone.GOOD) } }
@@ -258,6 +300,109 @@ private fun NotesTab(state: MeetingDetailState, meeting: MeetingEntity, actions:
                 )
             }
         }
+    }
+}
+
+/** How a line about an earlier action item reads, and how loudly. */
+fun earlierStatusLabel(line: EarlierLine): Pair<String, Tone> = when (line.status) {
+    "done" -> "Done" to Tone.GOOD
+    "dropped" -> "Dropped" to Tone.NEUTRAL
+    else -> "Still open" to Tone.WARN
+}
+
+/** What has moved since the previous meeting in the series, and where its action items stand. */
+@Composable
+private fun SinceLastTimeCard(lines: List<String>, earlier: List<EarlierLine>, actions: MeetingActions) {
+    AideCard {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(AideIcons.Loop, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Text("Since last time", style = MaterialTheme.typography.titleSmall)
+            }
+            for (line in lines) Bullet(line)
+            if (earlier.isNotEmpty()) {
+                if (lines.isNotEmpty()) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text("From earlier meetings", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                for (line in earlier) {
+                    val (label, tone) = earlierStatusLabel(line)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(line.task.title, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            Pill(label, tone = tone)
+                        }
+                        if (line.note.isNotBlank()) {
+                            Text(line.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        // The meeting said it was finished or abandoned, but it is still on the list: one tap settles it.
+                        if (line.task.status == TaskStatus.OPEN && line.status == "done") {
+                            TextButton(onClick = { actions.onToggle(line.task, true) }, contentPadding = PaddingValues(0.dp)) { Text("Mark it done") }
+                        } else if (line.task.status == TaskStatus.OPEN && line.status == "dropped") {
+                            TextButton(onClick = { actions.onDismissTask(line.task) }, contentPadding = PaddingValues(0.dp)) { Text("Take it off my list") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Choosing which recurring meeting this one belongs to. */
+@Composable
+private fun SeriesDialog(
+    current: SeriesEntity?,
+    all: List<SeriesEntity>,
+    suggestion: String,
+    onDismiss: () -> Unit,
+    onChoose: (Long?) -> Unit,
+    onNew: (String) -> Unit,
+) {
+    // -1 stands for "a new one", 0 for "none".
+    var choice by remember { mutableStateOf(current?.id ?: 0L) }
+    var name by remember { mutableStateOf(suggestion) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Recurring meeting") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "Meetings that repeat are read as one thread: notes open with what has moved since last time, and unfinished items carry over.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                SeriesOption("Not a recurring meeting", choice == 0L) { choice = 0L }
+                for (series in all) SeriesOption(series.name, choice == series.id) { choice = series.id }
+                SeriesOption("A new one…", choice == -1L) { choice = -1L }
+                if (choice == -1L) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        singleLine = true,
+                        label = { Text("What it's called") },
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = choice != -1L || name.isNotBlank(),
+                onClick = { if (choice == -1L) onNew(name) else onChoose(choice.takeIf { it > 0 }) },
+            ) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun SeriesOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onClick).padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null, modifier = Modifier.padding(10.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 

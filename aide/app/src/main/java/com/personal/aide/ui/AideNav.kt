@@ -37,6 +37,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.personal.aide.BuildConfig
+import com.personal.aide.calendar.CalendarEvent
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.meetingNotesText
 import com.personal.aide.ui.ask.AskActions
@@ -61,6 +62,18 @@ import com.personal.aide.ui.meetings.MeetingScreen
 import com.personal.aide.ui.meetings.MeetingViewModel
 import com.personal.aide.ui.meetings.MeetingsScreen
 import com.personal.aide.ui.meetings.MeetingsViewModel
+import com.personal.aide.ui.meetings.SeriesActions
+import com.personal.aide.ui.meetings.SeriesScreen
+import com.personal.aide.ui.meetings.SeriesViewModel
+import com.personal.aide.ui.people.PersonActions
+import com.personal.aide.ui.people.PersonScreen
+import com.personal.aide.ui.people.PersonViewModel
+import com.personal.aide.ui.prep.PrepActions
+import com.personal.aide.ui.prep.PrepScreen
+import com.personal.aide.ui.prep.PrepViewModel
+import com.personal.aide.ui.progress.ProgressActions
+import com.personal.aide.ui.progress.ProgressScreen
+import com.personal.aide.ui.progress.ProgressViewModel
 import com.personal.aide.ui.onboarding.OnboardingActions
 import com.personal.aide.ui.onboarding.OnboardingScreen
 import com.personal.aide.ui.onboarding.OnboardingStep
@@ -85,6 +98,9 @@ sealed interface Launch {
     data class OpenMeeting(val id: Long) : Launch
     data object OpenRecording : Launch
     data class SharedText(val text: String) : Launch
+    data object OpenTasks : Launch
+    /** A calendar meeting's brief; with [record], start recording it straight away. */
+    data class Prep(val event: CalendarEvent, val record: Boolean) : Launch
 }
 
 private object Routes {
@@ -102,9 +118,20 @@ private object Routes {
     const val MEETING = "meeting/{id}"
     const val ENTRY = "entry/{id}"
     const val ASK = "ask?meetingId={meetingId}&prompt={prompt}"
+    const val SERIES = "series/{id}"
+    const val PERSON = "person?name={name}"
+    const val PROGRESS = "progress"
+    const val PREP = "prep?eventId={eventId}&title={title}&start={start}&end={end}&attendees={attendees}"
+    const val NEW_PERSON = "new-person?name={name}"
 
     fun meeting(id: Long) = "meeting/$id"
     fun entry(id: Long) = "entry/$id"
+    fun series(id: Long) = "series/$id"
+    fun person(name: String) = "person?name=" + Uri.encode(name)
+    fun newPerson(name: String) = "new-person?name=" + Uri.encode(name)
+    fun prep(event: CalendarEvent) =
+        "prep?eventId=${event.id}&title=${Uri.encode(event.title)}&start=${event.start}&end=${event.end}&attendees=" +
+            Uri.encode(event.attendees.joinToString("\n"))
     fun ask(meetingId: Long? = null, prompt: String? = null) =
         "ask?meetingId=${meetingId ?: -1L}" + (prompt?.let { "&prompt=" + Uri.encode(it) } ?: "")
 }
@@ -217,6 +244,8 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 sharedText = launch.text
                 nav.navigate(Routes.IMPORT) { launchSingleTop = true }
             }
+            Launch.OpenTasks -> nav.toTab(Routes.TASKS)
+            is Launch.Prep -> if (launch.record) startRecording(launch.event) else nav.navigate(Routes.prep(launch.event)) { launchSingleTop = true }
         }
         onLaunchHandled()
     }
@@ -265,6 +294,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onQuickAdd = vm::addTaskForToday,
                         onDismissError = vm::dismissPlanError,
                         onDismissRecorderError = { container.recorder.clearError() },
+                        onPrep = { nav.navigate(Routes.prep(it)) },
                     ),
                 )
             }
@@ -317,6 +347,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     onAdd = { nav.navigate(Routes.entry(0)) },
                     onProfile = { nav.navigate(Routes.PROFILE) },
                     onAsk = { nav.navigate(Routes.ask()) },
+                    onOpenPerson = { nav.navigate(Routes.person(it)) },
                 )
             }
             composable(Routes.INSIGHTS) {
@@ -338,6 +369,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onShare = { context.shareText("Status update", it) },
                         onAsk = { nav.navigate(Routes.ask()) },
                         onSettings = { nav.navigate(Routes.SETTINGS) },
+                        onProgress = { nav.navigate(Routes.PROGRESS) },
                     ),
                 )
             }
@@ -401,6 +433,113 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onCloseFollowUp = vm::closeFollowUp,
                         onCopy = copy,
                         onShareText = { context.shareText("Follow-up: " + state.meeting?.title.orEmpty(), it) },
+                        onOpenSeries = { nav.navigate(Routes.series(it)) },
+                        onOpenPerson = { nav.navigate(Routes.person(it)) },
+                        onSetSeries = vm::setSeries,
+                        onNewSeries = vm::newSeries,
+                    ),
+                )
+            }
+            composable(Routes.SERIES, arguments = listOf(navArgument("id") { type = NavType.LongType })) { backStack ->
+                val id = backStack.arguments?.getLong("id") ?: 0L
+                val vm = aideViewModel { SeriesViewModel(it, id) }
+                val state by vm.state.collectAsStateWithLifecycle()
+                SeriesScreen(
+                    state,
+                    SeriesActions(
+                        onBack = { nav.popBackStack() },
+                        onRename = vm::rename,
+                        onDelete = { vm.delete { nav.popBackStack() } },
+                        onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
+                        onPrep = { prompt -> nav.navigate(Routes.ask(prompt = prompt)) },
+                        onToggle = vm::setDone,
+                        onSaveTask = { vm.saveTask(it) },
+                        onDeleteTask = vm::deleteTask,
+                        onDismissTask = vm::dismissTask,
+                    ),
+                )
+            }
+            composable(Routes.PERSON, arguments = listOf(navArgument("name") { type = NavType.StringType; defaultValue = "" })) { backStack ->
+                val name = backStack.arguments?.getString("name").orEmpty()
+                val vm = aideViewModel(key = "person-$name") { PersonViewModel(it, name) }
+                val state by vm.state.collectAsStateWithLifecycle()
+                PersonScreen(
+                    state,
+                    PersonActions(
+                        onBack = { nav.popBackStack() },
+                        onEdit = {
+                            val entry = state.person.entry
+                            nav.navigate(if (entry != null) Routes.entry(entry.id) else Routes.newPerson(state.person.name))
+                        },
+                        onSuggestAgenda = vm::suggestAgenda,
+                        onRateAgenda = vm::rateAgenda,
+                        onDismissError = vm::dismissError,
+                        onNudge = { prompt -> nav.navigate(Routes.ask(prompt = prompt)) },
+                        onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
+                        onToggle = vm::setDone,
+                        onSaveTask = { vm.saveTask(it) },
+                        onDeleteTask = vm::deleteTask,
+                        onDismissTask = vm::dismissTask,
+                        onSettings = { nav.navigate(Routes.SETTINGS) },
+                    ),
+                )
+            }
+            composable(Routes.PROGRESS) {
+                val vm = aideViewModel { ProgressViewModel(it) }
+                val state by vm.state.collectAsStateWithLifecycle()
+                ProgressScreen(
+                    state,
+                    ProgressActions(
+                        onBack = { nav.popBackStack() },
+                        onUpdate = vm::bringUpToDate,
+                        onDismissMessage = vm::dismissMessage,
+                        onSaveWin = vm::saveWin,
+                        onDeleteWin = vm::deleteWin,
+                        onSaveGoal = vm::saveGoal,
+                        onDraftReview = vm::draftReview,
+                        onOpenLastReview = vm::openLastReview,
+                        onCloseReview = vm::closeReview,
+                        onCopy = copy,
+                        onShare = { context.shareText("Self-review", it) },
+                        onSettings = { nav.navigate(Routes.SETTINGS) },
+                    ),
+                )
+            }
+            composable(
+                Routes.PREP,
+                arguments = listOf(
+                    navArgument("eventId") { type = NavType.LongType; defaultValue = 0L },
+                    navArgument("title") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("start") { type = NavType.LongType; defaultValue = 0L },
+                    navArgument("end") { type = NavType.LongType; defaultValue = 0L },
+                    navArgument("attendees") { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) { backStack ->
+                val args = backStack.arguments
+                val event = remember(backStack) {
+                    CalendarEvent(
+                        id = args?.getLong("eventId") ?: 0L,
+                        title = args?.getString("title").orEmpty(),
+                        start = args?.getLong("start") ?: 0L,
+                        end = args?.getLong("end") ?: 0L,
+                        attendees = args?.getString("attendees").orEmpty().split('\n').filter { it.isNotBlank() },
+                    )
+                }
+                val vm = aideViewModel(key = "prep-${event.id}-${event.start}") { PrepViewModel(it, event) }
+                val state by vm.state.collectAsStateWithLifecycle()
+                PrepScreen(
+                    state,
+                    PrepActions(
+                        onBack = { nav.popBackStack() },
+                        onRecord = { startRecording(event) },
+                        onAsk = { prompt -> nav.navigate(Routes.ask(prompt = prompt)) },
+                        onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
+                        onOpenSeries = { nav.navigate(Routes.series(it)) },
+                        onOpenPerson = { nav.navigate(Routes.person(it)) },
+                        onToggle = vm::setDone,
+                        onSaveTask = { vm.saveTask(it) },
+                        onDeleteTask = vm::deleteTask,
+                        onDismissTask = vm::dismissTask,
                     ),
                 )
             }
@@ -444,6 +583,21 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onBack = { nav.popBackStack() },
                         onSave = { type, title, content, pinned -> vm.save(type, title, content, pinned) { nav.popBackStack() } },
                         onDelete = { vm.delete { nav.popBackStack() } },
+                        onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
+                        onClearError = vm::clearError,
+                    )
+                }
+            }
+            composable(Routes.NEW_PERSON, arguments = listOf(navArgument("name") { type = NavType.StringType; defaultValue = "" })) { backStack ->
+                val name = backStack.arguments?.getString("name").orEmpty()
+                val vm = aideViewModel(key = "new-person-$name") { EntryViewModel(it, 0L, prefillName = name) }
+                val state by vm.state.collectAsStateWithLifecycle()
+                if (state.loaded) {
+                    EntryScreen(
+                        state = state,
+                        onBack = { nav.popBackStack() },
+                        onSave = { type, title, content, pinned -> vm.save(type, title, content, pinned) { nav.popBackStack() } },
+                        onDelete = { },
                         onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
                         onClearError = vm::clearError,
                     )
@@ -495,6 +649,8 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
                     vm.setBrief(true, state.settings.briefMinutes)
                 }
+                // Reminders are on by default; the permission is asked for the first time one is switched on by hand.
+                val askPrepNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
                 val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
                     uri?.let(vm::exportTo)
                 }
@@ -523,6 +679,14 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         },
                         onCalendar = { on ->
                             if (on && !context.hasPermission(Manifest.permission.READ_CALENDAR)) askCalendar.launch(Manifest.permission.READ_CALENDAR) else vm.setCalendar(on)
+                        },
+                        onPrep = { on ->
+                            if (on && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            vm.setPrep(on)
+                        },
+                        onNudges = { on ->
+                            if (on && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            vm.setNudges(on)
                         },
                         onTheme = vm::setTheme,
                         onExport = { saveBackup.launch("aide-backup-${Days.iso(Days.today())}.json") },

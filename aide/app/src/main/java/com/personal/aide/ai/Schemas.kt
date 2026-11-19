@@ -105,6 +105,30 @@ object Schemas {
             ),
         ),
         "transcript_quality" to choice("How usable the transcript was.", "good", "fair", "poor"),
+        "series" to shape(
+            "existing_id" to integer("The id of the recurring meeting this is an occurrence of, from the list you were given. 0 when it is none of them."),
+            "new_name" to string(
+                "Only when existing_id is 0 and this is plainly a regular fixture (a standup, a weekly sync, a 1:1 with someone): " +
+                    "the name the user would call it by, such as \"1:1 with Priya\" or \"Quoting standup\". Empty otherwise, and always empty for a one-off.",
+            ),
+            description = "Which recurring meeting, if any, this meeting is one occurrence of.",
+        ),
+        "since_last_time" to strings(
+            "When this meeting is an occurrence of a recurring meeting whose earlier notes you were given: what has moved since then, " +
+                "one line each (what got done, what changed, what is still stuck). Empty when there is nothing earlier to compare with.",
+        ),
+        "earlier_items" to list(
+            "For each action item listed from that recurring meeting's earlier occurrences: what this meeting said about it. Empty when none were listed.",
+            shape(
+                "task_id" to integer("The id of the earlier action item, from the list."),
+                "status" to choice(
+                    "\"done\" when someone said it has been done, \"still_open\" when it was discussed and isn't finished, " +
+                        "\"dropped\" when it was called off, \"not_mentioned\" when it didn't come up.",
+                    "done", "still_open", "dropped", "not_mentioned",
+                ),
+                "note" to string("A few words on what was said about it. Empty when it wasn't mentioned."),
+            ),
+        ),
     )
 
     val interviewTurn: JsonObject = shape(
@@ -165,6 +189,46 @@ object Schemas {
             ),
         ),
         "warnings" to strings("Where the week doesn't fit: more than can be done, deadlines that collide, things that should be renegotiated."),
+    )
+
+    val progressUpdate: JsonObject = shape(
+        "wins" to list(
+            "Accomplishments from the material that are worth keeping for a performance review and aren't logged already. " +
+                "Things the user did or drove, with a result. Not routine upkeep, and not things other people did.",
+            shape(
+                "title" to string("What was achieved, as a short past-tense statement, e.g. \"Got Sales and Product to agree on three fixed pricing tiers\"."),
+                "detail" to string("Why it mattered or what it led to, in a sentence. Use numbers and names from the material; empty if there is nothing to add."),
+                "goal" to string("The goal it counts towards, copied word for word from the user's goals. Empty when it serves none of them."),
+                "day" to string("The day it happened, as an ISO date (YYYY-MM-DD)."),
+                "task_id" to integer("The id of the completed task it comes from, or 0."),
+                "meeting_id" to integer("The id of the meeting it comes from, or 0."),
+            ),
+        ),
+        "goals" to list(
+            "One entry for each of the user's goals, in the order given.",
+            shape(
+                "goal" to string("The goal, copied word for word."),
+                "status" to choice(
+                    "Where it stands on the evidence: \"on_track\", \"at_risk\", \"stalled\" (nothing has moved lately), or \"no_evidence\" when the material says nothing about it.",
+                    "on_track", "at_risk", "stalled", "no_evidence",
+                ),
+                "note" to string("One or two sentences on why, pointing at what was done or not done."),
+                "next_step" to string("The single most useful next thing to do for this goal. Empty when you can't tell."),
+            ),
+        ),
+    )
+
+    val personAgenda: JsonObject = shape(
+        "headline" to string("One sentence on what this conversation most needs to settle."),
+        "items" to list(
+            "The topics to cover, most important first. Four to six at most.",
+            shape(
+                "topic" to string("The topic, as a short line."),
+                "why" to string("One clause on why now: a deadline, something overdue, a decision that is waiting."),
+            ),
+        ),
+        "to_ask" to strings("Specific things to ask them for or about, each a question or request the user could say out loud. Empty if none."),
+        "to_tell" to strings("Things the user owes them an update on. Empty if none."),
     )
 
     val weekReview: JsonObject = shape(

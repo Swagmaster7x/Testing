@@ -69,6 +69,8 @@ class SettingsActions(
     val onMuteChimes: (Boolean) -> Unit = {},
     val onBrief: (Boolean, Int) -> Unit = { _, _ -> },
     val onCalendar: (Boolean) -> Unit = {},
+    val onPrep: (Boolean) -> Unit = {},
+    val onNudges: (Boolean) -> Unit = {},
     val onTheme: (ThemeChoice) -> Unit = {},
     val onExport: () -> Unit = {},
     val onRestore: () -> Unit = {},
@@ -182,6 +184,15 @@ fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsAc
                     )
                     Divider()
                     SwitchRow("Show my calendar", "Read-only. Names recordings after the meeting you're in and shows the day on Today.", settings.calendarEnabled, actions.onCalendar)
+                    if (settings.calendarEnabled) {
+                        Divider()
+                        SwitchRow(
+                            "Brief me before meetings",
+                            "Ten minutes before a calendar meeting: what was decided last time and what is still open with the people in it.",
+                            settings.prepEnabled,
+                            actions.onPrep,
+                        )
+                    }
                     Divider()
                     SwitchRow(
                         "Morning brief",
@@ -192,6 +203,13 @@ fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsAc
                         Divider()
                         ListRow(title = "Brief time", detail = timeLabel(settings.briefMinutes), icon = AideIcons.Clock, onClick = { timeDialog = true })
                     }
+                    Divider()
+                    SwitchRow(
+                        "Afternoon reminders",
+                        "Around 2 pm: what is still due today, and a nudge when something you're waiting on has gone quiet for five days.",
+                        settings.nudgesEnabled,
+                        actions.onNudges,
+                    )
                 }
             }
 

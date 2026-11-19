@@ -3,12 +3,18 @@ package com.personal.aide.ai
 import com.personal.aide.calendar.Agenda
 import com.personal.aide.data.AideJson
 import com.personal.aide.data.DayPlan
+import com.personal.aide.data.GoalRead
 import com.personal.aide.data.InterviewTurn
 import com.personal.aide.data.KnowledgeBase
 import com.personal.aide.data.MeetingAnalysis
+import com.personal.aide.data.PersonAgenda
+import com.personal.aide.data.ProgressUpdate
+import com.personal.aide.data.SelfReview
+import com.personal.aide.data.SeriesStore
 import com.personal.aide.data.SettingsStore
 import com.personal.aide.data.WeekPlan
 import com.personal.aide.data.WeekReview
+import com.personal.aide.data.WinStore
 import com.personal.aide.data.WorkProfile
 import com.personal.aide.data.db.AppDatabase
 import com.personal.aide.data.db.ChatMessageEntity
@@ -21,14 +27,17 @@ import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
+import com.personal.aide.data.db.SeriesEntity
 import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.data.db.TaskOrigin
 import com.personal.aide.data.db.TaskStatus
 import com.personal.aide.data.db.ThreadKind
 import com.personal.aide.data.db.UsageEntity
+import com.personal.aide.data.db.WinSource
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.Retrieval
 import com.personal.aide.domain.WorkStats
+import com.personal.aide.domain.buildPersonView
 import com.personal.aide.domain.ellipsize
 import com.personal.aide.domain.knowledgeKey
 import com.personal.aide.domain.knowledgeTypeOf
@@ -57,6 +66,8 @@ class Assistant(
     private val agenda: Agenda,
     private val now: () -> Long = System::currentTimeMillis,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
+    private val series: SeriesStore = SeriesStore(db.series(), db.meetings(), now),
+    private val wins: WinStore = WinStore(db.wins(), now),
 ) {
     sealed interface SummaryResult {
         data object Done : SummaryResult
@@ -110,6 +121,10 @@ class Assistant(
             if (meeting.attendees.isNotEmpty()) append("Invited, according to the calendar: ").append(meeting.attendees.joinToString(", ")).append('\n')
             append("</meeting>")
         }
+        // Recurring meetings: the one this belongs to if that is known, else the few it most plausibly could.
+        val allSeries = db.series().all()
+        val own = meeting.seriesId?.let { id -> allSeries.firstOrNull { it.id == id } }
+        val thread = seriesContext(meeting, transcript, own, allSeries, zone)
         // The entries whose full text goes with the request; the assistant may rewrite these and only these.
         val shownInFull = ContextBlocks.pickKnowledge(entries, transcript, KNOWLEDGE_BUDGET, focusIsLongText = true).mapTo(HashSet()) { it.key }
         val request = LlmRequest(
@@ -120,6 +135,7 @@ class Assistant(
                     LlmMessage.Role.USER,
                     listOf(
                         ContextBlocks.knowledge(entries, transcript, KNOWLEDGE_BUDGET, focusIsLongText = true),
+                        thread.text,
                         header,
                         "<transcript>\n$transcript\n</transcript>",
                         Prompts.meetingTask(profile, imported, maxQuestions, learning = maxQuestions > 2),
@@ -131,7 +147,7 @@ class Assistant(
             effort = Effort.MEDIUM,
         )
 
-        val (analysis, response) = try {
+        val (raw, response) = try {
             callForJson(request, MeetingAnalysis.serializer())
         } catch (e: LlmException) {
             meetings.get(meetingId)?.let { meetings.update(it.copy(status = MeetingStatus.FAILED, error = e.message.orEmpty())) }
@@ -146,9 +162,20 @@ class Assistant(
             db.withTransaction {
                 // The user may have renamed or rated the meeting while the summary was being written.
                 val current = meetings.get(meetingId) ?: return@withTransaction SummaryResult.Missing
-                val named = current.titleIsAuto && analysis.title.isNotBlank()
+                val named = current.titleIsAuto && raw.title.isNotBlank()
+                // A series the user or the calendar chose stands; otherwise the assistant's reading decides.
+                val seriesId = current.seriesId
+                    ?: thread.candidates.firstOrNull { it.id == raw.series.existingId }?.id
+                    ?: raw.series.newName.takeIf { it.isNotBlank() }?.let { series.findOrCreate(it) }
+                // What it said about "last time" only means something against the series it was shown.
+                val earlierTasks = thread.earlierTasks[seriesId].orEmpty()
+                val analysis = raw.copy(
+                    sinceLastTime = if (seriesId != null && seriesId in thread.earlierTasks) raw.sinceLastTime.map { it.trim() }.filter { it.isNotEmpty() } else emptyList(),
+                    earlierItems = raw.earlierItems.filter { it.taskId in earlierTasks }.distinctBy { it.taskId },
+                )
                 meetings.update(
                     current.copy(
+                        seriesId = seriesId,
                         title = if (named) analysis.title.trim().take(80).trim() else current.title,
                         // Once it has a real name it keeps it, whoever gave it.
                         titleIsAuto = current.titleIsAuto && !named,
@@ -163,7 +190,7 @@ class Assistant(
                         model = response.model,
                     ),
                 )
-                saveActionItems(meetingId, analysis)
+                saveActionItems(meetingId, analysis, alreadyTracked = earlierTasks.values.filter { it.status == TaskStatus.OPEN }.map { it.title })
                 knowledge.saveNotes(analysis.knowledge, KnowledgeOrigin.MEETING, meetingId) { key -> key in shownInFull }
                 saveQuestions(meetingId, analysis, maxQuestions)
                 SummaryResult.Done
@@ -177,12 +204,93 @@ class Assistant(
         }
     }
 
-    private suspend fun saveActionItems(meetingId: Long, analysis: MeetingAnalysis) {
+    /**
+     * The meeting's recurring-meeting context for a request: the text to send, the series it
+     * covers, and for each of those the earlier action items the assistant may report on.
+     */
+    private class Thread(val text: String, val candidates: List<SeriesEntity>, val earlierTasks: Map<Long, Map<Long, TaskEntity>>)
+
+    private suspend fun seriesContext(
+        meeting: MeetingEntity,
+        transcript: String,
+        own: SeriesEntity?,
+        all: List<SeriesEntity>,
+        zone: ZoneId,
+    ): Thread {
+        val everyMeeting = db.meetings().all()
+        val everyTask = db.tasks().all()
+        val today = Days.today(zone, now())
+        val bySeries = everyMeeting.filter { it.seriesId != null && it.id != meeting.id && it.startedAt < meeting.startedAt }.groupBy { it.seriesId!! }
+
+        val candidates = if (own != null) {
+            listOf(own)
+        } else {
+            // Rank the user's recurring meetings by how well their name, people and last notes match this one.
+            val probe = meeting.title + " " + meeting.attendees.joinToString(" ") + " " + transcript.take(4_000)
+            Retrieval.rank(
+                probe,
+                all.map { one ->
+                    val last = bySeries[one.id]?.maxByOrNull { it.startedAt }
+                    Retrieval.Doc(one, one.name + " " + last?.attendees.orEmpty().joinToString(" "), last?.tldr.orEmpty())
+                },
+                limit = MAX_SERIES_CANDIDATES,
+            ).map { it.item }
+        }
+
+        val earlier = HashMap<Long, Map<Long, TaskEntity>>()
+        val text = buildString {
+            append("<recurring_meetings>\n")
+            when {
+                own != null -> append("This meeting is an occurrence of the recurring meeting below.\n")
+                candidates.isEmpty() -> append(if (all.isEmpty()) "The user keeps no recurring meetings yet.\n" else "None of the user's recurring meetings looks like a match for this one.\n")
+                else -> append("The user's recurring meetings that this one might be an occurrence of:\n")
+            }
+            for (one in candidates) {
+                val past = bySeries[one.id].orEmpty().sortedByDescending { it.startedAt }
+                val last = past.firstOrNull { it.status == MeetingStatus.READY }
+                append("\n## [series ").append(one.id).append("] \"").append(one.name).append("\"\n")
+                if (last == null) {
+                    append("No earlier notes on record.\n")
+                    earlier[one.id] = emptyMap()
+                    continue
+                }
+                append("Its previous occurrence:\n").append(ContextBlocks.meetingNotes(last, zone)).append('\n')
+                // What came out of its recent occurrences: still open, or finished since the last one.
+                val recent = past.take(3).mapTo(HashSet()) { it.id }
+                val items = everyTask.filter { task ->
+                    task.meetingId in recent && task.ownership != Ownership.UNCLEAR && (
+                        task.status == TaskStatus.OPEN || (task.status == TaskStatus.DONE && (task.completedAt ?: 0) >= last.startedAt)
+                        )
+                }.take(MAX_EARLIER_ITEMS)
+                earlier[one.id] = items.associateBy { it.id }
+                if (items.isNotEmpty()) {
+                    append("Action items from its earlier occurrences, as they stand today:\n")
+                    for (task in items) {
+                        append("- [id ").append(task.id).append("] ").append(task.title).append(" | ")
+                        append(if (task.ownership == Ownership.MINE) "the user's" else task.owner.ifBlank { "someone else" } + "'s").append(" | ")
+                        append(
+                            when {
+                                task.status == TaskStatus.DONE -> "marked done " + Days.iso(Days.ofMillis(task.completedAt ?: 0, zone))
+                                task.dueDay == null -> "still open"
+                                task.dueDay < today -> "still open, ${today - task.dueDay} days past its date"
+                                else -> "still open, due " + Days.iso(task.dueDay)
+                            },
+                        ).append('\n')
+                    }
+                }
+            }
+            append("</recurring_meetings>")
+        }
+        return Thread(text, candidates, earlier)
+    }
+
+    private suspend fun saveActionItems(meetingId: Long, analysis: MeetingAnalysis, alreadyTracked: List<String> = emptyList()) {
         val tasks = db.tasks()
         tasks.deleteUntouchedAiTasks(meetingId)
         // What survived was done, changed, settled or thrown out by the user; don't bring those back,
-        // whether under the wording they have now or the one the assistant first gave them.
-        val kept = HashSet<String>()
+        // whether under the wording they have now or the one the assistant first gave them. Nor is an
+        // action item still open from an earlier occurrence of the same recurring meeting a new one.
+        val kept = alreadyTracked.mapTo(HashSet()) { knowledgeKey(it) }
         for (task in tasks.forMeeting(meetingId)) {
             kept += knowledgeKey(task.title)
             if (task.suggestedTitle.isNotBlank()) kept += knowledgeKey(task.suggestedTitle)
@@ -533,6 +641,195 @@ class Assistant(
         review
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Goals, wins and the self-review
+
+    /**
+     * One pass over what has happened since the last pass: adds what is worth keeping to the wins
+     * log, and says where each of the user's goals stands. Returns what it added and concluded.
+     */
+    suspend fun updateProgress(): ProgressUpdate = job {
+        val zone = zone()
+        val today = Days.today(zone, now())
+        val profile = settings.currentProfile()
+        val lastPass = db.insights().get(InsightKind.GOALS, 0)
+        // A day of overlap with the last pass; the log refuses duplicates.
+        val since = lastPass?.let { Days.ofMillis(it.createdAt, zone) - 1 } ?: (today - FIRST_PROGRESS_DAYS)
+        val from = Days.startMillis(since, zone)
+        val allTasks = db.tasks().all()
+        val allMeetings = db.meetings().all()
+        val titles = allMeetings.associate { it.id to it.title }
+        val mine = allTasks.filter { it.ownership == Ownership.MINE }
+        val done = mine.filter { it.status == TaskStatus.DONE && (it.completedAt ?: 0) >= from }.sortedBy { it.completedAt }.takeLast(80)
+        val recent = allMeetings.filter { it.status == MeetingStatus.READY && it.startedAt >= from }.sortedBy { it.startedAt }.takeLast(30)
+        if (done.isEmpty() && recent.isEmpty()) {
+            throw LlmException(LlmException.Kind.OTHER, "Nothing has been finished or recorded since the last update, so there is nothing new to add.")
+        }
+        val logged = db.wins().all()
+
+        val body = buildString {
+            append("Today is ").append(Days.longDate(today)).append(". This covers everything since ").append(Days.longDate(since)).append(".\n\n")
+            append("<goals>\n").append(profile.goals.joinToString("\n") { "- $it" }.ifEmpty { "None set." }).append("\n</goals>\n\n")
+            if (profile.successMeasures.isNotEmpty()) {
+                append("<judged_on>\n").append(profile.successMeasures.joinToString("\n") { "- $it" }).append("\n</judged_on>\n\n")
+            }
+            append("<already_logged>\n")
+            append(logged.take(40).joinToString("\n") { "- ${Days.iso(it.day)}: ${it.title}" + if (it.goal.isNotBlank()) " [${it.goal}]" else "" }.ifEmpty { "Nothing yet." })
+            append("\n</already_logged>\n\n")
+            append("<completed_tasks>\n")
+            append(
+                done.joinToString("\n") { task ->
+                    val doneDay = Days.ofMillis(task.completedAt ?: 0, zone)
+                    buildString {
+                        append("- [task ").append(task.id).append("] ").append(task.title).append(" | done ").append(Days.iso(doneDay))
+                        task.dueDay?.let { due -> append(if (doneDay > due) " | ${doneDay - due} days after its date" else " | on time") }
+                        task.meetingId?.let { id -> titles[id]?.let { append(" | from \"").append(it).append('"') } }
+                        if (task.details.isNotBlank()) append(" | ").append(task.details.trim().take(160))
+                    }
+                }.ifEmpty { "None." },
+            )
+            append("\n</completed_tasks>\n\n")
+            append("<meetings>\n")
+            append(
+                recent.joinToString("\n") { meeting ->
+                    val decisions = ContextBlocks.analysisOf(meeting)?.decisions.orEmpty()
+                    "- [meeting ${meeting.id}] ${Days.iso(Days.ofMillis(meeting.startedAt, zone))} \"${meeting.title}\": ${meeting.tldr}" +
+                        if (decisions.isNotEmpty()) " Decided: " + decisions.joinToString("; ") else ""
+                }.ifEmpty { "None." },
+            )
+            append("\n</meetings>\n\n")
+            append("<still_open>\n").append(ContextBlocks.tasks(mine.filter { it.status == TaskStatus.OPEN }, today, titles, zone)).append("\n</still_open>\n\n")
+            append(Prompts.progressTask(profile))
+        }
+        val (raw, _) = callForJson(planRequest("progress", profile, body, Schemas.progressUpdate), ProgressUpdate.serializer())
+
+        // Keep only what points at real things: the user's own goals, tasks they finished, meetings they held.
+        val goalByKey = profile.goals.associateBy { knowledgeKey(it) }
+        val doneIds = done.mapTo(HashSet()) { it.id }
+        val meetingIds = recent.mapTo(HashSet()) { it.id }
+        val added = raw.wins.mapNotNull { win ->
+            val day = (Days.parseIso(win.day) ?: today).coerceAtMost(today)
+            val goal = goalByKey[knowledgeKey(win.goal)].orEmpty()
+            val id = wins.add(
+                title = win.title,
+                day = day,
+                detail = win.detail,
+                goal = goal,
+                source = WinSource.ASSISTANT,
+                taskId = win.taskId.takeIf { it in doneIds },
+                meetingId = win.meetingId.takeIf { it in meetingIds },
+            )
+            if (id == null) null else win.copy(goal = goal, day = Days.iso(day))
+        }
+        val reads = raw.goals.associateBy { knowledgeKey(it.goal) }
+        val goals = profile.goals.map { goal -> reads[knowledgeKey(goal)]?.copy(goal = goal) ?: GoalRead(goal = goal) }
+        val update = ProgressUpdate(wins = added, goals = goals)
+        db.insights().upsert(
+            InsightEntity(kind = InsightKind.GOALS, periodStart = 0, json = AideJson.encodeToString(ProgressUpdate.serializer(), update.copy(wins = emptyList())), createdAt = now()),
+        )
+        update
+    }
+
+    /** Drafts a self-review for the days [fromDay] to [toDay], streaming it to [onText], and keeps the draft. */
+    suspend fun draftSelfReview(fromDay: Long, toDay: Long, onText: (String) -> Unit): String = job {
+        val zone = zone()
+        val today = Days.today(zone, now())
+        val profile = settings.currentProfile()
+        val from = Days.startMillis(fromDay, zone)
+        val until = Days.startMillis(toDay + 1, zone)
+        val logged = db.wins().all().filter { it.day in fromDay..toDay }.sortedBy { it.day }
+        val allTasks = db.tasks().all()
+        val allMeetings = db.meetings().all()
+        val finished = allTasks.filter { it.ownership == Ownership.MINE && it.status == TaskStatus.DONE && (it.completedAt ?: 0) in from until until }
+        if (logged.isEmpty() && finished.isEmpty()) {
+            throw LlmException(LlmException.Kind.OTHER, "There is nothing on record for that period yet: no wins logged and no tasks finished.")
+        }
+        val reads = db.insights().get(InsightKind.GOALS, 0)
+            ?.let { runCatching { AideJson.decodeFromString(ProgressUpdate.serializer(), it.json) }.getOrNull() }?.goals.orEmpty()
+            .associateBy { knowledgeKey(it.goal) }
+        val reviews = db.insights().all().filter { it.kind == InsightKind.WEEK_REVIEW && it.periodStart in (fromDay - 6)..toDay }
+            .mapNotNull { stored -> runCatching { AideJson.decodeFromString(WeekReview.serializer(), stored.json) }.getOrNull()?.let { stored.periodStart to it } }
+            .sortedBy { it.first }
+
+        val body = buildString {
+            append("The period under review: ").append(Days.longDate(fromDay)).append(" to ").append(Days.longDate(toDay)).append(". Today is ").append(Days.longDate(today)).append(".\n\n")
+            append("<goals>\n")
+            if (profile.goals.isEmpty()) append("None set.\n")
+            for (goal in profile.goals) {
+                append("- ").append(goal)
+                reads[knowledgeKey(goal)]?.takeIf { it.note.isNotBlank() }?.let { append(" (as it stands: ").append(it.status.replace('_', ' ')).append(". ").append(it.note).append(')') }
+                append('\n')
+            }
+            append("</goals>\n\n")
+            append("<wins_log>\n")
+            append(
+                logged.joinToString("\n") { win ->
+                    "- ${Days.iso(win.day)}: ${win.title}" + (if (win.detail.isNotBlank()) " — ${win.detail}" else "") + if (win.goal.isNotBlank()) " [goal: ${win.goal}]" else ""
+                }.ifEmpty { "Nothing logged." },
+            )
+            append("\n</wins_log>\n\n")
+            append("<numbers>\n").append(statsText(workStats(allTasks, allMeetings, fromDay, toDay, today, zone))).append("\n</numbers>\n\n")
+            append("<tasks_finished>\n").append(finished.sortedBy { it.completedAt }.takeLast(60).joinToString("\n") { "- " + it.title }.ifEmpty { "None." }).append("\n</tasks_finished>\n\n")
+            if (reviews.isNotEmpty()) {
+                append("<weekly_reviews>\n")
+                for ((week, review) in reviews) {
+                    append("- Week of ").append(Days.iso(week)).append(": ").append(review.headline)
+                    if (review.patterns.isNotEmpty()) append(" Patterns: ").append(review.patterns.joinToString("; "))
+                    append('\n')
+                }
+                append("</weekly_reviews>\n\n")
+            }
+            append(Prompts.selfReviewTask(profile))
+        }
+        val response = call(
+            LlmRequest(
+                feature = "self_review",
+                system = listOf(SystemPart(Prompts.identity(profile) + "\n\n" + Prompts.profileBlock(profile))),
+                messages = listOf(LlmMessage(LlmMessage.Role.USER, body)),
+                maxTokens = 16_000,
+                effort = Effort.MEDIUM,
+            ),
+            onText,
+        )
+        val text = response.text.trim()
+        db.insights().upsert(
+            InsightEntity(kind = InsightKind.SELF_REVIEW, periodStart = fromDay, json = AideJson.encodeToString(SelfReview.serializer(), SelfReview(fromDay, toDay, text)), createdAt = now()),
+        )
+        text
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // People
+
+    /** Suggests what to cover in the user's next conversation with [name], and keeps the suggestion. */
+    suspend fun suggestAgenda(name: String): PersonAgenda = job {
+        val zone = zone()
+        val today = Days.today(zone, now())
+        val profile = settings.currentProfile()
+        val allMeetings = db.meetings().all()
+        val person = buildPersonView(name, db.knowledge().all(), db.tasks().all(), allMeetings)
+        val together = person.meetings.filter { it.status == MeetingStatus.READY }.take(3)
+        if (person.entry == null && person.theyOwe.isEmpty() && person.openWithThem.isEmpty() && together.isEmpty()) {
+            throw LlmException(LlmException.Kind.OTHER, "There is nothing on record with ${person.name} yet to build an agenda from.")
+        }
+        val titles = allMeetings.associate { it.id to it.title }
+        val body = buildString {
+            append("Today is ").append(Days.longDate(today)).append(".\n\n")
+            append("<person>\n").append(person.name).append('\n').append(person.entry?.content?.trim() ?: "Nothing saved about them yet.").append("\n</person>\n\n")
+            append("<they_owe_the_user>\n").append(ContextBlocks.tasks(person.theyOwe, today, titles, zone)).append("\n</they_owe_the_user>\n\n")
+            append("<the_user_owes_or_has_open_with_them>\n").append(ContextBlocks.tasks(person.openWithThem, today, titles, zone)).append("\n</the_user_owes_or_has_open_with_them>\n\n")
+            append("<recent_meetings_together>\n")
+            append(together.joinToString("\n\n") { ContextBlocks.meetingNotes(it, zone) }.ifEmpty { "None with notes." })
+            append("\n</recent_meetings_together>\n\n")
+            append(Prompts.agendaTask(profile, person.name))
+        }
+        val (agenda, _) = callForJson(planRequest("person_agenda", profile, body, Schemas.personAgenda), PersonAgenda.serializer())
+        db.insights().upsert(
+            InsightEntity(kind = InsightKind.PERSON_AGENDA, periodStart = person.number, json = AideJson.encodeToString(PersonAgenda.serializer(), agenda), createdAt = now()),
+        )
+        agenda
+    }
+
     private fun planRequest(feature: String, profile: WorkProfile, body: String, schema: kotlinx.serialization.json.JsonObject) = LlmRequest(
         feature = feature,
         system = listOf(SystemPart(Prompts.identity(profile) + "\n\n" + Prompts.profileBlock(profile))),
@@ -653,6 +950,12 @@ class Assistant(
         const val MIN_WORDS = 25
         /** How many meetings the assistant spends asking more questions than usual. */
         const val LEARNING_MEETINGS = 5
+        /** How many recurring meetings a meeting of unknown series is compared against. */
+        const val MAX_SERIES_CANDIDATES = 3
+        /** How many earlier action items per recurring meeting the assistant is asked to report on. */
+        const val MAX_EARLIER_ITEMS = 25
+        /** How far back the first pass over wins looks, in days. */
+        const val FIRST_PROGRESS_DAYS = 90L
         /** Characters of knowledge base text sent in full with a request (roughly 8,000 tokens). */
         const val KNOWLEDGE_BUDGET = 32_000
         const val MAX_HISTORY = 24

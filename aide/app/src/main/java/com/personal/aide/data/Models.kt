@@ -163,6 +163,78 @@ data class MeetingAnalysis(
     @SerialName("clarifying_questions") val clarifyingQuestions: List<ClarifyingQuestion> = emptyList(),
     /** "good", "fair" or "poor": how much of the recording was usable. */
     @SerialName("transcript_quality") val transcriptQuality: String = "",
+    /** Which recurring meeting this is an occurrence of, in the assistant's judgement. */
+    val series: SeriesGuess = SeriesGuess(),
+    /** What has moved since the previous meeting in the series, a line each. */
+    @SerialName("since_last_time") val sinceLastTime: List<String> = emptyList(),
+    /** What this meeting said about action items from earlier meetings in the series. */
+    @SerialName("earlier_items") val earlierItems: List<EarlierItem> = emptyList(),
+)
+
+@Serializable
+data class SeriesGuess(
+    /** The id of one of the series the assistant was shown, or 0. */
+    @SerialName("existing_id") val existingId: Long = 0,
+    /** A name for a new series, when the meeting is plainly a regular one that isn't listed yet. */
+    @SerialName("new_name") val newName: String = "",
+)
+
+@Serializable
+data class EarlierItem(
+    @SerialName("task_id") val taskId: Long = 0,
+    /** "done", "still_open", "dropped" or "not_mentioned". */
+    val status: String = "not_mentioned",
+    val note: String = "",
+)
+
+@Serializable
+data class LoggedWin(
+    val title: String = "",
+    val detail: String = "",
+    /** One of the user's goals, word for word, or blank. */
+    val goal: String = "",
+    /** ISO date. */
+    val day: String = "",
+    @SerialName("task_id") val taskId: Long = 0,
+    @SerialName("meeting_id") val meetingId: Long = 0,
+)
+
+@Serializable
+data class GoalRead(
+    val goal: String = "",
+    /** "on_track", "at_risk", "stalled" or "no_evidence". */
+    val status: String = "no_evidence",
+    val note: String = "",
+    @SerialName("next_step") val nextStep: String = "",
+)
+
+/** What one pass over recent work adds to the record: new wins, and where each goal stands. */
+@Serializable
+data class ProgressUpdate(
+    val wins: List<LoggedWin> = emptyList(),
+    val goals: List<GoalRead> = emptyList(),
+)
+
+@Serializable
+data class AgendaItem(
+    val topic: String = "",
+    val why: String = "",
+)
+
+@Serializable
+data class PersonAgenda(
+    val headline: String = "",
+    val items: List<AgendaItem> = emptyList(),
+    @SerialName("to_ask") val toAsk: List<String> = emptyList(),
+    @SerialName("to_tell") val toTell: List<String> = emptyList(),
+)
+
+/** A drafted self-review and the days it covers, as stored. */
+@Serializable
+data class SelfReview(
+    val fromDay: Long = 0,
+    val toDay: Long = 0,
+    val text: String = "",
 )
 
 @Serializable

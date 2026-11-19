@@ -89,6 +89,7 @@ class TodayActions(
     val onQuickAdd: (String) -> Unit = {},
     val onDismissError: () -> Unit = {},
     val onDismissRecorderError: () -> Unit = {},
+    val onPrep: (CalendarEvent) -> Unit = {},
 )
 
 fun greeting(name: String, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
@@ -173,9 +174,7 @@ fun TodayScreen(state: TodayState, actions: TodayActions) {
             if (upcoming.isNotEmpty()) {
                 item(key = "events-header") { SectionHeader("On your calendar") }
                 items(upcoming, key = { "event-${it.id}-${it.start}" }) { event ->
-                    EventCard(event, state.now, recording = state.recorder.active, onRecord = { actions.onRecord(event) }, onPrep = {
-                        actions.onAsk("Prep me for \"${event.title}\"" + (if (event.attendees.isNotEmpty()) " with ${event.attendees.take(5).joinToString(", ")}" else "") + ". What was decided last time, what's still open, and what should I raise?")
-                    }, canPrep = state.hasKey)
+                    EventCard(event, state.now, recording = state.recorder.active, onRecord = { actions.onRecord(event) }, onPrep = { actions.onPrep(event) })
                 }
             }
 
@@ -334,7 +333,7 @@ private fun QuestionsCard(count: Int, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun EventCard(event: CalendarEvent, now: Long, recording: Boolean, onRecord: () -> Unit, onPrep: () -> Unit, canPrep: Boolean) {
+private fun EventCard(event: CalendarEvent, now: Long, recording: Boolean, onRecord: () -> Unit, onPrep: () -> Unit) {
     val live = now in event.start..event.end
     AideCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -357,7 +356,7 @@ private fun EventCard(event: CalendarEvent, now: Long, recording: Boolean, onRec
             }
             Column(horizontalAlignment = Alignment.End) {
                 if (!recording) FilledTonalButton(onClick = onRecord) { Text("Record") }
-                if (canPrep) TextButton(onClick = onPrep) { Text("Prep") }
+                TextButton(onClick = onPrep) { Text("Prep") }
             }
         }
     }

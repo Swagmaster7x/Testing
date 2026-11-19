@@ -51,6 +51,7 @@ import com.personal.aide.ui.components.AideCard
 import com.personal.aide.ui.components.AideIcons
 import com.personal.aide.ui.components.Banner
 import com.personal.aide.ui.components.BulletSection
+import com.personal.aide.ui.components.ListRow
 import com.personal.aide.ui.components.Pill
 import com.personal.aide.ui.components.RatingRow
 import com.personal.aide.ui.components.SectionHeader
@@ -69,6 +70,7 @@ class InsightsActions(
     val onShare: (String) -> Unit = {},
     val onAsk: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    val onProgress: () -> Unit = {},
 )
 
 @Composable
@@ -88,6 +90,7 @@ fun InsightsScreen(state: InsightsState, actions: InsightsActions) {
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item(key = "progress") { ProgressLink(state, actions.onProgress) }
             item(key = "week") { WeekSwitcher(state, actions) }
             item(key = "review") { ReviewCard(state, actions) }
             state.reviewError?.let { error ->
@@ -98,6 +101,23 @@ fun InsightsScreen(state: InsightsState, actions: InsightsActions) {
             item(key = "chart") { CompletionChart(state.stats, state.today) }
             item(key = "assistant-header") { SectionHeader("How Aide is doing") }
             item(key = "assistant") { AssistantCard(state.assistant) }
+        }
+    }
+}
+
+/** The way in to the running record of goals and wins. */
+@Composable
+private fun ProgressLink(state: InsightsState, onClick: () -> Unit) {
+    val detail = when {
+        state.goals == 0 && state.wins == 0 -> "Keep a record of what you achieve, ready for appraisal time"
+        else -> listOf(
+            if (state.goals == 1) "1 goal" else "${state.goals} goals",
+            if (state.wins == 1) "1 win logged" else "${state.wins} wins logged",
+        ).joinToString(" · ") + " · self-review"
+    }
+    AideCard(onClick = onClick, padding = 0.dp) {
+        ListRow(title = "Goals & wins", detail = detail, icon = AideIcons.Flag) {
+            Text("Open", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

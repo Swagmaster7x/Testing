@@ -13,14 +13,20 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.personal.aide.MainActivity
 import com.personal.aide.R
+import com.personal.aide.calendar.CalendarEvent
 
 object Notifications {
     const val CHANNEL_RECORDING = "recording"
     const val CHANNEL_UPDATES = "updates"
     const val CHANNEL_BRIEF = "brief"
+    const val CHANNEL_PREP = "prep"
+    const val CHANNEL_NUDGES = "nudges"
 
     const val RECORDING_ID = 1
     const val BRIEF_ID = 2
+    const val DUE_ID = 3
+    const val WAITING_ID = 4
+    private const val PREP_ID_BASE = 200_000
     private const val SUMMARY_ID_BASE = 1000
 
     fun manager(context: Context): NotificationManager =
@@ -40,9 +46,73 @@ object Notifications {
             },
         )
         manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_PREP, "Before meetings", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "A short brief ten minutes before a meeting on your calendar."
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_NUDGES, "Reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "What is still due today, and follow-ups that have gone quiet."
+            },
+        )
+        manager.createNotificationChannel(
             NotificationChannel(CHANNEL_BRIEF, "Morning brief", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "A daily reminder of what is due and what is on."
             },
+        )
+    }
+
+    /** Ten minutes before a meeting: what the app has on it, and a button to start recording. */
+    fun prep(context: Context, event: CalendarEvent, text: String, minutesAway: Long) {
+        val id = PREP_ID_BASE + ((event.id * 31 + event.start / 60_000) % 100_000).toInt()
+        fun open(record: Boolean, requestCode: Int) = PendingIntent.getActivity(
+            context,
+            requestCode,
+            MainActivity.prepIntent(context, event, record),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        post(
+            context,
+            id,
+            NotificationCompat.Builder(context, CHANNEL_PREP)
+                .setSmallIcon(R.drawable.ic_stat_aide)
+                .setContentTitle(event.title + if (minutesAway <= 1) " is starting" else " in $minutesAway min")
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_EVENT)
+                .setContentIntent(open(record = false, requestCode = id))
+                .addAction(R.drawable.ic_stat_mic, "Record", open(record = true, requestCode = id + 1_000_000))
+                .build(),
+        )
+    }
+
+    /** The afternoon check-in's two reminders; both open the task lists. */
+    fun dueToday(context: Context, title: String, body: String) = tasksReminder(context, DUE_ID, title, body)
+
+    fun waitingOn(context: Context, title: String, body: String) = tasksReminder(context, WAITING_ID, title, body)
+
+    private fun tasksReminder(context: Context, id: Int, title: String, body: String) {
+        post(
+            context,
+            id,
+            NotificationCompat.Builder(context, CHANNEL_NUDGES)
+                .setSmallIcon(R.drawable.ic_stat_aide)
+                .setContentTitle(title)
+                .setContentText(body.lineSequence().first())
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setAutoCancel(true)
+                .setContentIntent(
+                    PendingIntent.getActivity(
+                        context,
+                        20 + id,
+                        Intent(context, MainActivity::class.java)
+                            .setAction(MainActivity.ACTION_OPEN_TASKS)
+                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    ),
+                )
+                .build(),
         )
     }
 

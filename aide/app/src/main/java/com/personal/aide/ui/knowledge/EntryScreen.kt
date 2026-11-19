@@ -60,10 +60,12 @@ data class EntryState(
     val entry: KnowledgeEntity? = null,
     val sources: List<MeetingEntity> = emptyList(),
     val error: String? = null,
+    /** For a new entry opened from a person's page: who it is about. */
+    val prefillName: String = "",
 )
 
 /** [entryId] 0 means a new entry. */
-class EntryViewModel(private val container: AppContainer, private val entryId: Long) : ViewModel() {
+class EntryViewModel(private val container: AppContainer, private val entryId: Long, private val prefillName: String = "") : ViewModel() {
     private val _state = MutableStateFlow(EntryState())
     val state: StateFlow<EntryState> = _state.asStateFlow()
 
@@ -71,7 +73,7 @@ class EntryViewModel(private val container: AppContainer, private val entryId: L
         viewModelScope.launch {
             val entry = if (entryId == 0L) null else container.db.knowledge().get(entryId)
             val sources = entry?.sourceMeetingIds.orEmpty().mapNotNull { container.db.meetings().get(it) }
-            _state.value = EntryState(loaded = true, entry = entry, sources = sources)
+            _state.value = EntryState(loaded = true, entry = entry, sources = sources, prefillName = if (entry == null) prefillName else "")
         }
     }
 
@@ -124,7 +126,7 @@ fun EntryScreen(
 ) {
     val entry = state.entry
     var type by rememberSaveable(entry?.id) { mutableStateOf(entry?.type ?: KnowledgeType.PERSON) }
-    var title by rememberSaveable(entry?.id) { mutableStateOf(entry?.title.orEmpty()) }
+    var title by rememberSaveable(entry?.id) { mutableStateOf(entry?.title ?: state.prefillName) }
     var content by rememberSaveable(entry?.id) { mutableStateOf(entry?.content.orEmpty()) }
     var pinned by rememberSaveable(entry?.id) { mutableStateOf(entry?.pinned ?: false) }
     var deleting by remember { mutableStateOf(false) }

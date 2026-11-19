@@ -136,6 +136,7 @@ fun KnowledgeScreen(
     onAdd: () -> Unit,
     onProfile: () -> Unit,
     onAsk: () -> Unit,
+    onOpenPerson: (String) -> Unit = {},
 ) {
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -194,7 +195,10 @@ fun KnowledgeScreen(
                     Text("Nothing matches.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
                 }
             }
-            items(state.entries, key = { it.id }) { entry -> EntryCard(entry) { onOpen(entry.id) } }
+            items(state.entries, key = { it.id }) { entry -> EntryCard(entry) {
+                    // A person has a page of their own, with what is open between you; the entry is edited from there.
+                    if (entry.type == KnowledgeType.PERSON) onOpenPerson(entry.title) else onOpen(entry.id)
+                } }
         }
     }
 }

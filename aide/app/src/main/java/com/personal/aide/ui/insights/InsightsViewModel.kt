@@ -37,6 +37,9 @@ data class InsightsState(
     val reviewError: String? = null,
     val hasKey: Boolean = true,
     val assistant: AssistantStats = assistantStats(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), 0),
+    /** How many goals the profile holds and how many wins are logged, for the way in to Goals & wins. */
+    val goals: Int = 0,
+    val wins: Int = 0,
 ) {
     val isThisWeek: Boolean get() = weekStart == Days.weekStart(today)
 }
@@ -68,7 +71,9 @@ class InsightsViewModel(private val container: AppContainer) : ViewModel() {
 
     private val view = combine(today, weekStart, reviewing, reviewError) { today, week, busy, error -> View(today, week, busy, error) }
 
-    val state: StateFlow<InsightsState> = combine(work, extras, view) { work, extras, view ->
+    private val progress = combine(container.settings.profile, container.db.wins().observeAll()) { profile, wins -> profile.goals.size to wins.size }
+
+    val state: StateFlow<InsightsState> = combine(work, extras, view, progress) { work, extras, view, progress ->
         val stored = extras.insights.firstOrNull { it.kind == InsightKind.WEEK_REVIEW && it.periodStart == view.weekStart }
         InsightsState(
             loaded = true,
@@ -81,6 +86,8 @@ class InsightsViewModel(private val container: AppContainer) : ViewModel() {
             reviewing = view.reviewing,
             reviewError = view.error,
             hasKey = extras.hasKey,
+            goals = progress.first,
+            wins = progress.second,
             assistant = assistantStats(work.meetings, work.tasks, work.questions, work.messages, extras.insights, extras.usage, extras.knowledge),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InsightsState())

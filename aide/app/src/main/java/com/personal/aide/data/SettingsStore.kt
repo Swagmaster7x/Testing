@@ -33,6 +33,10 @@ data class Settings(
     /** Minutes after midnight for the morning brief. */
     val briefMinutes: Int = 8 * 60,
     val calendarEnabled: Boolean = false,
+    /** A reminder with a brief ten minutes before each calendar meeting. Needs the calendar. */
+    val prepEnabled: Boolean = true,
+    /** An afternoon reminder of what is still due today and which follow-ups have gone quiet. */
+    val nudgesEnabled: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
 )
 
@@ -54,6 +58,8 @@ class SettingsStore(private val store: DataStore<Preferences>) {
             briefEnabled = prefs[BRIEF_ENABLED] ?: false,
             briefMinutes = prefs[BRIEF_MINUTES] ?: (8 * 60),
             calendarEnabled = prefs[CALENDAR] ?: false,
+            prepEnabled = prefs[PREP] ?: true,
+            nudgesEnabled = prefs[NUDGES] ?: true,
             theme = runCatching { ThemeChoice.valueOf(prefs[THEME].orEmpty()) }.getOrDefault(ThemeChoice.SYSTEM),
         )
     }.distinctUntilChanged()
@@ -75,6 +81,8 @@ class SettingsStore(private val store: DataStore<Preferences>) {
         it[BRIEF_MINUTES] = minutes.coerceIn(0, 24 * 60 - 1)
     }
     suspend fun setCalendarEnabled(value: Boolean) = store.edit { it[CALENDAR] = value }
+    suspend fun setPrepEnabled(value: Boolean) = store.edit { it[PREP] = value }
+    suspend fun setNudgesEnabled(value: Boolean) = store.edit { it[NUDGES] = value }
     suspend fun setTheme(theme: ThemeChoice) = store.edit { it[THEME] = theme.name }
 
     suspend fun setProfile(profile: WorkProfile) = store.edit {
@@ -102,6 +110,8 @@ class SettingsStore(private val store: DataStore<Preferences>) {
         val BRIEF_ENABLED = booleanPreferencesKey("brief_enabled")
         val BRIEF_MINUTES = intPreferencesKey("brief_minutes")
         val CALENDAR = booleanPreferencesKey("calendar")
+        val PREP = booleanPreferencesKey("prep")
+        val NUDGES = booleanPreferencesKey("nudges")
         val THEME = stringPreferencesKey("theme")
         val PROFILE = stringPreferencesKey("profile")
     }

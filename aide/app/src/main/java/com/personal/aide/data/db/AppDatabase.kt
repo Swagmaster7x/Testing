@@ -38,11 +38,14 @@ class Converters {
         ChatMessageEntity::class,
         InsightEntity::class,
         UsageEntity::class,
+        SeriesEntity::class,
+        WinEntity::class,
     ],
     // 2: tasks remember the assistant's original wording and whether the user has acted on them.
-    version = 2,
+    // 3: recurring meetings (series), the wins log, and when a follow-up was last nudged.
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -53,6 +56,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chat(): ChatDao
     abstract fun insights(): InsightDao
     abstract fun usage(): UsageDao
+    abstract fun series(): SeriesDao
+    abstract fun wins(): WinDao
     abstract fun restore(): RestoreDao
 
     companion object {

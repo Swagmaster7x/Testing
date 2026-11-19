@@ -21,6 +21,12 @@ interface MeetingDao {
     @Query("SELECT * FROM meetings WHERE startedAt >= :from AND startedAt < :to ORDER BY startedAt")
     suspend fun between(from: Long, to: Long): List<MeetingEntity>
     @Query("SELECT COUNT(*) FROM meetings WHERE status = 'READY'") suspend fun readyCount(): Int
+    @Query("SELECT * FROM meetings WHERE seriesId = :seriesId ORDER BY startedAt DESC")
+    suspend fun inSeries(seriesId: Long): List<MeetingEntity>
+    @Query("SELECT * FROM meetings WHERE calendarEventId = :eventId ORDER BY startedAt DESC")
+    suspend fun forCalendarEvent(eventId: Long): List<MeetingEntity>
+    @Query("UPDATE meetings SET seriesId = :seriesId WHERE id = :id") suspend fun setSeries(id: Long, seriesId: Long?)
+    @Query("UPDATE meetings SET seriesId = NULL WHERE seriesId = :seriesId") suspend fun clearSeries(seriesId: Long)
 
     @Query("UPDATE meetings SET status = :to WHERE status = :from")
     suspend fun moveStatus(from: MeetingStatus, to: MeetingStatus)
@@ -58,7 +64,34 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE meetingId = :meetingId AND origin = 'AI' AND status = 'OPEN' AND edited = 0 AND kept = 0")
     suspend fun deleteUntouchedAiTasks(meetingId: Long)
 
+    @Query("UPDATE tasks SET nudgedAt = :at WHERE id IN (:ids)") suspend fun markNudged(ids: List<Long>, at: Long)
+
     @Query("DELETE FROM tasks") suspend fun deleteAll()
+}
+
+@Dao
+interface SeriesDao {
+    @Insert suspend fun insert(series: SeriesEntity): Long
+    @Update suspend fun update(series: SeriesEntity)
+    @Delete suspend fun delete(series: SeriesEntity)
+    @Query("SELECT * FROM series WHERE id = :id") suspend fun get(id: Long): SeriesEntity?
+    @Query("SELECT * FROM series WHERE `key` = :key LIMIT 1") suspend fun findByKey(key: String): SeriesEntity?
+    @Query("SELECT * FROM series WHERE calendarEventId = :eventId LIMIT 1") suspend fun findByCalendarEvent(eventId: Long): SeriesEntity?
+    @Query("SELECT * FROM series ORDER BY name") suspend fun all(): List<SeriesEntity>
+    @Query("SELECT * FROM series ORDER BY name") fun observeAll(): Flow<List<SeriesEntity>>
+    @Query("DELETE FROM series") suspend fun deleteAll()
+}
+
+@Dao
+interface WinDao {
+    @Insert suspend fun insert(win: WinEntity): Long
+    @Update suspend fun update(win: WinEntity)
+    @Delete suspend fun delete(win: WinEntity)
+    @Query("SELECT * FROM wins WHERE id = :id") suspend fun get(id: Long): WinEntity?
+    @Query("SELECT * FROM wins ORDER BY day DESC, id DESC") suspend fun all(): List<WinEntity>
+    @Query("SELECT * FROM wins ORDER BY day DESC, id DESC") fun observeAll(): Flow<List<WinEntity>>
+    @Query("UPDATE wins SET goal = :to WHERE goal = :from") suspend fun moveGoal(from: String, to: String)
+    @Query("DELETE FROM wins") suspend fun deleteAll()
 }
 
 @Dao
@@ -152,4 +185,6 @@ interface RestoreDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun threads(rows: List<ChatThreadEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun messages(rows: List<ChatMessageEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insights(rows: List<InsightEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun series(rows: List<SeriesEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun wins(rows: List<WinEntity>)
 }

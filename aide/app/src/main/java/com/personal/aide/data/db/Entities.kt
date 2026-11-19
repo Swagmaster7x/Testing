@@ -34,6 +34,24 @@ data class MeetingEntity(
     val wordCount: Int = 0,
     val summarizedAt: Long? = null,
     val model: String = "",
+    /** The recurring meeting this is one occurrence of, if any. See [SeriesEntity]. */
+    val seriesId: Long? = null,
+)
+
+/**
+ * A meeting that happens again and again: a weekly sync, a 1:1. Its meetings are read as one
+ * thread, so each new set of notes can say what has moved since the last. [key] is the name
+ * folded for matching.
+ */
+@Serializable
+@Entity(tableName = "series", indices = [Index(value = ["key"], unique = true)])
+data class SeriesEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val key: String,
+    /** The calendar's id for the repeating event, when recordings were started from it. */
+    val calendarEventId: Long? = null,
+    val createdAt: Long,
 )
 
 enum class SegmentKind { SPEECH, NOTE, FLAG }
@@ -106,6 +124,33 @@ data class TaskEntity(
     @ColumnInfo(defaultValue = "") val suggestedTitle: String = "",
     /** The user has acted on this task (settled whose it is, planned it, changed it), so a fresh summary must leave it be. */
     @ColumnInfo(defaultValue = "0") val kept: Boolean = false,
+    /** When the user was last reminded that someone still owes them this; 0 for never. */
+    @ColumnInfo(defaultValue = "0") val nudgedAt: Long = 0,
+)
+
+enum class WinSource { ASSISTANT, MANUAL }
+
+/**
+ * Something the user achieved, kept for the day they have to account for their work. [goal] is
+ * the goal it counts towards in the profile's own wording, or blank; [key] is the title folded,
+ * so the assistant doesn't log the same thing twice.
+ */
+@Serializable
+@Entity(tableName = "wins", indices = [Index("day")])
+data class WinEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val key: String,
+    /** Why it mattered, or the evidence for it. */
+    val detail: String = "",
+    val goal: String = "",
+    /** The day it happened, as days since 1970-01-01. */
+    val day: Long,
+    val source: WinSource = WinSource.MANUAL,
+    /** Where the assistant found it, when it did. */
+    val taskId: Long? = null,
+    val meetingId: Long? = null,
+    val createdAt: Long,
 )
 
 enum class KnowledgeType { PERSON, PROJECT, TERM, DECISION, PROCESS, ORG, FACT }
@@ -198,9 +243,14 @@ data class ChatMessageEntity(
     val failed: Boolean = false,
 )
 
-enum class InsightKind { DAY_PLAN, WEEK_PLAN, WEEK_REVIEW }
+/**
+ * What the assistant wrote. For the plans and the weekly review [InsightEntity.periodStart] is a
+ * day; GOALS has one row (0); SELF_REVIEW uses the first day it covers; PERSON_AGENDA uses a
+ * number that stands for the person.
+ */
+enum class InsightKind { DAY_PLAN, WEEK_PLAN, WEEK_REVIEW, GOALS, SELF_REVIEW, PERSON_AGENDA }
 
-/** A plan or review the assistant wrote for a day or a week, kept so it isn't paid for twice. */
+/** A plan or review the assistant wrote, kept so it isn't paid for twice. */
 @Serializable
 @Entity(
     tableName = "insights",

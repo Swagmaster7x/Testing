@@ -1,6 +1,8 @@
 package com.personal.aide
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.personal.aide.calendar.CalendarEvent
 import com.personal.aide.ui.AideRoot
 import com.personal.aide.ui.Launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +47,17 @@ class MainActivity : ComponentActivity() {
     private fun route(intent: Intent?) {
         when (intent?.action) {
             ACTION_OPEN_RECORDING -> launch.value = Launch.OpenRecording
+            ACTION_OPEN_TASKS -> launch.value = Launch.OpenTasks
+            ACTION_OPEN_PREP -> {
+                val event = CalendarEvent(
+                    id = intent.getLongExtra(EXTRA_EVENT_ID, 0),
+                    title = intent.getStringExtra(EXTRA_EVENT_TITLE).orEmpty(),
+                    start = intent.getLongExtra(EXTRA_EVENT_START, 0),
+                    end = intent.getLongExtra(EXTRA_EVENT_END, 0),
+                    attendees = intent.getStringArrayExtra(EXTRA_EVENT_ATTENDEES)?.toList().orEmpty(),
+                )
+                if (event.title.isNotBlank()) launch.value = Launch.Prep(event, record = intent.getBooleanExtra(EXTRA_RECORD, false))
+            }
             ACTION_OPEN_MEETING -> intent.getLongExtra(EXTRA_MEETING_ID, 0L).takeIf { it > 0 }?.let { launch.value = Launch.OpenMeeting(it) }
             Intent.ACTION_SEND -> if (intent.type?.startsWith("text/") == true) {
                 intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { launch.value = Launch.SharedText(it) }
@@ -55,5 +69,27 @@ class MainActivity : ComponentActivity() {
         const val ACTION_OPEN_RECORDING = "com.personal.aide.action.OPEN_RECORDING"
         const val ACTION_OPEN_MEETING = "com.personal.aide.action.OPEN_MEETING"
         const val EXTRA_MEETING_ID = "meeting_id"
+        const val ACTION_OPEN_TASKS = "com.personal.aide.action.OPEN_TASKS"
+        const val ACTION_OPEN_PREP = "com.personal.aide.action.OPEN_PREP"
+        private const val EXTRA_EVENT_ID = "event_id"
+        private const val EXTRA_EVENT_TITLE = "event_title"
+        private const val EXTRA_EVENT_START = "event_start"
+        private const val EXTRA_EVENT_END = "event_end"
+        private const val EXTRA_EVENT_ATTENDEES = "event_attendees"
+        private const val EXTRA_RECORD = "record"
+
+        /** Opens the brief for a calendar meeting, or with [record] starts recording it. */
+        fun prepIntent(context: Context, event: CalendarEvent, record: Boolean): Intent =
+            Intent(context, MainActivity::class.java)
+                .setAction(ACTION_OPEN_PREP)
+                // Two notifications for two meetings must not share one intent.
+                .setData(Uri.parse("aide://prep/${event.id}/${event.start}/$record"))
+                .putExtra(EXTRA_EVENT_ID, event.id)
+                .putExtra(EXTRA_EVENT_TITLE, event.title)
+                .putExtra(EXTRA_EVENT_START, event.start)
+                .putExtra(EXTRA_EVENT_END, event.end)
+                .putExtra(EXTRA_EVENT_ATTENDEES, event.attendees.toTypedArray())
+                .putExtra(EXTRA_RECORD, record)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     }
 }

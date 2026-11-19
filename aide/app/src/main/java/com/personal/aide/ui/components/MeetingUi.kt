@@ -32,7 +32,15 @@ fun meetingWhen(meeting: MeetingEntity): String = buildString {
 }
 
 @Composable
-fun MeetingCard(meeting: MeetingEntity, summarizing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, actionCount: Int = 0) {
+fun MeetingCard(
+    meeting: MeetingEntity,
+    summarizing: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    actionCount: Int = 0,
+    /** The recurring meeting it belongs to, where the list it is shown in doesn't already say. */
+    series: String? = null,
+) {
     AideCard(modifier = modifier, onClick = onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -56,9 +64,14 @@ fun MeetingCard(meeting: MeetingEntity, summarizing: Boolean, onClick: () -> Uni
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (actionCount > 0 || meeting.meetingType.isNotBlank()) {
+            if (actionCount > 0 || meeting.meetingType.isNotBlank() || !series.isNullOrBlank()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (meeting.meetingType.isNotBlank()) Pill(meeting.meetingType.replaceFirstChar { it.uppercase() })
+                    // A recurring meeting's name says more than its type, and there is room for one of them.
+                    if (!series.isNullOrBlank()) {
+                        Pill(series, Modifier.weight(1f, fill = false), icon = AideIcons.Loop)
+                    } else if (meeting.meetingType.isNotBlank()) {
+                        Pill(meeting.meetingType.replaceFirstChar { it.uppercase() })
+                    }
                     if (actionCount > 0) Pill(if (actionCount == 1) "1 action" else "$actionCount actions", tone = Tone.INFO, icon = AideIcons.Tasks)
                 }
             }

@@ -9,7 +9,9 @@ import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.MeetingEntity
 import com.personal.aide.data.db.QuestionEntity
 import com.personal.aide.data.db.SegmentEntity
+import com.personal.aide.data.db.SeriesEntity
 import com.personal.aide.data.db.TaskEntity
+import com.personal.aide.data.db.WinEntity
 import kotlinx.serialization.Serializable
 
 /** Everything the app knows, as one file. The API key is deliberately not part of it. */
@@ -26,9 +28,12 @@ data class BackupFile(
     val threads: List<ChatThreadEntity> = emptyList(),
     val messages: List<ChatMessageEntity> = emptyList(),
     val insights: List<InsightEntity> = emptyList(),
+    val series: List<SeriesEntity> = emptyList(),
+    val wins: List<WinEntity> = emptyList(),
 ) {
     companion object {
-        const val FORMAT = 1
+        /** 2 added recurring meetings and the wins log; a format 1 file restores with none. */
+        const val FORMAT = 2
     }
 }
 
@@ -50,6 +55,8 @@ class Backup(
             threads = db.chat().allThreads(),
             messages = db.chat().allMessages(),
             insights = db.insights().all(),
+            series = db.series().all(),
+            wins = db.wins().all(),
         ),
     )
 
@@ -73,6 +80,8 @@ class Backup(
             restore.threads(file.threads)
             restore.messages(file.messages)
             restore.insights(file.insights)
+            restore.series(file.series)
+            restore.wins(file.wins)
         }
         settings.setProfile(file.profile)
     }
@@ -90,6 +99,8 @@ class Backup(
         db.meetings().deleteAll()
         db.knowledge().deleteAll()
         db.insights().deleteAll()
+        db.series().deleteAll()
+        db.wins().deleteAll()
         db.usage().deleteAll()
     }
 }
