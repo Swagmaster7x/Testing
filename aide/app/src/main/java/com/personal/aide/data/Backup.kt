@@ -67,8 +67,8 @@ class Backup(
     suspend fun restore(json: String) {
         val file = runCatching { AideJson.decodeFromString(BackupFile.serializer(), json) }
             .getOrElse { throw IllegalArgumentException("That file isn't an Aide backup.") }
-        require(file.format in 1..BackupFile.FORMAT) { "That backup was made by a newer version of Aide." }
-        require(file.exportedAt > 0) { "That file isn't an Aide backup." }
+        require(file.format >= 1 && file.exportedAt > 0) { "That file isn't an Aide backup." }
+        require(file.format <= BackupFile.FORMAT) { "That backup was made by a newer version of Aide." }
         db.withTransaction {
             wipeTables()
             val restore = db.restore()

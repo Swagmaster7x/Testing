@@ -43,13 +43,14 @@ object Nudges {
             )
         }
 
-        // Stale: someone else's, and either past its date or simply old, and not reminded about lately.
+        // Stale: someone else's, and past its date or, with no date set, simply old; and not reminded about lately.
+        // Something with a date still ahead of it isn't late, however long ago it was promised.
         val stale = open.filter { task ->
             if (task.ownership != Ownership.OTHERS) return@filter false
-            val age = today - Days.ofMillis(task.createdAt, zone)
-            val late = (task.dueDay ?: Long.MAX_VALUE) < today
+            val due = task.dueDay
+            val overdue = if (due != null) due < today else today - Days.ofMillis(task.createdAt, zone) >= STALE_DAYS
             val quietSince = if (task.nudgedAt == 0L) Long.MAX_VALUE else today - Days.ofMillis(task.nudgedAt, zone)
-            (late || age >= STALE_DAYS) && quietSince >= REPEAT_DAYS
+            overdue && quietSince >= REPEAT_DAYS
         }.sortedBy { it.dueDay ?: Days.ofMillis(it.createdAt, zone) }
         val waiting = if (stale.isEmpty()) {
             null

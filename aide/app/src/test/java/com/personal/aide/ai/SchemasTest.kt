@@ -1,9 +1,14 @@
 package com.personal.aide.ai
 
+import com.personal.aide.data.ActionItem
 import com.personal.aide.data.AideJson
 import com.personal.aide.data.DayPlan
+import com.personal.aide.data.EarlierItem
+import com.personal.aide.data.GoalRead
 import com.personal.aide.data.InterviewTurn
 import com.personal.aide.data.MeetingAnalysis
+import com.personal.aide.data.PersonAgenda
+import com.personal.aide.data.ProgressUpdate
 import com.personal.aide.data.WeekPlan
 import com.personal.aide.data.WeekReview
 import com.personal.aide.data.db.KnowledgeType
@@ -45,6 +50,8 @@ class SchemasTest {
         Shape("dayPlan", Schemas.dayPlan, DayPlan.serializer()),
         Shape("weekPlan", Schemas.weekPlan, WeekPlan.serializer()),
         Shape("weekReview", Schemas.weekReview, WeekReview.serializer()),
+        Shape("progressUpdate", Schemas.progressUpdate, ProgressUpdate.serializer()),
+        Shape("personAgenda", Schemas.personAgenda, PersonAgenda.serializer()),
     )
 
     /** Every schema node under [schema], with a path saying where it is. */
@@ -251,5 +258,57 @@ class SchemasTest {
     fun `the review's overall verdict offers the four documented words`() {
         assertEquals(listOf("strong", "steady", "mixed", "at_risk"), enumAt(Schemas.weekReview, "overall"))
         assertEquals(listOf("good", "fair", "poor"), enumAt(Schemas.meetingAnalysis, "transcript_quality"))
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Recurring meetings, goals and wins
+
+    @Test
+    fun `the meeting schema asks which recurring meeting this is and what has moved since the last one`() {
+        val properties = Schemas.meetingAnalysis.getValue("properties").jsonObject
+        assertTrue(properties.keys.containsAll(setOf("series", "since_last_time", "earlier_items")))
+
+        val series = properties.getValue("series").jsonObject
+        assertEquals("object", typeOf(series))
+        assertEquals(setOf("existing_id", "new_name"), series.getValue("properties").jsonObject.keys)
+        assertEquals("a series is picked by its id, not by retyping its name", "integer", typeOf(series.getValue("properties").jsonObject.getValue("existing_id").jsonObject))
+
+        val earlier = properties.getValue("earlier_items").jsonObject.getValue("items").jsonObject
+        assertEquals(setOf("task_id", "status", "note"), earlier.getValue("properties").jsonObject.keys)
+        assertEquals("integer", typeOf(earlier.getValue("properties").jsonObject.getValue("task_id").jsonObject))
+    }
+
+    @Test
+    fun `what can be said about an earlier action item and about a goal are the documented words`() {
+        assertEquals(listOf("done", "still_open", "dropped", "not_mentioned"), enumAt(Schemas.meetingAnalysis, "earlier_items", "[]", "status"))
+        assertEquals(listOf("on_track", "at_risk", "stalled", "no_evidence"), enumAt(Schemas.progressUpdate, "goals", "[]", "status"))
+    }
+
+    @Test
+    fun `a field nobody filled in holds one of the words its schema offers`() {
+        // The classes' defaults stand in when a stored copy predates a field; they must still be words the app understands.
+        assertTrue(EarlierItem().status in enumAt(Schemas.meetingAnalysis, "earlier_items", "[]", "status"))
+        assertTrue(GoalRead().status in enumAt(Schemas.progressUpdate, "goals", "[]", "status"))
+        assertTrue(ActionItem().ownership in enumAt(Schemas.meetingAnalysis, "action_items", "[]", "ownership"))
+        assertTrue(ActionItem().priority in enumAt(Schemas.meetingAnalysis, "action_items", "[]", "priority"))
+        assertEquals("saying nothing about an earlier item means it did not come up", "not_mentioned", EarlierItem().status)
+        assertEquals("saying nothing about a goal is not a claim of progress", "no_evidence", GoalRead().status)
+    }
+
+    @Test
+    fun `a win points at where it came from by id and names its goal and day`() {
+        val win = Schemas.progressUpdate.getValue("properties").jsonObject.getValue("wins").jsonObject.getValue("items").jsonObject
+        val properties = win.getValue("properties").jsonObject
+        assertEquals(setOf("title", "detail", "goal", "day", "task_id", "meeting_id"), properties.keys)
+        assertEquals("integer", typeOf(properties.getValue("task_id").jsonObject))
+        assertEquals("integer", typeOf(properties.getValue("meeting_id").jsonObject))
+        assertEquals("string", typeOf(properties.getValue("day").jsonObject))
+    }
+
+    @Test
+    fun `an agenda has a headline, topics with reasons, and things to ask and to tell`() {
+        val properties = Schemas.personAgenda.getValue("properties").jsonObject
+        assertEquals(setOf("headline", "items", "to_ask", "to_tell"), properties.keys)
+        assertEquals(setOf("topic", "why"), properties.getValue("items").jsonObject.getValue("items").jsonObject.getValue("properties").jsonObject.keys)
     }
 }

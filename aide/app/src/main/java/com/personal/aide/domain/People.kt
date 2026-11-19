@@ -15,7 +15,12 @@ import com.personal.aide.data.db.TaskStatus
  * another.
  */
 object People {
-    private fun words(name: String): List<String> = knowledgeKey(name).split(' ').filter { it.isNotEmpty() }
+    /** A hyphen inside a word: "Anne-Marie" is one first name, not a first and a middle one. */
+    private val joiningHyphen = Regex("(?<=\\p{L})[-\u2010\u2011](?=\\p{L})")
+
+    private fun fold(text: String): String = knowledgeKey(text.replace(joiningHyphen, ""))
+
+    private fun words(name: String): List<String> = fold(name).split(' ').filter { it.isNotEmpty() }
 
     /**
      * Whether [name] means [person]. The full names match, or one of them is a bare first name
@@ -28,23 +33,23 @@ object People {
         if (a == b) return true
         val (short, long) = if (a.size <= b.size) a to b else b to a
         if (short.size != 1 || long.size == 1 || short[0] != long[0]) return false
-        // A first name on its own is only safe when one known person has it.
-        val sharing = everyone.map { words(it) }.filter { it.size > 1 && it[0] == short[0] }.distinct()
-        return sharing.size <= 1
+        // A first name on its own is only safe when nobody else known has it: with a Chris Park on
+        // record, a bare "Chris" is not to be taken for Chris Evans.
+        return everyone.map { words(it) }.none { it.size > 1 && it[0] == short[0] && it != long }
     }
 
     /** Whether [text] names [person]: their full name, or their first name when nobody else known shares it. */
     fun mentioned(text: String, person: String, everyone: Collection<String> = emptyList()): Boolean {
         val name = words(person)
         if (name.isEmpty()) return false
-        val tokens = knowledgeKey(text).split(' ')
+        val tokens = fold(text).split(' ')
         if (name.size == 1) return name[0] in tokens
         for (start in 0..tokens.size - name.size) {
             if (tokens.subList(start, start + name.size) == name) return true
         }
         val first = name[0]
         if (first.length < 3 || first !in tokens) return false
-        return everyone.map { words(it) }.filter { it.size > 1 && it[0] == first }.distinct().size <= 1
+        return everyone.map { words(it) }.none { it.size > 1 && it[0] == first && it != name }
     }
 
     /** [names] with the user themselves taken out. */
@@ -75,6 +80,8 @@ fun buildPersonView(
     entries: List<KnowledgeEntity>,
     tasks: List<TaskEntity>,
     meetings: List<MeetingEntity>,
+    /** The user's own name: a calendar invite lists them among the people in the meeting. */
+    self: String = "",
 ): PersonView {
     val people = entries.filter { it.type == KnowledgeType.PERSON }
     val everyone = people.map { it.title }
@@ -85,7 +92,7 @@ fun buildPersonView(
         .filter { meeting -> meeting.attendees.any { People.same(full, it, everyone) } || People.mentioned(meeting.title, full, everyone) }
         .sortedByDescending { it.startedAt }
     // A meeting with them and nobody else: whatever came out of it is between the two of you.
-    val oneToOnes = theirMeetings.filter { it.attendees.size == 1 }.mapTo(HashSet()) { it.id }
+    val oneToOnes = theirMeetings.filter { People.others(it.attendees, self).size == 1 }.mapTo(HashSet()) { it.id }
     val open = tasks.filter { it.status == TaskStatus.OPEN }
     return PersonView(
         name = full,

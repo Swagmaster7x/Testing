@@ -111,7 +111,10 @@ class MeetingViewModel(container: AppContainer, private val meetingId: Long) : T
 
     /** Puts the meeting in a recurring meeting, or with null takes it out of the one it is in. */
     fun setSeries(seriesId: Long?) {
-        viewModelScope.launch { container.series.assign(meetingId, seriesId) }
+        viewModelScope.launch {
+            // "Not a recurring meeting" is a decision to remember, not just the absence of one.
+            if (seriesId == null) container.series.exclude(meetingId) else container.series.assign(meetingId, seriesId)
+        }
     }
 
     /** Starts a recurring meeting called [name] with this as an occurrence, or joins the one already called that. */

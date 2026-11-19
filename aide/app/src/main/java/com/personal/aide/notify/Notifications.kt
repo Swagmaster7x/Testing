@@ -26,7 +26,7 @@ object Notifications {
     const val BRIEF_ID = 2
     const val DUE_ID = 3
     const val WAITING_ID = 4
-    private const val PREP_ID_BASE = 200_000
+    const val PREP_ID = 5
     private const val SUMMARY_ID_BASE = 1000
 
     fun manager(context: Context): NotificationManager =
@@ -64,7 +64,10 @@ object Notifications {
 
     /** Ten minutes before a meeting: what the app has on it, and a button to start recording. */
     fun prep(context: Context, event: CalendarEvent, text: String, minutesAway: Long) {
-        val id = PREP_ID_BASE + ((event.id * 31 + event.start / 60_000) % 100_000).toInt()
+        // Each meeting's brief is filed under the meeting itself, so one can never replace another's.
+        val mark = "${event.id}|${event.start}"
+        val id = PREP_ID
+        val code = mark.hashCode() and 0x3FFFFFFF
         fun open(record: Boolean, requestCode: Int) = PendingIntent.getActivity(
             context,
             requestCode,
@@ -81,9 +84,10 @@ object Notifications {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_EVENT)
-                .setContentIntent(open(record = false, requestCode = id))
-                .addAction(R.drawable.ic_stat_mic, "Record", open(record = true, requestCode = id + 1_000_000))
+                .setContentIntent(open(record = false, requestCode = code))
+                .addAction(R.drawable.ic_stat_mic, "Record", open(record = true, requestCode = code + 1))
                 .build(),
+            tag = mark,
         )
     }
 
@@ -183,8 +187,8 @@ object Notifications {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-    private fun post(context: Context, id: Int, notification: Notification) {
+    private fun post(context: Context, id: Int, notification: Notification, tag: String? = null) {
         if (!canPost(context)) return
-        runCatching { manager(context).notify(id, notification) }
+        runCatching { manager(context).notify(tag, id, notification) }
     }
 }

@@ -82,8 +82,13 @@ class PersonViewModel(container: AppContainer, private val name: String) : TaskA
     private val error = MutableStateFlow<String?>(null)
 
     val state: StateFlow<PersonState> = combine(
-        combine(container.db.knowledge().observeAll(), container.db.tasks().observeAll(), container.db.meetings().observeAll()) { entries, tasks, meetings ->
-            buildPersonView(name, entries, tasks, meetings) to meetings.associate { it.id to it.title }
+        combine(
+            container.db.knowledge().observeAll(),
+            container.db.tasks().observeAll(),
+            container.db.meetings().observeAll(),
+            container.settings.profile,
+        ) { entries, tasks, meetings, profile ->
+            buildPersonView(name, entries, tasks, meetings, self = profile.name) to meetings.associate { it.id to it.title }
         },
         container.db.insights().observeAll(),
         container.secrets.hasKey,

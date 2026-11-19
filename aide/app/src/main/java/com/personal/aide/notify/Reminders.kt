@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.content.edit
 import androidx.work.CoroutineWorker
@@ -45,9 +46,11 @@ object Reminders {
 
     /** A meeting and the moment its brief should arrive. */
     data class Alarm(val event: CalendarEvent, val at: Long) {
-        /** Identifies the alarm to the system; the same meeting always gets the same number. */
-        val code: Int get() = ((event.id * 31 + event.start / 60_000) % Int.MAX_VALUE).toInt()
+        /** What makes this alarm this meeting's: the calendar's id for it and the moment it starts. */
         val mark: String get() = "${event.id}|${event.start}"
+
+        /** A number for the system to file the alarm under. Two meetings may share one; [mark] is what tells them apart. */
+        val code: Int get() = mark.hashCode() and Int.MAX_VALUE
     }
 
     /**
@@ -59,7 +62,7 @@ object Reminders {
             .filter { !it.allDay && it.start > now + 60_000 }
             .map { Alarm(it, maxOf(it.start - LEAD_MS, now + 3_000)) }
             .filter { it.mark !in alreadyNotified }
-            .distinctBy { it.code }
+            .distinctBy { it.mark }
             .toList()
 
     /**
@@ -108,15 +111,14 @@ object Reminders {
         val notified = prefs.getStringSet(KEY_NOTIFIED, emptySet()).orEmpty()
             .filter { (it.substringAfter('|').toLongOrNull() ?: 0) > now - HORIZON_MS }.toSet()
         val alarms = plan(events, now, notified)
-        val wanted = alarms.mapTo(HashSet()) { it.code }
+        val wanted = alarms.mapTo(HashSet()) { it.mark }
         val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
         for (old in prefs.getStringSet(KEY_SCHEDULED, emptySet()).orEmpty()) {
-            val code = old.toIntOrNull() ?: continue
-            if (code !in wanted) manager.cancel(pending(context, code, null))
+            if (old !in wanted) manager.cancel(pending(context, old, null))
         }
         for (alarm in alarms) {
-            val intent = pending(context, alarm.code, alarm.event)
+            val intent = pending(context, alarm.mark, alarm.event)
             // Exact where the system allows it: a brief that turns up after the meeting has started is no use.
             val exact = Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms()
             runCatching {
@@ -125,13 +127,19 @@ object Reminders {
             }
         }
         prefs.edit {
-            putStringSet(KEY_SCHEDULED, wanted.mapTo(HashSet()) { it.toString() })
+            putStringSet(KEY_SCHEDULED, wanted)
             putStringSet(KEY_NOTIFIED, notified)
         }
     }
 
-    private fun pending(context: Context, code: Int, event: CalendarEvent?): PendingIntent {
-        val intent = Intent(context, PrepReceiver::class.java).setAction(PrepReceiver.ACTION)
+    /**
+     * The system's handle on one meeting's alarm. The meeting is written into the intent's address,
+     * so two meetings can never be mistaken for each other and one alarm replace the other's.
+     */
+    private fun pending(context: Context, mark: String, event: CalendarEvent?): PendingIntent {
+        val address = Uri.Builder().scheme("aide").authority("brief")
+            .appendPath(mark.substringBefore('|')).appendPath(mark.substringAfter('|')).build()
+        val intent = Intent(context, PrepReceiver::class.java).setAction(PrepReceiver.ACTION).setData(address)
         if (event != null) {
             intent.putExtra(PrepReceiver.EXTRA_ID, event.id)
                 .putExtra(PrepReceiver.EXTRA_TITLE, event.title)
@@ -139,7 +147,7 @@ object Reminders {
                 .putExtra(PrepReceiver.EXTRA_END, event.end)
                 .putExtra(PrepReceiver.EXTRA_ATTENDEES, event.attendees.toTypedArray())
         }
-        return PendingIntent.getBroadcast(context, code, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        return PendingIntent.getBroadcast(context, mark.hashCode() and Int.MAX_VALUE, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     /** Called when a meeting's alarm goes off: posts its brief, unless there is nothing worth saying. */

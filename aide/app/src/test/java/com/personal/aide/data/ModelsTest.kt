@@ -211,4 +211,93 @@ class ModelsTest {
         val profile = sam.copy(workingHours = "9–5", notes = listOf("Says \"sync\" a lot"))
         assertEquals(profile, AideJson.decodeFromString(WorkProfile.serializer(), AideJson.encodeToString(WorkProfile.serializer(), profile)))
     }
+
+    // -------------------------------------------------------------------------------------------
+    // Recurring meetings, goals and wins
+
+    @Test
+    fun `what a meeting says about its series reads the field names the schema uses`() {
+        val analysis = AideJson.decodeFromString(
+            MeetingAnalysis.serializer(),
+            """
+            {"tldr":"Short.","series":{"existing_id":4,"new_name":"1:1 with Priya"},
+             "since_last_time":["The deck went out","Legal is still reviewing"],
+             "earlier_items":[{"task_id":7,"status":"done","note":"Sent on Monday"},{"task_id":9,"status":"still_open","note":""}]}
+            """.trimIndent(),
+        )
+        assertEquals(SeriesGuess(existingId = 4, newName = "1:1 with Priya"), analysis.series)
+        assertEquals(listOf("The deck went out", "Legal is still reviewing"), analysis.sinceLastTime)
+        assertEquals(listOf(EarlierItem(7, "done", "Sent on Monday"), EarlierItem(9, "still_open", "")), analysis.earlierItems)
+    }
+
+    @Test
+    fun `notes saved before recurring meetings existed still read, and claim no series`() {
+        // A stored analysis exactly as the previous version wrote it.
+        val analysis = AideJson.decodeFromString(
+            MeetingAnalysis.serializer(),
+            """
+            {"title":"Pricing review","meeting_type":"review","tldr":"Agreed tiers.","key_points":["Three tiers"],"decisions":["Ship in Q1"],
+             "action_items":[{"title":"Send deck","details":"v3","owner":"Dana","ownership":"others","due_date":"2026-11-20","priority":"high","evidence":"Dana said so"}],
+             "open_questions":[],"risks":[],"attendees":["Dana"],"knowledge":[],"clarifying_questions":[],"transcript_quality":"good"}
+            """.trimIndent(),
+        )
+        assertEquals(listOf("Ship in Q1"), analysis.decisions)
+        assertEquals("Send deck", analysis.actionItems.single().title)
+        assertEquals(SeriesGuess(), analysis.series)
+        assertEquals("no series is id 0, which no series ever has", 0L, analysis.series.existingId)
+        assertEquals("", analysis.series.newName)
+        assertTrue(analysis.sinceLastTime.isEmpty())
+        assertTrue(analysis.earlierItems.isEmpty())
+    }
+
+    @Test
+    fun `an earlier item with nothing said about it was not mentioned`() {
+        val item = AideJson.decodeFromString(EarlierItem.serializer(), """{"task_id":7,"status":null}""")
+        assertEquals(EarlierItem(taskId = 7, status = "not_mentioned", note = ""), item)
+    }
+
+    @Test
+    fun `a progress update reads the field names the schema uses`() {
+        val update = AideJson.decodeFromString(
+            ProgressUpdate.serializer(),
+            """
+            {"wins":[{"title":"Got Sales to agree on tiers","detail":"Unblocked the launch","goal":"Launch quoting","day":"2026-11-16","task_id":7,"meeting_id":3}],
+             "goals":[{"goal":"Launch quoting","status":"on_track","note":"Pricing is agreed.","next_step":"Book the pilot"}]}
+            """.trimIndent(),
+        )
+        assertEquals(listOf(LoggedWin("Got Sales to agree on tiers", "Unblocked the launch", "Launch quoting", "2026-11-16", taskId = 7, meetingId = 3)), update.wins)
+        assertEquals(listOf(GoalRead("Launch quoting", "on_track", "Pricing is agreed.", nextStep = "Book the pilot")), update.goals)
+    }
+
+    @Test
+    fun `a win or a goal with fields missing reads as pointing at nothing and proving nothing`() {
+        val update = AideJson.decodeFromString(ProgressUpdate.serializer(), """{"wins":[{"title":"Shipped it","task_id":null}],"goals":[{"goal":"Launch quoting"}]}""")
+
+        val win = update.wins.single()
+        assertEquals(0L, win.taskId)
+        assertEquals(0L, win.meetingId)
+        assertEquals("", win.goal)
+        assertEquals("", win.day)
+        assertEquals(GoalRead(goal = "Launch quoting", status = "no_evidence", note = "", nextStep = ""), update.goals.single())
+        assertEquals(ProgressUpdate(), AideJson.decodeFromString(ProgressUpdate.serializer(), "{}"))
+    }
+
+    @Test
+    fun `an agenda reads the field names the schema uses`() {
+        val agenda = AideJson.decodeFromString(
+            PersonAgenda.serializer(),
+            """{"headline":"Settle the contract.","items":[{"topic":"Contract","why":"a week overdue"}],"to_ask":["When will legal sign?"],"to_tell":["The deck is out"]}""",
+        )
+        assertEquals(
+            PersonAgenda("Settle the contract.", listOf(AgendaItem("Contract", "a week overdue")), toAsk = listOf("When will legal sign?"), toTell = listOf("The deck is out")),
+            agenda,
+        )
+    }
+
+    @Test
+    fun `a stored self-review keeps its text and the days it covers`() {
+        val review = SelfReview(fromDay = 20_680, toDay = 20_775, text = "# Summary\nA strong quarter.\n- Shipped \"quoting\"")
+        assertEquals(review, AideJson.decodeFromString(SelfReview.serializer(), AideJson.encodeToString(SelfReview.serializer(), review)))
+        assertEquals(SelfReview(), AideJson.decodeFromString(SelfReview.serializer(), "{}"))
+    }
 }

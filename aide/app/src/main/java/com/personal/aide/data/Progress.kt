@@ -32,6 +32,12 @@ class SeriesStore(
     /** Puts a meeting in a series, or with null takes it out of the one it is in. */
     suspend fun assign(meetingId: Long, seriesId: Long?) = meetings.setSeries(meetingId, seriesId)
 
+    /**
+     * Records that the user has said this meeting is not a recurring one. Unlike a meeting that
+     * simply has no series yet, it is then left alone: neither the calendar nor the assistant puts it in one.
+     */
+    suspend fun exclude(meetingId: Long) = meetings.setSeries(meetingId, NOT_RECURRING)
+
     suspend fun assignByName(meetingId: Long, name: String): Long? =
         findOrCreate(name)?.also { meetings.setSeries(meetingId, it) }
 
@@ -53,7 +59,7 @@ class SeriesStore(
         if (others.isEmpty()) return
         // Once is a meeting; twice is a habit. The earliest one's name is the one the calendar gave it.
         val name = others.lastOrNull { !it.titleIsAuto }?.title ?: meeting.title
-        val id = others.firstNotNullOfOrNull { it.seriesId } ?: findOrCreate(name, eventId) ?: return
+        val id = others.mapNotNull { it.seriesId }.firstOrNull { it != NOT_RECURRING } ?: findOrCreate(name, eventId) ?: return
         for (other in others) if (other.seriesId == null) meetings.setSeries(other.id, id)
         meetings.setSeries(meetingId, id)
     }
@@ -81,8 +87,13 @@ class SeriesStore(
 
     /** The meeting before [meeting] in its series that has notes, if any. */
     suspend fun previous(meeting: MeetingEntity): MeetingEntity? {
-        val id = meeting.seriesId ?: return null
+        val id = meeting.seriesId?.takeIf { it != NOT_RECURRING } ?: return null
         return meetings.inSeries(id).firstOrNull { it.id != meeting.id && it.startedAt < meeting.startedAt && it.status == MeetingStatus.READY }
+    }
+
+    companion object {
+        /** Stored as a meeting's series when the user has said it is not a recurring meeting. No series has this id. */
+        const val NOT_RECURRING = 0L
     }
 }
 

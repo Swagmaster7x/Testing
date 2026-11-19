@@ -297,7 +297,8 @@ class OnDeviceTest {
             assertTrue(text, text.contains("The rate feed fix is close to review."))
             assertTrue(text, text.contains("Owed to you: Fix the rate feed"))
             assertEquals("the brief offers to start recording", 1, posted.notification.actions?.size ?: 0)
-            notifications.cancel(posted.id)
+            assertEquals(Notifications.PREP_ID, posted.id)
+            notifications.cancel(posted.tag, posted.id)
         } finally {
             runBlocking {
                 container.settings.setCalendarEnabled(calendarWasOn)

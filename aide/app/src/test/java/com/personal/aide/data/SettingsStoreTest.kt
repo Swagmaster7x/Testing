@@ -51,6 +51,8 @@ class SettingsStoreTest {
         assertFalse(settings.briefEnabled)
         assertEquals(8 * 60, settings.briefMinutes)
         assertFalse(settings.calendarEnabled)
+        assertTrue("briefs before meetings are on until turned off", settings.prepEnabled)
+        assertTrue("so is the afternoon check-in", settings.nudgesEnabled)
         assertEquals(ThemeChoice.SYSTEM, settings.theme)
     }
 
@@ -65,6 +67,8 @@ class SettingsStoreTest {
         store.setMuteChimes(true)
         store.setBrief(enabled = true, minutes = 7 * 60 + 15)
         store.setCalendarEnabled(true)
+        store.setPrepEnabled(false)
+        store.setNudgesEnabled(false)
         store.setTheme(ThemeChoice.DARK)
 
         assertEquals(
@@ -79,10 +83,50 @@ class SettingsStoreTest {
                 briefEnabled = true,
                 briefMinutes = 7 * 60 + 15,
                 calendarEnabled = true,
+                prepEnabled = false,
+                nudgesEnabled = false,
                 theme = ThemeChoice.DARK,
             ),
             store.current(),
         )
+    }
+
+    @Test
+    fun `the two reminders are switched off and on separately`(): Unit = runBlocking {
+        store.setPrepEnabled(false)
+        assertEquals(Settings(prepEnabled = false), store.current())
+
+        store.setNudgesEnabled(false)
+        store.setPrepEnabled(true)
+        assertEquals(Settings(nudgesEnabled = false), store.current())
+
+        store.setNudgesEnabled(true)
+        assertEquals(Settings(), store.current())
+    }
+
+    @Test
+    fun `the meeting briefs keep their own switch, apart from the calendar and the morning brief`(): Unit = runBlocking {
+        store.setCalendarEnabled(true)
+        store.setBrief(enabled = true, minutes = 8 * 60)
+        store.setPrepEnabled(false)
+
+        assertEquals(Settings(calendarEnabled = true, briefEnabled = true, prepEnabled = false), store.current())
+
+        // Disconnecting the calendar doesn't forget that the user wanted briefs.
+        store.setPrepEnabled(true)
+        store.setCalendarEnabled(false)
+        assertTrue(store.current().prepEnabled)
+    }
+
+    @Test
+    fun `settings saved before the reminders existed read with both on`(): Unit = runBlocking {
+        // What an earlier version left behind: its own keys and nothing about reminders.
+        prefs.edit {
+            it[stringPreferencesKey("model")] = "claude-sonnet-5-5"
+            it[stringPreferencesKey("theme")] = "DARK"
+        }
+
+        assertEquals(Settings(model = AideModel.SONNET, theme = ThemeChoice.DARK, prepEnabled = true, nudgesEnabled = true), store.current())
     }
 
     @Test
@@ -191,6 +235,8 @@ class SettingsStoreTest {
         store.setProfile(sam)
         store.setOnboarded(true)
         store.setModel(AideModel.HAIKU)
+        store.setPrepEnabled(false)
+        store.setNudgesEnabled(false)
         store.clear()
 
         assertEquals(Settings(), store.current())
@@ -209,6 +255,7 @@ class SettingsStoreTest {
         first.setModel(AideModel.SONNET)
         first.setBrief(true, 6 * 60 + 45)
         first.setTheme(ThemeChoice.LIGHT)
+        first.setNudgesEnabled(false)
         first.setProfile(sam)
         // The process ends; only the file is left.
         firstRun.cancelAndJoin()
@@ -216,7 +263,10 @@ class SettingsStoreTest {
         val secondRun = Job()
         try {
             val second = SettingsStore(PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + secondRun)) { file })
-            assertEquals(Settings(model = AideModel.SONNET, briefEnabled = true, briefMinutes = 6 * 60 + 45, theme = ThemeChoice.LIGHT), second.current())
+            assertEquals(
+                Settings(model = AideModel.SONNET, briefEnabled = true, briefMinutes = 6 * 60 + 45, theme = ThemeChoice.LIGHT, nudgesEnabled = false),
+                second.current(),
+            )
             assertEquals(sam, second.currentProfile())
         } finally {
             secondRun.cancelAndJoin()

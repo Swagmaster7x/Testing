@@ -170,7 +170,7 @@ class Assistant(
                 // What it said about "last time" only means something against the series it was shown.
                 val earlierTasks = thread.earlierTasks[seriesId].orEmpty()
                 val analysis = raw.copy(
-                    sinceLastTime = if (seriesId != null && seriesId in thread.earlierTasks) raw.sinceLastTime.map { it.trim() }.filter { it.isNotEmpty() } else emptyList(),
+                    sinceLastTime = if (seriesId != null && seriesId in thread.withNotes) raw.sinceLastTime.map { it.trim() }.filter { it.isNotEmpty() } else emptyList(),
                     earlierItems = raw.earlierItems.filter { it.taskId in earlierTasks }.distinctBy { it.taskId },
                 )
                 meetings.update(
@@ -190,7 +190,12 @@ class Assistant(
                         model = response.model,
                     ),
                 )
-                saveActionItems(meetingId, analysis, alreadyTracked = earlierTasks.values.filter { it.status == TaskStatus.OPEN }.map { it.title })
+                saveActionItems(
+                    meetingId,
+                    analysis,
+                    // The earlier notes still carry the assistant's own wording, so that is what it tends to repeat.
+                    alreadyTracked = earlierTasks.values.filter { it.status == TaskStatus.OPEN }.flatMap { listOf(it.title, it.suggestedTitle) }.filter { it.isNotBlank() },
+                )
                 knowledge.saveNotes(analysis.knowledge, KnowledgeOrigin.MEETING, meetingId) { key -> key in shownInFull }
                 saveQuestions(meetingId, analysis, maxQuestions)
                 SummaryResult.Done
@@ -208,7 +213,13 @@ class Assistant(
      * The meeting's recurring-meeting context for a request: the text to send, the series it
      * covers, and for each of those the earlier action items the assistant may report on.
      */
-    private class Thread(val text: String, val candidates: List<SeriesEntity>, val earlierTasks: Map<Long, Map<Long, TaskEntity>>)
+    private class Thread(
+        val text: String,
+        val candidates: List<SeriesEntity>,
+        val earlierTasks: Map<Long, Map<Long, TaskEntity>>,
+        /** The series that were shown with an earlier occurrence's notes: only against those does "since last time" mean anything. */
+        val withNotes: Set<Long>,
+    )
 
     private suspend fun seriesContext(
         meeting: MeetingEntity,
@@ -217,10 +228,14 @@ class Assistant(
         all: List<SeriesEntity>,
         zone: ZoneId,
     ): Thread {
+        if (meeting.seriesId == SeriesStore.NOT_RECURRING) {
+            // The user's word is final; don't offer the assistant a choice it isn't allowed to make.
+            return Thread("<recurring_meetings>\nThe user has said this meeting is not one of their recurring meetings.\n</recurring_meetings>", emptyList(), emptyMap(), emptySet())
+        }
         val everyMeeting = db.meetings().all()
         val everyTask = db.tasks().all()
         val today = Days.today(zone, now())
-        val bySeries = everyMeeting.filter { it.seriesId != null && it.id != meeting.id && it.startedAt < meeting.startedAt }.groupBy { it.seriesId!! }
+        val bySeries = everyMeeting.filter { it.seriesId != null && it.seriesId != SeriesStore.NOT_RECURRING && it.id != meeting.id && it.startedAt < meeting.startedAt }.groupBy { it.seriesId!! }
 
         val candidates = if (own != null) {
             listOf(own)
@@ -238,6 +253,7 @@ class Assistant(
         }
 
         val earlier = HashMap<Long, Map<Long, TaskEntity>>()
+        val withNotes = HashSet<Long>()
         val text = buildString {
             append("<recurring_meetings>\n")
             when {
@@ -254,6 +270,7 @@ class Assistant(
                     earlier[one.id] = emptyMap()
                     continue
                 }
+                withNotes += one.id
                 append("Its previous occurrence:\n").append(ContextBlocks.meetingNotes(last, zone)).append('\n')
                 // What came out of its recent occurrences: still open, or finished since the last one.
                 val recent = past.take(3).mapTo(HashSet()) { it.id }
@@ -281,7 +298,7 @@ class Assistant(
             }
             append("</recurring_meetings>")
         }
-        return Thread(text, candidates, earlier)
+        return Thread(text, candidates, earlier, withNotes)
     }
 
     private suspend fun saveActionItems(meetingId: Long, analysis: MeetingAnalysis, alreadyTracked: List<String> = emptyList()) {
@@ -818,7 +835,7 @@ class Assistant(
         val today = Days.today(zone, now())
         val profile = settings.currentProfile()
         val allMeetings = db.meetings().all()
-        val person = buildPersonView(name, db.knowledge().all(), db.tasks().all(), allMeetings)
+        val person = buildPersonView(name, db.knowledge().all(), db.tasks().all(), allMeetings, self = profile.name)
         val together = person.meetings.filter { it.status == MeetingStatus.READY }.take(3)
         if (person.entry == null && person.theyOwe.isEmpty() && person.openWithThem.isEmpty() && together.isEmpty()) {
             throw LlmException(LlmException.Kind.OTHER, "There is nothing on record with ${person.name} yet to build an agenda from.")

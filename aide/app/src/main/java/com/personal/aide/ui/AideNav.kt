@@ -149,6 +149,9 @@ private val tabs = listOf(
 
 private const val CONSOLE_KEYS_URL = "https://console.anthropic.com/settings/keys"
 
+/** Only asked for where [Notifications.canPost] says it is needed, which is Android 13 and later. */
+private const val NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
+
 /** The whole app: first-run setup until it is finished, then the five tabs and everything behind them. */
 @Composable
 fun AideRoot(launch: Launch?, onLaunchHandled: () -> Unit, onDarkTheme: (Boolean) -> Unit = {}) {
@@ -678,7 +681,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 }
                 val askCalendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
                     vm.setCalendar(granted)
-                    if (granted && !Notifications.canPost(context)) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    if (granted && !Notifications.canPost(context)) askPrepNotifications.launch(NOTIFICATIONS_PERMISSION)
                 }
                 val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
                     uri?.let(vm::exportTo)
@@ -712,16 +715,16 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                                 on && !context.hasPermission(Manifest.permission.READ_CALENDAR) -> askCalendar.launch(Manifest.permission.READ_CALENDAR)
                                 else -> {
                                     vm.setCalendar(on)
-                                    if (on && !canNotify) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    if (on && !canNotify) askPrepNotifications.launch(NOTIFICATIONS_PERMISSION)
                                 }
                             }
                         },
                         onPrep = { on ->
-                            if (on && !canNotify) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (on && !canNotify) askPrepNotifications.launch(NOTIFICATIONS_PERMISSION)
                             vm.setPrep(on)
                         },
                         onNudges = { on ->
-                            if (on && !canNotify) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (on && !canNotify) askPrepNotifications.launch(NOTIFICATIONS_PERMISSION)
                             vm.setNudges(on)
                         },
                         // Once the question has been refused twice Android stops asking; the app's own page always works.
