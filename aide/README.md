@@ -23,7 +23,7 @@ The screens above are rendered from the app's own code with a sample week of dat
 
 ## What you need
 
-**A Claude API key.** Transcription and manual tasks work without one, but notes, plans, reviews and answers are written by Claude through the Anthropic API, with your own key from the [Claude Console](https://console.anthropic.com/settings/keys). This is billed per use to that account and is separate from a Claude subscription (Pro or Max); a subscription cannot be used by an app. A typical meeting costs a few cents to write up with the default model. The key is encrypted with the phone's hardware-backed keystore and can be changed or removed in Settings.
+**A Claude API key.** Transcription and manual tasks work without one, but notes, plans, reviews and answers are written by Claude through the Anthropic API, with your own key from the [Claude Console](https://console.anthropic.com/settings/keys). This is billed per use to that account and is separate from a Claude subscription (Pro or Max); a subscription cannot be used by an app. By the list prices of November 2026, writing up an hour-long meeting costs roughly 10 to 25 cents with the default model (Opus 5.5), about half that with Sonnet 5.5 and around a cent with Haiku 5.5; Insights keeps a running estimate. The key is encrypted with the phone's hardware-backed keystore and can be changed or removed in Settings.
 
 **A phone with speech recognition.** Nearly every Android phone has one (Google's "Speech Recognition & Synthesis"). In Settings you can choose the meeting language and whether recognition must stay on the device.
 

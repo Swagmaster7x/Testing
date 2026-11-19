@@ -286,7 +286,7 @@ private fun KeyStep(state: OnboardingState, actions: OnboardingActions) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("How to get a key", style = MaterialTheme.typography.titleSmall)
                 Text("1. Open the Claude Console and sign in or create an account.", style = MaterialTheme.typography.bodyMedium)
-                Text("2. Add a little credit under Billing. A typical meeting costs a few cents to write up.", style = MaterialTheme.typography.bodyMedium)
+                Text("2. Add a little credit under Billing. Writing up an hour-long meeting costs roughly 10 to 25 cents with the default model, and less with the faster ones.", style = MaterialTheme.typography.bodyMedium)
                 Text("3. Create a key under API keys, copy it, and paste it below.", style = MaterialTheme.typography.bodyMedium)
                 OutlinedButton(onClick = actions.onGetKey) { Text("Open the Claude Console") }
                 Text(
