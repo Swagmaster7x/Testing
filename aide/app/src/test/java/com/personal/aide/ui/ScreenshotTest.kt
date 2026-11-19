@@ -281,11 +281,13 @@ class ScreenshotTest {
     @Test
     @Config(sdk = [35], qualifiers = "w411dp-h1100dp-420dpi")
     fun addingNotesDocumentsAndPhotos() {
-        // The page pictures don't exist here, so their thumbnails show as blanks.
+        // The page pictures don't exist here, so their thumbnails show as blanks. They are named inside
+        // the build folder because looking for a picture that isn't there leaves an empty file behind.
+        val nowhere = java.io.File("build/tmp/screenshot-pages").apply { mkdirs() }
         val added = listOf(
             Material.Words("Planning notes.docx", "word ".repeat(1240)),
-            Material.Pages("Carrier onboarding guide.pdf", List(14) { java.io.File("missing-$it.jpg") }),
-            Material.Pages("Photos", List(3) { java.io.File("missing-photo-$it.jpg") }, photos = true),
+            Material.Pages("Carrier onboarding guide.pdf", List(14) { java.io.File(nowhere, "page-$it.jpg") }),
+            Material.Pages("Photos", List(3) { java.io.File(nowhere, "photo-$it.jpg") }, photos = true),
         )
         shot("add-empty") { AddScreen(AddState(), "", AddActions()) }
         shot("add") { AddScreen(AddState(kind = AddKind.REFERENCE, materials = added), "", AddActions()) }
