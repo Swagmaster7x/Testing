@@ -41,6 +41,14 @@ Tell people when you are transcribing a meeting. In many places the law requires
 
 The phone's recognizer hears one microphone and does not know who is speaking, so transcripts have no speaker labels, and names and jargon are sometimes misheard. Aide is built around that: Claude is told how the transcript was made, repairs mis-hearings from the knowledge base, and marks a task's owner as unclear instead of guessing. Typed notes and the answers you give to Aide's questions make the biggest difference to accuracy. A phone close to the speakers in a quiet room does much better than one across a table in a noisy one.
 
+## Known limits
+
+- No speaker labels, and no audio is kept, so a transcript can't be re-listened to or re-transcribed.
+- Transcription depends on the phone's recognizer. It has been exercised here against a simulated recognizer and on an emulator, not with real speech in a real room; expect to tune the language and the "keep recognition on the phone" setting on first use.
+- Notes are written after the meeting, not during it, and need a connection to reach Claude.
+- If the phone's clocks change, the morning brief arrives an hour off until its time is set again in Settings.
+- One phone, no sync. Use Settings > Save a backup to move to another phone; the API key is not in the backup.
+
 ## Build
 
 ```
@@ -58,6 +66,8 @@ Needs JDK 17 or later and the Android SDK (platform 37); `local.properties` shou
 ./gradlew recordRoborazziDebug       # renders every screen to app/build/outputs/roborazzi
 ./gradlew connectedDebugAndroidTest  # on a phone or emulator: the SDK on Android, the keystore, the recording service
 ```
+
+The unit tests never call the real Claude API: a local web server plays its part, so they cost nothing and need no key. The on-device tests do the same on Android. `SeedDemoData` (an on-device "test" that only runs when asked for by name) fills the debug build with a sample week to look at.
 
 ## How it is put together
 
