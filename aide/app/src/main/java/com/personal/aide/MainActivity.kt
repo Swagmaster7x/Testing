@@ -2,7 +2,7 @@ package com.personal.aide
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
             Intent(context, MainActivity::class.java)
                 .setAction(ACTION_OPEN_PREP)
                 // Two notifications for two meetings must not share one intent.
-                .setData(Uri.parse("aide://prep/${event.id}/${event.start}/$record"))
+                .setData("aide://prep/${event.id}/${event.start}/$record".toUri())
                 .putExtra(EXTRA_EVENT_ID, event.id)
                 .putExtra(EXTRA_EVENT_TITLE, event.title)
                 .putExtra(EXTRA_EVENT_START, event.start)

@@ -45,6 +45,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -386,7 +387,7 @@ private fun WinSheet(
     var title by remember { mutableStateOf(win?.title.orEmpty()) }
     var detail by remember { mutableStateOf(win?.detail.orEmpty()) }
     var goal by remember { mutableStateOf(win?.goal.orEmpty()) }
-    var day by remember { mutableStateOf(win?.day ?: today) }
+    var day by remember { mutableLongStateOf(win?.day ?: today) }
     var pickingDate by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {

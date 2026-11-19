@@ -156,6 +156,7 @@ class TasksActions(
     val onDiscardPlan: () -> Unit = {},
     val onOpenMeeting: (Long) -> Unit = {},
     val onAsk: () -> Unit = {},
+    val onOpenPerson: (String) -> Unit = {},
 )
 
 @Composable
@@ -209,6 +210,7 @@ fun TasksScreen(state: TasksState, actions: TasksActions) {
             meetingTitle = current?.meetingId?.let { state.meetingTitles[it] },
             onOpenMeeting = { editing = null; actions.onOpenMeeting(it) },
             defaultDay = if (tab == 0) state.today else null,
+            onOpenPerson = { editing = null; actions.onOpenPerson(it) },
         )
     }
 }

@@ -13,10 +13,12 @@ import com.personal.aide.data.db.MeetingEntity
 import com.personal.aide.data.db.QuestionEntity
 import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.data.db.UsageEntity
+import com.personal.aide.data.db.WinSource
 import com.personal.aide.domain.AssistantStats
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.WorkStats
 import com.personal.aide.domain.assistantStats
+import com.personal.aide.domain.knowledgeKey
 import com.personal.aide.domain.workStats
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +42,8 @@ data class InsightsState(
     /** How many goals the profile holds and how many wins are logged, for the way in to Goals & wins. */
     val goals: Int = 0,
     val wins: Int = 0,
+    /** What the week's review counted as going well that isn't in the wins log yet. */
+    val unloggedWins: List<String> = emptyList(),
 ) {
     val isThisWeek: Boolean get() = weekStart == Days.weekStart(today)
 }
@@ -71,23 +75,29 @@ class InsightsViewModel(private val container: AppContainer) : ViewModel() {
 
     private val view = combine(today, weekStart, reviewing, reviewError) { today, week, busy, error -> View(today, week, busy, error) }
 
-    private val progress = combine(container.settings.profile, container.db.wins().observeAll()) { profile, wins -> profile.goals.size to wins.size }
+    private data class Progress(val goals: Int, val wins: Int, val keys: Set<String>)
+
+    private val progress = combine(container.settings.profile, container.db.wins().observeAll()) { profile, wins ->
+        Progress(profile.goals.size, wins.size, wins.mapTo(HashSet()) { it.key })
+    }
 
     val state: StateFlow<InsightsState> = combine(work, extras, view, progress) { work, extras, view, progress ->
         val stored = extras.insights.firstOrNull { it.kind == InsightKind.WEEK_REVIEW && it.periodStart == view.weekStart }
+        val review = stored?.let { runCatching { AideJson.decodeFromString(WeekReview.serializer(), it.json) }.getOrNull() }
         InsightsState(
             loaded = true,
             today = view.today,
             weekStart = view.weekStart,
             stats = workStats(work.tasks, work.meetings, view.weekStart, view.weekStart + 6, view.today),
-            review = stored?.let { runCatching { AideJson.decodeFromString(WeekReview.serializer(), it.json) }.getOrNull() },
+            review = review,
+            unloggedWins = review?.wins.orEmpty().filter { it.isNotBlank() && knowledgeKey(it) !in progress.keys },
             reviewId = stored?.id,
             reviewRating = stored?.rating ?: 0,
             reviewing = view.reviewing,
             reviewError = view.error,
             hasKey = extras.hasKey,
-            goals = progress.first,
-            wins = progress.second,
+            goals = progress.goals,
+            wins = progress.wins,
             assistant = assistantStats(work.meetings, work.tasks, work.questions, work.messages, extras.insights, extras.usage, extras.knowledge),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), InsightsState())
@@ -125,6 +135,15 @@ class InsightsViewModel(private val container: AppContainer) : ViewModel() {
     fun rateReview(rating: Int) {
         val id = state.value.reviewId ?: return
         viewModelScope.launch { container.db.insights().rate(id, rating) }
+    }
+
+    /** Copies what the review counted as going well into the wins log, dated within the week it covers. */
+    fun logWins() {
+        val titles = state.value.unloggedWins
+        val day = minOf(state.value.today, state.value.weekStart + 6)
+        viewModelScope.launch {
+            for (title in titles) container.wins.add(title = title, day = day, source = WinSource.ASSISTANT)
+        }
     }
 
     fun dismissError() {

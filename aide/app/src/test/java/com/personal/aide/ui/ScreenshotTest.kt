@@ -7,6 +7,8 @@ import com.personal.aide.data.ThemeChoice
 import com.personal.aide.data.db.KnowledgeType
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.assistantStats
+import com.personal.aide.domain.buildPersonView
+import com.personal.aide.domain.buildPrepBrief
 import com.personal.aide.domain.buildTaskBoard
 import com.personal.aide.domain.workStats
 import com.personal.aide.transcribe.RecorderState
@@ -23,11 +25,25 @@ import com.personal.aide.ui.knowledge.KnowledgeScreen
 import com.personal.aide.ui.knowledge.KnowledgeState
 import com.personal.aide.ui.knowledge.QuestionsScreen
 import com.personal.aide.ui.knowledge.QuestionsState
+import com.personal.aide.ui.meetings.EarlierLine
 import com.personal.aide.ui.meetings.MeetingActions
 import com.personal.aide.ui.meetings.MeetingDetailState
 import com.personal.aide.ui.meetings.MeetingScreen
 import com.personal.aide.ui.meetings.MeetingsScreen
 import com.personal.aide.ui.meetings.MeetingsState
+import com.personal.aide.ui.meetings.SeriesActions
+import com.personal.aide.ui.meetings.SeriesScreen
+import com.personal.aide.ui.meetings.SeriesState
+import com.personal.aide.ui.people.PersonActions
+import com.personal.aide.ui.people.PersonScreen
+import com.personal.aide.ui.people.PersonState
+import com.personal.aide.ui.prep.PrepActions
+import com.personal.aide.ui.prep.PrepScreen
+import com.personal.aide.ui.prep.PrepState
+import com.personal.aide.ui.progress.GoalCard
+import com.personal.aide.ui.progress.ProgressActions
+import com.personal.aide.ui.progress.ProgressScreen
+import com.personal.aide.ui.progress.ProgressState
 import com.personal.aide.ui.onboarding.OnboardingActions
 import com.personal.aide.ui.onboarding.OnboardingScreen
 import com.personal.aide.ui.onboarding.OnboardingState
@@ -44,6 +60,8 @@ import com.personal.aide.ui.theme.AideTheme
 import com.personal.aide.ui.today.TodayActions
 import com.personal.aide.ui.today.TodayScreen
 import com.personal.aide.ui.today.TodayState
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -126,6 +144,7 @@ class ScreenshotTest {
             actionCounts = mapOf(3L to 4, 1L to 1),
             summarizing = setOf(2L),
             today = s.today,
+            series = s.series.associate { it.id to it.name },
         )
         shot("meetings") { MeetingsScreen(state, {}, {}, {}, {}, {}) }
         shot("meetings-empty") { MeetingsScreen(MeetingsState(loaded = true, today = s.today), {}, {}, {}, {}, {}) }
@@ -144,6 +163,100 @@ class ScreenshotTest {
         )
         shot("meeting") { MeetingScreen(state, MeetingActions()) }
         shot("meeting", dark = true) { MeetingScreen(state, MeetingActions()) }
+    }
+
+    @Test
+    fun meetingInASeries() {
+        val byId = s.tasks.associateBy { it.id }
+        val state = MeetingDetailState(
+            loaded = true,
+            meeting = s.meetings.first { it.id == 1L },
+            analysis = s.priyaAnalysis,
+            tasks = s.tasks.filter { it.meetingId == 1L },
+            today = s.today,
+            series = s.series[0],
+            occurrence = 2,
+            allSeries = s.series,
+            earlier = s.priyaAnalysis.earlierItems.map { EarlierLine(byId.getValue(it.taskId), it.status, it.note) },
+        )
+        shot("meeting-series") { MeetingScreen(state, MeetingActions()) }
+        shot("meeting-series", dark = true) { MeetingScreen(state, MeetingActions()) }
+    }
+
+    @Test
+    fun recurringMeeting() {
+        val meetings = s.meetings.filter { it.seriesId == 1L }.sortedByDescending { it.startedAt }
+        val ids = meetings.map { it.id }
+        val state = SeriesState(
+            loaded = true,
+            series = s.series[0],
+            meetings = meetings,
+            open = s.tasks.filter { it.meetingId in ids && it.status == com.personal.aide.data.db.TaskStatus.OPEN },
+            today = s.today,
+        )
+        shot("series") { SeriesScreen(state, SeriesActions()) }
+        shot("series", dark = true) { SeriesScreen(state, SeriesActions()) }
+    }
+
+    private fun personState(name: String, withAgenda: Boolean) = PersonState(
+        loaded = true,
+        person = buildPersonView(name, s.knowledge, s.tasks, s.meetings),
+        meetingTitles = s.meetings.associate { it.id to it.title },
+        agenda = if (withAgenda) s.danaAgenda else null,
+        agendaId = 1,
+        today = s.today,
+    )
+
+    @Test
+    @Config(sdk = [35], qualifiers = "w411dp-h1900dp-420dpi")
+    fun person() {
+        shot("person") { PersonScreen(personState("Dana Whitfield", withAgenda = true), PersonActions()) }
+        shot("person", dark = true) { PersonScreen(personState("Dana Whitfield", withAgenda = true), PersonActions()) }
+        // Someone with no knowledge entry and no agenda yet, reached from a meeting's attendee list.
+        shot("person-new") { PersonScreen(personState("Priya Nair", withAgenda = false), PersonActions()) }
+    }
+
+    private fun progressState() = ProgressState(
+        loaded = true,
+        goals = s.profile.goals.mapIndexed { index, goal -> GoalCard(goal, s.progress.goals[index], s.wins.count { it.goal == goal }) },
+        wins = s.wins,
+        updatedAt = s.now,
+        today = s.today,
+        lastReview = s.selfReview,
+        lastReviewAt = s.now,
+    )
+
+    @Test
+    @Config(sdk = [35], qualifiers = "w411dp-h2300dp-420dpi")
+    fun goalsAndWins() {
+        shot("progress") { ProgressScreen(progressState(), ProgressActions()) }
+        shot("progress", dark = true) { ProgressScreen(progressState(), ProgressActions()) }
+        shot("progress-empty") { ProgressScreen(ProgressState(loaded = true, today = s.today), ProgressActions()) }
+        shot("self-review-text") {
+            androidx.compose.material3.Surface {
+                com.personal.aide.ui.components.AssistantText(s.selfReview.text, androidx.compose.ui.Modifier.padding(20.dp))
+            }
+        }
+    }
+
+    private fun prepState(eventIndex: Int): PrepState {
+        val event = s.events[eventIndex]
+        return PrepState(
+            loaded = true,
+            event = event,
+            brief = buildPrepBrief(event.title, event.id, event.start, event.attendees, s.profile.name, s.meetings, s.tasks, s.series, s.knowledge),
+            meetingTitles = s.meetings.associate { it.id to it.title },
+            today = s.today,
+            now = s.now,
+        )
+    }
+
+    @Test
+    fun beforeAMeeting() {
+        shot("prep") { PrepScreen(prepState(0), PrepActions()) }
+        shot("prep", dark = true) { PrepScreen(prepState(0), PrepActions()) }
+        // A meeting Aide has never sat in on, with someone it knows nothing about.
+        shot("prep-empty") { PrepScreen(prepState(1), PrepActions()) }
     }
 
     @Test
@@ -202,6 +315,9 @@ class ScreenshotTest {
         review = if (reviewed) s.review else null,
         reviewId = 1,
         assistant = assistantStats(s.meetings, s.tasks, s.questions, s.chat, emptyList(), emptyList(), s.knowledge.size),
+        goals = s.profile.goals.size,
+        wins = s.wins.size,
+        unloggedWins = if (reviewed) s.review.wins.drop(1) else emptyList(),
     )
 
     @Test
@@ -215,7 +331,9 @@ class ScreenshotTest {
     @Test
     @Config(sdk = [35], qualifiers = "w411dp-h2100dp-420dpi")
     fun settings() {
-        shot("settings") { SettingsScreen(SettingsState(loaded = true, hasKey = true), "1.0", SettingsActions()) }
+        shot("settings") {
+            SettingsScreen(SettingsState(loaded = true, hasKey = true, settings = com.personal.aide.data.Settings(calendarEnabled = true)), "1.0", SettingsActions())
+        }
     }
 
     @Test

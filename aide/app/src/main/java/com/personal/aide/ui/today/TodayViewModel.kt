@@ -12,6 +12,7 @@ import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.TaskBoard
 import com.personal.aide.domain.buildTaskBoard
+import com.personal.aide.notify.Reminders
 import com.personal.aide.transcribe.RecorderState
 import com.personal.aide.ui.TaskActionsViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -115,6 +116,8 @@ class TodayViewModel(container: AppContainer) : TaskActionsViewModel(container) 
         clock.value = System.currentTimeMillis()
         viewModelScope.launch {
             events.value = container.agenda.events(Days.startMillis(today), Days.startMillis(today + 1))
+            // The calendar may have changed since the alarms for meeting briefs were last set.
+            runCatching { Reminders.refreshPrep(container) }
         }
     }
 

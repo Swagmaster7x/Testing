@@ -27,6 +27,7 @@ fun meetingNotesText(
         append("\n## ").append(title).append('\n')
         for (item in items) append("- ").append(item).append('\n')
     }
+    section("Since last time", analysis?.sinceLastTime.orEmpty())
     section("Key points", analysis?.keyPoints.orEmpty())
     section("Decisions", analysis?.decisions.orEmpty())
     section(

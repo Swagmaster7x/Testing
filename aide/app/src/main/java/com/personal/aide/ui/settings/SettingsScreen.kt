@@ -50,8 +50,10 @@ import com.personal.aide.ai.AideModel
 import com.personal.aide.data.ThemeChoice
 import com.personal.aide.ui.components.AideCard
 import com.personal.aide.ui.components.AideIcons
+import com.personal.aide.ui.components.Banner
 import com.personal.aide.ui.components.ListRow
 import com.personal.aide.ui.components.SectionHeader
+import com.personal.aide.ui.components.Tone
 import com.personal.aide.ui.components.Working
 import java.util.Locale
 
@@ -71,6 +73,7 @@ class SettingsActions(
     val onCalendar: (Boolean) -> Unit = {},
     val onPrep: (Boolean) -> Unit = {},
     val onNudges: (Boolean) -> Unit = {},
+    val onAllowNotifications: () -> Unit = {},
     val onTheme: (ThemeChoice) -> Unit = {},
     val onExport: () -> Unit = {},
     val onRestore: () -> Unit = {},
@@ -97,8 +100,10 @@ fun timeLabel(minutes: Int): String {
 }
 
 @Composable
-fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsActions) {
+fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsActions, notificationsAllowed: Boolean = true) {
     val settings = state.settings
+    // Briefs and reminders that are switched on but can't be shown: worth saying, since nothing else will.
+    val silenced = !notificationsAllowed && (settings.briefEnabled || settings.nudgesEnabled || (settings.prepEnabled && settings.calendarEnabled))
     var keyDialog by remember { mutableStateOf(false) }
     var modelDialog by remember { mutableStateOf(false) }
     var languageDialog by remember { mutableStateOf(false) }
@@ -172,6 +177,16 @@ fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsAc
             }
 
             item(key = "assistant-header") { SectionHeader("Assistant") }
+            if (silenced) {
+                item(key = "silenced") {
+                    Banner(
+                        "Aide isn't allowed to show notifications, so its briefs and reminders stay silent.",
+                        tone = Tone.WARN,
+                        action = "Allow",
+                        onAction = actions.onAllowNotifications,
+                    )
+                }
+            }
             item(key = "assistant") {
                 AideCard(padding = 0.dp) {
                     ListRow(title = "Your work profile", detail = "What Aide knows about your job", icon = AideIcons.Knowledge, onClick = actions.onProfile)

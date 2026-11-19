@@ -423,7 +423,7 @@ private fun ReadyStep(state: OnboardingState, microphoneAllowed: Boolean, action
                 Column(Modifier.weight(1f)) {
                     Text("Your calendar", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Read-only. Aide names each recording after the meeting you're in and shows your day.",
+                        "Read-only. Aide names each recording after the meeting you're in, shows your day, and briefs you ten minutes before each meeting.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

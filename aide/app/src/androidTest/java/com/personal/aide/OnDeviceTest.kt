@@ -2,6 +2,7 @@ package com.personal.aide
 
 import android.Manifest
 import android.app.Application
+import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -18,12 +19,19 @@ import com.personal.aide.ai.LlmMessage
 import com.personal.aide.ai.LlmRequest
 import com.personal.aide.ai.Schemas
 import com.personal.aide.ai.SystemPart
+import com.personal.aide.calendar.Agenda
+import com.personal.aide.calendar.CalendarEvent
 import com.personal.aide.data.KeystoreSecretStore
 import com.personal.aide.data.MemorySecretStore
 import com.personal.aide.data.db.AppDatabase
+import com.personal.aide.data.db.MeetingEntity
 import com.personal.aide.data.db.MeetingStatus
+import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.SegmentKind
+import com.personal.aide.data.db.TaskEntity
+import com.personal.aide.domain.Days
 import com.personal.aide.notify.Notifications
+import com.personal.aide.notify.Reminders
 import com.personal.aide.transcribe.RecorderState
 import com.personal.aide.transcribe.Transcriber
 import kotlinx.coroutines.runBlocking
@@ -235,6 +243,100 @@ class OnDeviceTest {
         assertEquals(listOf(SegmentKind.SPEECH, SegmentKind.NOTE, SegmentKind.FLAG), segments.map { it.kind })
         assertEquals("Good morning everyone.", segments[0].text)
         waitUntil("the notification to go away") { notifications.activeNotifications.none { it.id == Notifications.RECORDING_ID } }
+        db.close()
+    }
+
+    private fun titleOf(notification: Notification): String = notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+
+    private fun textOf(notification: Notification): String =
+        (notification.extras.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: notification.extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
+
+    /**
+     * The whole path of a meeting brief on a real system: the calendar is read, an exact alarm is
+     * set, the alarm wakes the receiver, and the brief is put together from the database and posted.
+     */
+    @Test
+    fun aMeetingBriefArrivesByAlarmWithWhatIsOnRecord() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val db = AppDatabase.inMemory(app)
+        // Five minutes away: inside the ten-minute lead, so its brief is due straight away.
+        val start = System.currentTimeMillis() + 5 * 60_000
+        val event = CalendarEvent(id = 4242, title = "Quoting standup", start = start, end = start + 30 * 60_000, attendees = listOf("Dana Whitfield"))
+        val agenda = object : Agenda {
+            override suspend fun events(fromMillis: Long, toMillis: Long): List<CalendarEvent> = listOf(event)
+        }
+        lateinit var container: AppContainer
+        instrumentation.runOnMainSync {
+            container = AppContainer(app, db = db, secrets = MemorySecretStore(), agenda = agenda)
+            (app as AideApp).container = container
+        }
+        val calendarWasOn = runBlocking { container.settings.current().calendarEnabled }
+        try {
+            runBlocking {
+                container.settings.setCalendarEnabled(true)
+                container.settings.setPrepEnabled(true)
+                val week = 7 * 86_400_000L
+                val seriesId = container.series.findOrCreate("Quoting standup", calendarEventId = 4242)
+                db.meetings().insert(
+                    MeetingEntity(
+                        title = "Quoting standup", titleIsAuto = false, startedAt = start - week, endedAt = start - week + 1_500_000,
+                        status = MeetingStatus.READY, attendees = listOf("Dana Whitfield"), calendarEventId = 4242,
+                        tldr = "The rate feed fix is close to review.", seriesId = seriesId,
+                    ),
+                )
+                db.tasks().insert(TaskEntity(title = "Fix the rate feed", owner = "Dana Whitfield", ownership = Ownership.OTHERS, createdAt = start - week))
+                Reminders.refreshPrep(container)
+            }
+            waitUntil("the meeting brief", timeoutMs = 180_000) {
+                notifications.activeNotifications.any { titleOf(it.notification).startsWith("Quoting standup") }
+            }
+            val posted = notifications.activeNotifications.first { titleOf(it.notification).startsWith("Quoting standup") }
+            val text = textOf(posted.notification)
+            assertTrue(text, text.contains("Last time"))
+            assertTrue(text, text.contains("The rate feed fix is close to review."))
+            assertTrue(text, text.contains("Owed to you: Fix the rate feed"))
+            assertEquals("the brief offers to start recording", 1, posted.notification.actions?.size ?: 0)
+            notifications.cancel(posted.id)
+        } finally {
+            runBlocking {
+                container.settings.setCalendarEnabled(calendarWasOn)
+                // With the calendar off again this clears any alarm the test left behind.
+                Reminders.refreshPrep(container)
+            }
+            db.close()
+        }
+    }
+
+    @Test
+    fun theAfternoonReminderSaysWhatIsDueAndWhoHasGoneQuiet() = runBlocking {
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val db = AppDatabase.inMemory(app)
+        val container = AppContainer(app, db = db, secrets = MemorySecretStore())
+        container.settings.setNudgesEnabled(true)
+        val now = System.currentTimeMillis()
+        db.tasks().insert(TaskEntity(title = "Send the pricing copy", dueDay = Days.today(), createdAt = now))
+        val staleId = db.tasks().insert(
+            TaskEntity(title = "Confirm the override window", owner = "Marcus Lee", ownership = Ownership.OTHERS, createdAt = now - 8 * 86_400_000L),
+        )
+
+        Reminders.nudge(container)
+
+        val due = notifications.activeNotifications.firstOrNull { it.id == Notifications.DUE_ID }
+        val waiting = notifications.activeNotifications.firstOrNull { it.id == Notifications.WAITING_ID }
+        assertNotNull("a reminder of what is due today", due)
+        assertNotNull("a nudge about the stale follow-up", waiting)
+        assertTrue(textOf(due!!.notification), textOf(due.notification).contains("Send the pricing copy"))
+        assertEquals("Marcus Lee still owes you something", titleOf(waiting!!.notification))
+        assertTrue(textOf(waiting.notification), textOf(waiting.notification).contains("Confirm the override window"))
+        assertTrue("the follow-up is marked as reminded", db.tasks().get(staleId)!!.nudgedAt >= now)
+
+        // Asked again the same day, it stays quiet about the follow-up.
+        notifications.cancel(Notifications.WAITING_ID)
+        Reminders.nudge(container)
+        assertNull(notifications.activeNotifications.firstOrNull { it.id == Notifications.WAITING_ID })
+
+        notifications.cancel(Notifications.DUE_ID)
         db.close()
     }
 

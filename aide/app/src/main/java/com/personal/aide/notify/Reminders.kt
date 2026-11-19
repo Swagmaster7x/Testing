@@ -223,6 +223,24 @@ class PrepReceiver : BroadcastReceiver() {
     }
 }
 
+/** Alarms are lost when the phone restarts or the app is updated; this sets them again. */
+class BootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        val container = (context.applicationContext as? AideApp)?.container ?: return
+        val result = goAsync()
+        container.scope.launch {
+            try {
+                Reminders.sync(container)
+            } catch (_: Exception) {
+                // Nothing to set them from; the next time the app opens it tries again.
+            } finally {
+                result.finish()
+            }
+        }
+    }
+}
+
 /** Re-reads the calendar every few hours so the alarms follow changes to it. */
 class PrepRefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {

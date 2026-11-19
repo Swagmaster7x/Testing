@@ -71,6 +71,7 @@ class InsightsActions(
     val onAsk: () -> Unit = {},
     val onSettings: () -> Unit = {},
     val onProgress: () -> Unit = {},
+    val onLogWins: () -> Unit = {},
 )
 
 @Composable
@@ -199,6 +200,12 @@ private fun ReviewBody(review: WeekReview, state: InsightsState, actions: Insigh
             if (review.headline.isNotBlank()) Text(review.headline, style = MaterialTheme.typography.titleLarge)
             if (review.summary.isNotBlank()) Text(review.summary, style = MaterialTheme.typography.bodyLarge)
             BulletSection("What went well", review.wins, tone = Tone.GOOD)
+            if (state.unloggedWins.isNotEmpty()) {
+                // The review has already been paid for; keeping what it found costs nothing more.
+                TextButton(onClick = actions.onLogWins, contentPadding = PaddingValues(0.dp)) {
+                    Text(if (state.unloggedWins.size == review.wins.size) "Add these to my wins log" else "Add the rest to my wins log")
+                }
+            }
             BulletSection("What slipped", review.slipped, tone = Tone.WARN)
             BulletSection("Patterns", review.patterns)
             BulletSection("Try next week", review.suggestions, tone = Tone.ASSISTANT)

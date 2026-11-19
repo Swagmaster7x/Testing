@@ -2,10 +2,17 @@ package com.personal.aide.ui
 
 import com.personal.aide.calendar.CalendarEvent
 import com.personal.aide.data.ActionItem
+import com.personal.aide.data.AgendaItem
 import com.personal.aide.data.AideJson
 import com.personal.aide.data.DayPlan
+import com.personal.aide.data.EarlierItem
+import com.personal.aide.data.GoalRead
 import com.personal.aide.data.MeetingAnalysis
+import com.personal.aide.data.PersonAgenda
 import com.personal.aide.data.PlanItem
+import com.personal.aide.data.ProgressUpdate
+import com.personal.aide.data.SelfReview
+import com.personal.aide.data.SeriesGuess
 import com.personal.aide.data.WeekDayPlan
 import com.personal.aide.data.WeekPlan
 import com.personal.aide.data.WeekReview
@@ -21,9 +28,12 @@ import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
 import com.personal.aide.data.db.SegmentEntity
 import com.personal.aide.data.db.SegmentKind
+import com.personal.aide.data.db.SeriesEntity
 import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.data.db.TaskOrigin
 import com.personal.aide.data.db.TaskStatus
+import com.personal.aide.data.db.WinEntity
+import com.personal.aide.data.db.WinSource
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.knowledgeKey
 import java.time.LocalDate
@@ -79,6 +89,46 @@ open class SampleSet(val today: Long) {
         transcriptQuality = "good",
     )
 
+    /** Meetings that repeat: the 1:1 was linked by the assistant, the standup by its calendar event. */
+    val series = listOf(
+        SeriesEntity(1, "1:1 with Priya", knowledgeKey("1:1 with Priya"), null, at(today - 9, 11, 30)),
+        SeriesEntity(2, "Quoting standup", knowledgeKey("Quoting standup"), 1, at(today - 6, 14, 30)),
+    )
+
+    /** This week's 1:1, read against the one before it. */
+    val priyaAnalysis = MeetingAnalysis(
+        title = "1:1 with Priya",
+        meetingType = "1:1",
+        tldr = "Priya wants the Q1 roadmap narrowed to two bets. Sam is to bring a cut-down version on Monday, with the quoting launch as the anchor.",
+        keyPoints = listOf(
+            "Priya will defend two bets at planning, not five.",
+            "The quoting launch is the anchor; carrier scorecards is the likely second.",
+        ),
+        decisions = listOf("The Q1 roadmap goes to planning with two bets."),
+        openQuestions = listOf("Does carrier scorecards need a designer of its own?"),
+        attendees = listOf("Priya Nair"),
+        transcriptQuality = "good",
+        series = SeriesGuess(existingId = 1),
+        sinceLastTime = listOf(
+            "Priya has read the customer interview notes and agrees the quote summary needs the three changes Sam proposed.",
+            "The second designer is still undecided: Priya raised it with finance and has no answer yet.",
+        ),
+        earlierItems = listOf(
+            EarlierItem(15, "done", "Sam walked Priya through the metrics in the meeting."),
+            EarlierItem(13, "still_open", "Priya is waiting on finance and expects an answer next week."),
+        ),
+    )
+
+    private val standupAnalysis = MeetingAnalysis(
+        title = "Quoting standup",
+        meetingType = "standup",
+        tldr = "The rate feed fix is close to review. Marcus still owes the details of the override window, and the reps' FAQ can't be written without them.",
+        decisions = listOf("The rate feed fix goes to review this week.", "Reps keep a price override for the first two weeks of beta."),
+        openQuestions = listOf("Is the override window enforced in the portal, or is it policy only?"),
+        attendees = listOf("Dana Whitfield", "Marcus Lee", "Jo Park"),
+        transcriptQuality = "good",
+    )
+
     val meetings = listOf(
         MeetingEntity(
             id = 3, title = "Q1 quoting launch: pricing review", titleIsAuto = true,
@@ -93,12 +143,25 @@ open class SampleSet(val today: Long) {
         MeetingEntity(
             id = 1, title = "1:1 with Priya", titleIsAuto = false,
             startedAt = at(today - 2, 11, 0), endedAt = at(today - 2, 11, 27), status = MeetingStatus.READY, meetingType = "1:1",
-            tldr = "Priya wants the Q1 roadmap narrowed to two bets. Sam is to bring a cut-down version on Monday, with the quoting launch as the anchor.",
-            wordCount = 3104,
+            attendees = listOf("Priya Nair"), tldr = priyaAnalysis.tldr,
+            analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), priyaAnalysis), wordCount = 3104, seriesId = 1,
         ),
         MeetingEntity(
             id = 4, title = "Notes: vendor call with RateStream", titleIsAuto = false, source = MeetingSource.IMPORT,
             startedAt = at(today - 5, 16, 0), endedAt = at(today - 5, 16, 0), status = MeetingStatus.TRANSCRIBED, wordCount = 420,
+        ),
+        MeetingEntity(
+            id = 6, title = "Quoting standup", titleIsAuto = false,
+            startedAt = at(today - 6, 14, 0), endedAt = at(today - 6, 14, 24), status = MeetingStatus.READY, meetingType = "standup",
+            attendees = listOf("Dana Whitfield", "Marcus Lee", "Jo Park"), calendarEventId = 1, tldr = standupAnalysis.tldr,
+            analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), standupAnalysis), wordCount = 2650, seriesId = 2,
+        ),
+        MeetingEntity(
+            id = 5, title = "1:1 with Priya", titleIsAuto = false,
+            startedAt = at(today - 9, 11, 0), endedAt = at(today - 9, 11, 31), status = MeetingStatus.READY, meetingType = "1:1",
+            attendees = listOf("Priya Nair"),
+            tldr = "Priya asked for the beta success metrics and flagged that a second designer depends on finance. Sam shared what the customer interviews turned up.",
+            wordCount = 3480, seriesId = 1,
         ),
     )
 
@@ -106,7 +169,7 @@ open class SampleSet(val today: Long) {
         TaskEntity(1, "Send revised pricing page copy to Marcus", dueDay = today + 2, priority = 2, origin = TaskOrigin.AI, meetingId = 3, createdAt = at(today, 9, 45), evidence = "Marcus asked Sam for it by Friday"),
         TaskEntity(2, "Cut the Q1 roadmap down to two bets for Priya", dueDay = today, priority = 2, origin = TaskOrigin.AI, meetingId = 1, createdAt = at(today - 2, 11, 30)),
         TaskEntity(3, "Reply to RateStream about the lane coverage gap", dueDay = today - 2, origin = TaskOrigin.MANUAL, createdAt = at(today - 6, 9)),
-        TaskEntity(4, "Review Figma flows for the quote summary screen", dueDay = today + 1, origin = TaskOrigin.MANUAL, createdAt = at(today - 3, 15)),
+        TaskEntity(4, "Review Figma flows for the quote summary screen", details = "Dana's team starts the build on Monday and needs comments first.", dueDay = today + 1, origin = TaskOrigin.MANUAL, createdAt = at(today - 3, 15)),
         TaskEntity(5, "Draft beta invite list of 25 customers", dueDay = today + 6, origin = TaskOrigin.AI, meetingId = 3, createdAt = at(today, 9, 45)),
         TaskEntity(6, "Book the launch retro room", origin = TaskOrigin.MANUAL, createdAt = at(today - 1, 10), priority = 0),
         TaskEntity(7, "Fix the rate feed failures on 4% of lanes", owner = "Dana Whitfield", ownership = Ownership.OTHERS, dueDay = today + 9, origin = TaskOrigin.AI, meetingId = 3, createdAt = at(today, 9, 45)),
@@ -115,6 +178,79 @@ open class SampleSet(val today: Long) {
         TaskEntity(10, "Share scorecard metrics draft with carriers team", status = TaskStatus.DONE, completedAt = at(today - 1, 16), dueDay = today - 1, origin = TaskOrigin.MANUAL, createdAt = at(today - 4, 9)),
         TaskEntity(11, "Update the Q4 roadmap page", status = TaskStatus.DONE, completedAt = at(today - 2, 12), dueDay = today - 3, origin = TaskOrigin.MANUAL, createdAt = at(today - 7, 9)),
         TaskEntity(12, "Send Priya the launch risks list", status = TaskStatus.DONE, completedAt = at(today, 8, 30), dueDay = today, origin = TaskOrigin.AI, meetingId = 1, createdAt = at(today - 2, 11, 30)),
+        TaskEntity(13, "Get an answer from finance on the second designer", owner = "Priya Nair", ownership = Ownership.OTHERS, dueDay = today - 3, origin = TaskOrigin.AI, meetingId = 5, createdAt = at(today - 9, 11, 35)),
+        TaskEntity(15, "Share the beta success metrics with Priya", origin = TaskOrigin.AI, meetingId = 5, createdAt = at(today - 9, 11, 35)),
+        TaskEntity(16, "Write up the override rules for the reps' FAQ", dueDay = today + 1, origin = TaskOrigin.AI, meetingId = 6, createdAt = at(today - 6, 14, 30)),
+    )
+
+    val wins = listOf(
+        WinEntity(
+            1, "Got Sales and Product to agree on three fixed pricing tiers", knowledgeKey("Got Sales and Product to agree on three fixed pricing tiers"),
+            "Unblocked the February beta. Custom pricing had been argued over since September.", profile.goals[0], today, WinSource.ASSISTANT, meetingId = 3, createdAt = now,
+        ),
+        WinEntity(
+            2, "Sent Priya the launch risks list the morning after she asked", knowledgeKey("Sent Priya the launch risks list the morning after she asked"),
+            "", profile.goals[0], today, WinSource.ASSISTANT, taskId = 12, createdAt = now,
+        ),
+        WinEntity(
+            3, "Shared the scorecard metrics draft with the carriers team", knowledgeKey("Shared the scorecard metrics draft with the carriers team"),
+            "", "", today - 1, WinSource.ASSISTANT, taskId = 10, createdAt = now,
+        ),
+        WinEntity(
+            4, "Cut median quote turnaround in the pilot from 2 days to 9 hours", knowledgeKey("Cut median quote turnaround in the pilot from 2 days to 9 hours"),
+            "Measured across 40 pilot quotes in October.", profile.goals[1], today - 23, WinSource.MANUAL, createdAt = at(today - 23, 17),
+        ),
+        WinEntity(
+            5, "Ran eight shipper interviews for the quoting flow", knowledgeKey("Ran eight shipper interviews for the quoting flow"),
+            "Three changes to the quote summary came straight out of them.", profile.goals[0], today - 37, WinSource.MANUAL, createdAt = at(today - 37, 17),
+        ),
+    )
+
+    /** Where each goal stands, as the assistant last read it. */
+    val progress = ProgressUpdate(
+        goals = listOf(
+            GoalRead(
+                profile.goals[0], "on_track",
+                "Pricing is agreed and the beta has a date, 9 February. The one dependency outside your hands is the rate feed fix.",
+                "Get a firm date for the rate feed fix from Dana.",
+            ),
+            GoalRead(
+                profile.goals[1], "at_risk",
+                "The pilot brought turnaround down to 9 hours, but nothing since October shows movement towards 2.",
+                "Agree with Dana what the self-serve flow measures from the first day of beta.",
+            ),
+        ),
+    )
+
+    val danaAgenda = PersonAgenda(
+        headline = "The rate feed fix decides whether beta opens on time. Leave with a date.",
+        items = listOf(
+            AgendaItem("Rate feed fix: where is it, and what is the real date?", "Beta on 9 February depends on it, and it was \"two weeks\" on the 18th"),
+            AgendaItem("Your comments on the quote summary flows", "Her team starts the build on Monday and is waiting for them"),
+            AgendaItem("How the override window is enforced", "Left open at the last standup: in the portal, or policy only?"),
+        ),
+        toAsk = listOf("Does the fix cover all of the failing lanes, or only the common ones?"),
+        toTell = listOf("Pricing is settled at three fixed tiers, so the quote summary can be designed against them."),
+    )
+
+    val selfReview = SelfReview(
+        fromDay = today - 183,
+        toDay = today,
+        text = """
+            # Summary
+            Over the last six months I took self-serve quoting from an open question to a dated beta, and brought quote turnaround in the pilot down from two days to nine hours.
+
+            # Against my goals
+            **Launch self-serve quoting by end of Q1.** On track.
+            - Got Sales and Product to agree on three fixed pricing tiers, which unblocked the February beta.
+            - Ran eight shipper interviews; three changes to the quote summary came straight out of them.
+
+            **Cut quote turnaround from 2 days to 2 hours.** Partly there.
+            - Median turnaround in the pilot fell to 9 hours across 40 quotes.
+
+            # What I would do differently
+            - Vendor follow-ups waited too long. I now give self-set tasks a date when I add them.
+        """.trimIndent(),
     )
 
     val dayPlan = DayPlan(

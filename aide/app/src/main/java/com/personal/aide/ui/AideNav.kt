@@ -40,6 +40,7 @@ import com.personal.aide.BuildConfig
 import com.personal.aide.calendar.CalendarEvent
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.meetingNotesText
+import com.personal.aide.notify.Notifications
 import com.personal.aide.ui.ask.AskActions
 import com.personal.aide.ui.ask.AskScreen
 import com.personal.aide.ui.ask.AskViewModel
@@ -177,7 +178,14 @@ private fun OnboardingRoute() {
     var microphone by remember { mutableStateOf(context.hasPermission(Manifest.permission.RECORD_AUDIO)) }
 
     val askMicrophone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { microphone = it }
-    val askCalendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.setCalendar(it) }
+    // Connecting the calendar switches on the brief before each meeting, which is a notification.
+    val askForBriefs = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val askCalendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        vm.setCalendar(granted)
+        if (granted && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+            askForBriefs.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.setBrief(true) }
 
     LaunchedEffect(state.step, state.hasKey) {
@@ -205,7 +213,14 @@ private fun OnboardingRoute() {
                 }
             },
             onCalendar = { on ->
-                if (on && !context.hasPermission(Manifest.permission.READ_CALENDAR)) askCalendar.launch(Manifest.permission.READ_CALENDAR) else vm.setCalendar(on)
+                if (on && !context.hasPermission(Manifest.permission.READ_CALENDAR)) {
+                    askCalendar.launch(Manifest.permission.READ_CALENDAR)
+                } else {
+                    vm.setCalendar(on)
+                    if (on && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
+                        askForBriefs.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
             },
             onFinish = vm::finish,
         ),
@@ -333,6 +348,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onDiscardPlan = vm::discardPlan,
                         onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
                         onAsk = { nav.navigate(Routes.ask()) },
+                        onOpenPerson = { nav.navigate(Routes.person(it)) },
                     ),
                 )
             }
@@ -370,6 +386,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onAsk = { nav.navigate(Routes.ask()) },
                         onSettings = { nav.navigate(Routes.SETTINGS) },
                         onProgress = { nav.navigate(Routes.PROGRESS) },
+                        onLogWins = vm::logWins,
                     ),
                 )
             }
@@ -645,12 +662,24 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
             composable(Routes.SETTINGS) {
                 val vm = aideViewModel { SettingsViewModel(it) }
                 val state by vm.state.collectAsStateWithLifecycle()
-                val askCalendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.setCalendar(it) }
-                val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+                var canNotify by remember { mutableStateOf(Notifications.canPost(context)) }
+                LifecycleResumeEffect(Unit) {
+                    // The user may have just come back from the system's settings for the app.
+                    canNotify = Notifications.canPost(context)
+                    onPauseOrDispose { }
+                }
+                val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    canNotify = granted || Notifications.canPost(context)
                     vm.setBrief(true, state.settings.briefMinutes)
                 }
-                // Reminders are on by default; the permission is asked for the first time one is switched on by hand.
-                val askPrepNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+                // Meeting briefs and afternoon reminders are on by default, so the question is asked when one of them first matters.
+                val askPrepNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    canNotify = granted || Notifications.canPost(context)
+                }
+                val askCalendar = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    vm.setCalendar(granted)
+                    if (granted && !Notifications.canPost(context)) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
                 val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
                     uri?.let(vm::exportTo)
                 }
@@ -658,6 +687,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 SettingsScreen(
                     state = state,
                     appVersion = BuildConfig.VERSION_NAME,
+                    notificationsAllowed = canNotify,
                     actions = SettingsActions(
                         onBack = { nav.popBackStack() },
                         onSaveKey = vm::saveKey,
@@ -678,16 +708,24 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                             }
                         },
                         onCalendar = { on ->
-                            if (on && !context.hasPermission(Manifest.permission.READ_CALENDAR)) askCalendar.launch(Manifest.permission.READ_CALENDAR) else vm.setCalendar(on)
+                            when {
+                                on && !context.hasPermission(Manifest.permission.READ_CALENDAR) -> askCalendar.launch(Manifest.permission.READ_CALENDAR)
+                                else -> {
+                                    vm.setCalendar(on)
+                                    if (on && !canNotify) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            }
                         },
                         onPrep = { on ->
-                            if (on && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (on && !canNotify) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                             vm.setPrep(on)
                         },
                         onNudges = { on ->
-                            if (on && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (on && !canNotify) askPrepNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                             vm.setNudges(on)
                         },
+                        // Once the question has been refused twice Android stops asking; the app's own page always works.
+                        onAllowNotifications = { context.openAppSettings() },
                         onTheme = vm::setTheme,
                         onExport = { saveBackup.launch("aide-backup-${Days.iso(Days.today())}.json") },
                         onRestore = { openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },

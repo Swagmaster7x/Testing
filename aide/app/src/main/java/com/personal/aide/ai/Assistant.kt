@@ -494,6 +494,17 @@ class Assistant(
                 for (task in done) append("- ").append(task.title).append(" (done ").append(Days.iso(Days.ofMillis(task.completedAt ?: 0, zone))).append(")\n")
                 append("</recently_completed>\n\n")
             }
+            // The record of what the user has achieved, so "what have I done this quarter" has something to stand on.
+            val logged = db.wins().all().take(MAX_WINS_IN_CONTEXT)
+            if (logged.isNotEmpty()) {
+                append("<wins_log>\n")
+                for (win in logged) {
+                    append("- ").append(Days.iso(win.day)).append(": ").append(win.title)
+                    if (win.goal.isNotBlank()) append(" [goal: ").append(win.goal).append(']')
+                    append('\n')
+                }
+                append("</wins_log>\n\n")
+            }
             if (events.isNotEmpty()) append("<calendar_today_and_tomorrow>\n").append(ContextBlocks.calendar(events, zone)).append("\n</calendar_today_and_tomorrow>\n\n")
             append("<recent_meetings>\n")
             append(meetings.take(10).joinToString("\n") { ContextBlocks.meetingLine(it, zone) }.ifEmpty { "None summarized yet." })
@@ -956,6 +967,9 @@ class Assistant(
         const val MAX_EARLIER_ITEMS = 25
         /** How far back the first pass over wins looks, in days. */
         const val FIRST_PROGRESS_DAYS = 90L
+
+        /** How many of the newest wins go along with a question to Ask. */
+        const val MAX_WINS_IN_CONTEXT = 20
         /** Characters of knowledge base text sent in full with a request (roughly 8,000 tokens). */
         const val KNOWLEDGE_BUDGET = 32_000
         const val MAX_HISTORY = 24

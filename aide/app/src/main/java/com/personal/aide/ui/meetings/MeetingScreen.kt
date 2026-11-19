@@ -51,6 +51,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -203,6 +204,7 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
             current = state.series,
             all = state.allSeries,
             suggestion = meeting.title,
+            hasNotes = meeting.status == MeetingStatus.READY,
             onDismiss = { choosingSeries = false },
             onChoose = { actions.onSetSeries(it); choosingSeries = false },
             onNew = { actions.onNewSeries(it); choosingSeries = false },
@@ -352,12 +354,13 @@ private fun SeriesDialog(
     current: SeriesEntity?,
     all: List<SeriesEntity>,
     suggestion: String,
+    hasNotes: Boolean,
     onDismiss: () -> Unit,
     onChoose: (Long?) -> Unit,
     onNew: (String) -> Unit,
 ) {
     // -1 stands for "a new one", 0 for "none".
-    var choice by remember { mutableStateOf(current?.id ?: 0L) }
+    var choice by remember { mutableLongStateOf(current?.id ?: 0L) }
     var name by remember { mutableStateOf(suggestion) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -365,7 +368,8 @@ private fun SeriesDialog(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(
-                    "Meetings that repeat are read as one thread: notes open with what has moved since last time, and unfinished items carry over.",
+                    "Meetings that repeat are read as one thread: notes open with what has moved since last time, and unfinished items carry over." +
+                        if (hasNotes) " These notes are already written; use \"Write the notes again\" to have them compared with last time." else "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

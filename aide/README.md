@@ -8,6 +8,8 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore, the official Anthropic SDK
 
 ![The welcome, Today, recording, meeting notes, Tasks, Insights, Ask and Knowledge screens](docs/screens.png)
 
+![A recurring meeting's notes opening with "Since last time", the brief before a meeting, a person's page, and Goals & wins](docs/screens-1.1.png)
+
 The screens above are rendered from the app's own code with a sample week of data (`./gradlew recordRoborazziDebug`).
 
 ## What it does
@@ -18,8 +20,16 @@ The screens above are rendered from the app's own code with a sample week of dat
 - **Knowledge base.** After each meeting Aide saves what is worth keeping: who people are and what they own, what a project is and where it stands, what an acronym means, what was decided and why. It reads the relevant entries before every meeting and every answer, and updates an entry instead of duplicating it. Everything is searchable and editable.
 - **Onboarding that builds the dataset.** First run asks for your role, company, industry and department, then Claude interviews you about your work: responsibilities, projects, the people you deal with, your regular meetings, vocabulary, how you are judged. For your first five meetings it also asks follow-up questions about names and terms it couldn't place; each answer goes into the knowledge base.
 - **Performance overview (Insights).** The week in numbers, counted from your own data: tasks completed, share done on time, what is overdue, what you are waiting on, time in meetings. On top of that Claude writes a weekly review: what went well, what slipped, patterns, what to try next week, and a status update ready to send to your manager. The same screen shows how Aide itself is doing: how many of its notes you rated right, how many of the tasks it spotted you kept, and roughly what it has cost.
+- **Recurring meetings as one thread.** A 1:1 or a standup is linked to the last time it was held, by its calendar event or by Claude recognising it, and you can link or unlink one yourself. Its notes open with "Since last time": what has moved, and where each action item from the earlier meetings stands, with one tap to close the ones the meeting said were done. Unfinished items carry over instead of being listed again.
+- **A page per person.** Tap a name anywhere: what Aide knows about them, what they owe you, what you have open with them, the meetings you have had, and an agenda for your next conversation that Claude suggests from all of that. "Draft a nudge" writes the chase-up for you.
+- **Goals and wins.** A running record of what you achieved, filed under the goals in your profile. Add wins yourself, or have Claude bring the log up to date from finished tasks and meeting notes and say where each goal stands. At appraisal time it drafts your self-review from that record.
+- **Briefs and nudges.** Ten minutes before a calendar meeting, a notification with what was decided last time and what is still open with the people in it, and a button to start recording. In the afternoon, a reminder of what is still due today, and a nudge when something you are waiting on has gone quiet for five days. All of it is worked out on the phone, with no Claude call.
 - **Ask Aide.** A chat that answers from your meetings, tasks and knowledge base: "What did I commit to this week?", "Prep me for my 2:00 with Dana", "Draft a status update".
 - **Around the edges.** Read-only calendar connection (names recordings after the meeting you are in, shows the day, one-tap prep), an optional morning brief notification, backup and restore to a file, light and dark themes.
+
+### Permissions
+
+Microphone (to transcribe), notifications (the recording controls, briefs and reminders), calendar (read-only, optional), exact alarms (so a meeting's brief arrives ten minutes before it and not whenever the phone next wakes), and run-at-startup (to set those alarms again after the phone restarts). Internet is used only to reach the Anthropic API.
 
 ## What you need
 
@@ -46,7 +56,10 @@ The phone's recognizer hears one microphone and does not know who is speaking, s
 - No speaker labels, and no audio is kept, so a transcript can't be re-listened to or re-transcribed.
 - Transcription depends on the phone's recognizer. It has been exercised here against a simulated recognizer and on an emulator, not with real speech in a real room; expect to tune the language and the "keep recognition on the phone" setting on first use.
 - Notes are written after the meeting, not during it, and need a connection to reach Claude.
-- If the phone's clocks change, the morning brief arrives an hour off until its time is set again in Settings.
+- If the phone's clocks change, the morning brief and the afternoon reminders arrive an hour off until the next time they run or their switch is flipped in Settings.
+- Meeting briefs follow the calendar on the phone, which Aide re-reads every few hours and whenever it is opened. A meeting added or moved at the last minute may get no brief, and phones with aggressive battery saving can delay or drop reminders; exempting Aide from battery optimisation helps.
+- People are matched by name. Two colleagues with the same first name are kept apart only when their full names are known; a person known only by a first name shared with someone else gets no page of their own until you say who they are.
+- The wins log and the self-review are drafted from what Aide has seen: recorded meetings, tasks, and what you add yourself. Work that never passed through the app is not in them unless you log it.
 - One phone, no sync. Use Settings > Save a backup to move to another phone; the API key is not in the backup.
 
 ## Build
@@ -76,8 +89,8 @@ The unit tests never call the real Claude API: a local web server plays its part
 | `ai` | `AnthropicLlm` (the Claude client: streaming, structured outputs, refusal fallbacks), `Prompts`, `Schemas` (the JSON shapes Claude replies in), `ContextBlocks` (what is sent with each request), `Assistant` (one function per job), `MeetingProcessor` |
 | `transcribe` | `AndroidSpeechTranscriber` (keeps the recognizer going for a whole meeting), `Recorder`, `RecordingService` |
 | `data` | Room database, settings and work profile (DataStore), the encrypted key store, backup |
-| `domain` | Pure logic: the task board, the performance numbers, keyword retrieval, dates, export |
-| `calendar`, `notify` | Read-only calendar access; notifications and the morning brief |
+| `domain` | Pure logic: the task board, the performance numbers, keyword retrieval, who a name refers to, the pre-meeting brief, dates, export |
+| `calendar`, `notify` | Read-only calendar access; notifications, the morning brief, meeting briefs and afternoon reminders |
 | `ui` | One folder per screen |
 
 The model defaults to Claude Opus 5.5 and can be switched to Sonnet 5.5 or Haiku 5.5 in Settings. Claude is never given tools: each request carries the context that code selected for it (retrieval runs on the phone), so a request can only ever read what it was sent.

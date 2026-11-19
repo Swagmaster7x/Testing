@@ -119,6 +119,7 @@ fun TaskSheet(
     meetingTitle: String? = null,
     onOpenMeeting: ((Long) -> Unit)? = null,
     defaultDay: Long? = null,
+    onOpenPerson: ((String) -> Unit)? = null,
 ) {
     var title by remember { mutableStateOf(task?.title.orEmpty()) }
     var details by remember { mutableStateOf(task?.details.orEmpty()) }
@@ -211,6 +212,12 @@ fun TaskSheet(
             if (meetingId != null && !meetingTitle.isNullOrBlank() && onOpenMeeting != null) {
                 TextButton(onClick = { onOpenMeeting(meetingId) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
                     Text("Open \"$meetingTitle\"")
+                }
+            }
+
+            if (task != null && task.ownership == Ownership.OTHERS && task.owner.isNotBlank() && onOpenPerson != null) {
+                TextButton(onClick = { onOpenPerson(task.owner) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                    Text("Everything open with ${task.owner}")
                 }
             }
 
