@@ -4,7 +4,10 @@ import android.Manifest
 import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -12,6 +15,7 @@ import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -520,6 +524,61 @@ class OnDeviceTest {
             feed.stop()
         }
         assertFalse(feed.alive())
+    }
+
+    /**
+     * Notes dictated in another app and brought across in parts: shared once, then copied and
+     * added with the notification's button, which only works if a window of Aide's can take
+     * focus for a moment to read what was copied. Then finished.
+     */
+    @Test
+    fun notesFromAnotherAppAreCollectedIntoOneMeeting() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val clipboard = app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        app.getSharedPreferences("aide_collecting", Context.MODE_PRIVATE).edit().clear().commit()
+        val db = AppDatabase.inMemory(app)
+        lateinit var container: AppContainer
+        instrumentation.runOnMainSync {
+            container = AppContainer(app, db = db, secrets = MemorySecretStore())
+            (app as AideApp).container = container
+        }
+        fun quick(action: String) = Intent(app, QuickAddActivity::class.java).setAction(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            // The first stretch, shared from the other app.
+            ActivityScenario.launch<QuickAddActivity>(
+                quick(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "Dana said the fix is in review."),
+            ).close()
+            waitUntil("the shared text to be collected") { container.collector.state.value?.parts == 1 }
+            val meetingId = container.collector.state.value!!.meetingId
+
+            waitUntil("the collecting notification") { notifications.activeNotifications.any { it.id == Notifications.COLLECT_ID } }
+            val posted = notifications.activeNotifications.first { it.id == Notifications.COLLECT_ID }
+            assertEquals(listOf("Add copied text", "Finish"), posted.notification.actions.map { it.title.toString() })
+            assertTrue(titleOf(posted.notification), titleOf(posted.notification).contains("collecting"))
+
+            // The second stretch: the whole box is copied, earlier words and all, and the button pressed.
+            instrumentation.runOnMainSync {
+                clipboard.setPrimaryClip(ClipData.newPlainText("dictation", "Dana said the fix is in review. Marcus wants a two-week override window."))
+            }
+            ActivityScenario.launch<QuickAddActivity>(quick(QuickAddActivity.ACTION_ADD_COPIED)).close()
+            waitUntil("the copied text to be collected") { container.collector.state.value?.parts == 2 }
+            assertEquals(
+                listOf("Dana said the fix is in review.", "Marcus wants a two-week override window."),
+                runBlocking { db.meetings().segments(meetingId) }.map { it.text },
+            )
+
+            // The meeting is over.
+            ActivityScenario.launch<QuickAddActivity>(quick(QuickAddActivity.ACTION_FINISH)).close()
+            waitUntil("the collecting to end") { container.collector.state.value == null }
+            waitUntil("the notification to go") { notifications.activeNotifications.none { it.id == Notifications.COLLECT_ID } }
+            assertEquals(MeetingStatus.TRANSCRIBED, runBlocking { db.meetings().get(meetingId) }!!.status)
+            assertEquals(13, runBlocking { db.meetings().get(meetingId) }!!.wordCount)
+        } finally {
+            app.getSharedPreferences("aide_collecting", Context.MODE_PRIVATE).edit().clear().commit()
+            notifications.cancel(Notifications.COLLECT_ID)
+            db.close()
+        }
     }
 
     private fun waitUntil(what: String, timeoutMs: Long = 60_000, condition: () -> Boolean) {

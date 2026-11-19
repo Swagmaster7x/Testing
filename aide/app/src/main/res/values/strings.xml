@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Aide</string>
+    <string name="quick_add_label">Add to Aide notes</string>
 </resources>

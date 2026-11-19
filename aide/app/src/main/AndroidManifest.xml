@@ -75,6 +75,31 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Adds text from another app to the notes being collected, without opening Aide: from the
+            share sheet, from the menu over selected text, or from the collecting notification.
+        -->
+        <activity
+            android:name=".QuickAddActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="@string/quick_add_label"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <!-- Hands the camera app one file to save a photo of notes into. Nothing else is shared. -->
         <provider
             android:name="androidx.core.content.FileProvider"

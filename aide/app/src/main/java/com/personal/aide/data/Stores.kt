@@ -77,6 +77,21 @@ class MeetingStore(private val dao: MeetingDao, private val now: () -> Long = Sy
         return id
     }
 
+    /**
+     * Adds more text to the end of a meeting the user is putting together from parts.
+     * False if the meeting has gone or there was nothing to add.
+     */
+    suspend fun appendText(meetingId: Long, text: String): Boolean {
+        val lines = splitImportedText(text)
+        if (lines.isEmpty()) return false
+        dao.get(meetingId) ?: return false
+        val next = (dao.segments(meetingId).maxOfOrNull { it.offsetMs } ?: -1L) + 1
+        dao.insertSegments(lines.mapIndexed { index, line -> SegmentEntity(meetingId = meetingId, offsetMs = next + index, text = line) })
+        // Read again: the user may have renamed it while the lines were going in.
+        dao.get(meetingId)?.let { current -> dao.update(current.copy(wordCount = current.wordCount + lines.sumOf { wordCount(it) }, error = "")) }
+        return true
+    }
+
     suspend fun rename(meetingId: Long, title: String) {
         val clean = title.trim()
         if (clean.isEmpty()) return

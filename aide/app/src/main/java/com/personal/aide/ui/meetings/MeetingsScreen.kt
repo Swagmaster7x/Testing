@@ -37,6 +37,7 @@ import com.personal.aide.data.db.TaskStatus
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.Retrieval
 import com.personal.aide.ai.IntakeState
+import com.personal.aide.data.Collecting
 import com.personal.aide.ui.components.AideIcons
 import com.personal.aide.ui.components.Banner
 import com.personal.aide.ui.components.Tone
@@ -48,6 +49,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class MeetingsState(
     val loaded: Boolean = false,
@@ -63,20 +65,23 @@ data class MeetingsState(
     val series: Map<Long, String> = emptyMap(),
     /** Something the user added by hand is being read. */
     val intake: IntakeState = IntakeState.Idle,
+    /** Notes being brought over a part at a time from another app. */
+    val collecting: Collecting? = null,
 )
 
-class MeetingsViewModel(container: AppContainer) : ViewModel() {
+class MeetingsViewModel(private val container: AppContainer) : ViewModel() {
     private val query = MutableStateFlow("")
 
     val state: StateFlow<MeetingsState> = combine(
         container.db.meetings().observeAll(),
         container.db.tasks().observeAll(),
         query,
-        combine(container.processor.inProgress, container.db.series().observeAll(), container.intake.state) { busy, series, intake ->
-            Triple(busy, series.associate { it.id to it.name }, intake)
+        combine(container.processor.inProgress, container.db.series().observeAll(), container.intake.state, container.collector.state) { busy, series, intake, collecting ->
+            Background(busy, series.associate { it.id to it.name }, intake, collecting)
         },
         container.recorder.state,
-    ) { meetings, tasks, query, (summarizing, series, intake), recorder ->
+    ) { meetings, tasks, query, background, recorder ->
+        val (summarizing, series, intake, collecting) = background
         val shown = if (query.isBlank()) {
             meetings
         } else {
@@ -98,12 +103,20 @@ class MeetingsViewModel(container: AppContainer) : ViewModel() {
             recording = recorder.active,
             series = series,
             intake = intake,
+            collecting = collecting,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MeetingsState())
 
     fun search(text: String) {
         query.value = text
     }
+
+    /** Ends the collecting and has it written up; [onDone] gets the meeting, or null if nothing was collected. */
+    fun finishCollecting(onDone: (Long?) -> Unit) {
+        viewModelScope.launch { onDone(runCatching { container.finishCollecting() }.getOrNull()) }
+    }
+
+    private data class Background(val summarizing: Set<Long>, val series: Map<Long, String>, val intake: IntakeState, val collecting: Collecting?)
 }
 
 fun dayHeading(day: Long, today: Long): String = when (day) {
@@ -120,6 +133,7 @@ fun MeetingsScreen(
     onRecord: () -> Unit,
     onImport: () -> Unit,
     onAsk: () -> Unit,
+    onFinishCollecting: () -> Unit = {},
 ) {
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -161,6 +175,17 @@ fun MeetingsScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 160.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            state.collecting?.let { collecting ->
+                item(key = "collecting") {
+                    Banner(
+                        "Collecting notes from another app: " + collectingSoFar(collecting) + ".",
+                        tone = Tone.ASSISTANT,
+                        icon = AideIcons.Note,
+                        action = if (collecting.parts == 0) "Stop" else "Finish",
+                        onAction = onFinishCollecting,
+                    )
+                }
+            }
             (state.intake as? IntakeState.Working)?.let { reading ->
                 item(key = "intake") {
                     Banner(

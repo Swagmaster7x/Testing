@@ -16,6 +16,7 @@ import com.personal.aide.data.DocumentReader
 import com.personal.aide.data.KeystoreSecretStore
 import com.personal.aide.data.KnowledgeBase
 import com.personal.aide.data.MeetingStore
+import com.personal.aide.data.NoteCollector
 import com.personal.aide.data.QuestionStore
 import com.personal.aide.data.SecretStore
 import com.personal.aide.data.SeriesStore
@@ -66,6 +67,9 @@ class AppContainer(
 
     val documents = DocumentReader(app)
 
+    /** One meeting's notes brought over a part at a time from another app. */
+    val collector = NoteCollector(app, meetings, db.meetings())
+
     val processor = MeetingProcessor(scope, assistant, db, settings, secrets) { meetingId, result ->
         // Someone looking at the app can see the summary arrive; anyone else gets a notification.
         if (ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@MeetingProcessor
@@ -101,6 +105,23 @@ class AppContainer(
         // Once the text is saved the pictures have done their job. After a failure they are kept, to try again with.
         onFinished = { materials, saved -> if (saved) materials.forEach(documents::discard) },
     )
+
+    /** Ends the collecting and has what was collected written up. Null if nothing was collected. */
+    suspend fun finishCollecting(): Long? {
+        val meetingId = collector.finish() ?: return null
+        runCatching { processor.onRecordingSaved(meetingId) }
+        return meetingId
+    }
+
+    init {
+        // The notification with its "Add copied text" button is up exactly as long as something is being collected.
+        scope.launch {
+            runCatching { collector.refresh() }
+            collector.state.collect { collecting ->
+                if (collecting == null) Notifications.stopCollecting(app) else Notifications.collecting(app, collecting)
+            }
+        }
+    }
 
     /** Tidying up after a crash or a kill: closes a recording that was cut off, and frees a summary that never finished. */
     private val recovery: Job = scope.launch(Dispatchers.IO) {

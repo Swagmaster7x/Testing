@@ -351,6 +351,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         nav.navigate(Routes.add())
                     },
                     onAsk = { nav.navigate(Routes.ask()) },
+                    onFinishCollecting = { vm.finishCollecting { id -> if (id != null) nav.navigate(Routes.meeting(id)) } },
                 )
             }
             composable(Routes.TASKS) {
@@ -694,6 +695,10 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 }
                 val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_PHOTOS)) { vm.addFiles(it) }
                 val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { vm.addFiles(it) }
+                val askToNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                    // Asked for while collecting was starting; put the notification up now that it may be shown.
+                    if (granted) container.collector.state.value?.let { Notifications.collecting(context, it) }
+                }
                 // Once it is saved there is nothing more to do here: show what Aide makes of it.
                 LaunchedEffect(state.intake) {
                     val done = state.intake as? IntakeState.Done ?: return@LaunchedEffect
@@ -730,6 +735,20 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onSave = vm::save,
                         onDismissError = vm::dismissError,
                         onSettings = { nav.navigate(Routes.SETTINGS) },
+                        onStartCollecting = {
+                            // The notification's button is how each part gets across, so it has to be allowed to show.
+                            if (!Notifications.canPost(context)) runCatching { askToNotify.launch(NOTIFICATIONS_PERMISSION) }
+                            vm.startCollecting()
+                        },
+                        onFinishCollecting = {
+                            vm.finishCollecting { id ->
+                                if (id != null) {
+                                    nav.popBackStack()
+                                    nav.navigate(Routes.meeting(id))
+                                }
+                            }
+                        },
+                        onOpenMeeting = { nav.navigate(Routes.meeting(it)) },
                     ),
                 )
             }

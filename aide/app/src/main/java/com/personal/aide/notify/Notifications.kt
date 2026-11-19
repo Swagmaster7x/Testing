@@ -12,6 +12,8 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.personal.aide.MainActivity
+import com.personal.aide.data.Collecting
+import com.personal.aide.QuickAddActivity
 import com.personal.aide.R
 import com.personal.aide.calendar.CalendarEvent
 
@@ -21,12 +23,14 @@ object Notifications {
     const val CHANNEL_BRIEF = "brief"
     const val CHANNEL_PREP = "prep"
     const val CHANNEL_NUDGES = "nudges"
+    const val CHANNEL_COLLECT = "collect"
 
     const val RECORDING_ID = 1
     const val BRIEF_ID = 2
     const val DUE_ID = 3
     const val WAITING_ID = 4
     const val PREP_ID = 5
+    const val COLLECT_ID = 6
     private const val SUMMARY_ID_BASE = 1000
 
     fun manager(context: Context): NotificationManager =
@@ -60,6 +64,49 @@ object Notifications {
                 description = "A daily reminder of what is due and what is on."
             },
         )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_COLLECT, "Collecting notes", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Shown while Aide is collecting notes you bring over from another app, with a button to add what you copied."
+                setShowBadge(false)
+            },
+        )
+    }
+
+    /**
+     * Stays up while notes are being collected from another app: its buttons are how each part
+     * gets across without leaving that app.
+     */
+    fun collecting(context: Context, collecting: Collecting) {
+        fun quick(action: String, requestCode: Int) = PendingIntent.getActivity(
+            context,
+            requestCode,
+            Intent(context, QuickAddActivity::class.java).setAction(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val soFar = when (collecting.parts) {
+            0 -> "Nothing added yet"
+            1 -> "1 part, %,d words".format(collecting.words)
+            else -> "%d parts, %,d words".format(collecting.parts, collecting.words)
+        }
+        post(
+            context,
+            COLLECT_ID,
+            NotificationCompat.Builder(context, CHANNEL_COLLECT)
+                .setSmallIcon(R.drawable.ic_stat_aide)
+                .setContentTitle("Aide is collecting notes")
+                .setContentText("$soFar. Copy what you dictated, then tap Add copied text.")
+                .setStyle(NotificationCompat.BigTextStyle().bigText("$soFar. Copy what you dictated in the other app, then tap Add copied text. Tap Finish when the meeting is over."))
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(openMeeting(context, collecting.meetingId))
+                .addAction(0, "Add copied text", quick(QuickAddActivity.ACTION_ADD_COPIED, 31))
+                .addAction(0, "Finish", quick(QuickAddActivity.ACTION_FINISH, 32))
+                .build(),
+        )
+    }
+
+    fun stopCollecting(context: Context) {
+        runCatching { manager(context).cancel(COLLECT_ID) }
     }
 
     /** Ten minutes before a meeting: what the app has on it, and a button to start recording. */

@@ -153,6 +153,9 @@ class ScreenshotTest {
             series = s.series.associate { it.id to it.name },
         )
         shot("meetings") { MeetingsScreen(state, {}, {}, {}, {}, {}) }
+        shot("meetings-collecting") {
+            MeetingsScreen(state.copy(collecting = com.personal.aide.data.Collecting(9, "Meeting 18 Nov, 2:00 PM", parts = 3, words = 412)), {}, {}, {}, {}, {})
+        }
         shot("meetings-empty") { MeetingsScreen(MeetingsState(loaded = true, today = s.today), {}, {}, {}, {}, {}) }
     }
 
@@ -294,6 +297,9 @@ class ScreenshotTest {
         shot("add", dark = true) { AddScreen(AddState(kind = AddKind.REFERENCE, materials = added), "", AddActions()) }
         shot("add-reading") {
             AddScreen(AddState(kind = AddKind.REFERENCE, materials = added, intake = IntakeState.Working(6, 17)), "", AddActions())
+        }
+        shot("add-collecting") {
+            AddScreen(AddState(collecting = com.personal.aide.data.Collecting(9, "Meeting 18 Nov, 2:00 PM", parts = 3, words = 412)), "", AddActions())
         }
         shot("add-no-key") {
             AddScreen(AddState(hasKey = false, error = "Pictures and PDFs are read by Claude. Add your API key in Settings first, or type the notes in."), "Standup: Dana said the rate feed fix is in review.", AddActions())

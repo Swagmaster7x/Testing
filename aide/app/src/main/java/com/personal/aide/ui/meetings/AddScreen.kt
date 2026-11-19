@@ -57,6 +57,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.personal.aide.AppContainer
 import com.personal.aide.ai.IntakeState
+import com.personal.aide.data.Collecting
 import com.personal.aide.data.DocumentException
 import com.personal.aide.data.Material
 import com.personal.aide.data.db.MeetingSource
@@ -87,6 +88,8 @@ data class AddState(
     val intake: IntakeState = IntakeState.Idle,
     val error: String? = null,
     val hasKey: Boolean = true,
+    /** Notes being brought over a part at a time from another app, if that is going on. */
+    val collecting: Collecting? = null,
 ) {
     /** Pictures and PDF pages, which Claude has to read. */
     val pageCount: Int get() = materials.sumOf { if (it is Material.Pages) it.files.size else 0 }
@@ -108,16 +111,32 @@ class AddViewModel(private val container: AppContainer, kind: AddKind) : ViewMod
 
     private val local = MutableStateFlow(Local(kind))
 
-    val state: StateFlow<AddState> = combine(local, container.intake.state, container.secrets.hasKey) { local, intake, hasKey ->
-        AddState(local.kind, local.materials, local.opening, intake, local.error, hasKey)
+    val state: StateFlow<AddState> = combine(
+        local,
+        container.intake.state,
+        container.secrets.hasKey,
+        container.collector.state,
+    ) { local, intake, hasKey, collecting ->
+        AddState(local.kind, local.materials, local.opening, intake, local.error, hasKey, collecting)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AddState(kind = kind))
 
     init {
+        viewModelScope.launch { runCatching { container.collector.refresh() } }
         // A result left over from something added earlier belongs to that screen, not this one.
         if (container.intake.state.value is IntakeState.Done) container.intake.acknowledge()
     }
 
     fun setKind(kind: AddKind) = local.update { it.copy(kind = kind) }
+
+    /** Begins collecting notes that will arrive a part at a time from another app. */
+    fun startCollecting() {
+        viewModelScope.launch { runCatching { container.collector.start() } }
+    }
+
+    /** Ends the collecting and has it written up; [onDone] gets the meeting, or null if nothing was collected. */
+    fun finishCollecting(onDone: (Long?) -> Unit) {
+        viewModelScope.launch { onDone(runCatching { container.finishCollecting() }.getOrNull()) }
+    }
 
     fun addFiles(uris: List<Uri>) {
         if (uris.isEmpty()) return
@@ -203,7 +222,17 @@ class AddActions(
     val onSave: (title: String, typed: String) -> Unit = { _, _ -> },
     val onDismissError: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    val onStartCollecting: () -> Unit = {},
+    val onFinishCollecting: () -> Unit = {},
+    val onOpenMeeting: (Long) -> Unit = {},
 )
+
+/** How far a collection has got, in a few words. */
+fun collectingSoFar(collecting: Collecting): String = when (collecting.parts) {
+    0 -> "nothing added yet"
+    1 -> "1 part, %,d words".format(collecting.words)
+    else -> "%d parts, %,d words".format(collecting.parts, collecting.words)
+}
 
 /** A rough cost of having Claude read [pages] pictures with the default model, for the user to see before they send them. */
 fun readingCost(pages: Int): String {
@@ -363,7 +392,49 @@ fun AddScreen(state: AddState, initialText: String, actions: AddActions) {
                     )
                 }
             }
+            if (!state.working) CollectCard(state.collecting, actions)
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+/** The way to bring a meeting over in parts from an app whose voice typing hears it better. */
+@Composable
+private fun CollectCard(collecting: Collecting?, actions: AddActions) {
+    if (collecting == null) {
+        AideCard {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Dictating in another app?", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "If another app's voice typing hears your meetings better, let it do the listening. Start collecting here, then after each stretch copy what it wrote and tap \"Add copied text\" on Aide's notification. The parts go into one meeting, and Aide writes it up when you finish.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = actions.onStartCollecting) { Text("Start collecting") }
+            }
+        }
+        return
+    }
+    AideCard(container = MaterialTheme.colorScheme.tertiaryContainer) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "Collecting notes: " + collectingSoFar(collecting),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            Text(
+                "In the other app, copy what you dictated, pull down your notifications and tap \"Add copied text\". Sharing the text to \"Add to Aide notes\" does the same. If you copy the whole box each time, Aide keeps only what is new.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = actions.onFinishCollecting) { Text(if (collecting.parts == 0) "Stop collecting" else "Finish and write the notes") }
+                if (collecting.parts > 0) {
+                    androidx.compose.material3.TextButton(onClick = { actions.onOpenMeeting(collecting.meetingId) }) {
+                        Text("See it", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
+            }
         }
     }
 }
