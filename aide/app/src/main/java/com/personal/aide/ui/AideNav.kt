@@ -260,7 +260,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
     val route = entry?.destination?.route
     var sharedText by rememberSaveable { mutableStateOf("") }
     // Addresses of files another app shared, kept as text so they survive the screen being rebuilt.
-    var sharedFiles by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var sharedFiles by rememberSaveable { mutableStateOf<List<String>>(emptyList()) }
 
     val startRecording = rememberRecordingStarter { nav.navigate(Routes.RECORD) { launchSingleTop = true } }
     val copy: (String) -> Unit = { text ->
@@ -275,12 +275,12 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
             Launch.OpenRecording -> if (container.recorder.state.value.active) nav.navigate(Routes.RECORD) { launchSingleTop = true }
             is Launch.SharedText -> {
                 sharedText = launch.text
-                sharedFiles = arrayListOf()
+                sharedFiles = emptyList()
                 nav.navigate(Routes.add()) { launchSingleTop = true }
             }
             is Launch.SharedFiles -> {
                 sharedText = launch.text
-                sharedFiles = ArrayList(launch.files.map { it.toString() })
+                sharedFiles = launch.files.map { it.toString() }
                 nav.navigate(Routes.add()) { launchSingleTop = true }
             }
             Launch.OpenTasks -> nav.toTab(Routes.TASKS)
@@ -347,7 +347,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     onRecord = { startRecording(null) },
                     onImport = {
                         sharedText = ""
-                        sharedFiles = arrayListOf()
+                        sharedFiles = emptyList()
                         nav.navigate(Routes.add())
                     },
                     onAsk = { nav.navigate(Routes.ask()) },
@@ -391,7 +391,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     onOpenPerson = { nav.navigate(Routes.person(it)) },
                     onAddDocument = {
                         sharedText = ""
-                        sharedFiles = arrayListOf()
+                        sharedFiles = emptyList()
                         nav.navigate(Routes.add(AddKind.REFERENCE))
                     },
                 )
@@ -683,7 +683,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 LaunchedEffect(sharedFiles) {
                     if (sharedFiles.isNotEmpty()) {
                         vm.addFiles(sharedFiles.map(Uri::parse))
-                        sharedFiles = arrayListOf()
+                        sharedFiles = emptyList()
                     }
                 }
                 // Where the camera was asked to save its picture; kept across the trip to the camera app and back.
@@ -699,7 +699,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     val done = state.intake as? IntakeState.Done ?: return@LaunchedEffect
                     vm.finished()
                     sharedText = ""
-                    sharedFiles = arrayListOf()
+                    sharedFiles = emptyList()
                     nav.popBackStack()
                     nav.navigate(Routes.meeting(done.meetingId))
                 }

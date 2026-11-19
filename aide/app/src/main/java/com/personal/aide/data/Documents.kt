@@ -6,11 +6,12 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
-import android.media.ExifInterface
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
+import androidx.exifinterface.media.ExifInterface
 import com.personal.aide.domain.MaterialKind
 import com.personal.aide.domain.docxText
 import com.personal.aide.domain.fitWithin
@@ -131,7 +132,7 @@ class DocumentReader(context: Context) {
             }
             String(buffer, 0, length)
         } ?: throw DocumentException("\"$name\" couldn't be opened.")
-        return checked(text.removePrefix("﻿"), name)
+        return checked(text.removePrefix(BYTE_ORDER_MARK), name)
     }
 
     private fun readWord(uri: Uri, name: String): String {
@@ -167,7 +168,7 @@ class DocumentReader(context: Context) {
                     for (index in 0 until pdf.pageCount) {
                         pdf.openPage(index).use { page ->
                             val (width, height) = scaleTo(page.width, page.height, PDF_EDGE)
-                            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            val bitmap = createBitmap(width, height)
                             // Pages are drawn on transparent by default, which a JPEG turns black.
                             bitmap.eraseColor(Color.WHITE)
                             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
@@ -232,6 +233,8 @@ class DocumentReader(context: Context) {
     }
 
     companion object {
+        /** What some editors put invisibly at the start of a text file. */
+        private const val BYTE_ORDER_MARK = "\uFEFF"
         const val AUTHORITY_SUFFIX = ".files"
         const val PAGE_DIR = "aide_pages"
 

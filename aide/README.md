@@ -10,6 +10,8 @@ Kotlin, Jetpack Compose, Material 3, Room, DataStore, the official Anthropic SDK
 
 ![A recurring meeting's notes opening with "Since last time", the brief before a meeting, a person's page, and Goals & wins](docs/screens-1.1.png)
 
+![Adding a document and photos, Aide reading the pages, a filed document with what it added to the knowledge base, and Settings](docs/screens-1.2.png)
+
 The screens above are rendered from the app's own code with a sample week of data (`./gradlew recordRoborazziDebug`).
 
 ## What it does
