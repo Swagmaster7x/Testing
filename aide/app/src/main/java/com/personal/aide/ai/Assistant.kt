@@ -97,7 +97,11 @@ class Assistant(
                 meeting.copy(
                     status = MeetingStatus.TRANSCRIBED,
                     wordCount = words,
-                    error = "Only $words words were captured, which is too little to summarize.",
+                    error = if (meeting.source == MeetingSource.LIVE) {
+                        "Only $words words were captured, which is too little to summarize."
+                    } else {
+                        "There are only $words words here, which is too little to write up."
+                    },
                 ),
             )
             return SummaryResult.TooShort(words)
@@ -112,6 +116,8 @@ class Assistant(
         val document = meeting.source == MeetingSource.DOCUMENT
         val maxQuestions = when {
             !prefs.learningMode -> 0
+            // A document gets a couple at most: it is read once, and the questions are for the meetings to come.
+            document -> 2
             meetings.readyCount() < LEARNING_MEETINGS -> 4
             else -> 2
         }
@@ -145,7 +151,7 @@ class Assistant(
                         thread.text,
                         header,
                         if (document) "<document>\n$transcript\n</document>" else "<transcript>\n$transcript\n</transcript>",
-                        if (document) Prompts.documentTask(profile, maxQuestions.coerceAtMost(2))
+                        if (document) Prompts.documentTask(profile, maxQuestions)
                         else Prompts.meetingTask(profile, imported, maxQuestions, learning = maxQuestions > 2),
                     ).filter { it.isNotBlank() }.joinToString("\n\n"),
                 ),
@@ -646,7 +652,10 @@ class Assistant(
         val completed = mine.filter { it.status == TaskStatus.DONE && (it.completedAt ?: 0) in from until until }
         val open = mine.filter { it.status == TaskStatus.OPEN }
         val waiting = tasks.filter { it.ownership == Ownership.OTHERS && it.status == TaskStatus.OPEN }
-        val weekMeetings = allMeetings.filter { it.startedAt in from until until && it.status == MeetingStatus.READY }.sortedBy { it.startedAt }
+        // The numbers below leave documents out of the meeting count, so the list does too.
+        val weekMeetings = allMeetings
+            .filter { it.startedAt in from until until && it.status == MeetingStatus.READY && it.source != MeetingSource.DOCUMENT }
+            .sortedBy { it.startedAt }
         val previous = db.insights().get(InsightKind.WEEK_REVIEW, weekStart - 7)
             ?.let { runCatching { AideJson.decodeFromString(WeekReview.serializer(), it.json) }.getOrNull() }
 
@@ -922,7 +931,8 @@ class Assistant(
     }
 
     private suspend fun recentMeetingsBlock(zone: ZoneId): String {
-        val recent = db.meetings().all().filter { it.status == MeetingStatus.READY }.take(6)
+        // Meetings, not documents: this is for planning around what has been happening.
+        val recent = db.meetings().all().filter { it.status == MeetingStatus.READY && it.source != MeetingSource.DOCUMENT }.take(6)
         return "<recent_meetings>\n" + recent.joinToString("\n") { ContextBlocks.meetingLine(it, zone) }.ifEmpty { "None." } + "\n</recent_meetings>"
     }
 

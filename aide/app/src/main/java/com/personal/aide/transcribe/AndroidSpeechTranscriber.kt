@@ -74,8 +74,9 @@ class AndroidSpeechTranscriber(
             when {
                 // The microphone was taken away (a call, another recorder): take it back, or let the recognizer try.
                 !source.alive() -> if (!source.start()) dropBoost(unsupported = false)
-                // The recognizer isn't reading what it is given, so it isn't listening to it.
-                source.stalledMs() > STALL_MS -> dropBoost(unsupported = true)
+                // The recognizer isn't reading what it is given, so it isn't listening to it. If it has
+                // already made words out of this audio it does support it, and something else is wrong.
+                source.stalledMs() > STALL_MS -> dropBoost(unsupported = !heardEver)
                 // It takes the audio, people have been talking for a good while, and not a word has come back.
                 !heardEver && source.speechMs() > DEAF_MS -> dropBoost(unsupported = false)
             }

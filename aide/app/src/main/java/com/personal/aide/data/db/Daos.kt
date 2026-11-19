@@ -20,7 +20,8 @@ interface MeetingDao {
     @Query("SELECT * FROM meetings ORDER BY startedAt DESC") suspend fun all(): List<MeetingEntity>
     @Query("SELECT * FROM meetings WHERE startedAt >= :from AND startedAt < :to ORDER BY startedAt")
     suspend fun between(from: Long, to: Long): List<MeetingEntity>
-    @Query("SELECT COUNT(*) FROM meetings WHERE status = 'READY'") suspend fun readyCount(): Int
+    /** How many meetings have had their notes written. Documents the user added are not meetings. */
+    @Query("SELECT COUNT(*) FROM meetings WHERE status = 'READY' AND source != 'DOCUMENT'") suspend fun readyCount(): Int
     @Query("SELECT * FROM meetings WHERE seriesId = :seriesId ORDER BY startedAt DESC")
     suspend fun inSeries(seriesId: Long): List<MeetingEntity>
     @Query("SELECT * FROM meetings WHERE calendarEventId = :eventId ORDER BY startedAt DESC")

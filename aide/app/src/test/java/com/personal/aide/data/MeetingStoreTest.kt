@@ -181,6 +181,49 @@ class MeetingStoreTest {
         assertEquals(now, meeting.startedAt)
     }
 
+    @Test
+    fun `text brought in as something to know is saved as a document, and is otherwise the same`(): Unit = runBlocking {
+        val text = "Team handbook\n\nWe ship on Thursdays.\nAsk Priya about budgets."
+        val document = get(store.importText("Team handbook", text, source = MeetingSource.DOCUMENT))
+        val notes = get(store.importText("Team handbook", text, source = MeetingSource.IMPORT))
+
+        assertEquals(MeetingSource.DOCUMENT, document.source)
+        assertEquals(MeetingSource.IMPORT, notes.source)
+        assertEquals("nothing but the source differs", notes.copy(id = document.id, source = MeetingSource.DOCUMENT), document)
+        assertEquals(MeetingStatus.TRANSCRIBED, document.status)
+        assertEquals(now, document.startedAt)
+        assertEquals(now, document.endedAt)
+        assertEquals(2 + 4 + 4, document.wordCount)
+        assertEquals(
+            listOf("Team handbook", "We ship on Thursdays.", "Ask Priya about budgets."),
+            db.meetings().segments(document.id).map { it.text },
+        )
+    }
+
+    @Test
+    fun `text brought in is a meeting's notes unless said to be a document`(): Unit = runBlocking {
+        assertEquals(MeetingSource.IMPORT, get(store.importText("Vendor call", "Some notes.")).source)
+        assertEquals(MeetingSource.IMPORT, get(store.importText(null, "Some notes.", now - 1_000)).source)
+    }
+
+    @Test
+    fun `a document without a name gets the dated placeholder for the assistant to replace`(): Unit = runBlocking {
+        val document = get(store.importText("  ", "Reference material.", source = MeetingSource.DOCUMENT))
+        assertTrue(document.titleIsAuto)
+        assertEquals(MeetingStore.defaultTitle(now), document.title)
+    }
+
+    @Test
+    fun `a document that was never read is left a document by a restart`(): Unit = runBlocking {
+        val id = store.importText("Team handbook", "We ship on Thursdays.", source = MeetingSource.DOCUMENT)
+        db.meetings().update(get(id).copy(status = MeetingStatus.PROCESSING))
+
+        store.recoverAfterRestart()
+
+        assertEquals(MeetingStatus.TRANSCRIBED, get(id).status)
+        assertEquals(MeetingSource.DOCUMENT, get(id).source)
+    }
+
     // -------------------------------------------------------------------------------------------
     // Renaming, rating, deleting
 

@@ -4,6 +4,7 @@ import com.personal.aide.data.db.ChatMessageEntity
 import com.personal.aide.data.db.InsightEntity
 import com.personal.aide.data.db.InsightKind
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
@@ -232,6 +233,40 @@ class MetricsTest {
         val stats = workStats(emptyList(), listOf(meeting(1, at(today, 10), at(today, 9)), meeting(2, at(today, 11), at(today, 11, 20))), monday, sunday, today, zone)
         assertEquals(2, stats.meetings)
         assertEquals(20L, stats.meetingMinutes)
+    }
+
+    @Test
+    fun `a document the user added is not a meeting they held`() {
+        val handbook = MeetingEntity(
+            id = 21, title = "Team handbook", startedAt = at(today, 11), endedAt = at(today, 11),
+            source = MeetingSource.DOCUMENT, status = MeetingStatus.READY,
+        )
+        val documents = listOf(
+            handbook,
+            // Not read by the assistant yet.
+            handbook.copy(id = 22, title = "Org chart", startedAt = at(tuesday, 9), endedAt = at(tuesday, 9), status = MeetingStatus.TRANSCRIBED),
+            // Even one that somehow carries a length adds no meeting time.
+            handbook.copy(id = 23, title = "Brief", startedAt = at(monday, 14), endedAt = at(monday, 16)),
+        )
+
+        val without = workStats(weekTasks, weekMeetings, monday, sunday, today, zone)
+        val with = workStats(weekTasks, weekMeetings + documents, monday, sunday, today, zone)
+
+        assertEquals(3, with.meetings)
+        assertEquals(75L, with.meetingMinutes)
+        assertEquals("nothing else about the week changes either", without, with)
+        assertEquals(0, workStats(emptyList(), documents, monday, sunday, today, zone).meetings)
+    }
+
+    @Test
+    fun `notes the user typed or pasted from a meeting still count as that meeting`() {
+        val pasted = MeetingEntity(
+            id = 31, title = "Vendor call", startedAt = at(today, 15), endedAt = at(today, 15),
+            source = MeetingSource.IMPORT, status = MeetingStatus.TRANSCRIBED,
+        )
+        val stats = workStats(emptyList(), listOf(pasted), monday, sunday, today, zone)
+        assertEquals(1, stats.meetings)
+        assertEquals(0L, stats.meetingMinutes)
     }
 
     @Test

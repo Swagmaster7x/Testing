@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.personal.aide.ai.AideModel
 import com.personal.aide.testing.MemoryDataStore
+import com.personal.aide.transcribe.Transcriber
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -173,6 +174,113 @@ class SettingsStoreTest {
         assertEquals(AideModel.OPUS, AideModel.of(""))
         assertEquals(AideModel.OPUS, AideModel.of("claude-opus-5-5"))
         assertEquals(AideModel.HAIKU, AideModel.of("claude-haiku-5-5"))
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Hearing quiet voices
+
+    @Test
+    fun `a fresh install boosts quiet voices and has no reason not to`(): Unit = runBlocking {
+        val settings = store.current()
+        assertEquals(Transcriber.Sensitivity.BOOSTED, settings.sensitivity)
+        assertFalse(settings.boostUnsupported)
+    }
+
+    @Test
+    fun `each sensitivity can be chosen and read back`(): Unit = runBlocking {
+        for (level in Transcriber.Sensitivity.entries) {
+            store.setSensitivity(level)
+            assertEquals(level, store.current().sensitivity)
+            assertEquals(Settings(sensitivity = level), store.current())
+        }
+    }
+
+    @Test
+    fun `the sensitivity is stored by its name`(): Unit = runBlocking {
+        store.setSensitivity(Transcriber.Sensitivity.MAXIMUM)
+        assertEquals("MAXIMUM", prefs.data.first()[stringPreferencesKey("sensitivity")])
+
+        prefs.edit { it[stringPreferencesKey("sensitivity")] = "PHONE" }
+        assertEquals(Transcriber.Sensitivity.PHONE, store.current().sensitivity)
+    }
+
+    @Test
+    fun `a stored sensitivity this version does not know falls back to boosted`(): Unit = runBlocking {
+        for (unknown in listOf("ULTRA", "boosted", "")) {
+            prefs.edit { it[stringPreferencesKey("sensitivity")] = unknown }
+            assertEquals(unknown, Transcriber.Sensitivity.BOOSTED, store.current().sensitivity)
+        }
+    }
+
+    @Test
+    fun `settings saved before there was a sensitivity read as boosted`(): Unit = runBlocking {
+        prefs.edit {
+            it[stringPreferencesKey("model")] = "claude-sonnet-5-5"
+            it[stringPreferencesKey("language")] = "en-GB"
+        }
+        assertEquals(Settings(model = AideModel.SONNET, language = "en-GB", sensitivity = Transcriber.Sensitivity.BOOSTED, boostUnsupported = false), store.current())
+    }
+
+    @Test
+    fun `a phone that refused boosted audio is remembered until told otherwise`(): Unit = runBlocking {
+        store.setSensitivity(Transcriber.Sensitivity.MAXIMUM)
+        store.setBoostUnsupported(true)
+        assertEquals(Settings(sensitivity = Transcriber.Sensitivity.MAXIMUM, boostUnsupported = true), store.current())
+
+        // Nothing else the user changes makes the phone any more willing.
+        store.setLanguage("en-GB")
+        store.setPreferOnDevice(false)
+        store.setMuteChimes(true)
+        store.setModel(AideModel.HAIKU)
+        assertTrue(store.current().boostUnsupported)
+        assertEquals(Transcriber.Sensitivity.MAXIMUM, store.current().sensitivity)
+
+        store.setBoostUnsupported(false)
+        assertFalse(store.current().boostUnsupported)
+    }
+
+    @Test
+    fun `choosing a sensitivity is a request to try boosting again`(): Unit = runBlocking {
+        for (level in Transcriber.Sensitivity.entries) {
+            store.setBoostUnsupported(true)
+            store.setSensitivity(level)
+            assertEquals(Settings(sensitivity = level, boostUnsupported = false), store.current())
+        }
+
+        // Even choosing the level that was already chosen.
+        store.setSensitivity(Transcriber.Sensitivity.BOOSTED)
+        store.setBoostUnsupported(true)
+        store.setSensitivity(Transcriber.Sensitivity.BOOSTED)
+        assertFalse(store.current().boostUnsupported)
+    }
+
+    @Test
+    fun `clearing forgets the sensitivity and what the phone refused`(): Unit = runBlocking {
+        store.setSensitivity(Transcriber.Sensitivity.PHONE)
+        store.setBoostUnsupported(true)
+        store.clear()
+
+        assertEquals(Transcriber.Sensitivity.BOOSTED, store.current().sensitivity)
+        assertFalse(store.current().boostUnsupported)
+    }
+
+    @Test
+    fun `the sensitivity and what the phone refused are still there when the app starts again`(): Unit = runBlocking {
+        val file = File(folder.newFolder(), "aide_settings.preferences_pb")
+
+        val firstRun = Job()
+        val first = SettingsStore(PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + firstRun)) { file })
+        first.setSensitivity(Transcriber.Sensitivity.MAXIMUM)
+        first.setBoostUnsupported(true)
+        firstRun.cancelAndJoin()
+
+        val secondRun = Job()
+        try {
+            val second = SettingsStore(PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + secondRun)) { file })
+            assertEquals(Settings(sensitivity = Transcriber.Sensitivity.MAXIMUM, boostUnsupported = true), second.current())
+        } finally {
+            secondRun.cancelAndJoin()
+        }
     }
 
     // -------------------------------------------------------------------------------------------

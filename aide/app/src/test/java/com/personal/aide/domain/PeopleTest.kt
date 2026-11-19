@@ -3,6 +3,7 @@ package com.personal.aide.domain
 import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.KnowledgeType
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.TaskEntity
@@ -409,6 +410,44 @@ class PeopleTest {
             ),
         )
         assertEquals(listOf(22L, 21L), view.meetings.map { it.id })
+    }
+
+    @Test
+    fun `a document that names them is not a meeting with them`() {
+        val handbook = meeting(31, "Dana Whitfield's onboarding brief", today - 1).copy(source = MeetingSource.DOCUMENT)
+        val unread = meeting(32, "Notes on Dana Whitfield", today - 2, status = MeetingStatus.TRANSCRIBED).copy(source = MeetingSource.DOCUMENT)
+        // Should a document ever carry a list of people, that is still not them attending it.
+        val listed = meeting(33, "Org chart", today - 3, attendees = listOf("Dana Whitfield")).copy(source = MeetingSource.DOCUMENT)
+        val held = meeting(21, "Pricing review", today - 9, attendees = listOf("Dana Whitfield", "Marcus Lee"))
+
+        val view = buildPersonView("Dana Whitfield", listOf(dana, marcus), emptyList(), listOf(handbook, unread, listed, held))
+
+        assertEquals(listOf(21L), view.meetings.map { it.id })
+        assertEquals("they were last met at the meeting, not when the document was added", Fixed.at(today - 9, 10), view.lastMet)
+
+        val onlyDocuments = buildPersonView("Dana Whitfield", listOf(dana), emptyList(), listOf(handbook, unread, listed))
+        assertTrue(onlyDocuments.meetings.isEmpty())
+        assertNull(onlyDocuments.lastMet)
+    }
+
+    @Test
+    fun `what a document lists for the user to do is not taken for something agreed with them one to one`() {
+        val listed = meeting(33, "Onboarding checklist", today - 3, attendees = listOf("Dana Whitfield")).copy(source = MeetingSource.DOCUMENT)
+        val view = buildPersonView(
+            "Dana Whitfield",
+            listOf(dana),
+            listOf(task(1, title = "Order a laptop", meetingId = 33), task(2, title = "Ask Dana Whitfield for API access", meetingId = 33)),
+            listOf(listed),
+        )
+
+        assertEquals("only the task that names them is with them", listOf(2L), view.openWithThem.ids())
+    }
+
+    @Test
+    fun `notes the user typed up from a meeting with them still count as that meeting`() {
+        val typed = meeting(41, "1:1 with Dana", today - 2).copy(source = MeetingSource.IMPORT)
+        val view = buildPersonView("Dana Whitfield", listOf(dana), emptyList(), listOf(typed))
+        assertEquals(listOf(41L), view.meetings.map { it.id })
     }
 
     @Test

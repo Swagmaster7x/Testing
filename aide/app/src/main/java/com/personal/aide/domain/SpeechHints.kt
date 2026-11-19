@@ -23,7 +23,7 @@ fun speechHints(
 
     fun add(text: String) {
         // "Priya Nair — VP Product" is a name with a note attached; the name is the part worth hearing.
-        val clean = text.substringBefore('—').substringBefore(" - ").substringBefore('(').substringBefore(',').substringBefore(':').trim()
+        val clean = text.substringBefore('—').substringBefore('–').substringBefore(" - ").substringBefore('(').substringBefore(',').substringBefore(':').trim()
         if (clean.length !in 2..40 || clean.none { it.isLetter() }) return
         if (seen.add(clean.lowercase())) hints += clean
     }

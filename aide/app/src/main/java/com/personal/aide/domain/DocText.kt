@@ -80,18 +80,33 @@ internal fun wordXmlText(xml: InputStream): String {
     val handler = object : DefaultHandler() {
         private var inText = false
         private var cells = 0
+        /** Inside the list of where a paragraph's tab stops are set, which is formatting and not text. */
+        private var tabStops = 0
+        /** Inside the plain copy Word keeps of a text box for older software; the real one is read. */
+        private var fallback = 0
 
         override fun startElement(uri: String?, localName: String?, qName: String, attributes: Attributes?) {
-            when (qName.substringAfter(':')) {
+            val name = qName.substringAfter(':')
+            if (name == "Fallback") fallback++
+            if (fallback > 0) return
+            when (name) {
                 "t" -> inText = true
-                "tab" -> out.append('\t')
+                "tabs" -> tabStops++
+                "tab" -> if (tabStops == 0) out.append('\t')
                 "br", "cr" -> out.append('\n')
                 "tc" -> cells++
             }
         }
 
         override fun endElement(uri: String?, localName: String?, qName: String) {
-            when (qName.substringAfter(':')) {
+            val name = qName.substringAfter(':')
+            if (name == "Fallback") {
+                fallback = (fallback - 1).coerceAtLeast(0)
+                return
+            }
+            if (fallback > 0) return
+            when (name) {
+                "tabs" -> tabStops = (tabStops - 1).coerceAtLeast(0)
                 "t" -> inText = false
                 // Inside a table a paragraph is part of a cell, not a line of its own.
                 "p" -> out.append(if (cells > 0) ' ' else '\n')
@@ -108,7 +123,7 @@ internal fun wordXmlText(xml: InputStream): String {
         }
 
         override fun characters(chars: CharArray, start: Int, length: Int) {
-            if (inText) out.append(chars, start, length)
+            if (inText && fallback == 0) out.append(chars, start, length)
         }
 
         private fun trimEnd() {
@@ -126,7 +141,10 @@ internal fun wordXmlText(xml: InputStream): String {
     } catch (e: Exception) {
         throw IOException("The document's text couldn't be read", e)
     }
-    return out.toString().lines().joinToString("\n") { it.trimEnd() }.replace(Regex("\n{3,}"), "\n\n").trim()
+    return out.toString().lines()
+        // A row of empty cells is only its dividers; it says nothing.
+        .joinToString("\n") { line -> if (line.all { it == '|' || it.isWhitespace() }) "" else line.trimEnd() }
+        .replace(Regex("\n{3,}"), "\n\n").trim()
 }
 
 /**

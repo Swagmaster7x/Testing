@@ -60,6 +60,15 @@ class RecorderTest {
     /** Set to make the "recording saved" hook blow up. */
     private var finishedHookFails = false
 
+    /** The names and terms the recorder will be given to pass to the recognizer. */
+    private var vocabulary = emptyList<String>()
+
+    /** Set to make putting the vocabulary together blow up. */
+    private var vocabularyFails = false
+
+    /** Every time the recorder asked for the vocabulary, with the people it asked about. */
+    private val vocabularyAskedFor = ArrayList<List<String>>()
+
     private fun time(): Long = Fixed.now + scheduler.currentTime
 
     /** Behaves like the real transcriber as far as the recorder can tell. */
@@ -117,6 +126,11 @@ class RecorderTest {
             onFinished = { id ->
                 finished += id
                 if (finishedHookFails) throw IllegalStateException("the summary could not be started")
+            },
+            hints = { attendees ->
+                vocabularyAskedFor += attendees
+                if (vocabularyFails) throw IllegalStateException("the knowledge base could not be read")
+                vocabulary
             },
             clock = { time() },
         )
@@ -209,13 +223,158 @@ class RecorderTest {
             settings.setMuteChimes(true)
         }
         startRecording()
-        assertEquals(Transcriber.Config(language = "en-GB", preferOnDevice = false, muteChimes = true), mic.config)
+        assertEquals(
+            Transcriber.Config(language = "en-GB", preferOnDevice = false, muteChimes = true, sensitivity = Transcriber.Sensitivity.BOOSTED),
+            mic.config,
+        )
     }
 
     @Test
-    fun `by default the transcriber follows the phone's language and prefers on-device`() {
+    fun `by default the transcriber follows the phone's language, prefers on-device and boosts quiet voices`() {
         startRecording()
-        assertEquals(Transcriber.Config(language = "", preferOnDevice = true, muteChimes = false), mic.config)
+        assertEquals(
+            Transcriber.Config(language = "", preferOnDevice = true, muteChimes = false, sensitivity = Transcriber.Sensitivity.BOOSTED, hints = emptyList()),
+            mic.config,
+        )
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Hearing quiet voices
+
+    @Test
+    fun `the sensitivity chosen in settings is the one the transcriber is started with`() {
+        for (level in Transcriber.Sensitivity.entries) {
+            runBlocking { settings.setSensitivity(level) }
+            startRecording()
+            assertEquals(level, mic.config!!.sensitivity)
+            recorder.stop()
+            settle()
+        }
+    }
+
+    @Test
+    fun `a phone remembered as refusing boosted audio records with its own microphone handling`() {
+        runBlocking {
+            settings.setSensitivity(Transcriber.Sensitivity.MAXIMUM)
+            settings.setBoostUnsupported(true)
+        }
+        startRecording()
+
+        assertEquals(Transcriber.Sensitivity.PHONE, mic.config!!.sensitivity)
+        assertEquals("what the user chose is not forgotten", Transcriber.Sensitivity.MAXIMUM, runBlocking { settings.current() }.sensitivity)
+    }
+
+    @Test
+    fun `choosing a sensitivity again gives the boost another try`() {
+        runBlocking {
+            settings.setBoostUnsupported(true)
+            settings.setSensitivity(Transcriber.Sensitivity.BOOSTED)
+        }
+        startRecording()
+        assertEquals(Transcriber.Sensitivity.BOOSTED, mic.config!!.sensitivity)
+    }
+
+    @Test
+    fun `a transcriber that reports the boost unsupported is remembered for the next recording`() {
+        val first = startRecording()
+        assertEquals(Transcriber.Sensitivity.BOOSTED, mic.config!!.sensitivity)
+        assertFalse(runBlocking { settings.current() }.boostUnsupported)
+
+        mic.listener!!.onBoostUnsupported()
+        settle()
+
+        assertTrue(runBlocking { settings.current() }.boostUnsupported)
+        // It is something to remember, not something that went wrong with this recording.
+        assertEquals(Phase.LISTENING, state.phase)
+        assertNull(state.error)
+        assertNull(state.notice)
+        mic.say("still being heard")
+        recorder.stop()
+        settle()
+        assertEquals(listOf("still being heard"), segments(first).map { it.text })
+
+        startRecording()
+        assertEquals(Transcriber.Sensitivity.PHONE, mic.config!!.sensitivity)
+    }
+
+    @Test
+    fun `once refused, the boost is not tried again when the same recording is paused and resumed`() {
+        startRecording()
+        assertEquals(Transcriber.Sensitivity.BOOSTED, mic.config!!.sensitivity)
+        mic.listener!!.onBoostUnsupported()
+        settle()
+
+        recorder.pause()
+        recorder.resume()
+        settle()
+
+        // Trying again would cost the first seconds after every pause for something already known not to work.
+        assertEquals(Transcriber.Sensitivity.PHONE, mic.config!!.sensitivity)
+        assertEquals(Phase.LISTENING, state.phase)
+    }
+
+    @Test
+    fun `without such a report nothing is remembered`() {
+        startRecording()
+        mic.say("heard fine")
+        mic.listener!!.onNotice("Retrying…")
+        recorder.pause()
+        recorder.resume()
+        recorder.stop()
+        settle()
+
+        assertFalse(runBlocking { settings.current() }.boostUnsupported)
+        startRecording()
+        assertEquals(Transcriber.Sensitivity.BOOSTED, mic.config!!.sensitivity)
+    }
+
+    @Test
+    fun `the recognizer is given the vocabulary for the people in the meeting`() {
+        vocabulary = listOf("Dana Whitfield", "Marcus Lee", "RateStream")
+        recorder.start("Weekly sync", attendees = listOf("Dana Whitfield", "Marcus Lee"))
+        settle()
+
+        assertEquals(listOf(listOf("Dana Whitfield", "Marcus Lee")), vocabularyAskedFor)
+        assertEquals(listOf("Dana Whitfield", "Marcus Lee", "RateStream"), mic.config!!.hints)
+    }
+
+    @Test
+    fun `a recording nobody was invited to still gets the vocabulary`() {
+        vocabulary = listOf("RateStream")
+        startRecording()
+
+        assertEquals(listOf(emptyList<String>()), vocabularyAskedFor)
+        assertEquals(listOf("RateStream"), mic.config!!.hints)
+    }
+
+    @Test
+    fun `a recording still starts when the vocabulary cannot be put together`() {
+        vocabularyFails = true
+        val id = startRecording("No hints today")
+
+        assertEquals(Phase.LISTENING, state.phase)
+        assertNull(state.error)
+        assertTrue(mic.listening)
+        assertEquals(emptyList<String>(), mic.config!!.hints)
+        mic.say("heard all the same")
+        settle()
+        assertEquals(listOf("heard all the same"), segments(id).map { it.text })
+    }
+
+    @Test
+    fun `resuming after a pause still boosts quiet voices and listens out for the same names`() {
+        runBlocking { settings.setSensitivity(Transcriber.Sensitivity.MAXIMUM) }
+        vocabulary = listOf("Dana Whitfield", "RateStream")
+        recorder.start("Weekly sync", attendees = listOf("Dana Whitfield"))
+        settle()
+
+        recorder.pause()
+        recorder.resume()
+
+        assertEquals(2, transcribers.size)
+        assertTrue(mic.listening)
+        assertEquals(Transcriber.Sensitivity.MAXIMUM, mic.config!!.sensitivity)
+        assertEquals(listOf("Dana Whitfield", "RateStream"), mic.config!!.hints)
     }
 
     @Test

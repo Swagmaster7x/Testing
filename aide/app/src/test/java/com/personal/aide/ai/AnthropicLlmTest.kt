@@ -233,6 +233,151 @@ class AnthropicLlmTest {
         else -> throw AssertionError("Unexpected message content: $content")
     }
 
+    // -------------------------------------------------------------------------------------------
+    // Pictures
+
+    private val jpeg = LlmImage("image/jpeg", "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAEB")
+    private val png = LlmImage("image/png", "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ")
+
+    /** The messages of the request the server just received. */
+    private fun sentMessages(): List<JsonObject> = server.takeRequest().json().getValue("messages").jsonArray.map { it.jsonObject }
+
+    private fun blocksOf(message: JsonObject): List<JsonObject> = message.getValue("content").jsonArray.map { it.jsonObject }
+
+    @Test
+    fun `a message with pictures is sent as image blocks followed by the text`() {
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Write out what is on these pages.", listOf(jpeg, png)))))
+
+        val message = sentMessages().single()
+        assertEquals("user", message.getValue("role").jsonPrimitive.content)
+        val blocks = blocksOf(message)
+        assertEquals("the pictures come first, then what to do with them", listOf("image", "image", "text"), blocks.map { it.getValue("type").jsonPrimitive.content })
+
+        assertEquals(
+            buildJsonObject {
+                put("type", "base64")
+                put("media_type", "image/jpeg")
+                put("data", jpeg.base64)
+            },
+            blocks[0].getValue("source"),
+        )
+        assertEquals(
+            buildJsonObject {
+                put("type", "base64")
+                put("media_type", "image/png")
+                put("data", png.base64)
+            },
+            blocks[1].getValue("source"),
+        )
+        assertEquals("Write out what is on these pages.", blocks[2].getValue("text").jsonPrimitive.content)
+        assertFalse("the text is sent once, as a block of its own", blocks[2].containsKey("source"))
+    }
+
+    @Test
+    fun `pictures keep the order they were given in, however many there are`() {
+        val pages = (1..6).map { LlmImage("image/jpeg", java.util.Base64.getEncoder().encodeToString("page $it".toByteArray())) }
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Read pages 1 to 6.", pages))))
+
+        val blocks = blocksOf(sentMessages().single())
+        assertEquals(7, blocks.size)
+        assertEquals(pages.map { it.base64 }, blocks.take(6).map { it.getValue("source").jsonObject.getValue("data").jsonPrimitive.content })
+        assertEquals("text", blocks.last().getValue("type").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `a picture's bytes arrive exactly as they were encoded`() {
+        // A third of a megabyte, about a photographed page, with every byte value in it.
+        val bytes = ByteArray(350_000) { (it * 31 + it / 256).toByte() }
+        val encoded = java.util.Base64.getEncoder().encodeToString(bytes)
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Read this.", listOf(LlmImage("image/jpeg", encoded))))))
+
+        val data = blocksOf(sentMessages().single()).first().getValue("source").jsonObject.getValue("data").jsonPrimitive.content
+        assertEquals(encoded, data)
+        assertTrue(java.util.Base64.getDecoder().decode(data).contentEquals(bytes))
+    }
+
+    @Test
+    fun `every kind of picture the API takes is sent as its own kind`() {
+        for (type in listOf("image/jpeg", "image/png", "image/gif", "image/webp")) {
+            server.enqueue(simpleReply())
+            complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Read this.", listOf(LlmImage(type, "QUJD"))))))
+
+            val source = blocksOf(sentMessages().single()).first().getValue("source").jsonObject
+            assertEquals(type, source.getValue("media_type").jsonPrimitive.content)
+            assertEquals("base64", source.getValue("type").jsonPrimitive.content)
+        }
+    }
+
+    @Test
+    fun `a message without pictures is sent exactly as it was before there were any`() {
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Second question"))))
+        val plain = sentMessages().single()
+        assertEquals("Second question", textOf(plain.getValue("content")))
+        assertFalse(plain.toString().contains("image"))
+
+        // The same message, in a conversation that had pictures earlier on.
+        server.enqueue(simpleReply())
+        complete(
+            request = request(
+                messages = listOf(
+                    LlmMessage(LlmMessage.Role.USER, "What does this say?", listOf(jpeg)),
+                    LlmMessage(LlmMessage.Role.ASSISTANT, "It says three tiers."),
+                    LlmMessage(LlmMessage.Role.USER, "Second question"),
+                ),
+            ),
+        )
+        val (withPicture, reply, later) = sentMessages()
+        assertEquals(listOf("image", "text"), blocksOf(withPicture).map { it.getValue("type").jsonPrimitive.content })
+        assertEquals("It says three tiers.", textOf(reply.getValue("content")))
+        assertEquals("a message with no pictures is untouched by its neighbour having some", plain, later)
+
+        // And an empty list of pictures is no pictures.
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Second question", emptyList()))))
+        assertEquals(plain, sentMessages().single())
+    }
+
+    @Test
+    fun `pictures change nothing else about the request`() {
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Hello"))))
+        val without = server.takeRequest()
+        val plainBody = without.json()
+
+        server.enqueue(simpleReply())
+        complete(request = request(messages = listOf(LlmMessage(LlmMessage.Role.USER, "Hello", listOf(jpeg)))))
+        val with = server.takeRequest()
+        val pictureBody = with.json()
+
+        assertEquals(plainBody.keys, pictureBody.keys)
+        for (key in plainBody.keys - "messages") assertEquals(key, plainBody.getValue(key), pictureBody.getValue(key))
+        assertEquals(without.requestUrl!!.encodedPath, with.requestUrl!!.encodedPath)
+        assertEquals(without.betas(), with.betas())
+    }
+
+    @Test
+    fun `pictures are only ever sent from the user's side`() {
+        server.enqueue(simpleReply())
+        complete(
+            request = request(
+                messages = listOf(
+                    LlmMessage(LlmMessage.Role.USER, "First question"),
+                    LlmMessage(LlmMessage.Role.ASSISTANT, "First answer", listOf(png)),
+                    LlmMessage(LlmMessage.Role.USER, "Second question"),
+                ),
+            ),
+        )
+
+        val messages = sentMessages()
+        assertEquals(listOf("user", "assistant", "user"), messages.map { it.getValue("role").jsonPrimitive.content })
+        assertEquals("First answer", textOf(messages[1].getValue("content")))
+        assertFalse(messages.toString().contains(png.base64))
+    }
+
     @Test
     fun `effort is sent inside output_config`() {
         for ((effort, word) in listOf(Effort.LOW to "low", Effort.MEDIUM to "medium", Effort.HIGH to "high")) {

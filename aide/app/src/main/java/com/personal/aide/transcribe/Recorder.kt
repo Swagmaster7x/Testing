@@ -95,7 +95,9 @@ class Recorder(
         override fun onFatal(message: String) = finish(error = message)
 
         override fun onBoostUnsupported() {
-            // Remembered, so the next recording doesn't spend its first seconds finding out again.
+            // Not tried again when this recording is paused and resumed...
+            config = config.copy(sensitivity = Transcriber.Sensitivity.PHONE)
+            // ...and remembered, so the next recording doesn't spend its first seconds finding out again.
             scope.launch { runCatching { settings.setBoostUnsupported(true) } }
         }
     }

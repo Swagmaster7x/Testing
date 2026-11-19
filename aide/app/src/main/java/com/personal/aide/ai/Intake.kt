@@ -71,9 +71,15 @@ class Intake(
                 val id = meetings.importText(title, text, source = source)
                 saved = true
                 _state.value = IntakeState.Done(id)
-                onSaved(id)
+                // Whatever goes wrong with having its notes written, the text is safely in; that can be asked for again.
+                try {
+                    onSaved(id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                }
             } catch (e: CancellationException) {
-                _state.value = IntakeState.Idle
+                if (!saved) _state.value = IntakeState.Idle
                 throw e
             } catch (e: LlmException) {
                 _state.value = IntakeState.Failed(e.message ?: "The pages couldn't be read.")

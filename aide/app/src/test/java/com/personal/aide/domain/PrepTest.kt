@@ -5,6 +5,7 @@ import com.personal.aide.data.MeetingAnalysis
 import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.KnowledgeType
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.SeriesEntity
@@ -193,6 +194,42 @@ class PrepTest {
         assertEquals(1L, brief(meetings = listOf(sameEvent, unrelated)).last?.id)
         assertNull(brief(meetings = listOf(unrelated)).last)
         assertNull(brief(meetings = listOf(sameEvent, sameName, unrelated)).series)
+    }
+
+    @Test
+    fun `a document with the meeting's name is not last time`() {
+        // The user added the standup's handbook under the standup's own name, after the last standup.
+        val handbook = held(1, title = "Quoting standup", daysAgo = 1, tldr = "How the standup is run.").copy(source = MeetingSource.DOCUMENT)
+        val lastStandup = held(2, title = "Quoting standup", daysAgo = 7, tldr = "Agreed the release date.")
+        val fromTheHandbook = task(5, title = "Read the release checklist", meetingId = 1)
+
+        val brief = brief(calendarEventId = null, meetings = listOf(handbook, lastStandup), tasks = listOf(fromTheHandbook))
+        assertEquals(2L, brief.last?.id)
+        assertTrue(brief.summary(zone), brief.summary(zone).contains("Agreed the release date."))
+        assertTrue("a task from the document was not carried over from an earlier meeting", brief.carriedOver.isEmpty())
+
+        val onlyTheDocument = brief(calendarEventId = null, meetings = listOf(handbook), tasks = listOf(fromTheHandbook))
+        assertNull(onlyTheDocument.last)
+        assertTrue(onlyTheDocument.lastDecisions.isEmpty())
+        assertFalse(onlyTheDocument.hasHistory)
+    }
+
+    @Test
+    fun `a document does not stand in for last time in a series either`() {
+        val standup = series(5, "Quoting standup", calendarEventId = eventId)
+        // However it came to be filed there, a document in the series is not an occurrence of it.
+        val handbook = held(1, daysAgo = 1, seriesId = 5, tldr = "How the standup is run.").copy(source = MeetingSource.DOCUMENT)
+        val lastStandup = held(2, daysAgo = 7, seriesId = 5, tldr = "Agreed the release date.")
+
+        val brief = brief(meetings = listOf(handbook, lastStandup), series = listOf(standup))
+        assertEquals(standup, brief.series)
+        assertEquals(2L, brief.last?.id)
+    }
+
+    @Test
+    fun `notes the user typed up from last time are still last time`() {
+        val typed = held(1, daysAgo = 7, calendarEventId = eventId).copy(source = MeetingSource.IMPORT)
+        assertEquals(1L, brief(meetings = listOf(typed)).last?.id)
     }
 
     @Test

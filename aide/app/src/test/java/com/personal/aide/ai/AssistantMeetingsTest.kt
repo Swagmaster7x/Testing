@@ -247,17 +247,17 @@ class AssistantMeetingsTest : AssistantTestBase() {
     }
 
     @Test
-    fun `pasted text is described as pasted, a recording as recognized speech`(): Unit = runBlocking {
+    fun `text the user brought in is described as theirs, a recording as recognized speech`(): Unit = runBlocking {
         val live = recorded()
         llm.reply(pricingReply)
         assistant.summarizeMeeting(live)
         assertTrue(llm.last.prompt.contains("live speech recognition"))
-        assertFalse(llm.last.prompt.contains("pasted it in"))
+        assertFalse(llm.last.prompt.contains("brought it in themselves"))
 
         val pasted = meetings.importText("Vendor call", pricingTalk.joinToString("\n"))
         llm.reply(pricingReply)
         assistant.summarizeMeeting(pasted)
-        assertTrue(llm.last.prompt.contains("pasted it in"))
+        assertTrue(llm.last.prompt.contains("brought it in themselves"))
         assertFalse(llm.last.prompt.contains("live speech recognition"))
         assertTrue(llm.last.prompt.contains("Title: Vendor call\n"))
     }
