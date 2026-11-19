@@ -25,6 +25,12 @@ import com.personal.aide.ui.knowledge.KnowledgeScreen
 import com.personal.aide.ui.knowledge.KnowledgeState
 import com.personal.aide.ui.knowledge.QuestionsScreen
 import com.personal.aide.ui.knowledge.QuestionsState
+import com.personal.aide.ai.IntakeState
+import com.personal.aide.data.Material
+import com.personal.aide.ui.meetings.AddActions
+import com.personal.aide.ui.meetings.AddKind
+import com.personal.aide.ui.meetings.AddScreen
+import com.personal.aide.ui.meetings.AddState
 import com.personal.aide.ui.meetings.EarlierLine
 import com.personal.aide.ui.meetings.MeetingActions
 import com.personal.aide.ui.meetings.MeetingDetailState
@@ -257,6 +263,39 @@ class ScreenshotTest {
         shot("prep", dark = true) { PrepScreen(prepState(0), PrepActions()) }
         // A meeting Aide has never sat in on, with someone it knows nothing about.
         shot("prep-empty") { PrepScreen(prepState(1), PrepActions()) }
+    }
+
+    @Test
+    fun aDocumentThatWasAdded() {
+        val state = MeetingDetailState(
+            loaded = true,
+            meeting = s.meetings.first { it.id == 7L },
+            analysis = s.guideAnalysis,
+            today = s.today,
+            learned = s.knowledge.filter { 7L in it.sourceMeetingIds },
+        )
+        shot("document") { MeetingScreen(state, MeetingActions()) }
+        shot("document", dark = true) { MeetingScreen(state, MeetingActions()) }
+    }
+
+    @Test
+    @Config(sdk = [35], qualifiers = "w411dp-h1100dp-420dpi")
+    fun addingNotesDocumentsAndPhotos() {
+        // The page pictures don't exist here, so their thumbnails show as blanks.
+        val added = listOf(
+            Material.Words("Planning notes.docx", "word ".repeat(1240)),
+            Material.Pages("Carrier onboarding guide.pdf", List(14) { java.io.File("missing-$it.jpg") }),
+            Material.Pages("Photos", List(3) { java.io.File("missing-photo-$it.jpg") }, photos = true),
+        )
+        shot("add-empty") { AddScreen(AddState(), "", AddActions()) }
+        shot("add") { AddScreen(AddState(kind = AddKind.REFERENCE, materials = added), "", AddActions()) }
+        shot("add", dark = true) { AddScreen(AddState(kind = AddKind.REFERENCE, materials = added), "", AddActions()) }
+        shot("add-reading") {
+            AddScreen(AddState(kind = AddKind.REFERENCE, materials = added, intake = IntakeState.Working(6, 17)), "", AddActions())
+        }
+        shot("add-no-key") {
+            AddScreen(AddState(hasKey = false, error = "Pictures and PDFs are read by Claude. Add your API key in Settings first, or type the notes in."), "Standup: Dana said the rate feed fix is in review.", AddActions())
+        }
     }
 
     @Test

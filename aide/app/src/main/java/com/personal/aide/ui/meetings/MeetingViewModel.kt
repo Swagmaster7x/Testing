@@ -5,7 +5,9 @@ import com.personal.aide.AppContainer
 import com.personal.aide.ai.ContextBlocks
 import com.personal.aide.ai.LlmException
 import com.personal.aide.data.MeetingAnalysis
+import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.QuestionEntity
 import com.personal.aide.data.db.QuestionStatus
 import com.personal.aide.data.db.SegmentEntity
@@ -45,7 +47,12 @@ data class MeetingDetailState(
     val occurrence: Int = 0,
     val allSeries: List<SeriesEntity> = emptyList(),
     val earlier: List<EarlierLine> = emptyList(),
-)
+    /** What the knowledge base holds that came from this meeting or document. */
+    val learned: List<KnowledgeEntity> = emptyList(),
+) {
+    /** Reference material the user added, as opposed to something that happened. */
+    val isDocument: Boolean get() = meeting?.source == MeetingSource.DOCUMENT
+}
 
 class MeetingViewModel(container: AppContainer, private val meetingId: Long) : TaskActionsViewModel(container) {
     private val followUp = MutableStateFlow<FollowUp?>(null)
@@ -65,14 +72,22 @@ class MeetingViewModel(container: AppContainer, private val meetingId: Long) : T
         container.db.questions().observeForMeeting(meetingId),
     ) { meeting, segments, tasks, questions -> Stored(meeting, segments, tasks, questions) }
 
-    private data class Around(val series: List<SeriesEntity>, val meetings: List<MeetingEntity>, val tasks: Map<Long, TaskEntity>)
+    private data class Around(
+        val series: List<SeriesEntity>,
+        val meetings: List<MeetingEntity>,
+        val tasks: Map<Long, TaskEntity>,
+        val learned: List<KnowledgeEntity>,
+    )
 
     /** The rest of the app's data that a meeting in a series is read against. */
     private val around = combine(
         container.db.series().observeAll(),
         container.db.meetings().observeAll(),
         container.db.tasks().observeAll(),
-    ) { series, meetings, tasks -> Around(series, meetings, tasks.associateBy { it.id }) }
+        container.db.knowledge().observeAll(),
+    ) { series, meetings, tasks, knowledge ->
+        Around(series, meetings, tasks.associateBy { it.id }, knowledge.filter { meetingId in it.sourceMeetingIds }.sortedBy { it.type.ordinal })
+    }
 
     val state: StateFlow<MeetingDetailState> = combine(
         stored,
@@ -90,6 +105,7 @@ class MeetingViewModel(container: AppContainer, private val meetingId: Long) : T
             series = series,
             occurrence = if (series == null) 0 else around.meetings.count { it.seriesId == series.id && it.startedAt <= stored.meeting.startedAt },
             allSeries = around.series,
+            learned = around.learned,
             // Only what the meeting actually spoke about; a task since deleted has nothing to show.
             earlier = analysis?.earlierItems.orEmpty().filter { it.status != "not_mentioned" }
                 .mapNotNull { item -> around.tasks[item.taskId]?.let { EarlierLine(it, item.status, item.note) } },

@@ -49,7 +49,9 @@ import com.personal.aide.domain.workStats
 import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
+import java.io.File
 import java.time.ZoneId
+import java.util.Base64
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -106,13 +108,18 @@ class Assistant(
         val profile = settings.currentProfile()
         val entries = db.knowledge().all()
         val imported = meeting.source == MeetingSource.IMPORT
+        // Reference material is read for what it says, not for what happened in it.
+        val document = meeting.source == MeetingSource.DOCUMENT
         val maxQuestions = when {
             !prefs.learningMode -> 0
             meetings.readyCount() < LEARNING_MEETINGS -> 4
             else -> 2
         }
         val zone = zone()
-        val header = buildString {
+        val header = if (document) {
+            "<about_the_document>\nTitle: " + (if (meeting.titleIsAuto) "(not named yet)" else meeting.title) +
+                "\nAdded on: " + Days.longDate(Days.ofMillis(meeting.startedAt, zone)) + "\n</about_the_document>"
+        } else buildString {
             append("<meeting>\n")
             append("Title: ").append(if (meeting.titleIsAuto) "(not named yet)" else meeting.title).append('\n')
             append("Date: ").append(Days.longDate(Days.ofMillis(meeting.startedAt, zone)))
@@ -124,7 +131,7 @@ class Assistant(
         // Recurring meetings: the one this belongs to if that is known, else the few it most plausibly could.
         val allSeries = db.series().all()
         val own = meeting.seriesId?.let { id -> allSeries.firstOrNull { it.id == id } }
-        val thread = seriesContext(meeting, transcript, own, allSeries, zone)
+        val thread = if (document) Thread("", emptyList(), emptyMap(), emptySet()) else seriesContext(meeting, transcript, own, allSeries, zone)
         // The entries whose full text goes with the request; the assistant may rewrite these and only these.
         val shownInFull = ContextBlocks.pickKnowledge(entries, transcript, KNOWLEDGE_BUDGET, focusIsLongText = true).mapTo(HashSet()) { it.key }
         val request = LlmRequest(
@@ -137,9 +144,10 @@ class Assistant(
                         ContextBlocks.knowledge(entries, transcript, KNOWLEDGE_BUDGET, focusIsLongText = true),
                         thread.text,
                         header,
-                        "<transcript>\n$transcript\n</transcript>",
-                        Prompts.meetingTask(profile, imported, maxQuestions, learning = maxQuestions > 2),
-                    ).joinToString("\n\n"),
+                        if (document) "<document>\n$transcript\n</document>" else "<transcript>\n$transcript\n</transcript>",
+                        if (document) Prompts.documentTask(profile, maxQuestions.coerceAtMost(2))
+                        else Prompts.meetingTask(profile, imported, maxQuestions, learning = maxQuestions > 2),
+                    ).filter { it.isNotBlank() }.joinToString("\n\n"),
                 ),
             ),
             schema = Schemas.meetingAnalysis,
@@ -164,9 +172,13 @@ class Assistant(
                 val current = meetings.get(meetingId) ?: return@withTransaction SummaryResult.Missing
                 val named = current.titleIsAuto && raw.title.isNotBlank()
                 // A series the user or the calendar chose stands; otherwise the assistant's reading decides.
-                val seriesId = current.seriesId
-                    ?: thread.candidates.firstOrNull { it.id == raw.series.existingId }?.id
-                    ?: raw.series.newName.takeIf { it.isNotBlank() }?.let { series.findOrCreate(it) }
+                val seriesId = if (document) {
+                    null
+                } else {
+                    current.seriesId
+                        ?: thread.candidates.firstOrNull { it.id == raw.series.existingId }?.id
+                        ?: raw.series.newName.takeIf { it.isNotBlank() }?.let { series.findOrCreate(it) }
+                }
                 // What it said about "last time" only means something against the series it was shown.
                 val earlierTasks = thread.earlierTasks[seriesId].orEmpty()
                 val analysis = raw.copy(
@@ -180,8 +192,8 @@ class Assistant(
                         // Once it has a real name it keeps it, whoever gave it.
                         titleIsAuto = current.titleIsAuto && !named,
                         status = MeetingStatus.READY,
-                        attendees = current.attendees.ifEmpty { analysis.attendees.map { it.trim() }.filter { it.isNotEmpty() }.distinct() },
-                        meetingType = analysis.meetingType.trim(),
+                        attendees = if (document) emptyList() else current.attendees.ifEmpty { analysis.attendees.map { it.trim() }.filter { it.isNotEmpty() }.distinct() },
+                        meetingType = if (document) "document" else analysis.meetingType.trim(),
                         tldr = analysis.tldr.trim(),
                         analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), analysis),
                         error = "",
@@ -689,7 +701,9 @@ class Assistant(
         val titles = allMeetings.associate { it.id to it.title }
         val mine = allTasks.filter { it.ownership == Ownership.MINE }
         val done = mine.filter { it.status == TaskStatus.DONE && (it.completedAt ?: 0) >= from }.sortedBy { it.completedAt }.takeLast(80)
-        val recent = allMeetings.filter { it.status == MeetingStatus.READY && it.startedAt >= from }.sortedBy { it.startedAt }.takeLast(30)
+        // A document added to the knowledge base is not something the user did in a meeting.
+        val recent = allMeetings.filter { it.status == MeetingStatus.READY && it.startedAt >= from && it.source != MeetingSource.DOCUMENT }
+            .sortedBy { it.startedAt }.takeLast(30)
         if (done.isEmpty() && recent.isEmpty()) {
             throw LlmException(LlmException.Kind.OTHER, "Nothing has been finished or recorded since the last update, so there is nothing new to add.")
         }
@@ -824,6 +838,40 @@ class Assistant(
             InsightEntity(kind = InsightKind.SELF_REVIEW, periodStart = fromDay, json = AideJson.encodeToString(SelfReview.serializer(), SelfReview(fromDay, toDay, text)), createdAt = now()),
         )
         text
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Documents and photographs
+
+    /**
+     * Reads pictures of pages (photographed notes, a whiteboard, the pages of a PDF) into plain
+     * text, a few at a time so that no single reply can run out of room. [onProgress] is told
+     * how many pages are done after each batch. The text is the whole of what is kept: the
+     * pictures themselves are not stored.
+     */
+    suspend fun readPages(name: String, pages: List<File>, onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): String = job {
+        if (pages.isEmpty()) throw LlmException(LlmException.Kind.OTHER, "There were no pages to read.")
+        val profile = settings.currentProfile()
+        val text = StringBuilder()
+        var done = 0
+        for (batch in pages.chunked(PAGES_PER_CALL)) {
+            val images = batch.map { file -> LlmImage("image/jpeg", Base64.getEncoder().encodeToString(file.readBytes())) }
+            val response = call(
+                LlmRequest(
+                    feature = "read_pages",
+                    // Names from the profile help with handwriting; nothing else about the user is needed to read a page.
+                    system = listOf(SystemPart(Prompts.identity(profile) + "\n\n" + Prompts.profileBlock(profile))),
+                    messages = listOf(LlmMessage(LlmMessage.Role.USER, Prompts.readPagesTask(name, done + 1, batch.size, pages.size), images)),
+                    maxTokens = 32_000,
+                    effort = Effort.LOW,
+                ),
+            )
+            if (text.isNotEmpty()) text.append("\n\n")
+            text.append(response.text.trim())
+            done += batch.size
+            onProgress(done, pages.size)
+        }
+        text.toString()
     }
 
     // ---------------------------------------------------------------------------------------
@@ -984,6 +1032,9 @@ class Assistant(
         const val MAX_EARLIER_ITEMS = 25
         /** How far back the first pass over wins looks, in days. */
         const val FIRST_PROGRESS_DAYS = 90L
+
+        /** How many page pictures go to Claude in one request when reading a document. */
+        const val PAGES_PER_CALL = 6
 
         /** How many of the newest wins go along with a question to Ask. */
         const val MAX_WINS_IN_CONTEXT = 20

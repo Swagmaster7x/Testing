@@ -55,7 +55,11 @@ class MeetingStore(private val dao: MeetingDao, private val now: () -> Long = Sy
     }
 
     /** A meeting made from pasted text: an exported transcript, or the user's own notes. */
-    suspend fun importText(title: String?, text: String, startedAt: Long = now()): Long {
+    /**
+     * Saves text the user brought in. [source] says whether it is notes from a meeting
+     * ([MeetingSource.IMPORT]) or reference material ([MeetingSource.DOCUMENT]).
+     */
+    suspend fun importText(title: String?, text: String, startedAt: Long = now(), source: MeetingSource = MeetingSource.IMPORT): Long {
         val given = title?.trim().orEmpty()
         val lines = splitImportedText(text)
         val id = dao.insert(
@@ -64,7 +68,7 @@ class MeetingStore(private val dao: MeetingDao, private val now: () -> Long = Sy
                 titleIsAuto = given.isEmpty(),
                 startedAt = startedAt,
                 endedAt = startedAt,
-                source = MeetingSource.IMPORT,
+                source = source,
                 status = MeetingStatus.TRANSCRIBED,
                 wordCount = lines.sumOf { wordCount(it) },
             ),

@@ -14,8 +14,11 @@ import com.anthropic.errors.RateLimitException
 import com.anthropic.errors.SseException
 import com.anthropic.errors.UnauthorizedException
 import com.anthropic.helpers.BetaMessageAccumulator
+import com.anthropic.models.beta.messages.BetaBase64ImageSource
 import com.anthropic.models.beta.messages.BetaCacheControlEphemeral
+import com.anthropic.models.beta.messages.BetaContentBlockParam
 import com.anthropic.models.beta.messages.BetaFallbacksParam
+import com.anthropic.models.beta.messages.BetaImageBlockParam
 import com.anthropic.models.beta.messages.BetaJsonOutputFormat
 import com.anthropic.models.beta.messages.BetaMessage
 import com.anthropic.models.beta.messages.BetaOutputConfig
@@ -144,7 +147,25 @@ class AnthropicLlm(
             )
         for (message in request.messages) {
             when (message.role) {
-                LlmMessage.Role.USER -> builder.addUserMessage(message.text)
+                LlmMessage.Role.USER ->
+                    if (message.images.isEmpty()) {
+                        builder.addUserMessage(message.text)
+                    } else {
+                        // Pictures first, then what to do with them.
+                        val blocks = message.images.map { image ->
+                            BetaContentBlockParam.ofImage(
+                                BetaImageBlockParam.builder()
+                                    .source(
+                                        BetaBase64ImageSource.builder()
+                                            .mediaType(BetaBase64ImageSource.MediaType.of(image.mediaType))
+                                            .data(image.base64)
+                                            .build(),
+                                    )
+                                    .build(),
+                            )
+                        } + BetaContentBlockParam.ofText(BetaTextBlockParam.builder().text(message.text).build())
+                        builder.addUserMessageOfContentBlockParams(blocks)
+                    }
                 LlmMessage.Role.ASSISTANT -> builder.addAssistantMessage(message.text)
             }
         }

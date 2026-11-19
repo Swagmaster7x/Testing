@@ -36,7 +36,10 @@ import com.personal.aide.data.db.MeetingEntity
 import com.personal.aide.data.db.TaskStatus
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.Retrieval
+import com.personal.aide.ai.IntakeState
 import com.personal.aide.ui.components.AideIcons
+import com.personal.aide.ui.components.Banner
+import com.personal.aide.ui.components.Tone
 import com.personal.aide.ui.components.EmptyState
 import com.personal.aide.ui.components.MeetingCard
 import com.personal.aide.ui.components.SectionHeader
@@ -58,6 +61,8 @@ data class MeetingsState(
     val recording: Boolean = false,
     /** The names of the recurring meetings, by id. */
     val series: Map<Long, String> = emptyMap(),
+    /** Something the user added by hand is being read. */
+    val intake: IntakeState = IntakeState.Idle,
 )
 
 class MeetingsViewModel(container: AppContainer) : ViewModel() {
@@ -67,9 +72,11 @@ class MeetingsViewModel(container: AppContainer) : ViewModel() {
         container.db.meetings().observeAll(),
         container.db.tasks().observeAll(),
         query,
-        combine(container.processor.inProgress, container.db.series().observeAll()) { busy, series -> busy to series.associate { it.id to it.name } },
+        combine(container.processor.inProgress, container.db.series().observeAll(), container.intake.state) { busy, series, intake ->
+            Triple(busy, series.associate { it.id to it.name }, intake)
+        },
         container.recorder.state,
-    ) { meetings, tasks, query, (summarizing, series), recorder ->
+    ) { meetings, tasks, query, (summarizing, series, intake), recorder ->
         val shown = if (query.isBlank()) {
             meetings
         } else {
@@ -90,6 +97,7 @@ class MeetingsViewModel(container: AppContainer) : ViewModel() {
             today = Days.today(),
             recording = recorder.active,
             series = series,
+            intake = intake,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MeetingsState())
 
@@ -124,7 +132,7 @@ fun MeetingsScreen(
         },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SmallFloatingActionButton(onClick = onImport) { Icon(AideIcons.Paste, contentDescription = "Paste a transcript or notes") }
+                SmallFloatingActionButton(onClick = onImport) { Icon(AideIcons.Note, contentDescription = "Add notes, a document or photos") }
                 if (!state.recording) {
                     ExtendedFloatingActionButton(
                         onClick = onRecord,
@@ -141,7 +149,7 @@ fun MeetingsScreen(
             EmptyState(
                 icon = AideIcons.Meetings,
                 title = "No meetings yet",
-                body = "Record one, or paste in a transcript or your own notes. Aide writes up the summary, the decisions and the action items.",
+                body = "Record one, or add your own notes: typed, pasted, a document, or photos of what you wrote down. Aide writes up the summary, the decisions and the action items.",
                 modifier = Modifier.padding(padding),
                 action = "Record a meeting",
                 onAction = onRecord,
@@ -153,6 +161,15 @@ fun MeetingsScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 160.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            (state.intake as? IntakeState.Working)?.let { reading ->
+                item(key = "intake") {
+                    Banner(
+                        if (reading.total == 0) "Saving what you added…" else "Reading what you added: page ${minOf(reading.done + 1, reading.total)} of ${reading.total}…",
+                        tone = Tone.ASSISTANT,
+                        icon = AideIcons.Sparkle,
+                    )
+                }
+            }
             item(key = "search") {
                 OutlinedTextField(
                     value = state.query,

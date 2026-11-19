@@ -5,6 +5,13 @@ import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.net.Uri
+import android.os.ParcelFileDescriptor
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -21,10 +28,14 @@ import com.personal.aide.ai.Schemas
 import com.personal.aide.ai.SystemPart
 import com.personal.aide.calendar.Agenda
 import com.personal.aide.calendar.CalendarEvent
+import com.personal.aide.data.DocumentException
+import com.personal.aide.data.DocumentReader
 import com.personal.aide.data.KeystoreSecretStore
+import com.personal.aide.data.Material
 import com.personal.aide.data.MemorySecretStore
 import com.personal.aide.data.db.AppDatabase
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.SegmentKind
@@ -32,6 +43,7 @@ import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.domain.Days
 import com.personal.aide.notify.Notifications
 import com.personal.aide.notify.Reminders
+import com.personal.aide.transcribe.AudioFeed
 import com.personal.aide.transcribe.RecorderState
 import com.personal.aide.transcribe.Transcriber
 import kotlinx.coroutines.runBlocking
@@ -44,10 +56,15 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 /**
  * What only a real Android runtime can confirm: that the Claude SDK loads and works there, that
@@ -339,6 +356,166 @@ class OnDeviceTest {
 
         notifications.cancel(Notifications.DUE_ID)
         db.close()
+    }
+
+    /**
+     * What only a real Android can do with a document: draw the pages of a PDF, and bring a
+     * photograph down to a size worth sending, the right way up.
+     */
+    @Test
+    fun aPdfAWordFileAndAPhotoAreOpenedOnThePhone() = runBlocking {
+        val reader = DocumentReader(app)
+        val work = File(app.cacheDir, "ondevice-docs").apply { mkdirs() }
+
+        // A two-page PDF, one page upright and one on its side.
+        val pdf = File(work, "Quoting brief.pdf")
+        PdfDocument().apply {
+            for ((index, size) in listOf(595 to 842, 842 to 595).withIndex()) {
+                val page = startPage(PdfDocument.PageInfo.Builder(size.first, size.second, index + 1).create())
+                page.canvas.drawText("Self-serve quoting, page ${index + 1}", 72f, 100f, Paint().apply { textSize = 24f })
+                finishPage(page)
+            }
+            pdf.outputStream().use { writeTo(it) }
+            close()
+        }
+        val pages = reader.read(Uri.fromFile(pdf)) as Material.Pages
+        assertEquals("Quoting brief.pdf", pages.name)
+        assertEquals(2, pages.files.size)
+        assertFalse(pages.photos)
+        val sizes = pages.files.map { file -> BitmapFactory.decodeFile(file.path).let { it.width to it.height } }
+        assertEquals("each page is drawn with its long side at the reading size", listOf(1800, 1800), sizes.map { maxOf(it.first, it.second) })
+        assertTrue("the upright page stays upright", sizes[0].second > sizes[0].first)
+        assertTrue("the sideways page stays sideways", sizes[1].first > sizes[1].second)
+        // Drawn on white, not on the transparent black a JPEG would make of an empty page.
+        val corner = BitmapFactory.decodeFile(pages.files[0].path).getPixel(5, 5)
+        assertTrue("page background is white", Color.red(corner) > 240 && Color.green(corner) > 240 && Color.blue(corner) > 240)
+
+        // A photograph far bigger than Claude makes use of.
+        val big = File(work, "whiteboard.jpg")
+        Bitmap.createBitmap(4000, 3000, Bitmap.Config.ARGB_8888).also { bitmap ->
+            bitmap.eraseColor(Color.LTGRAY)
+            big.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+            bitmap.recycle()
+        }
+        val photo = reader.read(Uri.fromFile(big)) as Material.Pages
+        assertTrue(photo.photos)
+        val shrunk = BitmapFactory.decodeFile(photo.files.single().path)
+        assertEquals(2200, shrunk.width)
+        assertEquals(1650, shrunk.height)
+
+        // A Word document, read without Claude.
+        val word = File(work, "Notes.docx")
+        ZipOutputStream(word.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("word/document.xml"))
+            zip.write(
+                ("<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body>" +
+                    "<w:p><w:r><w:t>Decisions</w:t></w:r></w:p><w:p><w:r><w:t>Beta opens 9 February.</w:t></w:r></w:p>" +
+                    "</w:body></w:document>").toByteArray(),
+            )
+            zip.closeEntry()
+        }
+        val words = reader.read(Uri.fromFile(word)) as Material.Words
+        assertEquals("Decisions\nBeta opens 9 February.", words.text)
+
+        // Something it can't read is refused in words, not with a crash.
+        val sheet = File(work, "budget.xlsx").apply { writeText("not really a spreadsheet") }
+        try {
+            reader.read(Uri.fromFile(sheet))
+            fail("A spreadsheet should have been refused")
+        } catch (e: DocumentException) {
+            assertTrue(e.message.orEmpty(), e.message.orEmpty().contains("budget.xlsx"))
+        }
+
+        (pages.files + photo.files).forEach { assertTrue(it.exists()) }
+        reader.discard(pages)
+        reader.discard(photo)
+        (pages.files + photo.files).forEach { assertFalse(it.exists()) }
+        work.deleteRecursively()
+        Unit
+    }
+
+    /** Pictures of pages go to Claude as images, and what comes back is saved as a document and filed. */
+    @Test
+    fun photographedNotesAreReadAndFiledEndToEnd() = runBlocking {
+        val db = AppDatabase.inMemory(app)
+        val container = AppContainer(app, db = db, secrets = MemorySecretStore("sk-ant-test"), llm = llm())
+        val page = File(app.cacheDir, "ondevice-page.jpg")
+        Bitmap.createBitmap(400, 300, Bitmap.Config.ARGB_8888).also { bitmap ->
+            bitmap.eraseColor(Color.WHITE)
+            page.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+            bitmap.recycle()
+        }
+        server.enqueue(reply("--- page 1 ---\nRateStream supplies carrier rates for the quoting project. Dana Whitfield owns the rate feed and reports to Priya Nair, who signs off pricing changes above five percent."))
+        server.enqueue(
+            reply(
+                """{"title":"Quoting notes","meeting_type":"document","tldr":"Who owns what on quoting.","key_points":["Dana owns the rate feed"],"decisions":[],"action_items":[],"open_questions":[],"risks":[],"attendees":[],"knowledge":[{"type":"org","title":"RateStream","content":"Supplies carrier rates for the quoting project."}],"clarifying_questions":[],"transcript_quality":"good","series":{"existing_id":0,"new_name":""},"since_last_time":[],"earlier_items":[]}""",
+            ),
+        )
+
+        assertTrue(container.intake.submit("", "", listOf(Material.Pages("Photos", listOf(page), photos = true)), MeetingSource.DOCUMENT))
+        waitUntil("the photographed page to be read and filed", timeoutMs = 120_000) {
+            runBlocking { db.meetings().all().firstOrNull()?.status == MeetingStatus.READY }
+        }
+
+        val saved = db.meetings().all().single()
+        assertEquals(MeetingSource.DOCUMENT, saved.source)
+        assertEquals("Quoting notes", saved.title)
+        assertTrue(db.meetings().segments(saved.id).joinToString(" ") { it.text }.contains("Dana Whitfield owns the rate feed"))
+        assertNotNull(db.knowledge().findByKey("ratestream"))
+        assertEquals("a document is not a meeting with anyone", emptyList<String>(), saved.attendees)
+        assertFalse("the picture is not kept once it has been read", page.exists())
+
+        val reading = server.takeRequest().body.readUtf8()
+        assertTrue(reading.take(600), reading.contains("\"type\":\"image\""))
+        assertTrue(reading.contains("\"media_type\":\"image/jpeg\""))
+        assertTrue(reading.contains("page 1 of 1"))
+        val filing = server.takeRequest().body.readUtf8()
+        assertTrue(filing.contains("<document>"))
+        assertFalse("the second request carries the text, not the picture again", filing.contains("\"type\":\"image\""))
+        db.close()
+    }
+
+    /**
+     * The app's own microphone capture really produces audio into a pipe a recognizer could read.
+     * Skipped where the microphone can't be opened at all (some emulators have none).
+     */
+    @Test
+    fun theAppsOwnCaptureDeliversAudioThroughAPipe() {
+        val levels = AtomicInteger(0)
+        val feed = AudioFeed(maxGain = 16f) { levels.incrementAndGet() }
+        assumeTrue("this device has no microphone to open", feed.start())
+        try {
+            assertTrue(feed.alive())
+            val stream = feed.open()
+            assertNotNull(stream)
+            val read = AtomicInteger(0)
+            val reader = Thread {
+                runCatching {
+                    ParcelFileDescriptor.AutoCloseInputStream(stream).use { input ->
+                        val buffer = ByteArray(3200)
+                        while (read.get() < 32_000) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            read.addAndGet(count)
+                        }
+                    }
+                }
+            }.also { it.start() }
+            // A second of 16 kHz, 16-bit audio is 32,000 bytes.
+            waitUntil("a second of audio to come through the pipe", timeoutMs = 30_000) { read.get() >= 32_000 }
+            assertTrue("the level meter is fed too", levels.get() > 0)
+            assertEquals("a reader that keeps up is never reported as stalled", 0L, feed.stalledMs())
+
+            // A new session gets a new stream; the old one ends instead of hanging its reader.
+            val next = feed.open()
+            assertNotNull(next)
+            reader.join(10_000)
+            assertFalse("the first stream's reader was released", reader.isAlive)
+            next!!.close()
+        } finally {
+            feed.stop()
+        }
+        assertFalse(feed.alive())
     }
 
     private fun waitUntil(what: String, timeoutMs: Long = 60_000, condition: () -> Boolean) {

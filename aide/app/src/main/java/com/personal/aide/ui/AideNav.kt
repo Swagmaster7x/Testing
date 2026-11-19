@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,7 +38,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.personal.aide.BuildConfig
+import com.personal.aide.ai.IntakeState
 import com.personal.aide.calendar.CalendarEvent
+import com.personal.aide.data.db.KnowledgeType
 import com.personal.aide.domain.Days
 import com.personal.aide.domain.meetingNotesText
 import com.personal.aide.notify.Notifications
@@ -57,7 +60,10 @@ import com.personal.aide.ui.knowledge.KnowledgeViewModel
 import com.personal.aide.ui.knowledge.ProfileScreen
 import com.personal.aide.ui.knowledge.QuestionsScreen
 import com.personal.aide.ui.knowledge.QuestionsViewModel
-import com.personal.aide.ui.meetings.ImportScreen
+import com.personal.aide.ui.meetings.AddActions
+import com.personal.aide.ui.meetings.AddKind
+import com.personal.aide.ui.meetings.AddScreen
+import com.personal.aide.ui.meetings.AddViewModel
 import com.personal.aide.ui.meetings.MeetingActions
 import com.personal.aide.ui.meetings.MeetingScreen
 import com.personal.aide.ui.meetings.MeetingViewModel
@@ -93,12 +99,15 @@ import com.personal.aide.ui.today.TodayActions
 import com.personal.aide.ui.today.TodayScreen
 import com.personal.aide.ui.today.TodayViewModel
 import kotlinx.coroutines.launch
+import java.io.File
 
 /** Something from outside the app that should take the user straight to a screen. */
 sealed interface Launch {
     data class OpenMeeting(val id: Long) : Launch
     data object OpenRecording : Launch
     data class SharedText(val text: String) : Launch
+    /** Pictures or documents shared from another app, with any text that came with them. */
+    data class SharedFiles(val files: List<Uri>, val text: String = "") : Launch
     data object OpenTasks : Launch
     /** A calendar meeting's brief; with [record], start recording it straight away. */
     data class Prep(val event: CalendarEvent, val record: Boolean) : Launch
@@ -115,7 +124,7 @@ private object Routes {
     const val QUESTIONS = "questions"
     const val PROFILE = "profile"
     const val INTERVIEW = "interview"
-    const val IMPORT = "import"
+    const val ADD = "add?kind={kind}"
     const val MEETING = "meeting/{id}"
     const val ENTRY = "entry/{id}"
     const val ASK = "ask?meetingId={meetingId}&prompt={prompt}"
@@ -127,6 +136,7 @@ private object Routes {
 
     fun meeting(id: Long) = "meeting/$id"
     fun entry(id: Long) = "entry/$id"
+    fun add(kind: AddKind = AddKind.MEETING) = "add?kind=${kind.name}"
     fun series(id: Long) = "series/$id"
     fun person(name: String) = "person?name=" + Uri.encode(name)
     fun newPerson(name: String) = "new-person?name=" + Uri.encode(name)
@@ -148,6 +158,9 @@ private val tabs = listOf(
 )
 
 private const val CONSOLE_KEYS_URL = "https://console.anthropic.com/settings/keys"
+
+private const val WORD_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+private const val MAX_PICKED_PHOTOS = 20
 
 /** Only asked for where [Notifications.canPost] says it is needed, which is Android 13 and later. */
 private const val NOTIFICATIONS_PERMISSION = "android.permission.POST_NOTIFICATIONS"
@@ -246,6 +259,8 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     var sharedText by rememberSaveable { mutableStateOf("") }
+    // Addresses of files another app shared, kept as text so they survive the screen being rebuilt.
+    var sharedFiles by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
 
     val startRecording = rememberRecordingStarter { nav.navigate(Routes.RECORD) { launchSingleTop = true } }
     val copy: (String) -> Unit = { text ->
@@ -260,7 +275,13 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
             Launch.OpenRecording -> if (container.recorder.state.value.active) nav.navigate(Routes.RECORD) { launchSingleTop = true }
             is Launch.SharedText -> {
                 sharedText = launch.text
-                nav.navigate(Routes.IMPORT) { launchSingleTop = true }
+                sharedFiles = arrayListOf()
+                nav.navigate(Routes.add()) { launchSingleTop = true }
+            }
+            is Launch.SharedFiles -> {
+                sharedText = launch.text
+                sharedFiles = ArrayList(launch.files.map { it.toString() })
+                nav.navigate(Routes.add()) { launchSingleTop = true }
             }
             Launch.OpenTasks -> nav.toTab(Routes.TASKS)
             is Launch.Prep -> if (launch.record) startRecording(launch.event) else nav.navigate(Routes.prep(launch.event)) { launchSingleTop = true }
@@ -326,7 +347,8 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     onRecord = { startRecording(null) },
                     onImport = {
                         sharedText = ""
-                        nav.navigate(Routes.IMPORT)
+                        sharedFiles = arrayListOf()
+                        nav.navigate(Routes.add())
                     },
                     onAsk = { nav.navigate(Routes.ask()) },
                 )
@@ -367,6 +389,11 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     onProfile = { nav.navigate(Routes.PROFILE) },
                     onAsk = { nav.navigate(Routes.ask()) },
                     onOpenPerson = { nav.navigate(Routes.person(it)) },
+                    onAddDocument = {
+                        sharedText = ""
+                        sharedFiles = arrayListOf()
+                        nav.navigate(Routes.add(AddKind.REFERENCE))
+                    },
                 )
             }
             composable(Routes.INSIGHTS) {
@@ -457,6 +484,9 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onOpenPerson = { nav.navigate(Routes.person(it)) },
                         onSetSeries = vm::setSeries,
                         onNewSeries = vm::newSeries,
+                        onOpenEntry = { entry ->
+                            nav.navigate(if (entry.type == KnowledgeType.PERSON) Routes.person(entry.title) else Routes.entry(entry.id))
+                        },
                     ),
                 )
             }
@@ -645,21 +675,55 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                 LaunchedEffect(Unit) { vm.begin() }
                 InterviewScreen(state, onBack = { nav.popBackStack() }, onAnswer = vm::answer, onRetry = vm::retry)
             }
-            composable(Routes.IMPORT) {
-                val hasKey by container.secrets.hasKey.collectAsStateWithLifecycle(initialValue = false)
-                ImportScreen(
+            composable(Routes.ADD, arguments = listOf(navArgument("kind") { type = NavType.StringType; defaultValue = AddKind.MEETING.name })) { backStack ->
+                val kind = runCatching { AddKind.valueOf(backStack.arguments?.getString("kind").orEmpty()) }.getOrDefault(AddKind.MEETING)
+                val vm = aideViewModel { AddViewModel(it, kind, sharedFiles.map(Uri::parse)) }
+                val state by vm.state.collectAsStateWithLifecycle()
+                // Where the camera was asked to save its picture; kept across the trip to the camera app and back.
+                var pendingPhoto by rememberSaveable { mutableStateOf<String?>(null) }
+                val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+                    pendingPhoto?.let { vm.photoTaken(File(it), saved) }
+                    pendingPhoto = null
+                }
+                val pickPhotos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED_PHOTOS)) { vm.addFiles(it) }
+                val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { vm.addFiles(it) }
+                // Once it is saved there is nothing more to do here: show what Aide makes of it.
+                LaunchedEffect(state.intake) {
+                    val done = state.intake as? IntakeState.Done ?: return@LaunchedEffect
+                    vm.finished()
+                    sharedText = ""
+                    sharedFiles = arrayListOf()
+                    nav.popBackStack()
+                    nav.navigate(Routes.meeting(done.meetingId))
+                }
+                AddScreen(
+                    state,
                     initialText = sharedText,
-                    hasKey = hasKey,
-                    onBack = { nav.popBackStack() },
-                    onSave = { title, text ->
-                        container.scope.launch {
-                            val id = container.meetings.importText(title, text)
-                            sharedText = ""
-                            container.processor.onRecordingSaved(id)
-                            nav.popBackStack()
-                            nav.navigate(Routes.meeting(id))
-                        }
-                    },
+                    AddActions(
+                        onBack = { nav.popBackStack() },
+                        onKind = vm::setKind,
+                        onTakePhoto = {
+                            val (file, address) = vm.newPhoto()
+                            pendingPhoto = file.path
+                            runCatching { takePhoto.launch(address) }.onFailure {
+                                pendingPhoto = null
+                                file.delete()
+                                Toast.makeText(context, "No camera app was found on this phone.", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        onChoosePhotos = {
+                            runCatching { pickPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+                        },
+                        onChooseFiles = {
+                            runCatching { pickFiles.launch(arrayOf("application/pdf", "image/*", "text/*", WORD_DOCUMENT)) }.onFailure {
+                                Toast.makeText(context, "No file browser was found on this phone.", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        onRemove = vm::remove,
+                        onSave = vm::save,
+                        onDismissError = vm::dismissError,
+                        onSettings = { nav.navigate(Routes.SETTINGS) },
+                    ),
                 )
             }
             composable(Routes.SETTINGS) {
@@ -691,6 +755,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                     state = state,
                     appVersion = BuildConfig.VERSION_NAME,
                     notificationsAllowed = canNotify,
+                    canBoost = Build.VERSION.SDK_INT >= 33,
                     actions = SettingsActions(
                         onBack = { nav.popBackStack() },
                         onSaveKey = vm::saveKey,
@@ -703,6 +768,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onAutoSummarize = vm::setAutoSummarize,
                         onLearningMode = vm::setLearningMode,
                         onMuteChimes = vm::setMuteChimes,
+                        onSensitivity = vm::setSensitivity,
                         onBrief = { on, minutes ->
                             if (on && Build.VERSION.SDK_INT >= 33 && !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)) {
                                 askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)

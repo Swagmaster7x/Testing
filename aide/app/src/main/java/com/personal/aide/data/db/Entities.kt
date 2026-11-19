@@ -8,9 +8,14 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 enum class MeetingStatus { RECORDING, TRANSCRIBED, PROCESSING, READY, FAILED }
-enum class MeetingSource { LIVE, IMPORT }
+/**
+ * Where a meeting's text came from: heard live; the user's own account of a meeting, typed,
+ * pasted or photographed; or a document that isn't a meeting at all but is worth knowing about
+ * (a handbook, a brief, an org chart), kept alongside so it can be read, searched and asked about.
+ */
+enum class MeetingSource { LIVE, IMPORT, DOCUMENT }
 
-/** One meeting: a live recording or pasted text, plus what the assistant made of it. */
+/** One meeting (or one document, see [MeetingSource]): its text, plus what the assistant made of it. */
 @Serializable
 @Entity(tableName = "meetings")
 data class MeetingEntity(

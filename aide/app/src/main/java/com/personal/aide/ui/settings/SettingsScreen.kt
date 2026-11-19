@@ -55,6 +55,7 @@ import com.personal.aide.ui.components.ListRow
 import com.personal.aide.ui.components.SectionHeader
 import com.personal.aide.ui.components.Tone
 import com.personal.aide.ui.components.Working
+import com.personal.aide.transcribe.Transcriber
 import java.util.Locale
 
 class SettingsActions(
@@ -69,6 +70,7 @@ class SettingsActions(
     val onAutoSummarize: (Boolean) -> Unit = {},
     val onLearningMode: (Boolean) -> Unit = {},
     val onMuteChimes: (Boolean) -> Unit = {},
+    val onSensitivity: (Transcriber.Sensitivity) -> Unit = {},
     val onBrief: (Boolean, Int) -> Unit = { _, _ -> },
     val onCalendar: (Boolean) -> Unit = {},
     val onPrep: (Boolean) -> Unit = {},
@@ -81,6 +83,18 @@ class SettingsActions(
     val onGetKey: () -> Unit = {},
     val onProfile: () -> Unit = {},
 )
+
+fun sensitivityName(level: Transcriber.Sensitivity): String = when (level) {
+    Transcriber.Sensitivity.PHONE -> "Leave it to the phone"
+    Transcriber.Sensitivity.BOOSTED -> "Boosted"
+    Transcriber.Sensitivity.MAXIMUM -> "Maximum"
+}
+
+fun sensitivityBlurb(level: Transcriber.Sensitivity): String = when (level) {
+    Transcriber.Sensitivity.PHONE -> "The recognizer opens the microphone itself, as it would for voice typing."
+    Transcriber.Sensitivity.BOOSTED -> "Turns quiet voices up. Right for most meeting rooms."
+    Transcriber.Sensitivity.MAXIMUM -> "For a big room or a phone far from the speakers. Background noise comes up too."
+}
 
 /** Languages offered for speech recognition; the phone's recognizer decides which it really supports. */
 val speechLanguages: List<String> = listOf(
@@ -100,13 +114,21 @@ fun timeLabel(minutes: Int): String {
 }
 
 @Composable
-fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsActions, notificationsAllowed: Boolean = true) {
+fun SettingsScreen(
+    state: SettingsState,
+    appVersion: String,
+    actions: SettingsActions,
+    notificationsAllowed: Boolean = true,
+    /** Whether this phone can be handed audio the app captured itself (Android 13 and later). */
+    canBoost: Boolean = true,
+) {
     val settings = state.settings
     // Briefs and reminders that are switched on but can't be shown: worth saying, since nothing else will.
     val silenced = !notificationsAllowed && (settings.briefEnabled || settings.nudgesEnabled || (settings.prepEnabled && settings.calendarEnabled))
     var keyDialog by remember { mutableStateOf(false) }
     var modelDialog by remember { mutableStateOf(false) }
     var languageDialog by remember { mutableStateOf(false) }
+    var sensitivityDialog by remember { mutableStateOf(false) }
     var timeDialog by remember { mutableStateOf(false) }
     var eraseDialog by remember { mutableStateOf(false) }
     var restoreDialog by remember { mutableStateOf(false) }
@@ -157,6 +179,16 @@ fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsAc
             item(key = "transcription") {
                 AideCard(padding = 0.dp) {
                     ListRow(title = "Meeting language", detail = languageName(settings.language), icon = AideIcons.Mic, onClick = { languageDialog = true })
+                    Divider()
+                    ListRow(
+                        title = "Hearing quiet voices",
+                        detail = when {
+                            !canBoost -> "Needs Android 13 or later. This phone's recognizer handles the microphone itself."
+                            settings.boostUnsupported -> "This phone's recognizer wouldn't take boosted audio last time, so it handles the microphone itself. Tap to try again."
+                            else -> sensitivityName(settings.sensitivity) + ". " + sensitivityBlurb(settings.sensitivity)
+                        },
+                        onClick = if (canBoost) ({ sensitivityDialog = true }) else null,
+                    )
                     Divider()
                     SwitchRow(
                         "Keep speech recognition on the phone",
@@ -296,6 +328,37 @@ fun SettingsScreen(state: SettingsState, appVersion: String, actions: SettingsAc
                 }
             },
             confirmButton = { TextButton(onClick = { modelDialog = false }) { Text("Close") } },
+        )
+    }
+    if (sensitivityDialog) {
+        AlertDialog(
+            onDismissRequest = { sensitivityDialog = false },
+            title = { Text("Hearing quiet voices") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "A phone on a meeting table hears people across the room far more quietly than someone dictating into it. Aide can capture the audio itself and turn quiet voices up before the recognizer hears them.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    for (level in Transcriber.Sensitivity.entries) {
+                        Row(
+                            Modifier.fillMaxWidth().clickable { actions.onSensitivity(level); sensitivityDialog = false }.padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = settings.sensitivity == level && !settings.boostUnsupported,
+                                onClick = { actions.onSensitivity(level); sensitivityDialog = false },
+                            )
+                            Column {
+                                Text(sensitivityName(level), style = MaterialTheme.typography.bodyLarge)
+                                Text(sensitivityBlurb(level), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { sensitivityDialog = false }) { Text("Close") } },
         )
     }
     if (languageDialog) {

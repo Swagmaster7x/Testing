@@ -56,6 +56,8 @@ class Recorder(
     private val onFinished: suspend (meetingId: Long) -> Unit = {},
     /** Something to wait for before the first recording is created, such as tidying up after a crash. */
     private val beforeStart: suspend () -> Unit = {},
+    /** Names and terms the recognizer should listen out for, given who is in the meeting. */
+    private val hints: suspend (attendees: List<String>) -> List<String> = { emptyList() },
     val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val _state = MutableStateFlow(RecorderState())
@@ -91,6 +93,11 @@ class Recorder(
         override fun onNotice(notice: String?) = _state.update { if (it.active) it.copy(notice = notice) else it }
 
         override fun onFatal(message: String) = finish(error = message)
+
+        override fun onBoostUnsupported() {
+            // Remembered, so the next recording doesn't spend its first seconds finding out again.
+            scope.launch { runCatching { settings.setBoostUnsupported(true) } }
+        }
     }
 
     /** Starts a new recording. Does nothing if one is already running. */
@@ -111,7 +118,13 @@ class Recorder(
                 meetings.delete(meetingId)
                 return@launch
             }
-            config = Transcriber.Config(language = prefs.language, preferOnDevice = prefs.preferOnDevice, muteChimes = prefs.muteChimes)
+            config = Transcriber.Config(
+                language = prefs.language,
+                preferOnDevice = prefs.preferOnDevice,
+                muteChimes = prefs.muteChimes,
+                sensitivity = if (prefs.boostUnsupported) Transcriber.Sensitivity.PHONE else prefs.sensitivity,
+                hints = runCatching { hints(attendees) }.getOrDefault(emptyList()),
+            )
             _state.update { it.copy(meetingId = meetingId) }
             keepAlive(true)
             // Set before listening begins, so a recognizer that fails at once finds it there to cancel.

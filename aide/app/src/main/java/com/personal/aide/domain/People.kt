@@ -3,6 +3,7 @@ package com.personal.aide.domain
 import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.KnowledgeType
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.TaskEntity
@@ -89,6 +90,8 @@ fun buildPersonView(
     val full = entry?.title ?: name.trim()
     val theirMeetings = meetings
         .filter { it.status == MeetingStatus.READY || it.status == MeetingStatus.TRANSCRIBED }
+        // A document that names them is not a meeting with them.
+        .filter { it.source != MeetingSource.DOCUMENT }
         .filter { meeting -> meeting.attendees.any { People.same(full, it, everyone) } || People.mentioned(meeting.title, full, everyone) }
         .sortedByDescending { it.startedAt }
     // A meeting with them and nobody else: whatever came out of it is between the two of you.

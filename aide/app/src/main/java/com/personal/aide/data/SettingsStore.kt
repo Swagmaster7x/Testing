@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.personal.aide.ai.AideModel
+import com.personal.aide.transcribe.Transcriber
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -29,6 +30,10 @@ data class Settings(
     val learningMode: Boolean = true,
     /** Silence the chime some phones play each time the recognizer starts listening. */
     val muteChimes: Boolean = false,
+    /** How hard to work at hearing quiet voices; anything but PHONE has the app capture and boost the audio itself. */
+    val sensitivity: Transcriber.Sensitivity = Transcriber.Sensitivity.BOOSTED,
+    /** This phone's recognizer has refused boosted audio, so recordings use its own microphone handling. */
+    val boostUnsupported: Boolean = false,
     val briefEnabled: Boolean = false,
     /** Minutes after midnight for the morning brief. */
     val briefMinutes: Int = 8 * 60,
@@ -55,6 +60,8 @@ class SettingsStore(private val store: DataStore<Preferences>) {
             autoSummarize = prefs[AUTO_SUMMARIZE] ?: true,
             learningMode = prefs[LEARNING] ?: true,
             muteChimes = prefs[MUTE_CHIMES] ?: false,
+            sensitivity = runCatching { Transcriber.Sensitivity.valueOf(prefs[SENSITIVITY].orEmpty()) }.getOrDefault(Transcriber.Sensitivity.BOOSTED),
+            boostUnsupported = prefs[BOOST_UNSUPPORTED] ?: false,
             briefEnabled = prefs[BRIEF_ENABLED] ?: false,
             briefMinutes = prefs[BRIEF_MINUTES] ?: (8 * 60),
             calendarEnabled = prefs[CALENDAR] ?: false,
@@ -76,6 +83,13 @@ class SettingsStore(private val store: DataStore<Preferences>) {
     suspend fun setAutoSummarize(value: Boolean) = store.edit { it[AUTO_SUMMARIZE] = value }
     suspend fun setLearningMode(value: Boolean) = store.edit { it[LEARNING] = value }
     suspend fun setMuteChimes(value: Boolean) = store.edit { it[MUTE_CHIMES] = value }
+
+    /** Choosing a level is also a request to try boosting again on a phone that once refused it. */
+    suspend fun setSensitivity(value: Transcriber.Sensitivity) = store.edit {
+        it[SENSITIVITY] = value.name
+        it[BOOST_UNSUPPORTED] = false
+    }
+    suspend fun setBoostUnsupported(value: Boolean) = store.edit { it[BOOST_UNSUPPORTED] = value }
     suspend fun setBrief(enabled: Boolean, minutes: Int) = store.edit {
         it[BRIEF_ENABLED] = enabled
         it[BRIEF_MINUTES] = minutes.coerceIn(0, 24 * 60 - 1)
@@ -107,6 +121,8 @@ class SettingsStore(private val store: DataStore<Preferences>) {
         val AUTO_SUMMARIZE = booleanPreferencesKey("auto_summarize")
         val LEARNING = booleanPreferencesKey("learning_mode")
         val MUTE_CHIMES = booleanPreferencesKey("mute_chimes")
+        val SENSITIVITY = stringPreferencesKey("sensitivity")
+        val BOOST_UNSUPPORTED = booleanPreferencesKey("boost_unsupported")
         val BRIEF_ENABLED = booleanPreferencesKey("brief_enabled")
         val BRIEF_MINUTES = intPreferencesKey("brief_minutes")
         val CALENDAR = booleanPreferencesKey("calendar")

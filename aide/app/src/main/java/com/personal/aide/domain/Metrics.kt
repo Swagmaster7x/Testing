@@ -3,6 +3,7 @@ package com.personal.aide.domain
 import com.personal.aide.data.db.ChatMessageEntity
 import com.personal.aide.data.db.InsightEntity
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
@@ -65,7 +66,8 @@ fun workStats(
     val asOf = minOf(today, lastDay)
     val open = mine.filter { it.status == TaskStatus.OPEN }
     val waiting = tasks.filter { it.ownership == Ownership.OTHERS && it.status == TaskStatus.OPEN }
-    val periodMeetings = meetings.filter { it.startedAt in from until until && it.status != MeetingStatus.RECORDING }
+    // A document the user added is kept with the meetings but was never a meeting.
+    val periodMeetings = meetings.filter { it.startedAt in from until until && it.status != MeetingStatus.RECORDING && it.source != MeetingSource.DOCUMENT }
 
     val byDay = completed.groupingBy { Days.ofMillis(it.completedAt!!, zone) }.eachCount()
     return WorkStats(

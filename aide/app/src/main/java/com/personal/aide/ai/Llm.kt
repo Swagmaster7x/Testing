@@ -19,7 +19,20 @@ enum class Effort { LOW, MEDIUM, HIGH }
 /** A block of the system prompt. [cache] marks the end of a prefix worth caching between turns. */
 data class SystemPart(val text: String, val cache: Boolean = false)
 
-data class LlmMessage(val role: Role, val text: String) {
+/** A picture sent along with a message: a photo of notes, a page of a document. */
+class LlmImage(
+    /** "image/jpeg", "image/png", "image/gif" or "image/webp". */
+    val mediaType: String,
+    /** The file's bytes in base64, with no line breaks. */
+    val base64: String,
+)
+
+data class LlmMessage(
+    val role: Role,
+    val text: String,
+    /** Pictures to look at, shown to the model before [text]. Only on messages from the user. */
+    val images: List<LlmImage> = emptyList(),
+) {
     enum class Role { USER, ASSISTANT }
 }
 

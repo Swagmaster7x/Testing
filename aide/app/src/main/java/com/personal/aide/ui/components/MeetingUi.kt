@@ -21,6 +21,7 @@ fun meetingStatusLabel(meeting: MeetingEntity, summarizing: Boolean): Pair<Strin
     summarizing || meeting.status == MeetingStatus.PROCESSING -> "Writing notes…" to Tone.ASSISTANT
     meeting.status == MeetingStatus.RECORDING -> "Recording" to Tone.BAD
     meeting.status == MeetingStatus.FAILED -> "Notes failed" to Tone.BAD
+    meeting.status == MeetingStatus.TRANSCRIBED && meeting.source == MeetingSource.DOCUMENT -> "Not read yet" to Tone.WARN
     meeting.status == MeetingStatus.TRANSCRIBED -> "No notes yet" to Tone.WARN
     else -> null
 }
@@ -28,7 +29,11 @@ fun meetingStatusLabel(meeting: MeetingEntity, summarizing: Boolean): Pair<Strin
 fun meetingWhen(meeting: MeetingEntity): String = buildString {
     append(Days.dateTime(meeting.startedAt))
     val length = (meeting.endedAt ?: meeting.startedAt) - meeting.startedAt
-    if (meeting.source == MeetingSource.IMPORT) append(" · pasted in") else if (length >= 1000) append(" · ").append(Days.duration(length))
+    when {
+        meeting.source == MeetingSource.DOCUMENT -> append(" · added by you")
+        meeting.source == MeetingSource.IMPORT -> append(" · your notes")
+        length >= 1000 -> append(" · ").append(Days.duration(length))
+    }
 }
 
 @Composable

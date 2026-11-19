@@ -6,11 +6,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.personal.aide.ai.AnthropicLlm
 import com.personal.aide.ai.Assistant
+import com.personal.aide.ai.Intake
 import com.personal.aide.ai.Llm
 import com.personal.aide.ai.MeetingProcessor
 import com.personal.aide.calendar.Agenda
 import com.personal.aide.calendar.DeviceAgenda
 import com.personal.aide.data.Backup
+import com.personal.aide.data.DocumentReader
 import com.personal.aide.data.KeystoreSecretStore
 import com.personal.aide.data.KnowledgeBase
 import com.personal.aide.data.MeetingStore
@@ -21,6 +23,7 @@ import com.personal.aide.data.SettingsStore
 import com.personal.aide.data.TaskStore
 import com.personal.aide.data.WinStore
 import com.personal.aide.data.db.AppDatabase
+import com.personal.aide.domain.speechHints
 import com.personal.aide.notify.Notifications
 import com.personal.aide.transcribe.AndroidSpeechTranscriber
 import com.personal.aide.transcribe.Recorder
@@ -61,6 +64,8 @@ class AppContainer(
     val wins = WinStore(db.wins())
     val assistant = Assistant(db, settings, this.llm, knowledge, this.agenda, series = series, wins = wins)
 
+    val documents = DocumentReader(app)
+
     val processor = MeetingProcessor(scope, assistant, db, settings, secrets) { meetingId, result ->
         // Someone looking at the app can see the summary arrive; anyone else gets a notification.
         if (ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@MeetingProcessor
@@ -84,8 +89,23 @@ class AppContainer(
             processor.onRecordingSaved(meetingId)
         },
         beforeStart = { recovery.join() },
+        hints = { attendees -> speechHints(attendees, settings.currentProfile(), db.knowledge().all()) },
+    )
+
+    /** Takes in what the user adds by hand: typed notes, files, photographs. */
+    val intake = Intake(
+        scope = scope,
+        assistant = assistant,
+        meetings = meetings,
+        onSaved = { meetingId -> processor.onRecordingSaved(meetingId) },
+        // Once the text is saved the pictures have done their job. After a failure they are kept, to try again with.
+        onFinished = { materials, saved -> if (saved) materials.forEach(documents::discard) },
     )
 
     /** Tidying up after a crash or a kill: closes a recording that was cut off, and frees a summary that never finished. */
-    private val recovery: Job = scope.launch(Dispatchers.IO) { runCatching { meetings.recoverAfterRestart() } }
+    private val recovery: Job = scope.launch(Dispatchers.IO) {
+        runCatching { meetings.recoverAfterRestart() }
+        // Page pictures from something that was never finished being added.
+        runCatching { documents.clear() }
+    }
 }

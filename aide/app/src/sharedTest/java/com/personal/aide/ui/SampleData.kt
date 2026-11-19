@@ -129,6 +129,20 @@ open class SampleSet(val today: Long) {
         transcriptQuality = "good",
     )
 
+    /** A document the user photographed and added, read for what it says. */
+    val guideAnalysis = MeetingAnalysis(
+        title = "Carrier onboarding guide",
+        meetingType = "document",
+        tldr = "The operations team's guide to bringing a new carrier onto the network: the checks each one has to pass, who signs off, and how long each step is meant to take.",
+        keyPoints = listOf(
+            "A carrier needs insurance, a safety rating and two reference lanes before it can be offered loads.",
+            "Compliance signs off within three working days; anything slower is escalated to Tomas Berg.",
+            "Rates are loaded into RateStream only after sign-off, never before.",
+        ),
+        decisions = listOf("Carriers with a conditional safety rating are limited to ten loads until re-rated."),
+        transcriptQuality = "good",
+    )
+
     val meetings = listOf(
         MeetingEntity(
             id = 3, title = "Q1 quoting launch: pricing review", titleIsAuto = true,
@@ -155,6 +169,11 @@ open class SampleSet(val today: Long) {
             startedAt = at(today - 6, 14, 0), endedAt = at(today - 6, 14, 24), status = MeetingStatus.READY, meetingType = "standup",
             attendees = listOf("Dana Whitfield", "Marcus Lee", "Jo Park"), calendarEventId = 1, tldr = standupAnalysis.tldr,
             analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), standupAnalysis), wordCount = 2650, seriesId = 2,
+        ),
+        MeetingEntity(
+            id = 7, title = "Carrier onboarding guide", titleIsAuto = false, source = MeetingSource.DOCUMENT,
+            startedAt = at(today - 3, 17, 10), endedAt = at(today - 3, 17, 10), status = MeetingStatus.READY, meetingType = "document",
+            tldr = guideAnalysis.tldr, analysisJson = AideJson.encodeToString(MeetingAnalysis.serializer(), guideAnalysis), wordCount = 1840,
         ),
         MeetingEntity(
             id = 5, title = "1:1 with Priya", titleIsAuto = false,
@@ -294,6 +313,9 @@ open class SampleSet(val today: Long) {
         entry(4, KnowledgeType.DECISION, "Fixed tiers for launch", "Decided 18 Nov 2026: launch with Starter, Growth and Enterprise tiers; revisit custom pricing after 90 days of data.", listOf(3L)),
         entry(5, KnowledgeType.ORG, "RateStream", "Vendor supplying carrier rates. Coverage gap on some lanes under discussion.", listOf(4L)),
         entry(6, KnowledgeType.PERSON, "Marcus Lee", "Head of Sales. Wants reps to keep a price override during the first two weeks of beta.", listOf(3L)),
+        entry(7, KnowledgeType.PROCESS, "Carrier onboarding", "Insurance, safety rating and two reference lanes, then Compliance sign-off within three working days. Rates go into RateStream only after sign-off.", listOf(7L)),
+        entry(8, KnowledgeType.PERSON, "Tomas Berg", "Head of Compliance. Escalation point when a carrier's sign-off takes more than three working days.", listOf(7L)),
+        entry(9, KnowledgeType.TERM, "Conditional rating", "A carrier safety rating that allows only ten loads until the carrier is re-rated.", listOf(7L)),
     )
 
     private fun entry(id: Long, type: KnowledgeType, title: String, content: String, sources: List<Long>, origin: KnowledgeOrigin = KnowledgeOrigin.MEETING, pinned: Boolean = false) =

@@ -4,6 +4,7 @@ import com.personal.aide.ai.ContextBlocks
 import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.KnowledgeType
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.SeriesEntity
@@ -65,7 +66,7 @@ fun buildPrepBrief(
     val everyone = entries.filter { it.type == KnowledgeType.PERSON }.map { it.title }
     val others = People.others(attendees, self)
     val key = knowledgeKey(title)
-    val past = meetings.filter { it.startedAt < start }.sortedByDescending { it.startedAt }
+    val past = meetings.filter { it.startedAt < start && it.source != MeetingSource.DOCUMENT }.sortedByDescending { it.startedAt }
 
     // The series this belongs to: the one recorded from this calendar event, else one with the same name.
     val match = calendarEventId?.let { id -> series.firstOrNull { it.calendarEventId == id } }

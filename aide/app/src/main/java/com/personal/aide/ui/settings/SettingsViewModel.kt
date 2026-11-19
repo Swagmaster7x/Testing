@@ -10,6 +10,7 @@ import com.personal.aide.data.Settings
 import com.personal.aide.data.ThemeChoice
 import com.personal.aide.notify.Brief
 import com.personal.aide.notify.Reminders
+import com.personal.aide.transcribe.Transcriber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -80,6 +81,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     fun setAutoSummarize(on: Boolean) = change { container.settings.setAutoSummarize(on) }
     fun setLearningMode(on: Boolean) = change { container.settings.setLearningMode(on) }
     fun setMuteChimes(on: Boolean) = change { container.settings.setMuteChimes(on) }
+    fun setSensitivity(level: Transcriber.Sensitivity) = change { container.settings.setSensitivity(level) }
     fun setCalendar(on: Boolean) = change {
         container.settings.setCalendarEnabled(on)
         Reminders.sync(container)

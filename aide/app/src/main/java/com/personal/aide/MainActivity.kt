@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.net.toUri
 import android.graphics.Color
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -59,13 +61,38 @@ class MainActivity : ComponentActivity() {
                 if (event.title.isNotBlank()) launch.value = Launch.Prep(event, record = intent.getBooleanExtra(EXTRA_RECORD, false))
             }
             ACTION_OPEN_MEETING -> intent.getLongExtra(EXTRA_MEETING_ID, 0L).takeIf { it > 0 }?.let { launch.value = Launch.OpenMeeting(it) }
-            Intent.ACTION_SEND -> if (intent.type?.startsWith("text/") == true) {
-                intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }?.let { launch.value = Launch.SharedText(it) }
+            Intent.ACTION_SEND -> {
+                val file = sharedFile(intent)
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() }
+                when {
+                    // A picture or a document, possibly with a caption.
+                    file != null -> launch.value = Launch.SharedFiles(listOf(file), text.orEmpty())
+                    text != null -> launch.value = Launch.SharedText(text)
+                }
+            }
+            Intent.ACTION_SEND_MULTIPLE -> {
+                val files = if (Build.VERSION.SDK_INT >= 33) {
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+                }
+                if (!files.isNullOrEmpty()) launch.value = Launch.SharedFiles(files.take(MAX_SHARED_FILES))
             }
         }
     }
 
+    private fun sharedFile(intent: Intent): Uri? =
+        if (Build.VERSION.SDK_INT >= 33) {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+        }
+
     companion object {
+        /** More pictures than this in one share is a mistake more often than a document. */
+        private const val MAX_SHARED_FILES = 40
         const val ACTION_OPEN_RECORDING = "com.personal.aide.action.OPEN_RECORDING"
         const val ACTION_OPEN_MEETING = "com.personal.aide.action.OPEN_MEETING"
         const val EXTRA_MEETING_ID = "meeting_id"

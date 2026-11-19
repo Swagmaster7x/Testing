@@ -13,7 +13,22 @@ interface Transcriber {
         val language: String = "",
         val preferOnDevice: Boolean = true,
         val muteChimes: Boolean = false,
+        /** How hard to work at hearing quiet voices. */
+        val sensitivity: Sensitivity = Sensitivity.PHONE,
+        /** Names and terms likely to come up, which the recognizer is asked to listen out for. */
+        val hints: List<String> = emptyList(),
     )
+
+    /**
+     * Who handles the microphone. With [PHONE] the recognizer opens it and hears what it hears.
+     * With the others the app captures the audio itself, turns quiet voices up by as much as
+     * [maxGain], and passes the result to the recognizer (Android 13 and later).
+     */
+    enum class Sensitivity(val maxGain: Float) {
+        PHONE(1f),
+        BOOSTED(16f),
+        MAXIMUM(40f),
+    }
 
     interface Listener {
         /** The words heard so far in the sentence being spoken; replaces the previous partial. */
@@ -27,6 +42,12 @@ interface Transcriber {
 
         /** Whether recognition is running normally, or what it is waiting for. Null clears the note. */
         fun onNotice(notice: String?)
+
+        /**
+         * The recognizer on this phone would not take audio the app had boosted, so it has gone
+         * back to handling the microphone itself. Called at most once per [start].
+         */
+        fun onBoostUnsupported() = Unit
 
         /** Recognition can't continue. Listening has stopped. */
         fun onFatal(message: String)

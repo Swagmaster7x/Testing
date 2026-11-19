@@ -63,19 +63,23 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.personal.aide.data.db.KnowledgeEntity
 import com.personal.aide.data.db.MeetingEntity
+import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
 import com.personal.aide.data.db.SeriesEntity
 import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.data.db.TaskStatus
+import com.personal.aide.domain.label
 import com.personal.aide.ui.components.AideCard
 import com.personal.aide.ui.components.AideIcons
 import com.personal.aide.ui.components.AssistantText
 import com.personal.aide.ui.components.Banner
 import com.personal.aide.ui.components.Bullet
 import com.personal.aide.ui.components.BulletSection
+import com.personal.aide.ui.components.ListRow
 import com.personal.aide.ui.components.Pill
 import com.personal.aide.ui.components.QuestionCard
 import com.personal.aide.ui.components.RatingRow
@@ -113,6 +117,7 @@ class MeetingActions(
     /** The recurring meeting to put this one in, or null to take it out. */
     val onSetSeries: (Long?) -> Unit = {},
     val onNewSeries: (String) -> Unit = {},
+    val onOpenEntry: (KnowledgeEntity) -> Unit = {},
 )
 
 @Composable
@@ -139,7 +144,7 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More") }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; renaming = true })
-                            if (meeting.status != MeetingStatus.RECORDING) {
+                            if (meeting.status != MeetingStatus.RECORDING && !state.isDocument) {
                                 DropdownMenuItem(text = { Text("Recurring meeting…") }, onClick = { menu = false; choosingSeries = true })
                             }
                             if (state.hasKey && meeting.status != MeetingStatus.RECORDING && !state.summarizing) {
@@ -148,7 +153,7 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
                                     onClick = { menu = false; actions.onSummarize(true) },
                                 )
                             }
-                            DropdownMenuItem(text = { Text("Delete meeting") }, onClick = { menu = false; deleting = true })
+                            DropdownMenuItem(text = { Text(if (state.isDocument) "Delete document" else "Delete meeting") }, onClick = { menu = false; deleting = true })
                         }
                     }
                 },
@@ -165,7 +170,8 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
             PrimaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.background) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Notes") })
                 Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(if (state.tasks.isEmpty()) "Actions" else "Actions (${state.tasks.size})") })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Transcript") })
+                // Only something heard has a transcript; what the user brought in is just its text.
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(if (meeting.source == MeetingSource.LIVE) "Transcript" else "Text") })
             }
             when (tab) {
                 0 -> NotesTab(state, meeting, actions)
@@ -181,8 +187,8 @@ fun MeetingScreen(state: MeetingDetailState, actions: MeetingActions) {
     if (deleting) {
         AlertDialog(
             onDismissRequest = { deleting = false },
-            title = { Text("Delete this meeting?") },
-            text = { Text("Its transcript and notes are removed for good. Tasks and knowledge that came from it stay.") },
+            title = { Text(if (state.isDocument) "Delete this document?" else "Delete this meeting?") },
+            text = { Text("Its text and notes are removed for good. Tasks and knowledge that came from it stay.") },
             confirmButton = { TextButton(onClick = { deleting = false; actions.onDelete() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text("Cancel") } },
         )
@@ -281,17 +287,24 @@ private fun NotesTab(state: MeetingDetailState, meeting: MeetingEntity, actions:
             if (analysis.decisions.isNotEmpty()) item(key = "decisions") { AideCard { BulletSection("Decisions", analysis.decisions, tone = Tone.GOOD) } }
             if (analysis.openQuestions.isNotEmpty()) item(key = "open") { AideCard { BulletSection("Still open", analysis.openQuestions, tone = Tone.ASSISTANT) } }
             if (analysis.risks.isNotEmpty()) item(key = "risks") { AideCard { BulletSection("Risks and concerns", analysis.risks, tone = Tone.WARN) } }
+            if (state.learned.isNotEmpty()) item(key = "learned") { LearnedCard(state.learned, actions) }
             items(state.questions, key = { "question-${it.id}" }) { question ->
                 QuestionCard(question, onAnswer = { actions.onAnswer(question, it) }, onSkip = { actions.onSkip(question) })
             }
             item(key = "buttons") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = actions.onDraftFollowUp, modifier = Modifier.weight(1f)) { Text("Draft follow-up") }
+                    // Nobody is waiting for a follow-up email about a handbook.
+                    if (!state.isDocument) FilledTonalButton(onClick = actions.onDraftFollowUp, modifier = Modifier.weight(1f)) { Text("Draft follow-up") }
                     OutlinedButton(onClick = actions.onAsk, modifier = Modifier.weight(1f)) { Text("Ask about it") }
                 }
             }
             item(key = "rating") {
-                RatingRow(meeting.rating, actions.onRate, Modifier.fillMaxWidth(), label = "Did Aide get this meeting right? Your answer shows up under Insights.")
+                RatingRow(
+                    meeting.rating,
+                    actions.onRate,
+                    Modifier.fillMaxWidth(),
+                    label = (if (state.isDocument) "Did Aide read this right?" else "Did Aide get this meeting right?") + " Your answer shows up under Insights.",
+                )
             }
         } else if (meeting.status == MeetingStatus.TRANSCRIBED && state.segments.isEmpty()) {
             item(key = "empty") {
@@ -304,6 +317,39 @@ private fun NotesTab(state: MeetingDetailState, meeting: MeetingEntity, actions:
         }
     }
 }
+
+/** What went into the knowledge base from this meeting or document, each a tap away. */
+@Composable
+private fun LearnedCard(learned: List<KnowledgeEntity>, actions: MeetingActions) {
+    AideCard(padding = 0.dp) {
+        Row(
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(AideIcons.Knowledge, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Text(
+                if (learned.size == 1) "Added to the knowledge base" else "Added to the knowledge base (${learned.size})",
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
+        for (entry in learned.take(MAX_LEARNED_SHOWN)) {
+            ListRow(title = entry.title, detail = entry.type.label(), onClick = { actions.onOpenEntry(entry) })
+        }
+        if (learned.size > MAX_LEARNED_SHOWN) {
+            Text(
+                "and ${learned.size - MAX_LEARNED_SHOWN} more, under Knowledge",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+            )
+        } else {
+            Spacer(Modifier.height(6.dp))
+        }
+    }
+}
+
+private const val MAX_LEARNED_SHOWN = 8
 
 /** How a line about an earlier action item reads, and how loudly. */
 fun earlierStatusLabel(line: EarlierLine): Pair<String, Tone> = when (line.status) {

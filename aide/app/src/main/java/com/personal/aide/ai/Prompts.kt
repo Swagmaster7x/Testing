@@ -62,11 +62,59 @@ How to be useful:
         for (value in values) append("- ").append(value.trim()).append('\n')
     }
 
+    /**
+     * What to do with reference material the user added: something to know, not something that happened.
+     * Uses the same reply shape as a meeting, so everything downstream treats the two alike.
+     */
+    fun documentTask(profile: WorkProfile, maxQuestions: Int): String {
+        val name = whoFor(profile)
+        val questions = if (maxQuestions <= 0) {
+            "Don't ask any clarifying questions this time; leave that list empty."
+        } else {
+            "Ask at most $maxQuestions clarifying questions, and only about something the document leaves unclear that you will need to know in $name's meetings."
+        }
+        return """
+$name has added this document to what you know about their work. It is reference material (a brief, a handbook, a plan, an org chart, their own notes on a subject), not a record of a meeting. Some of it may have been read from photographs or scans, so allow for the odd misread word.
+
+Your main job here is the knowledge base. Go through the document and file what is worth knowing for the long run: who people are and what they own, what projects are and where they stand, what terms and acronyms mean, how processes work, what has been decided and why, facts and figures that will come up again. Be thorough: this is the one time you will read it closely. You can see what is already saved; when the document adds to or corrects an existing entry, return that entry under the same title with its complete, updated text. One entry per thing, each able to stand on its own.
+
+Then describe the document itself, using the meeting fields this way:
+- title: what the document is called, or a short name for it if it has none.
+- meeting_type: "document".
+- tldr: what it is and what it is for, in two or three sentences.
+- key_points: the things $name is most likely to need from it.
+- decisions: decisions it records, if any.
+- open_questions and risks: only ones the document itself raises.
+- action_items: only where the document plainly assigns $name or someone else something to do. Most documents assign nothing; leave the list empty then.
+- attendees: leave empty. Nobody attended a document.
+- series, since_last_time, earlier_items: leave empty.
+
+$questions
+
+If there is too little here to file anything, say so in the tldr and leave the lists empty.
+        """.trim()
+    }
+
+    /** What to do with pictures of pages: turn them into text, faithfully, for the app to keep. */
+    fun readPagesTask(name: String, first: Int, count: Int, total: Int): String {
+        val which = if (count == 1) "page $first" else "pages $first to ${first + count - 1}"
+        return """
+These pictures are $which of $total from "$name": photographs or scans of notes, a whiteboard, slides or a printed document. Write out exactly what is on them, as plain text, so that it can be read and searched later without the pictures.
+
+- Start each page with a line of its own: "--- page N ---".
+- Keep the order a person would read it in. Keep headings, lists and numbering. Write a table as one row per line with " | " between the cells.
+- Handwriting: give your best reading. Where a word can't be made out, write [illegible] instead of guessing; for a name or a number you are unsure of, write your reading followed by [?].
+- A drawing, chart or diagram: describe what it shows in a line or two inside square brackets.
+- A page that is blank, or a picture that isn't of writing at all, gets one line in square brackets saying so.
+- Add nothing of your own: no summary, no commentary, no corrections to what the page says.
+        """.trim()
+    }
+
     fun meetingTask(profile: WorkProfile, imported: Boolean, maxQuestions: Int, learning: Boolean): String {
         val name = whoFor(profile)
         val source = if (imported) {
             """
-About the text: $name pasted it in. It may be a transcript exported from a call tool (which may name the speakers), or their own notes from the meeting. Take speaker names at face value where they are given.
+About the text: $name brought it in themselves. It may be a transcript exported from a call tool (which may name the speakers), their own typed notes from the meeting, or notes read from photographs or a document, in which case allow for the odd misread word and for "--- page N ---" lines marking where each page began. Take speaker names at face value where they are given.
             """.trim()
         } else {
             """

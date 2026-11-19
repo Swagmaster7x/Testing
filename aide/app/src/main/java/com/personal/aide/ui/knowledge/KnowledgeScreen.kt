@@ -53,6 +53,7 @@ import com.personal.aide.domain.plural
 import com.personal.aide.ui.components.AideCard
 import com.personal.aide.ui.components.AideIcons
 import com.personal.aide.ui.components.EmptyState
+import com.personal.aide.ui.components.ListRow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -137,6 +138,7 @@ fun KnowledgeScreen(
     onProfile: () -> Unit,
     onAsk: () -> Unit,
     onOpenPerson: (String) -> Unit = {},
+    onAddDocument: () -> Unit = {},
 ) {
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -159,6 +161,15 @@ fun KnowledgeScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "profile") { ProfileCard(state.profile, onProfile) }
+            item(key = "add-document") {
+                AideCard(onClick = onAddDocument, padding = 0.dp) {
+                    ListRow(
+                        title = "Add a document or photos",
+                        detail = "A brief, a handbook, notes on paper. Aide reads it and files what matters here.",
+                        icon = AideIcons.Document,
+                    ) { Text("Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
+                }
+            }
             if (state.total == 0 && state.loaded) {
                 item(key = "empty") {
                     EmptyState(
