@@ -677,8 +677,15 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
             }
             composable(Routes.ADD, arguments = listOf(navArgument("kind") { type = NavType.StringType; defaultValue = AddKind.MEETING.name })) { backStack ->
                 val kind = runCatching { AddKind.valueOf(backStack.arguments?.getString("kind").orEmpty()) }.getOrDefault(AddKind.MEETING)
-                val vm = aideViewModel { AddViewModel(it, kind, sharedFiles.map(Uri::parse)) }
+                val vm = aideViewModel { AddViewModel(it, kind) }
                 val state by vm.state.collectAsStateWithLifecycle()
+                // Files shared from another app are opened once, whether this screen is new or was already showing.
+                LaunchedEffect(sharedFiles) {
+                    if (sharedFiles.isNotEmpty()) {
+                        vm.addFiles(sharedFiles.map(Uri::parse))
+                        sharedFiles = arrayListOf()
+                    }
+                }
                 // Where the camera was asked to save its picture; kept across the trip to the camera app and back.
                 var pendingPhoto by rememberSaveable { mutableStateOf<String?>(null) }
                 val takePhoto = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->

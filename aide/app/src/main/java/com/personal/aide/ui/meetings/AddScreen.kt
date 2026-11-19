@@ -103,7 +103,7 @@ fun joinMaterial(materials: List<Material>, added: Material): List<Material> {
     }
 }
 
-class AddViewModel(private val container: AppContainer, kind: AddKind, files: List<Uri>) : ViewModel() {
+class AddViewModel(private val container: AppContainer, kind: AddKind) : ViewModel() {
     private data class Local(val kind: AddKind, val materials: List<Material> = emptyList(), val opening: Boolean = false, val error: String? = null)
 
     private val local = MutableStateFlow(Local(kind))
@@ -115,7 +115,6 @@ class AddViewModel(private val container: AppContainer, kind: AddKind, files: Li
     init {
         // A result left over from something added earlier belongs to that screen, not this one.
         if (container.intake.state.value is IntakeState.Done) container.intake.acknowledge()
-        if (files.isNotEmpty()) addFiles(files)
     }
 
     fun setKind(kind: AddKind) = local.update { it.copy(kind = kind) }

@@ -120,7 +120,10 @@ class AudioFeed(
                 -1
             }
             if (read <= 0) {
-                if (read < 0) break
+                // An error, or a recording the system has stopped under us: either way this capture is over.
+                if (read < 0 || source.recordingState != AudioRecord.RECORDSTATE_RECORDING) break
+                // Nothing to read just now; don't spin while waiting.
+                runCatching { Thread.sleep(10) }
                 continue
             }
             val level = gain.process(frame, read)
@@ -153,7 +156,8 @@ class AudioFeed(
         }
         record?.let { source ->
             runCatching { source.stop() }
-            runCatching { capture?.join(500) }
+            // Let the capture thread leave its read before the recorder is freed under it.
+            runCatching { capture?.join(1_500) }
             runCatching { source.release() }
         }
         record = null
