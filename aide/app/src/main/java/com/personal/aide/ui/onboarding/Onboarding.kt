@@ -117,9 +117,11 @@ class OnboardingViewModel(private val container: AppContainer) : ViewModel() {
             val result = if (evenIfUnchecked) KeyCheck.Valid else container.llm.checkKey(key, container.settings.current().model)
             checking.value = false
             when (result) {
-                KeyCheck.Valid -> {
+                KeyCheck.Valid -> try {
                     container.secrets.setApiKey(key)
                     step.value = OnboardingStep.BASICS
+                } catch (e: Exception) {
+                    keyError.value = "This phone couldn't store the key securely (${e.message ?: e.javaClass.simpleName})."
                 }
                 is KeyCheck.Invalid -> keyError.value = result.reason
             }

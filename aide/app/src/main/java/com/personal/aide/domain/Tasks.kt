@@ -40,8 +40,9 @@ fun buildTaskBoard(tasks: List<TaskEntity>, today: Long): TaskBoard {
 
     val todayList = mine.filter { task ->
         val day = task.effectiveDay
-        // An overdue task stays on today's list even if it was planned for an earlier day.
-        (day != null && day <= today) || task.isOverdue(today)
+        // Anything late is today's problem, unless the user (or a plan they accepted) has put it on a
+        // day still to come: then it waits there, still marked late.
+        (day != null && day <= today) || (task.isOverdue(today) && (task.plannedDay ?: today) <= today)
     }.sortedWith(urgency)
     val todayIds = todayList.mapTo(HashSet()) { it.id }
 

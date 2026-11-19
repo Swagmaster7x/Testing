@@ -54,6 +54,8 @@ class Recorder(
     private val keepAlive: (Boolean) -> Unit = {},
     /** Called once a recording has been closed and saved. */
     private val onFinished: suspend (meetingId: Long) -> Unit = {},
+    /** Something to wait for before the first recording is created, such as tidying up after a crash. */
+    private val beforeStart: suspend () -> Unit = {},
     val clock: () -> Long = System::currentTimeMillis,
 ) {
     private val _state = MutableStateFlow(RecorderState())
@@ -62,6 +64,7 @@ class Recorder(
     private var transcriber: Transcriber? = null
     private var config = Transcriber.Config()
     private var limit: Job? = null
+    private var starts = 0
 
     /** Database writes in the order they were asked for, so the transcript keeps its order. */
     private val writes = Channel<suspend () -> Unit>(Channel.UNLIMITED)
@@ -93,25 +96,30 @@ class Recorder(
     /** Starts a new recording. Does nothing if one is already running. */
     fun start(title: String? = null, attendees: List<String> = emptyList(), calendarEventId: Long? = null) {
         if (_state.value.active) return
+        // Every start gets a number. Setting up takes a moment, and the user may have stopped, or stopped
+        // and started again, by the time it finishes; the number says whether this is still the recording.
+        val mine = ++starts
         val startedAt = clock()
         // Shown as recording straight away; the meeting row follows a moment later.
         _state.value = RecorderState(phase = RecorderState.Phase.LISTENING, title = title.orEmpty(), startedAt = startedAt)
         scope.launch {
+            beforeStart()
             val prefs = settings.current()
             val meetingId = meetings.startLive(title, attendees, calendarEventId)
-            if (!_state.value.active) {
-                // Stopped before the meeting existed; close the empty meeting off.
-                meetings.finish(meetingId)
+            if (starts != mine || !_state.value.active) {
+                // Stopped before there was anything to save: leave no empty meeting behind.
+                meetings.delete(meetingId)
                 return@launch
             }
             config = Transcriber.Config(language = prefs.language, preferOnDevice = prefs.preferOnDevice, muteChimes = prefs.muteChimes)
             _state.update { it.copy(meetingId = meetingId) }
             keepAlive(true)
-            if (_state.value.phase == RecorderState.Phase.LISTENING) startTranscriber()
+            // Set before listening begins, so a recognizer that fails at once finds it there to cancel.
             limit = launch {
                 delay(MAX_LENGTH_MS)
-                finish(error = "The recording reached its four-hour limit and was saved.")
+                if (starts == mine) finish(error = "The recording reached its four-hour limit and was saved.")
             }
+            if (_state.value.phase == RecorderState.Phase.LISTENING) startTranscriber()
         }
     }
 

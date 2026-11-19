@@ -118,6 +118,8 @@ Each turn, record in "profile" only what their latest message added or corrected
         """.trim()
     }
 
+    const val INTERVIEW_CONTINUE = "(The user is waiting for your next question.)"
+
     const val INTERVIEW_KICKOFF = "(The user has just opened the interview. Greet them in a few words and ask your first question.)"
 
     fun dayPlanTask(profile: WorkProfile): String = """

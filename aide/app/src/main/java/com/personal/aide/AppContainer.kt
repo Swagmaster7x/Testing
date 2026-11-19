@@ -26,6 +26,7 @@ import com.personal.aide.transcribe.RecordingService
 import com.personal.aide.transcribe.Transcriber
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
@@ -74,10 +75,9 @@ class AppContainer(
         newTranscriber = newTranscriber ?: { AndroidSpeechTranscriber(app) },
         keepAlive = { on -> if (on) RecordingService.start(app) },
         onFinished = { meetingId -> processor.onRecordingSaved(meetingId) },
+        beforeStart = { recovery.join() },
     )
 
-    init {
-        // Tidy up after a crash or a kill: close a recording that was cut off, and free a summary that never finished.
-        scope.launch(Dispatchers.IO) { meetings.recoverAfterRestart() }
-    }
+    /** Tidying up after a crash or a kill: closes a recording that was cut off, and frees a summary that never finished. */
+    private val recovery: Job = scope.launch(Dispatchers.IO) { runCatching { meetings.recoverAfterRestart() } }
 }

@@ -653,13 +653,16 @@ class AssistantMeetingsTest : AssistantTestBase() {
     }
 
     @Test
-    fun `a very long suggested name is cut to eighty characters`(): Unit = runBlocking {
+    fun `a very long suggested name is cut to eighty characters at most, with no space left dangling`(): Unit = runBlocking {
         val id = recorded()
         llm.reply(json(MeetingAnalysis(title = "  " + "Pricing ".repeat(30), tldr = "t")))
         assistant.summarizeMeeting(id)
 
-        assertEquals(80, meeting(id).title.length)
-        assertTrue(meeting(id).title.startsWith("Pricing Pricing"))
+        val title = meeting(id).title
+        // "Pricing " is eight characters, so a cut at eighty lands on a space, which is dropped.
+        assertEquals(79, title.length)
+        assertEquals(title.trim(), title)
+        assertTrue(title.startsWith("Pricing Pricing"))
     }
 
     @Test

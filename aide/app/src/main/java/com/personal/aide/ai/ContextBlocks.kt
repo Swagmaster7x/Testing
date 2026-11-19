@@ -135,6 +135,16 @@ object ContextBlocks {
         for (item in items) append("- ").append(item).append('\n')
     }
 
+    /** What a meeting's notes say, as plain words for searching: the stored JSON's field names would match everything. */
+    fun searchText(meeting: MeetingEntity): String {
+        val analysis = analysisOf(meeting) ?: return meeting.tldr
+        return buildString {
+            append(meeting.tldr).append(' ')
+            for (line in analysis.keyPoints + analysis.decisions + analysis.openQuestions + analysis.risks) append(line).append(' ')
+            for (item in analysis.actionItems) append(item.title).append(' ').append(item.owner).append(' ')
+        }
+    }
+
     fun analysisOf(meeting: MeetingEntity): MeetingAnalysis? =
         meeting.analysisJson.takeIf { it.isNotBlank() }
             ?.let { runCatching { AideJson.decodeFromString(MeetingAnalysis.serializer(), it) }.getOrNull() }

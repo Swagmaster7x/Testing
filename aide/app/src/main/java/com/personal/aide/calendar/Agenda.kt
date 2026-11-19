@@ -6,8 +6,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
+import com.personal.aide.domain.Days
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.ZoneId
 
 data class CalendarEvent(
     val id: Long,
@@ -57,6 +59,9 @@ class DeviceAgenda(context: Context, private val enabled: suspend () -> Boolean)
             CalendarContract.Instances.EVENT_LOCATION,
             CalendarContract.Instances.SELF_ATTENDEE_STATUS,
         )
+        val zone = ZoneId.systemDefault()
+        val firstDay = Days.ofMillis(fromMillis, zone)
+        val lastDay = Days.ofMillis(toMillis - 1, zone)
         val events = ArrayList<CalendarEvent>()
         context.contentResolver.query(uri, projection, null, null, CalendarContract.Instances.BEGIN + " ASC")?.use { cursor ->
             while (cursor.moveToNext()) {
@@ -64,17 +69,34 @@ class DeviceAgenda(context: Context, private val enabled: suspend () -> Boolean)
                 if (cursor.getInt(6) == CalendarContract.Attendees.ATTENDEE_STATUS_DECLINED) continue
                 val title = cursor.getString(1)?.trim().orEmpty()
                 if (title.isEmpty()) continue
+                val allDay = cursor.getInt(4) != 0
+                var start = cursor.getLong(2)
+                var end = cursor.getLong(3)
+                if (allDay) {
+                    // The calendar stores an all-day event as midnight to midnight UTC, whatever the phone's
+                    // time zone. Read as an instant, it spills into the day before or after; read as dates, it
+                    // is on the days it names.
+                    val startDay = Math.floorDiv(start, DAY_MS)
+                    val endDay = maxOf(Math.floorDiv(end, DAY_MS), startDay + 1)
+                    if (startDay > lastDay || endDay <= firstDay) continue
+                    start = Days.startMillis(startDay, zone)
+                    end = Days.startMillis(endDay, zone)
+                }
                 events += CalendarEvent(
                     id = cursor.getLong(0),
                     title = title,
-                    start = cursor.getLong(2),
-                    end = cursor.getLong(3),
-                    allDay = cursor.getInt(4) != 0,
+                    start = start,
+                    end = end,
+                    allDay = allDay,
                     location = cursor.getString(5)?.trim().orEmpty(),
                 )
             }
         }
         return events.distinctBy { Triple(it.id, it.start, it.title) }.map { it.copy(attendees = attendees(it.id)) }
+    }
+
+    private companion object {
+        const val DAY_MS = 86_400_000L
     }
 
     private fun attendees(eventId: Long): List<String> {

@@ -21,7 +21,6 @@ import com.personal.aide.data.db.MeetingSource
 import com.personal.aide.data.db.MeetingStatus
 import com.personal.aide.data.db.Ownership
 import com.personal.aide.data.db.QuestionEntity
-import com.personal.aide.data.db.QuestionStatus
 import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.data.db.TaskOrigin
 import com.personal.aide.data.db.TaskStatus
@@ -42,6 +41,7 @@ import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.KSerializer
 import java.time.ZoneId
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -149,7 +149,7 @@ class Assistant(
                 val named = current.titleIsAuto && analysis.title.isNotBlank()
                 meetings.update(
                     current.copy(
-                        title = if (named) analysis.title.trim().take(80) else current.title,
+                        title = if (named) analysis.title.trim().take(80).trim() else current.title,
                         // Once it has a real name it keeps it, whoever gave it.
                         titleIsAuto = current.titleIsAuto && !named,
                         status = MeetingStatus.READY,
@@ -213,8 +213,9 @@ class Assistant(
         val questions = db.questions()
         questions.deleteOpenForMeeting(meetingId)
         if (maxQuestions <= 0) return
-        // Don't ask again about a topic that is already answered, or already waiting for an answer.
-        val asked = questions.all().filter { it.status != QuestionStatus.SKIPPED }.mapTo(HashSet()) { knowledgeKey(it.topic) }
+        // Don't ask again about a topic that is already answered, waiting for an answer, or was skipped:
+        // skipping a question means "don't ask me this", not "ask me after every meeting".
+        val asked = questions.all().mapTo(HashSet()) { knowledgeKey(it.topic) }
         val time = now()
         val fresh = analysis.clarifyingQuestions.take(maxQuestions).mapNotNull { item ->
             val question = item.question.trim()
@@ -274,7 +275,9 @@ class Assistant(
             chat.insertMessage(ChatMessageEntity(threadId = threadId, role = "user", text = it, createdAt = now()))
         }
         val profile = settings.currentProfile()
-        val history = listOf(LlmMessage(LlmMessage.Role.USER, Prompts.INTERVIEW_KICKOFF)) + historyOf(threadId)
+        var history = listOf(LlmMessage(LlmMessage.Role.USER, Prompts.INTERVIEW_KICKOFF)) + historyOf(threadId)
+        // The API answers the user's turn; if the assistant spoke last, hand the turn back to it explicitly.
+        if (history.last().role == LlmMessage.Role.ASSISTANT) history = history + LlmMessage(LlmMessage.Role.USER, Prompts.INTERVIEW_CONTINUE)
         val (turn, _) = callForJson(
             LlmRequest(
                 feature = "interview",
@@ -365,7 +368,7 @@ class Assistant(
         val done = db.tasks().all().filter { it.status == TaskStatus.DONE }.sortedByDescending { it.completedAt ?: 0 }.take(15)
         val relevant = Retrieval.rank(
             focus,
-            meetings.map { Retrieval.Doc(it, it.title + " " + it.attendees.joinToString(" "), it.tldr + " " + it.analysisJson) },
+            meetings.map { Retrieval.Doc(it, it.title + " " + it.attendees.joinToString(" "), ContextBlocks.searchText(it)) },
             limit = 4,
         ).map { it.item }
         val events = agenda.events(Days.startMillis(today, zone), Days.startMillis(today + 2, zone))
@@ -558,7 +561,7 @@ class Assistant(
             append(stats.completedLate).append(" late (").append((it * 100).roundToInt()).append("% on time)\n")
         }
         append("Open tasks now: ").append(stats.openNow).append(", of which overdue: ").append(stats.overdueNow).append('\n')
-        stats.averageDaysToClose?.let { append("Average days from taking a task on to finishing it: ").append("%.1f".format(it)).append('\n') }
+        stats.averageDaysToClose?.let { append("Average days from taking a task on to finishing it: ").append(String.format(Locale.US, "%.1f", it)).append('\n') }
         append("Waiting on other people for: ").append(stats.waitingNow).append(" things")
         if (stats.waitingNow > 0) append(" (the oldest for ").append(stats.oldestWaitingDays).append(" days)")
         append('\n')

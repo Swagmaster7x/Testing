@@ -108,6 +108,8 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
         }
         sessionStart = SystemClock.elapsedRealtime()
         heardThisSession = false
+        // A recognizer may report a session's last words twice; the same words in a new session are new.
+        lastFinal = ""
         try {
             active.startListening(intent())
         } catch (e: Exception) {
@@ -252,7 +254,8 @@ class AndroidSpeechTranscriber(context: Context) : Transcriber {
         again(delayMs)
     }
 
-    private fun backoff(): Long = (500L shl failures.coerceAtMost(4)).coerceAtMost(8_000L)
+    /** How long to wait before trying again: longer after each failure, but never long enough to miss much of a meeting. */
+    private fun backoff(): Long = (500L shl failures.coerceAtMost(3)).coerceAtMost(4_000L)
 
     private fun commitPending() {
         if (pending.isNotBlank()) commit(pending)

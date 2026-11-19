@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.personal.aide.AppContainer
+import com.personal.aide.ai.ContextBlocks
 import com.personal.aide.data.db.MeetingEntity
 import com.personal.aide.data.db.TaskStatus
 import com.personal.aide.domain.Days
@@ -73,7 +74,7 @@ class MeetingsViewModel(container: AppContainer) : ViewModel() {
             // Anything typed is matched against the notes as well as the title.
             val ranked = Retrieval.rank(
                 query,
-                meetings.map { Retrieval.Doc(it, it.title + " " + it.attendees.joinToString(" "), it.tldr + " " + it.analysisJson) },
+                meetings.map { Retrieval.Doc(it, it.title + " " + it.attendees.joinToString(" "), ContextBlocks.searchText(it)) },
             ).map { it.item }
             (meetings.filter { it.title.contains(query.trim(), ignoreCase = true) } + ranked).distinctBy { it.id }
         }

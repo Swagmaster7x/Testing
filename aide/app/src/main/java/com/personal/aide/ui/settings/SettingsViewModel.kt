@@ -47,9 +47,11 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             val result = if (evenIfUnchecked) KeyCheck.Valid else container.llm.checkKey(key, container.settings.current().model)
             when (result) {
-                KeyCheck.Valid -> {
+                KeyCheck.Valid -> transient.value = try {
                     container.secrets.setApiKey(key)
-                    transient.value = Transient(keySaved = true, message = if (evenIfUnchecked) "Key saved without checking it." else "Claude is connected.")
+                    Transient(keySaved = true, message = if (evenIfUnchecked) "Key saved without checking it." else "Claude is connected.")
+                } catch (e: Exception) {
+                    Transient(keyError = "This phone couldn't store the key securely (${e.message ?: e.javaClass.simpleName}).")
                 }
                 is KeyCheck.Invalid -> transient.value = Transient(keyError = result.reason)
             }
@@ -104,6 +106,7 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun restoreFrom(uri: Uri) {
+        if (recordingInTheWay()) return
         viewModelScope.launch {
             val message = runCatching {
                 val json = withContext(Dispatchers.IO) {
@@ -117,7 +120,15 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /** Replacing or erasing everything would pull the meeting out from under a recording in progress. */
+    private fun recordingInTheWay(): Boolean {
+        if (!container.recorder.state.value.active) return false
+        transient.value = transient.value.copy(message = "Stop the recording first.")
+        return true
+    }
+
     fun eraseEverything() {
+        if (recordingInTheWay()) return
         viewModelScope.launch {
             container.backup.eraseEverything()
             transient.value = transient.value.copy(message = "Everything has been erased.")
