@@ -1,6 +1,7 @@
 package com.personal.aide
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
@@ -48,6 +49,7 @@ import com.personal.aide.data.db.TaskEntity
 import com.personal.aide.domain.Days
 import com.personal.aide.notify.Notifications
 import com.personal.aide.notify.Reminders
+import com.personal.aide.notify.WorkService
 import com.personal.aide.transcribe.AudioFeed
 import com.personal.aide.transcribe.RecorderState
 import com.personal.aide.transcribe.Transcriber
@@ -67,6 +69,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -577,6 +580,49 @@ class OnDeviceTest {
         } finally {
             app.getSharedPreferences("aide_collecting", Context.MODE_PRIVATE).edit().clear().commit()
             notifications.cancel(Notifications.COLLECT_ID)
+            db.close()
+        }
+    }
+
+    /**
+     * While Claude is writing notes the app holds a foreground service, which is what stops
+     * Android freezing it (and cutting the connection) when the user switches to another app.
+     */
+    @Test
+    fun writingNotesKeepsTheAppAliveUntilTheyAreDone() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val activity = app.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        @Suppress("DEPRECATION") // Still answers for the app's own services, which is all that is asked.
+        fun keptAlive() = activity.getRunningServices(50).any { it.service.className == WorkService::class.java.name && it.foreground }
+        val db = AppDatabase.inMemory(app)
+        lateinit var container: AppContainer
+        instrumentation.runOnMainSync {
+            container = AppContainer(app, db = db, secrets = MemorySecretStore("sk-ant-test"), llm = llm())
+            (app as AideApp).container = container
+        }
+        try {
+            assertFalse("nothing is being written yet", keptAlive())
+            val meetingId = runBlocking {
+                container.meetings.importText(
+                    "",
+                    "Sam will send the pricing page copy to Marcus by Friday. Dana said the rate feed fix needs two more weeks. " +
+                        "We agreed the beta opens on the ninth of February with twenty-five customers, and that tiers stay fixed for ninety days.",
+                )
+            }
+            // Claude takes its time, as it does with a real meeting.
+            server.enqueue(
+                reply(
+                    """{"title":"Pricing review","meeting_type":"review","tldr":"Fixed tiers agreed.","key_points":[],"decisions":[],"action_items":[],"open_questions":[],"risks":[],"attendees":[],"knowledge":[],"clarifying_questions":[],"transcript_quality":"good","series":{"existing_id":0,"new_name":""},"since_last_time":[],"earlier_items":[]}""",
+                ).setBodyDelay(8, TimeUnit.SECONDS),
+            )
+            instrumentation.runOnMainSync { container.processor.summarize(meetingId) }
+
+            waitUntil("the app to hold a foreground service while the notes are written") { keptAlive() }
+            assertTrue(container.busy.value)
+            waitUntil("the notes to be written", timeoutMs = 480_000) { runBlocking { db.meetings().get(meetingId)?.status == MeetingStatus.READY } }
+            waitUntil("the service to go once the work is done") { !keptAlive() }
+            assertFalse(container.busy.value)
+        } finally {
             db.close()
         }
     }

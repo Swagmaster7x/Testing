@@ -39,6 +39,10 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import java.io.InterruptedIOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 import java.time.Duration
 
 /**
@@ -269,12 +273,7 @@ class AnthropicLlm(
                 } else {
                     LlmException.Kind.OTHER to "Claude returned an error (${error.statusCode()}): ${error.apiMessage().orElse("unknown")}"
                 }
-            is AnthropicIoException, is java.io.IOException ->
-                if (error is InterruptedIOException || error.cause is InterruptedIOException) {
-                    LlmException.Kind.OFFLINE to "The connection to Claude timed out. Check your internet and try again."
-                } else {
-                    LlmException.Kind.OFFLINE to "Couldn't reach Claude. Check your internet connection."
-                }
+            is AnthropicIoException, is java.io.IOException -> LlmException.Kind.OFFLINE to connectionProblem(error)
             else -> LlmException.Kind.OTHER to "Something went wrong talking to Claude: ${error.message ?: error.javaClass.simpleName}"
         }
         return LlmException(kind, message, error)
@@ -282,6 +281,35 @@ class AnthropicLlm(
 
     companion object {
         const val FALLBACK_BETA = "server-side-fallback-2026-07-01"
+
+        /**
+         * Why the connection failed, in words the user can act on. "Check your internet" is the wrong
+         * advice when the internet is fine and it is this network that won't let Claude through, or
+         * the app was put aside while it was working. The technical name follows in brackets, for
+         * when the user passes the message on to someone who can read it.
+         */
+        internal fun connectionProblem(error: Throwable): String {
+            val causes = generateSequence(error) { it.cause.takeIf { cause -> cause !== it } }.take(8).toList()
+            val root = causes.firstOrNull { it is UnknownHostException || it is SSLException || it is SocketTimeoutException || it is ConnectException }
+                ?: causes.last()
+            val what = when (root) {
+                is UnknownHostException ->
+                    "Couldn't find Claude's servers. Either the phone is offline, or this network (a work or guest Wi-Fi, a VPN, an ad blocker) doesn't let apps reach them. Try mobile data."
+                is SSLException ->
+                    "This network is getting in the way of the secure connection to Claude. Work and guest Wi-Fi sometimes do. Try mobile data."
+                is SocketTimeoutException ->
+                    "The connection to Claude timed out. Check your internet and try again."
+                is ConnectException ->
+                    "Couldn't reach Claude. Check your internet connection."
+                else ->
+                    if (causes.any { it is InterruptedIOException }) {
+                        "The connection to Claude timed out. Check your internet and try again."
+                    } else {
+                        "The connection to Claude was cut off part-way. Try again."
+                    }
+            }
+            return "$what (${root.javaClass.simpleName})"
+        }
     }
 }
 

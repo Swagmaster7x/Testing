@@ -788,6 +788,7 @@ private fun MainNav(launch: Launch?, onLaunchHandled: () -> Unit) {
                         onRemoveKey = vm::removeKey,
                         onClearKeyDialog = vm::clearKeyDialog,
                         onClearMessage = vm::clearMessage,
+                        onCheckConnection = vm::checkConnection,
                         onModel = vm::setModel,
                         onLanguage = vm::setLanguage,
                         onPreferOnDevice = vm::setPreferOnDevice,

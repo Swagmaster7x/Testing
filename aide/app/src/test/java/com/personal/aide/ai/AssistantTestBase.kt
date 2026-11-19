@@ -67,7 +67,8 @@ abstract class AssistantTestBase {
         knowledge = KnowledgeBase(db.knowledge()) { now }
         meetings = MeetingStore(db.meetings()) { now }
         tasks = TaskStore(db.tasks()) { now }
-        assistant = Assistant(db, settings, llm, knowledge, agenda, now = { now }, zone = { Fixed.zone })
+        // No waiting and trying again after a failure: a test that scripts one failure means exactly one call.
+        assistant = Assistant(db, settings, llm, knowledge, agenda, now = { now }, zone = { Fixed.zone }, retryDelays = emptyList())
     }
 
     @After

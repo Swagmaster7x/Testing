@@ -33,11 +33,22 @@ class MeetingProcessorTest : AssistantTestBase() {
     @Volatile
     private var announcingFails = false
 
+    /** None, unless a test is about trying again. */
+    private var retryDelays: List<Long> = emptyList()
+
     private fun processor(secrets: SecretStore = MemorySecretStore("sk-ant-test")) =
-        MeetingProcessor(scope, assistant, db, settings, secrets) { id, result ->
-            announced += id to result
-            if (announcingFails) throw IllegalStateException("notifications are blocked")
-        }
+        MeetingProcessor(
+            scope,
+            assistant,
+            db,
+            settings,
+            secrets,
+            announce = { id, result ->
+                announced += id to result
+                if (announcingFails) throw IllegalStateException("notifications are blocked")
+            },
+            retryDelays = retryDelays,
+        )
 
     @After
     fun stopBackgroundWork() {
@@ -219,6 +230,90 @@ class MeetingProcessorTest : AssistantTestBase() {
         val (meetingId, result) = announced.single()
         assertEquals(id, meetingId)
         assertEquals(LlmException.Kind.OVERLOADED, (result as SummaryResult.Failed).error.kind)
+        assertEquals(MeetingStatus.FAILED, meeting(id).status)
+    }
+
+    @Test
+    fun `a dropped connection is tried again, and the user only hears that the notes are ready`(): Unit = runBlocking {
+        retryDelays = listOf(20L, 20L)
+        val id = recorded()
+        llm.fail(LlmException.Kind.OFFLINE, "The connection to Claude was cut off part-way. Try again.")
+        llm.reply(notes)
+        val processor = processor()
+
+        processor.summarize(id)
+        processor.awaitIdle()
+
+        assertEquals(SummaryResult.Done, announced.single().second)
+        assertEquals(MeetingStatus.READY, meeting(id).status)
+        assertEquals("", meeting(id).error)
+        assertEquals(2, llm.requests.size)
+    }
+
+    @Test
+    fun `it tries as often as it has waits for, then says it failed`(): Unit = runBlocking {
+        retryDelays = listOf(20L, 20L)
+        val id = recorded()
+        repeat(3) { llm.fail(LlmException.Kind.OFFLINE, "Couldn't reach Claude.") }
+        val processor = processor()
+
+        processor.summarize(id)
+        processor.awaitIdle()
+
+        assertEquals("the first try and one after each wait", 3, llm.requests.size)
+        assertEquals(LlmException.Kind.OFFLINE, (announced.single().second as SummaryResult.Failed).error.kind)
+        assertEquals(MeetingStatus.FAILED, meeting(id).status)
+    }
+
+    @Test
+    fun `a failure that waiting won't cure is not tried again`(): Unit = runBlocking {
+        retryDelays = listOf(20L, 20L)
+        val id = recorded()
+        llm.fail(LlmException.Kind.BAD_KEY, "Claude rejected the API key. Check it in Settings.")
+        val processor = processor()
+
+        processor.summarize(id)
+        processor.awaitIdle()
+
+        assertEquals(1, llm.requests.size)
+        assertEquals(LlmException.Kind.BAD_KEY, (announced.single().second as SummaryResult.Failed).error.kind)
+    }
+
+    @Test
+    fun `notes cut short by a lost connection are tried again when the user comes back`(): Unit = runBlocking {
+        val id = recorded()
+        llm.fail(LlmException.Kind.OFFLINE, "Couldn't reach Claude.")
+        val processor = processor()
+        processor.summarize(id)
+        processor.awaitIdle()
+        assertEquals(MeetingStatus.FAILED, meeting(id).status)
+
+        // Back in the app, online again.
+        llm.reply(notes)
+        processor.retryInterrupted()
+        processor.awaitIdle()
+
+        assertEquals(MeetingStatus.READY, meeting(id).status)
+        assertEquals(SummaryResult.Done, announced.last().second)
+
+        // Once written, coming back again does nothing more.
+        processor.retryInterrupted()
+        processor.awaitIdle()
+        assertEquals(2, llm.requests.size)
+    }
+
+    @Test
+    fun `coming back does not retry what failed for a reason that is still there`(): Unit = runBlocking {
+        val id = recorded()
+        llm.fail(LlmException.Kind.BILLING, "Your Claude account needs credit.")
+        val processor = processor()
+        processor.summarize(id)
+        processor.awaitIdle()
+
+        processor.retryInterrupted()
+        processor.awaitIdle()
+
+        assertEquals(1, llm.requests.size)
         assertEquals(MeetingStatus.FAILED, meeting(id).status)
     }
 

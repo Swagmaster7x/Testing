@@ -60,6 +60,23 @@ class SettingsViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /** Tries the saved key against Claude from wherever the phone is now, and says what happened. */
+    fun checkConnection() {
+        if (transient.value.checking) return
+        transient.value = Transient(checking = true)
+        viewModelScope.launch {
+            val key = runCatching { container.secrets.apiKey() }.getOrNull()
+            val message = when {
+                key.isNullOrBlank() -> "No API key is saved on this phone yet."
+                else -> when (val result = container.llm.checkKey(key, container.settings.current().model)) {
+                    KeyCheck.Valid -> "Claude can be reached from here, and your key works."
+                    is KeyCheck.Invalid -> result.reason
+                }
+            }
+            transient.value = Transient(message = message)
+        }
+    }
+
     fun removeKey() {
         viewModelScope.launch {
             container.secrets.setApiKey(null)

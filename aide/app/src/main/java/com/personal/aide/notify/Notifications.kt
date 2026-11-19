@@ -24,6 +24,7 @@ object Notifications {
     const val CHANNEL_PREP = "prep"
     const val CHANNEL_NUDGES = "nudges"
     const val CHANNEL_COLLECT = "collect"
+    const val CHANNEL_WORK = "work"
 
     const val RECORDING_ID = 1
     const val BRIEF_ID = 2
@@ -31,6 +32,7 @@ object Notifications {
     const val WAITING_ID = 4
     const val PREP_ID = 5
     const val COLLECT_ID = 6
+    const val WORK_ID = 7
     private const val SUMMARY_ID_BASE = 1000
 
     fun manager(context: Context): NotificationManager =
@@ -62,6 +64,12 @@ object Notifications {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_BRIEF, "Morning brief", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "A daily reminder of what is due and what is on."
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_WORK, "Working", NotificationManager.IMPORTANCE_LOW).apply {
+                description = "Shown while Claude is writing notes or reading pages, so the work isn't cut off when you switch to another app."
+                setShowBadge(false)
             },
         )
         manager.createNotificationChannel(

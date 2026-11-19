@@ -40,12 +40,18 @@ class NotificationsTest {
     private fun Notification.text(): String = extras.getCharSequence(Notification.EXTRA_TEXT).toString()
 
     @Test
-    fun `the five channels exist, and the recording one is quiet`() {
+    fun `the seven channels exist, and the ones that stay up while something is going on are quiet`() {
         val channels = manager.notificationChannels.associateBy { it.id }
         assertEquals(
-            setOf(Notifications.CHANNEL_RECORDING, Notifications.CHANNEL_UPDATES, Notifications.CHANNEL_BRIEF, Notifications.CHANNEL_PREP, Notifications.CHANNEL_NUDGES),
+            setOf(
+                Notifications.CHANNEL_RECORDING, Notifications.CHANNEL_UPDATES, Notifications.CHANNEL_BRIEF, Notifications.CHANNEL_PREP,
+                Notifications.CHANNEL_NUDGES, Notifications.CHANNEL_COLLECT, Notifications.CHANNEL_WORK,
+            ),
             channels.keys,
         )
+        // Collecting notes and Claude working are states, not news: they must not buzz.
+        assertEquals(NotificationManager.IMPORTANCE_LOW, channels.getValue(Notifications.CHANNEL_COLLECT).importance)
+        assertEquals(NotificationManager.IMPORTANCE_LOW, channels.getValue(Notifications.CHANNEL_WORK).importance)
         assertEquals(NotificationManager.IMPORTANCE_LOW, channels.getValue(Notifications.CHANNEL_RECORDING).importance)
         assertEquals(NotificationManager.IMPORTANCE_DEFAULT, channels.getValue(Notifications.CHANNEL_UPDATES).importance)
         assertEquals(NotificationManager.IMPORTANCE_DEFAULT, channels.getValue(Notifications.CHANNEL_BRIEF).importance)
@@ -57,7 +63,7 @@ class NotificationsTest {
     @Test
     fun `creating the channels again changes nothing`() {
         Notifications.createChannels(context)
-        assertEquals(5, manager.notificationChannels.size)
+        assertEquals(7, manager.notificationChannels.size)
     }
 
     // -------------------------------------------------------------------------------------------

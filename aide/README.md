@@ -33,7 +33,7 @@ The screens above are rendered from the app's own code with a sample week of dat
 
 ### Permissions
 
-Microphone (to transcribe), notifications (the recording controls, briefs and reminders), calendar (read-only, optional), exact alarms (so a meeting's brief arrives ten minutes before it and not whenever the phone next wakes), and run-at-startup (to set those alarms again after the phone restarts). Internet is used only to reach the Anthropic API. Photos are taken with the phone's own camera app, so Aide asks for no camera permission, and files and pictures are picked through the phone's own pickers, so it sees only what you choose.
+Microphone (to transcribe), carrying on in the background while Claude is writing notes or reading pages (with an "Aide is working" notification, so the work isn't cut off when you switch to another app), notifications (the recording controls, briefs and reminders), calendar (read-only, optional), exact alarms (so a meeting's brief arrives ten minutes before it and not whenever the phone next wakes), and run-at-startup (to set those alarms again after the phone restarts). Internet is used only to reach the Anthropic API. Photos are taken with the phone's own camera app, so Aide asks for no camera permission, and files and pictures are picked through the phone's own pickers, so it sees only what you choose.
 
 ## What you need
 
@@ -63,7 +63,7 @@ The recognizer hears one microphone and does not know who is speaking, so transc
 
 - No speaker labels, and no audio is kept, so a transcript can't be re-listened to or re-transcribed.
 - Transcription depends on the phone's recognizer. It has been exercised here against a simulated recognizer and on an emulator, not with real speech in a real room; expect to tune the language and the "keep recognition on the phone" setting on first use.
-- Notes are written after the meeting, not during it, and need a connection to reach Claude.
+- Notes are written after the meeting, not during it, and need a connection to reach Claude. If the connection drops, Aide tries again by itself a couple of times, and once more when you next open it. When it does give up, the message says what kind of failure it was; some work and guest networks don't let apps reach Claude at all, and Settings > Check the connection will tell you whether the one you are on does.
 - Reading pictures and PDFs costs roughly 2 to 3 cents a page with the default model, and a PDF is read up to 60 pages at a time. Old Word files (.doc), spreadsheets and slides aren't opened: save them as PDF first. Handwriting is read as well as Claude can; words it can't make out are marked, not guessed.
 - If the phone's clocks change, the morning brief and the afternoon reminders arrive an hour off until the next time they run or their switch is flipped in Settings.
 - Meeting briefs follow the calendar on the phone, which Aide re-reads every few hours and whenever it is opened. A meeting added or moved at the last minute may get no brief, and phones with aggressive battery saving can delay or drop reminders; exempting Aide from battery optimisation helps.

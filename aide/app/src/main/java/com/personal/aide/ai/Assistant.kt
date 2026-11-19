@@ -48,6 +48,7 @@ import com.personal.aide.domain.wordCount
 import com.personal.aide.domain.workStats
 import androidx.room.withTransaction
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.KSerializer
 import java.io.File
 import java.time.ZoneId
@@ -70,6 +71,8 @@ class Assistant(
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     private val series: SeriesStore = SeriesStore(db.series(), db.meetings(), now),
     private val wins: WinStore = WinStore(db.wins(), now),
+    /** Waits before trying again when reading a batch of pages fails for want of a connection. Empty for no retries. */
+    private val retryDelays: List<Long> = listOf(3_000L, 10_000L),
 ) {
     sealed interface SummaryResult {
         data object Done : SummaryResult
@@ -865,7 +868,8 @@ class Assistant(
         var done = 0
         for (batch in pages.chunked(PAGES_PER_CALL)) {
             val images = batch.map { file -> LlmImage("image/jpeg", Base64.getEncoder().encodeToString(file.readBytes())) }
-            val response = call(
+            val response = patiently {
+                call(
                 LlmRequest(
                     feature = "read_pages",
                     // Names from the profile help with handwriting; nothing else about the user is needed to read a page.
@@ -874,13 +878,27 @@ class Assistant(
                     maxTokens = 32_000,
                     effort = Effort.LOW,
                 ),
-            )
+                )
+            }
             if (text.isNotEmpty()) text.append("\n\n")
             text.append(response.text.trim())
             done += batch.size
             onProgress(done, pages.size)
         }
         text.toString()
+    }
+
+    /** Runs [block], trying again after each of [retryDelays] when it fails in a way that may pass: a dropped connection, a busy server. */
+    private suspend fun <T> patiently(block: suspend () -> T): T {
+        for (wait in retryDelays) {
+            try {
+                return block()
+            } catch (e: LlmException) {
+                if (!e.retryable) throw e
+                delay(wait)
+            }
+        }
+        return block()
     }
 
     // ---------------------------------------------------------------------------------------

@@ -3,10 +3,12 @@ package com.personal.aide
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.personal.aide.ai.AnthropicLlm
 import com.personal.aide.ai.Assistant
 import com.personal.aide.ai.Intake
+import com.personal.aide.ai.IntakeState
 import com.personal.aide.ai.Llm
 import com.personal.aide.ai.MeetingProcessor
 import com.personal.aide.calendar.Agenda
@@ -26,6 +28,7 @@ import com.personal.aide.data.WinStore
 import com.personal.aide.data.db.AppDatabase
 import com.personal.aide.domain.speechHints
 import com.personal.aide.notify.Notifications
+import com.personal.aide.notify.WorkService
 import com.personal.aide.transcribe.AndroidSpeechTranscriber
 import com.personal.aide.transcribe.Recorder
 import com.personal.aide.transcribe.RecordingService
@@ -34,6 +37,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -105,6 +112,24 @@ class AppContainer(
         // Once the text is saved the pictures have done their job. After a failure they are kept, to try again with.
         onFinished = { materials, saved -> if (saved) materials.forEach(documents::discard) },
     )
+
+    /** Claude is writing notes or reading pages. While this is true the app must not be frozen. */
+    val busy: StateFlow<Boolean> = combine(processor.inProgress, intake.state) { writing, taking ->
+        writing.isNotEmpty() || taking is IntakeState.Working
+    }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    init {
+        scope.launch {
+            // Work begins while the user is looking at the app, which is when Android lets the keep-alive start.
+            busy.collect { working -> if (working) WorkService.start(app) }
+        }
+        // Coming back to the app is the moment to try again for notes a lost connection cut short.
+        runCatching {
+            ProcessLifecycleOwner.get().lifecycle.addObserver(
+                LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_START) processor.retryInterrupted() },
+            )
+        }
+    }
 
     /** Ends the collecting and has what was collected written up. Null if nothing was collected. */
     suspend fun finishCollecting(): Long? {

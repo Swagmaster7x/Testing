@@ -64,6 +64,7 @@ class SettingsActions(
     val onRemoveKey: () -> Unit = {},
     val onClearKeyDialog: () -> Unit = {},
     val onClearMessage: () -> Unit = {},
+    val onCheckConnection: () -> Unit = {},
     val onModel: (AideModel) -> Unit = {},
     val onLanguage: (String) -> Unit = {},
     val onPreferOnDevice: (Boolean) -> Unit = {},
@@ -172,6 +173,16 @@ fun SettingsScreen(
                     ) { Text(if (state.hasKey) "Change" else "Add", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) }
                     Divider()
                     ListRow(title = "Model", detail = settings.model.label + ". " + settings.model.blurb, icon = AideIcons.Sparkle, onClick = { modelDialog = true })
+                    if (state.hasKey) {
+                        Divider()
+                        ListRow(
+                            title = "Check the connection",
+                            detail = "Tries Claude from where you are now. Useful when notes fail on one network and not another.",
+                            onClick = actions.onCheckConnection,
+                        ) {
+                            if (state.checkingKey) Working("") else Text("Check", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
             }
 
