@@ -195,7 +195,9 @@ class DocumentReader(context: Context) {
     /** Decodes a picture at no more than the size Claude makes use of, turned the right way up. */
     private fun pageFromImage(name: String, open: () -> InputStream?): File {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        open()?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: throw DocumentException("\"$name\" couldn't be opened.")
+        // Asking only for the size returns no picture, by design; what matters is whether the file opened.
+        val measuring = open() ?: throw DocumentException("\"$name\" couldn't be opened.")
+        measuring.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw DocumentException("\"$name\" isn't a picture Aide can read.")
         var sample = 1
         while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= IMAGE_EDGE) sample *= 2

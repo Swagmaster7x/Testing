@@ -20,6 +20,7 @@ import com.personal.aide.ai.AideModel
 import com.personal.aide.ai.AnthropicLlm
 import com.personal.aide.ai.Assistant
 import com.personal.aide.ai.Effort
+import com.personal.aide.ai.IntakeState
 import com.personal.aide.ai.KeyCheck
 import com.personal.aide.ai.LlmException
 import com.personal.aide.ai.LlmMessage
@@ -453,7 +454,10 @@ class OnDeviceTest {
         )
 
         assertTrue(container.intake.submit("", "", listOf(Material.Pages("Photos", listOf(page), photos = true)), MeetingSource.DOCUMENT))
-        waitUntil("the photographed page to be read and filed", timeoutMs = 120_000) {
+        // Generous: the first request in a run also loads the whole Claude SDK, which is slow on an emulator.
+        waitUntil("the photographed page to be read", timeoutMs = 480_000) { container.intake.state.value !is IntakeState.Working }
+        assertTrue("reading ended as ${container.intake.state.value}", container.intake.state.value is IntakeState.Done)
+        waitUntil("the document to be filed", timeoutMs = 240_000) {
             runBlocking { db.meetings().all().firstOrNull()?.status == MeetingStatus.READY }
         }
 
