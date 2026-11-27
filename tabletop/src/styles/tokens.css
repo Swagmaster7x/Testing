@@ -21,7 +21,7 @@
   /* Text on the dark room */
   --text-1: #efe6d6;
   --text-2: #c7bba7;
-  --text-3: #978b78;
+  --text-3: #aa9e88;
 
   /* Materials */
   --felt-800: #10291f;
@@ -42,6 +42,9 @@
   --brass-2: #c9a25a;
   --brass-3: #8f7140;
   --brass-wash: rgb(201 162 90 / 0.14);
+  /* A primary button's face: light gold under dark text, in every look. */
+  --brass-fill: #c9a25a;
+  --brass-fill-hover: #e2c27f;
 
   /* Signals, kept muted */
   --good: #9cba84;
@@ -117,12 +120,14 @@
 
   --text-1: #241c13;
   --text-2: #4d4132;
-  --text-3: #75685a;
+  --text-3: #5f5243;
 
-  --brass-1: #7a5519;
-  --brass-2: #94692a;
-  --brass-3: #b58e52;
+  --brass-1: #5e400f;
+  --brass-2: #6e4c16;
+  --brass-3: #a9824a;
   --brass-wash: rgb(148 105 42 / 0.12);
+  --brass-fill: #c9a25a;
+  --brass-fill-hover: #d6b46e;
 
   --good: #4b7537;
   --warn: #9a5d16;
@@ -155,7 +160,7 @@
   --ink-500: #54493c;
   --text-1: #efe6d6;
   --text-2: #c7bba7;
-  --text-3: #978b78;
+  --text-3: #aa9e88;
   --brass-1: #e2c27f;
   --brass-2: #c9a25a;
   --brass-3: #8f7140;

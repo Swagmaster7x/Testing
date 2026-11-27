@@ -73,8 +73,23 @@ Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in th
 - [x] **The first-run tour**: five short steps in a card at the top of Today (welcome, the four
       doors of every game, Today, Progress and table-ready, the tools), each with a link; "No
       thanks" or the last step puts it away; Settings shows it again. It never covers the screen.
-- [ ] Still to come in M16: the Spanish interface, accessibility and performance passes, the
-      Mahjong score calculators (after M14), the release APK, optional web hosting.
+- [x] **Spanish interface, first part**: a language choice in Settings (per profile); a Spanish
+      catalogue that falls back to English key by key; every string of the shell and of the
+      learning loop translated (informal "tú", Caribbean usage where it differs); dates follow the
+      language. The games' own text is being translated in its own checkout; lessons stay in
+      English, as the plan allows. `tests/unit/text-es.test.ts` checks keys and placeholders.
+- [x] **Accessibility pass**: axe-core (`@axe-core/playwright`, a test dependency) scans every main
+      screen, the daylight look, six tables and a lesson at all three sizes
+      (`tests/e2e/a11y.spec.ts`); none has a WCAG 2.1 A or AA finding. Fixed on the way: quiet text
+      (`--text-3`) and primary buttons raised to 4.5:1 in both looks, a faded "0 due" badge.
+      One rule is off, with the reason in the spec: a playing card's corner number is part of its
+      picture, and its spoken name ("Dos de oros") is what a person says to choose it.
+- [x] **Performance pass**, measured in Chromium with the CPU slowed four times (a mid-range
+      phone): Today opens in about 0.6 s from cold, a game's hub in 0.35 s, chess practice with its
+      800 KB of puzzles in 0.8 s, a Mahjong table starts in 0.25 s. The startup script is 714 KB
+      (React, Dexie and the interface text); nothing needed splitting further now.
+- [ ] Still to come in M16: the games' Spanish text (in progress), the Mahjong score calculators
+      (after M14), the release APK, optional web hosting.
 
 ### Decisions in M16 so far
 

@@ -356,8 +356,9 @@
   color: var(--text-1);
 }
 
+/* A quiet status (nothing due) in the tertiary text colour, not faded, so it stays readable. */
 .status[data-quiet='true'] {
-  opacity: 0.6;
+  color: var(--text-3);
 }
 
 .attribution {
