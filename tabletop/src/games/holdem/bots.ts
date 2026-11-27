@@ -265,7 +265,6 @@ function preflop(v: HoldemView, seat: Seat, style: StyleParams, skill: Skill, rn
     return result({ type: 'fold' }, ['price'], eq);
   };
   if (lastRaise?.allIn && skill.ranges) return priceCheck(['call']);
-  if (skill.stats) return preflopByValue(v, seat, style, skill, rng);
   if (raises === 1) {
     const raiserOpen = openFraction(positionName(v, raiser), players) * read.loose;
     const wide = Math.sqrt(Math.max(0.05, raiserOpen) / 0.2);
@@ -299,54 +298,6 @@ function preflop(v: HoldemView, seat: Seat, style: StyleParams, skill: Skill, rn
   }
   if (allInCall && skill.ranges) return priceCheck(['call']);
   return result({ type: 'fold' }, ['fold-weak']);
-}
-
-/**
- * Facing a raise before the flop, levels 5 and 6 weigh folding, calling and re-raising by expected
- * value against the raiser's likely hands (read from the session so far). A call only realises part
- * of its equity, less out of position; a re-raise also wins what the others fold.
- */
-function preflopByValue(v: HoldemView, seat: Seat, style: StyleParams, skill: Skill, rng: Rng): Decision {
-  const mine = me(v, seat);
-  const hole = holeOf(v, seat);
-  const pos = positionName(v, seat);
-  const order = dealtOrder(v);
-  const live = seatsInHand(v);
-  // In position when every player still in acts before this seat after the flop.
-  const inPosition = live.every((s) => s === seat || order.indexOf(s) < order.indexOf(seat)) && pos !== 'SB';
-  const readers = readersFor(v, seat, skill);
-  const pot = potOf(v);
-  const owe = Math.min(toCallOf(v, seat), mine.stack);
-  const eq = rangeEquity(hole, [], readers.map((r) => r.range), skill.samples, rng);
-  const realise = inPosition ? 0.95 : 0.78;
-  const options: Option[] = [{ action: { type: 'fold' }, ev: 0, tags: ['fold-weak'] }];
-  options.push({ action: { type: 'call' }, ev: eq * realise * (pot + owe) - owe + (1 - style.sticky) * pot * 0.1, tags: ['call'] });
-  const range = raiseRange(v, seat);
-  if (range) {
-    const targets = new Set<number>([range.max]);
-    const three = raiseTo(v, seat, v.currentBet * (inPosition ? 3 : 3.6));
-    if (three?.type === 'raise') targets.add(three.to);
-    for (const to of targets) {
-      const add = to - mine.bet;
-      let allFold = 1;
-      let callChips = 0;
-      const keeps: Range[] = [];
-      for (const r of readers) {
-        const p = me(v, r.seat);
-        const call = Math.min(to - p.bet, p.stack);
-        const { fold, keep } = splitRange(r, call / Math.max(1, pot + add + call));
-        allFold *= fold * 0.9;
-        callChips += (1 - fold) * call;
-        keeps.push(keep);
-      }
-      const eqCalled = rangeEquity(hole, [], keeps, Math.ceil(skill.samples / 2), rng);
-      const ev = allFold * pot + (1 - allFold) * (eqCalled * (to >= range.max ? 1 : 0.92) * (pot + add + callChips) - add) + (style.bluff - 0.15) * pot * 0.3;
-      options.push({ action: { type: 'raise', to }, ev, tags: to >= range.max ? ['four-bet', 'push'] : [eqCalled >= 0.5 ? 'three-bet' : 'bluff'] });
-    }
-  }
-  let best = options[0] as Option;
-  for (const o of options) if (o.ev > best.ev) best = o;
-  return { action: best.action, tags: best.tags, equity: eq };
 }
 
 // After the flop
