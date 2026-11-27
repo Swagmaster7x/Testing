@@ -1,9 +1,10 @@
 /**
  * The table's side of the bot worker. It sends a view, waits for the answer and keeps a short
- * minimum pause so play stays readable. Cancelling terminates the worker, which is the only
- * sure way to stop a long search; a fresh worker starts on the next request.
+ * minimum pause before CPU moves so play stays readable. Cancelling terminates the worker, which is
+ * the only sure way to stop a long search; a fresh worker starts on the next request.
  */
-import type { BotReply, BotReplyOk, BotRequest } from './protocol';
+import type { Json } from '../core/json';
+import type { AdviseRequest, BotReply, BotRequest, ChooseReply, ChooseRequest } from './protocol';
 
 export interface WorkerLike {
   postMessage(message: BotRequest): void;
@@ -20,8 +21,10 @@ export class BotCancelled extends Error {
 }
 
 export interface BotHostOptions {
-  /** The bot's answer is held back until at least this long after the request (about half a second). */
+  /** A CPU move is held back until at least this long after the request (about half a second). */
   readonly minPauseMs: number;
+  /** Base URL of the app's files, passed to engines in the worker. */
+  readonly assetsBase: string;
   readonly delay?: (ms: number) => Promise<void>;
 }
 
@@ -29,6 +32,8 @@ interface Waiting {
   resolve(reply: BotReply): void;
   reject(error: Error): void;
 }
+
+type Without<T> = T extends unknown ? Omit<T, 'id' | 'assetsBase' | 'kind'> : never;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -43,16 +48,24 @@ export class BotHost {
     private readonly options: BotHostOptions,
   ) {}
 
-  async choose(request: Omit<BotRequest, 'id'>): Promise<BotReplyOk> {
+  /** A move for a CPU seat. */
+  async choose(request: Without<ChooseRequest>): Promise<ChooseReply> {
     const generation = this.generation;
-    const id = this.nextId++;
-    const worker = this.ensureWorker();
-    const reply = new Promise<BotReply>((resolve, reject) => this.waiting.set(id, { resolve, reject }));
-    worker.postMessage({ id, gameId: request.gameId, view: request.view, seat: request.seat, level: request.level, seed: request.seed });
-    const [answer] = await Promise.all([reply, (this.options.delay ?? sleep)(this.options.minPauseMs)]);
+    const [answer] = await Promise.all([this.send({ ...request, kind: 'choose' }), (this.options.delay ?? sleep)(this.options.minPauseMs)]);
     if (generation !== this.generation) throw new BotCancelled();
     if (!answer.ok) throw new Error(`Bot error: ${answer.error}`);
+    if (answer.kind !== 'choose') throw new Error('The bot answered the wrong question');
     return answer;
+  }
+
+  /** A coach answer about a person's own position. */
+  async advise(request: Without<AdviseRequest>): Promise<Json> {
+    const generation = this.generation;
+    const answer = await this.send({ ...request, kind: 'advise' });
+    if (generation !== this.generation) throw new BotCancelled();
+    if (!answer.ok) throw new Error(`Coach error: ${answer.error}`);
+    if (answer.kind !== 'advise') throw new Error('The coach answered the wrong question');
+    return (answer).advice;
   }
 
   /** Stops any search in progress. Pending requests reject with BotCancelled. */
@@ -71,6 +84,14 @@ export class BotHost {
 
   dispose(): void {
     this.cancelAll();
+  }
+
+  private send(request: Without<ChooseRequest> & { kind: 'choose' } | Without<AdviseRequest> & { kind: 'advise' }): Promise<BotReply> {
+    const id = this.nextId++;
+    const worker = this.ensureWorker();
+    const reply = new Promise<BotReply>((resolve, reject) => this.waiting.set(id, { resolve, reject }));
+    worker.postMessage({ ...request, id, assetsBase: this.options.assetsBase });
+    return reply;
   }
 
   private ensureWorker(): WorkerLike {

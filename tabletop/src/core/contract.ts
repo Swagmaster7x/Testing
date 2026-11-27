@@ -42,7 +42,11 @@ export interface Codec<T> {
   /** Reads JSON written by toJSON. Throws on anything malformed: records come from storage and backups. */
   fromJSON(json: Json): T;
   toText(value: T): string;
-  fromText(text: string): T;
+  /**
+   * Reads notation back. Some notation only makes sense in a position (chess's Nc3), so action
+   * codecs are given the state the action is played in, when there is one.
+   */
+  fromText(text: string, context?: unknown): T;
 }
 
 /** JSON only, for values with no useful notation (game options). */

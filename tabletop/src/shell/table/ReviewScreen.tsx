@@ -13,6 +13,8 @@ import { appDb } from '../../store/db';
 import type { StoredRecord } from '../../store/db';
 import { getRecord } from '../../store/records';
 import { gameName, t, tDynamic } from '../../text';
+import { NO_OVERLAY } from '../../games/types';
+import { saveTextFile } from '../platform';
 import { Icon } from '../components/Icon';
 import { useReducedMotion } from '../motion';
 import { href, navigate } from '../router';
@@ -31,6 +33,8 @@ function Review({ ui, record, ply }: { ui: AnyGameUi; record: StoredRecord; ply:
   const total = steps.length;
   const current = Math.max(0, Math.min(ply ?? total, total));
   const previous = useRef(current);
+  const [flipOverride, setFlipOverride] = useState(false);
+  const notify = useApp((s) => s.notify);
   const anim = useSyncExternalStore(queue.subscribe, queue.snapshot);
 
   useEffect(() => {
@@ -67,8 +71,9 @@ function Review({ ui, record, ply }: { ui: AnyGameUi; record: StoredRecord; ply:
   const name = gameName(ui.def.id);
   const Surface = ui.Surface;
   const SeatMark = ui.SeatMark;
+  const SeatExtra = ui.SeatExtra;
   const moves = steps.map((s) => ({ ply: s.ply, seat: s.seat, text: ui.def.codec.action.toText(s.action) }));
-  const seatNames = ui.def.seats(start).map((s) => ui.sideName(s));
+  const seatNames = ui.def.seats(start).map((s) => (ui.movePrefix ? ui.movePrefix(s) : ui.sideName(s)));
   const positionText = current === 0 ? t('review.start') : t('review.of', { n: current, total });
 
   return (
@@ -83,6 +88,39 @@ function Review({ ui, record, ply }: { ui: AnyGameUi; record: StoredRecord; ply:
       onToggleRail={() => void updateSettings({ railOpen: !(settings?.railOpen ?? true) })}
       menu={(close) => (
         <>
+          {ui.flipForSeat ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                close();
+                setFlipOverride((f) => !f);
+              }}
+            >
+              <Icon name="again" size={20} />
+              {t('table.flip')}
+            </button>
+          ) : null}
+          {ui.exportRecord ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                close();
+                const format = ui.exportRecord;
+                if (!format) return;
+                const names = ui.def.seats(start).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
+                const fileName = `${ui.def.id}-${new Date(record.createdAt).toISOString().slice(0, 10)}.${format.extension}`;
+                saveTextFile(fileName, format.write(record, names), name).then(
+                  () => notify(t('table.exported', { file: fileName })),
+                  (err: unknown) => notify(t('settings.backup.failed', { message: (err as Error).message })),
+                );
+              }}
+            >
+              <Icon name="export" size={20} />
+              {t('table.export', { format: ui.exportRecord.extension.toUpperCase() })}
+            </button>
+          ) : null}
           <a role="menuitem" href={href(`/games/${ui.def.id}/reference`)} onClick={close}>
             <Icon name="reference" size={20} />
             {t('table.reference')}
@@ -106,6 +144,7 @@ function Review({ ui, record, ply }: { ui: AnyGameUi; record: StoredRecord; ply:
                   <span className="player-text">
                     <span className="player-name">{player?.kind === 'bot' ? t('common.cpu') : t('common.you')}</span>
                     <span className="player-detail">{player?.kind === 'bot' ? t('common.level', { n: player.level ?? 1 }) : ui.sideName(seat)}</span>
+                    {SeatExtra ? <SeatExtra state={state} start={start} seat={seat} /> : null}
                   </span>
                 </li>
               );
@@ -138,7 +177,21 @@ function Review({ ui, record, ply }: { ui: AnyGameUi; record: StoredRecord; ply:
           </div>
         </>
       }
-      surface={<Surface state={state} mySeats={mySeats} canAct={false} legal={[]} lastAction={lastAction} anim={anim} onAction={() => undefined} onSkip={() => queue.skip()} />}
+      surface={
+        <Surface
+          state={state}
+          mySeats={mySeats}
+          canAct={false}
+          legal={[]}
+          lastAction={lastAction}
+          anim={anim}
+          onAction={() => undefined}
+          onSkip={() => queue.skip()}
+          flipped={(ui.flipForSeat?.(mySeats[0] ?? 0) ?? false) !== flipOverride}
+          helps={{}}
+          overlay={NO_OVERLAY}
+        />
+      }
       rail={
         <>
           <RailSection title={t('rail.moves')}>

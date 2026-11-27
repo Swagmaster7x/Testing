@@ -3,14 +3,14 @@
  * level 1 must beat random play. Players see only their own view, as in the app.
  */
 import type { GameDef, GameEvent, Outcome, Seat } from '../core/contract';
-import { outcomePoints } from '../core/contract';
+import { findLegal, outcomePoints } from '../core/contract';
 import { createRng } from '../core/rng';
 import type { Rng } from '../core/rng';
 import { botSeed } from './bot';
 
 export interface Contender<V, A> {
   readonly name: string;
-  choose(view: V, seat: Seat, rng: Rng): A;
+  choose(view: V, seat: Seat, rng: Rng): A | Promise<A>;
 }
 
 export interface MatchResult {
@@ -24,19 +24,21 @@ export interface MatchResult {
 
 const MAX_PLIES = 10_000;
 
-export function playGame<S, A, C, V, E extends GameEvent>(
+export async function playGame<S, A, C, V, E extends GameEvent>(
   def: GameDef<S, A, C, V, E>,
   config: C,
   bySeat: readonly Contender<V, A>[],
   seed: string,
-): Outcome {
+): Promise<Outcome> {
   let state = def.setup(config, createRng(seed));
   for (let ply = 1; ply <= MAX_PLIES; ply++) {
     const seat = def.turn(state);
     if (seat === null) break;
     const player = bySeat[seat];
     if (!player) throw new Error(`No player for seat ${seat}`);
-    const action = player.choose(def.view(state, seat), seat, createRng(botSeed(seed, ply)));
+    const chosen = await player.choose(def.view(state, seat), seat, createRng(botSeed(seed, ply)));
+    const action = findLegal(def, state, seat, chosen);
+    if (action === null) throw new Error(`${player.name} chose an illegal move in game ${seed}`);
     state = def.apply(state, action).state;
   }
   const outcome = def.outcome(state);
@@ -45,14 +47,14 @@ export function playGame<S, A, C, V, E extends GameEvent>(
 }
 
 /** Two-seat match. The contenders swap seats every game. */
-export function runMatch<S, A, C, V, E extends GameEvent>(
+export async function runMatch<S, A, C, V, E extends GameEvent>(
   def: GameDef<S, A, C, V, E>,
   config: C,
   a: Contender<V, A>,
   b: Contender<V, A>,
   games: number,
   seedPrefix: string,
-): MatchResult {
+): Promise<MatchResult> {
   let total = 0;
   let wins = 0;
   let draws = 0;
@@ -60,7 +62,7 @@ export function runMatch<S, A, C, V, E extends GameEvent>(
   for (let i = 0; i < games; i++) {
     const aSeat: Seat = i % 2;
     const bySeat = aSeat === 0 ? [a, b] : [b, a];
-    const outcome = playGame(def, config, bySeat, `${seedPrefix}:${i}`);
+    const outcome = await playGame(def, config, bySeat, `${seedPrefix}:${i}`);
     const points = outcomePoints(outcome, aSeat);
     total += points;
     if (points > 0.5) wins++;
@@ -87,18 +89,21 @@ export interface LadderRung {
 }
 
 /** Random play against level 1, then each level against the next. */
-export function runLadder<S, A, C, V, E extends GameEvent>(
+export async function runLadder<S, A, C, V, E extends GameEvent>(
   spec: LadderSpec<S, A, C, V, E>,
   games: number,
   seedPrefix: string,
   random: Contender<V, A>,
-): LadderRung[] {
+  onRung?: (rung: LadderRung) => void,
+): Promise<LadderRung[]> {
   const rungs: LadderRung[] = [];
   let lower: Contender<V, A> = random;
   for (const level of spec.levels) {
     const higher = spec.bot(level);
-    const result = runMatch(spec.def, spec.config, higher, lower, games, `${seedPrefix}:${higher.name}-${lower.name}`);
-    rungs.push({ higher: higher.name, lower: lower.name, result, passed: result.score >= spec.margin });
+    const result = await runMatch(spec.def, spec.config, higher, lower, games, `${seedPrefix}:${higher.name}-${lower.name}`);
+    const rung = { higher: higher.name, lower: lower.name, result, passed: result.score >= spec.margin };
+    rungs.push(rung);
+    onRung?.(rung);
     lower = higher;
   }
   return rungs;

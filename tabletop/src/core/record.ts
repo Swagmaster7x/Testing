@@ -5,6 +5,7 @@
 import type { AnyGameDef, GameDef, GameEvent, Outcome, Seat } from './contract';
 import { resignationOutcome } from './contract';
 import type { Json } from './json';
+import { createRng } from './rng';
 import { isJsonObject } from './json';
 
 export type PlayerKind = 'human' | 'bot';
@@ -16,6 +17,19 @@ export interface SeatPlayer {
 }
 
 export type RecordStatus = 'active' | 'finished';
+
+/** How a game ended when it did not end on the board. */
+export interface Ending {
+  readonly kind: 'resigned' | 'timeout';
+  readonly seat: Seat;
+}
+
+/** An optional clock. Remaining time is saved after every move, per seat. */
+export interface ClockState {
+  readonly initialMs: number;
+  readonly incrementMs: number;
+  readonly remainingMs: readonly number[];
+}
 
 export interface GameRecord {
   readonly id: string;
@@ -30,8 +44,9 @@ export interface GameRecord {
   readonly actions: readonly Json[];
   readonly status: RecordStatus;
   readonly outcome: Outcome | null;
-  /** Set when a seat resigned rather than playing to the end. */
-  readonly resigned: Seat | null;
+  /** Set when a seat resigned or lost on time rather than playing to the end. */
+  readonly ending: Ending | null;
+  readonly clock: ClockState | null;
   /** Played with coach helps on: such games never move a rating. */
   readonly training: boolean;
   readonly createdAt: number;
@@ -46,6 +61,8 @@ export interface NewRecordInput<Config> {
   readonly appVersion: string;
   readonly training: boolean;
   readonly now: number;
+  /** Minutes and seconds per move, when the table uses a clock. */
+  readonly clock?: { readonly initialMs: number; readonly incrementMs: number } | null;
 }
 
 export function newRecord<S, A, C, V, E extends GameEvent>(
@@ -63,7 +80,14 @@ export function newRecord<S, A, C, V, E extends GameEvent>(
     actions: [],
     status: 'active',
     outcome: null,
-    resigned: null,
+    ending: null,
+    clock: input.clock
+      ? {
+          initialMs: input.clock.initialMs,
+          incrementMs: input.clock.incrementMs,
+          remainingMs: def.seats(def.setup(input.config, createRng(input.seed))).map(() => input.clock?.initialMs ?? 0),
+        }
+      : null,
     training: input.training,
     createdAt: input.now,
     updatedAt: input.now,
@@ -81,7 +105,24 @@ export function withOutcome(record: GameRecord, outcome: Outcome, now: number): 
 
 export function withResignation(record: GameRecord, seat: Seat, seats: readonly Seat[], now: number): GameRecord {
   if (record.status !== 'active') throw new Error('Cannot resign a finished game');
-  return { ...record, status: 'finished', resigned: seat, outcome: resignationOutcome(seats, seat), updatedAt: now };
+  return { ...record, status: 'finished', ending: { kind: 'resigned', seat }, outcome: resignationOutcome(seats, seat), updatedAt: now };
+}
+
+/** A loss on time. `outcome` lets a game turn it into a draw when the other side cannot win. */
+export function withTimeout(record: GameRecord, seat: Seat, outcome: Outcome, now: number): GameRecord {
+  if (record.status !== 'active') throw new Error('The game is already over');
+  return { ...record, status: 'finished', ending: { kind: 'timeout', seat }, outcome, updatedAt: now };
+}
+
+/** Removes the last `count` moves (a take-back), keeping the clock as it is. */
+export function withoutLastMoves(record: GameRecord, count: number, now: number): GameRecord {
+  if (record.status !== 'active') throw new Error('Cannot take back a move in a finished game');
+  return { ...record, actions: record.actions.slice(0, Math.max(0, record.actions.length - count)), updatedAt: now };
+}
+
+export function withClock(record: GameRecord, remainingMs: readonly number[]): GameRecord {
+  if (!record.clock) return record;
+  return { ...record, clock: { ...record.clock, remainingMs: [...remainingMs] } };
 }
 
 /** The seats a person plays in this record. */
@@ -117,6 +158,16 @@ export function parseRecord(value: unknown): GameRecord {
   });
   const status = r.status;
   if (status !== 'active' && status !== 'finished') throw new Error('Bad game record status');
+  // Records from 0.1.0 kept a plain resigned seat.
+  const ending: Ending | null = isJsonObject(r.ending) && (r.ending.kind === 'resigned' || r.ending.kind === 'timeout') && typeof r.ending.seat === 'number'
+    ? { kind: r.ending.kind, seat: r.ending.seat }
+    : typeof r.resigned === 'number'
+      ? { kind: 'resigned', seat: r.resigned }
+      : null;
+  const clock: ClockState | null =
+    isJsonObject(r.clock) && typeof r.clock.initialMs === 'number' && typeof r.clock.incrementMs === 'number' && Array.isArray(r.clock.remainingMs) && r.clock.remainingMs.every((v) => typeof v === 'number')
+      ? { initialMs: r.clock.initialMs, incrementMs: r.clock.incrementMs, remainingMs: r.clock.remainingMs }
+      : null;
   return {
     id: str('id'),
     gameId: str('gameId'),
@@ -128,7 +179,8 @@ export function parseRecord(value: unknown): GameRecord {
     actions: r.actions,
     status,
     outcome: (r.outcome ?? null) as Outcome | null,
-    resigned: typeof r.resigned === 'number' ? r.resigned : null,
+    ending,
+    clock,
     training: r.training === true,
     createdAt: num('createdAt'),
     updatedAt: num('updatedAt'),

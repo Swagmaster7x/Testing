@@ -78,7 +78,10 @@ export function App() {
       break;
     case 'games':
       if (second && third === 'reference') screen = <ReferenceScreen gameId={second} />;
-      else if (second && !third) screen = <HubScreen gameId={second} seed={route.query.get('seed') ?? undefined} />;
+      else if (second && !third) {
+        const fen = route.query.get('fen');
+        screen = <HubScreen gameId={second} seed={route.query.get('seed') ?? undefined} setup={fen ? { fen } : {}} />;
+      }
       else if (!second) screen = <GamesScreen />;
       else screen = <NotFound />;
       if (second && catalogGame(second)?.onShelf === false) section = '/settings';

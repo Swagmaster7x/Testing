@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { runLadder } from '../../src/ai/ladder';
 import { createRng } from '../../src/core/rng';
-import { LADDERS } from '../../src/games/ladders';
+import { buildLadders } from '../../src/games/ladders';
+import { nodeEngine } from '../harness/stockfish-node';
 import { noughtsBots, reasonTags } from '../../src/games/noughts/bots';
 import { noughts, parseCell } from '../../src/games/noughts/rules';
 
@@ -68,11 +69,11 @@ describe('noughts and crosses CPU levels', () => {
     expect(() => choose('.../.../... x', 7)).toThrow();
   });
 
-  it('passes a short ladder: level 1 beats random, each level beats the one below', () => {
-    const ladder = LADDERS.noughts;
+  it('passes a short ladder: level 1 beats random, each level beats the one below', async () => {
+    const ladder = buildLadders({ chessEngine: nodeEngine }).noughts;
     expect(ladder).toBeDefined();
     if (!ladder) return;
-    const rungs = runLadder(ladder.spec, 40, 'quick', ladder.random);
+    const rungs = await runLadder(ladder.spec, 40, 'quick', ladder.random);
     expect(rungs.map((r) => `${r.higher}>${r.lower}`)).toEqual(['L1>random', 'L2>L1', 'L3>L2']);
     for (const r of rungs) expect(r.passed, `${r.higher} vs ${r.lower}: ${r.result.score}`).toBe(true);
   });

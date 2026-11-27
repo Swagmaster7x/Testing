@@ -1,0 +1,223 @@
+/* BoardKit grid, chess pieces, the coach rail, clocks and warnings. */
+.grid-board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sq-light {
+  fill: #ead7b2;
+}
+
+.sq-dark {
+  fill: #9b6b45;
+}
+
+.sq-last {
+  fill: #e2c27f;
+  fill-opacity: 0.42;
+}
+
+.sq-selected {
+  fill: #f3d58f;
+  fill-opacity: 0.62;
+}
+
+.sq-hit {
+  fill: transparent;
+  outline: none;
+}
+
+.sq-hit:focus-visible {
+  fill: rgb(226 194 127 / 0.25);
+  stroke: var(--brass-1);
+  stroke-width: 5;
+}
+
+.coord {
+  font-family: var(--font-sans);
+  font-size: 19px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.coord-on-light {
+  fill: #9b6b45;
+}
+
+.coord-on-dark {
+  fill: #ead7b2;
+}
+
+.piece,
+.piece-slide,
+.piece-dragged {
+  pointer-events: none;
+}
+
+.piece-slide {
+  animation: piece-slide var(--dur) var(--ease) both;
+}
+
+@keyframes piece-slide {
+  from {
+    transform: translate(var(--dx), var(--dy));
+  }
+  to {
+    transform: translate(0, 0);
+  }
+}
+
+.piece-dragged {
+  filter: drop-shadow(0 8px 6px rgb(0 0 0 / 0.45));
+}
+
+/* Captured pieces under a player */
+.captured {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  margin-top: 2px;
+  min-height: 16px;
+}
+
+.captured-piece {
+  width: 15px;
+  height: 15px;
+  margin-right: -3px;
+}
+
+.captured .lead {
+  margin-left: 6px;
+  font-size: var(--fs-2xs);
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+/* Clocks */
+.clock {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.35);
+  font-size: var(--fs-md);
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.player[data-turn='true'] .clock {
+  background: var(--ivory-1);
+  color: var(--ivory-ink);
+}
+
+.clock[data-low='true'] {
+  color: var(--bad);
+}
+
+.player[data-turn='true'] .clock[data-low='true'] {
+  background: #f3d2c6;
+  color: #7a2a17;
+}
+
+/* Blunder warning */
+.warning-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  background: #3a2418;
+  border: 1px solid #a2553b;
+  animation: rise-in var(--dur-2) var(--ease);
+}
+
+.warning-card h2 {
+  font-size: var(--fs-lg);
+  color: #f6c9b6;
+}
+
+.warning-card p {
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}
+
+/* Coach rail */
+.helps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--sp-2);
+}
+
+.help-chip {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.help-chip[aria-checked='true'] {
+  background: var(--brass-wash);
+  border-color: var(--brass-3);
+  color: var(--brass-1);
+}
+
+.coach {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.coach-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: flex-start;
+}
+
+.hint-steps {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coach-line {
+  font-size: var(--fs-sm);
+  color: #f0b8a3;
+}
+
+.eval {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.eval-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: #1a130d;
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+
+.eval-white {
+  height: 100%;
+  background: var(--ivory-1);
+  transition: width var(--dur-2) var(--ease);
+}

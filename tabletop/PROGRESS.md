@@ -1,12 +1,16 @@
 # Kibitz progress
 
-Last updated 2026-11-27, at the end of milestone 0. The plan is `PLAN.md`; this file says what
+Last updated 2026-11-27, at the end of milestone 1. The plan is `PLAN.md`; this file says what
 has been built, what was decided along the way, and what is still open.
+
+**Swag's instruction after M0 (2026-11-27): "I trust you, build it all."** So the build carries
+on milestone after milestone without stopping, including past the feedback stop the plan puts
+after M2. Feedback is still welcome at any point and will be applied to the template.
 
 ## Milestones
 
 - [x] **M0. Foundation** (2026-11-27)
-- [ ] M1. Chess: play
+- [x] **M1. Chess: play** (2026-11-27)
 - [ ] M2. The learning loop, on Chess. Then stop for Swag's feedback.
 - [ ] M3. Cards and Brisca (2 players)
 - [ ] M4. Dominoes
@@ -23,7 +27,63 @@ has been built, what was decided along the way, and what is still open.
 - [ ] M15. Stronger engines
 - [ ] M16. Table tools, polish, release
 
-Next up: **M1, Chess: play.**
+Next up: **M2, the learning loop on Chess.**
+
+## M1. Chess: play
+
+- [x] BoardKit grid (`src/kits/board/GridBoard.tsx`): tap a piece then a square, or drag; last
+      move, legal-move dots and capture rings, check highlight, coach arrows and marks,
+      coordinates, flip. Every square is a labelled button ("e4, white knight").
+- [x] An original chess set drawn for the app (`src/kits/board/chess-pieces.tsx`).
+- [x] `chess.js` behind the contract (`src/games/chess/rules.ts`), with automatic draws by
+      repetition, fifty moves and insufficient material. Rules: `docs/rules/chess.md`.
+- [x] Stockfish 19 (lite, single-threaded) in its own worker, started from the bot worker, behind
+      a small UCI driver (`src/ai/uci.ts`). The same engine build runs in Node for ladders and
+      tests (`tests/harness/stockfish-node.ts`). The two engine files are copied from
+      `node_modules` at build time and precached for offline use.
+- [x] Levels 1 to 8. Levels 1 to 3 pick among Stockfish's top lines with planned mistakes (and a
+      liking for captures), seeded so a game replays exactly; levels 4 to 8 use Stockfish's own
+      strength limit at 1500, 1750, 2000, 2300 and 2700, each with a node budget.
+- [x] Optional clock: none, 5 min, 10 min, 15 + 10. Time is saved after every move and paused
+      while the app is closed; loss on time, or a draw when the other side cannot mate.
+- [x] Coach in the rail, each help a switch: legal moves (on by default), blunder warning with
+      take-back, three-step hint (where to look, the idea, the move), threats, evaluation bar
+      (off by default). Helps other than legal moves mark the game as training.
+- [x] Move list in standard notation, captured pieces and material, fifty-move count, save and
+      resume, take-back, flip, PGN out (menu) and in (Review door → Open a game file).
+- [x] Starting from any position by link: `#/games/chess?fen=...` (used by tests, and by lessons
+      next).
+
+### Gate
+
+| Check | Result |
+| --- | --- |
+| Perft cross-check | Our contract wrapper matches the published counts for six standard positions (to depth 2 or 3), and chess.js matches one ply deeper (`tests/unit/chess-rules.test.ts`) |
+| Ladder | Measured over 16 games a rung (seats alternate): L1 beats random 16–0 (earlier tuning), L2 beats random 0.97, L3 beats L2 0.72, L4 beats L3 0.91, L5 beats L4 0.81, L6 beats L5 0.72, L7 beats L6 0.81; L8 against L7 was still running at the time of writing (see the M2 section) |
+| Scripted full game against level 1 in e2e | Yes, at 844×390, 1180×820 and 1440×900: Stockfish in Node plays the person's side to checkmate, then the game is reviewed move by move |
+| `npm run check` | Green: 136 unit tests, 6 property tests (chess random games keep the contract and replay), lint, types |
+| `npm run e2e` | Green: 78 tests (2 skipped on purpose: PGN runs once), including the M1 screenshots |
+
+Found and fixed on the way: Stockfish's own strength limit is far weaker than its name (level 3
+with planned mistakes beat "1350" 15–1), so levels 1 to 3 now make many more mistakes and level
+4 starts at 1500; the blunder check was asked about the position after the move instead of
+before it; standard notation like `B6d7` was mistaken for from-to form; captured pieces were
+counted from the standard set even in set-up positions; a hint that parries a mate threat now
+says so; the New game dialog closes with Escape.
+
+### Decisions in M1
+
+1. **Contract additions.** An action codec may read notation in the context of a position
+   (`fromText(text, state)`), because standard chess notation needs one. State notation must read
+   back to the same notation (FEN cannot carry repetition history); JSON must read back exactly.
+2. **Records** gained a general `ending` (resigned or timeout, replacing `resigned`; old records
+   still open) and an optional `clock`.
+3. **Draws by repetition and the fifty-move rule are automatic**, as online. The Table-ready track
+   in M2 teaches how to claim them at a club.
+4. **Coach answers come from the bot worker** (`advise` requests), with a node budget of 40,000,
+   so the main thread never runs the engine.
+5. **The table's move check pauses the clock** while the coach looks at a move, and a take-back
+   restores the clock to before the move.
 
 ## M0. Foundation
 

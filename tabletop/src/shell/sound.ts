@@ -1,7 +1,7 @@
 /**
  * A handful of short sounds, synthesised on the spot (no audio files), with a switch in Settings.
  */
-export type SoundName = 'place' | 'line' | 'end';
+export type SoundName = 'place' | 'capture' | 'line' | 'end';
 
 let context: AudioContext | null = null;
 
@@ -34,6 +34,11 @@ export function playSound(name: SoundName): void {
       // A soft wooden tock.
       tone(ctx, now, 190, 0.09, 0.22, 'triangle');
       tone(ctx, now, 820, 0.03, 0.05, 'sine');
+      break;
+    case 'capture':
+      // A firmer double knock.
+      tone(ctx, now, 170, 0.08, 0.26, 'triangle');
+      tone(ctx, now + 0.05, 230, 0.08, 0.18, 'triangle');
       break;
     case 'line':
       tone(ctx, now, 523.25, 0.22, 0.09, 'sine');

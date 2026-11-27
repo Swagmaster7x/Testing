@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { BotReplyOk, BotRequest } from '../../src/ai/protocol';
+import type { ChooseReply, ChooseRequest } from '../../src/ai/protocol';
 import { runBot } from '../../src/ai/run-bot';
 import type { BotHost } from '../../src/ai/worker-host';
 import { BotCancelled } from '../../src/ai/worker-host';
@@ -12,15 +12,16 @@ import { TableController } from '../../src/shell/table/controller';
 
 /** A bot host that answers in-process, records what it was sent, and can be held back. */
 function fakeBots(options: { hold?: boolean } = {}) {
-  const sent: Omit<BotRequest, 'id'>[] = [];
-  const pending: { resolve: (r: BotReplyOk) => void; reject: (e: Error) => void; request: Omit<BotRequest, 'id'> }[] = [];
+  type Sent = Omit<ChooseRequest, 'id' | 'assetsBase' | 'kind'>;
+  const sent: Sent[] = [];
+  const pending: { resolve: (r: ChooseReply) => void; reject: (e: Error) => void; request: Sent }[] = [];
   let cancels = 0;
   const host = {
-    choose: (request: Omit<BotRequest, 'id'>) => {
+    choose: (request: Sent) => {
       sent.push(structuredClone(request));
-      return new Promise<BotReplyOk>((resolve, reject) => {
+      return new Promise<ChooseReply>((resolve, reject) => {
         if (options.hold) pending.push({ resolve, reject, request });
-        else void runBot({ ...request, id: 1 }).then((r) => (r.ok ? resolve(r) : reject(new Error(r.error))));
+        else void runBot({ ...request, id: 1, kind: 'choose', assetsBase: '' }).then((r) => (r.ok && r.kind === 'choose' ? resolve(r) : reject(new Error(r.ok ? 'wrong kind' : r.error))));
       });
     },
     cancelAll: () => {
@@ -31,8 +32,8 @@ function fakeBots(options: { hold?: boolean } = {}) {
   const release = async () => {
     const next = pending.shift();
     if (!next) throw new Error('nothing pending');
-    const reply = await runBot({ ...next.request, id: 1 });
-    if (reply.ok) next.resolve(reply);
+    const reply = await runBot({ ...next.request, id: 1, kind: 'choose', assetsBase: '' });
+    if (reply.ok && reply.kind === 'choose') next.resolve(reply);
   };
   return { host, sent, release, cancels: () => cancels };
 }
@@ -128,11 +129,79 @@ describe('table controller', () => {
     await controller.flush();
     const { record, turn } = controller.snapshot();
     expect(record.status).toBe('finished');
-    expect(record.resigned).toBe(0);
+    expect(record.ending).toEqual({ kind: 'resigned', seat: 0 });
     expect(record.outcome?.results.find((r) => r.seat === 1)?.place).toBe(1);
     expect(turn).toBeNull();
     controller.act(parseCell('b2'));
     expect(controller.snapshot().record.actions).toHaveLength(0);
+  });
+
+  it('takes back the person’s move and the CPU reply, and marks the game as training', async () => {
+    const bots = fakeBots();
+    const { controller } = setup(humanFirst(), bots.host);
+    controller.start();
+    controller.act(parseCell('b2'));
+    await vi.waitFor(() => expect(controller.snapshot().record.actions).toHaveLength(2));
+    controller.takeBack();
+    const snap = controller.snapshot();
+    expect(snap.record.actions).toHaveLength(0);
+    expect(snap.record.training).toBe(true);
+    expect(snap.humanTurn).toBe(true);
+  });
+
+  it('holds the CPU back while a move is checked, then plays on or takes back', async () => {
+    const bots = fakeBots();
+    const { controller } = setup(humanFirst(), bots.host);
+    let release: (w: { text: string; overlay: { arrows: []; marks: [] } } | null) => void = () => undefined;
+    controller.setMoveCheck(() => new Promise((resolve) => (release = resolve)));
+    controller.start();
+    controller.act(parseCell('a1'));
+    expect(controller.snapshot().checking).toBe(true);
+    expect(bots.sent).toHaveLength(0);
+    release({ text: 'Careful', overlay: { arrows: [], marks: [] } });
+    await vi.waitFor(() => expect(controller.snapshot().warning?.text).toBe('Careful'));
+    expect(bots.sent).toHaveLength(0);
+    controller.keepMove();
+    await vi.waitFor(() => expect(controller.snapshot().record.actions).toHaveLength(2));
+    controller.act(parseCell('c3'));
+    release({ text: 'Again', overlay: { arrows: [], marks: [] } });
+    await vi.waitFor(() => expect(controller.snapshot().warning).not.toBeNull());
+    controller.takeBack();
+    expect(controller.snapshot().record.actions).toHaveLength(2);
+    expect(controller.snapshot().warning).toBeNull();
+  });
+
+  it('runs a clock: the mover pays for thinking time, gains the increment, and loses on time', () => {
+    let now = 0;
+    const bots = fakeBots({ hold: true });
+    const record = newRecord(noughts, { id: 'c', config: {}, seed: 'clock', players: [{ kind: 'human' }, { kind: 'bot', level: 1 }], appVersion: 't', training: false, now: 0, clock: { initialMs: 10_000, incrementMs: 1_000 } });
+    const queue = new EventQueue<NoughtsEvent>({ duration: () => 0, reducedMotion: () => true });
+    const controller = new TableController({ def: noughts, bots: bots.host, queue, save: () => Promise.resolve(), now: () => now }, record);
+    controller.start();
+    now = 3_000;
+    expect(controller.clock()).toEqual([7_000, 10_000]);
+    controller.act(parseCell('b2'));
+    expect(controller.snapshot().record.clock?.remainingMs).toEqual([8_000, 10_000]);
+    now = 25_000;
+    controller.tick();
+    const snap = controller.snapshot();
+    expect(snap.record.status).toBe('finished');
+    expect(snap.record.ending).toEqual({ kind: 'timeout', seat: 1 });
+    expect(snap.record.outcome?.results.find((r) => r.seat === 0)?.place).toBe(1);
+  });
+
+  it('pauses the clock while the app is closed', () => {
+    let now = 0;
+    const bots = fakeBots({ hold: true });
+    const record = newRecord(noughts, { id: 'p', config: {}, seed: 'pause', players: [{ kind: 'human' }, { kind: 'bot', level: 1 }], appVersion: 't', training: false, now: 0, clock: { initialMs: 10_000, incrementMs: 0 } });
+    const queue = new EventQueue<NoughtsEvent>({ duration: () => 0, reducedMotion: () => true });
+    const controller = new TableController({ def: noughts, bots: bots.host, queue, save: () => Promise.resolve(), now: () => now }, record);
+    controller.start();
+    now = 2_000;
+    controller.stop();
+    now = 60_000;
+    controller.start();
+    expect(controller.clock()).toEqual([8_000, 10_000]);
   });
 
   it('plays a whole game to the end against level 3 and never lets the person act out of turn', async () => {

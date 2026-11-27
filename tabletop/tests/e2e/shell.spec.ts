@@ -19,7 +19,7 @@ test.describe('the shell', () => {
     }
   });
 
-  test('the shelf shows the eight launch games as coming, grouped, without the test game', async ({ page }) => {
+  test('the shelf shows the eight launch games, grouped, built ones playable, without the test game', async ({ page }) => {
     await page.goto('/#/games');
     for (const group of ['Cards', 'Boards', 'Tiles']) await expect(page.getByRole('heading', { name: group })).toBeVisible();
     const tiles = page.locator('.tile');
@@ -28,13 +28,15 @@ test.describe('the shell', () => {
       await expect(page.getByRole('link', { name: `Open ${name}` })).toBeVisible();
     }
     await expect(page.getByText('Noughts and crosses')).toHaveCount(0);
-    await expect(page.getByText(/Coming · M\d|Next up · M1/)).toHaveCount(8);
+    // Chess is built (milestone 1); the other seven are still coming.
+    await expect(page.getByText(/Coming · M\d|Next up · M\d/)).toHaveCount(7);
+    await expect(page.getByRole('link', { name: 'Open Chess' })).not.toContainText(/Coming|Next up/);
   });
 
   test('a coming game has a hub with four closed doors and a reference card', async ({ page }) => {
     await page.goto('/#/games');
-    await page.getByRole('link', { name: 'Open Chess' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Chess' })).toBeVisible();
+    await page.getByRole('link', { name: 'Open Brisca' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Brisca' })).toBeVisible();
     const doors = page.locator('.door');
     await expect(doors).toHaveCount(4);
     for (let i = 0; i < 4; i++) await expect(doors.nth(i)).toHaveAttribute('aria-disabled', 'true');
@@ -79,6 +81,9 @@ test.describe('the shell', () => {
     await page.goto('/#/settings');
     await page.getByRole('radiogroup', { name: 'Coach rail side' }).getByRole('radio', { name: 'Left' }).click();
     await page.getByRole('radiogroup', { name: 'Sound' }).getByRole('radio', { name: 'Off' }).click();
+    await expect(page.getByRole('radiogroup', { name: 'Sound' }).getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true');
+    // Settings are written in the background; give the write a moment before the reload.
+    await page.waitForTimeout(400);
     await page.reload();
     await expect(page.getByRole('radiogroup', { name: 'Coach rail side' }).getByRole('radio', { name: 'Left' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByRole('radiogroup', { name: 'Sound' }).getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true');

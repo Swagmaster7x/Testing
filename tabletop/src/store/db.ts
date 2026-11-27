@@ -32,6 +32,10 @@ export interface ProfileSettings {
   readonly focus: readonly string[];
   /** The CPU level last chosen for each game. */
   readonly levels: Readonly<Record<string, number>>;
+  /** Coach switches per game, by help id. Missing ones take the game's default. */
+  readonly coach: Readonly<Record<string, Readonly<Record<string, boolean>>>>;
+  /** The clock last chosen for each game, by clock id. */
+  readonly clocks: Readonly<Record<string, string>>;
 }
 
 export interface StoredRecord extends GameRecord {

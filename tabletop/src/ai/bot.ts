@@ -19,6 +19,13 @@ export interface BotInput<V> {
   readonly rng: Rng;
 }
 
+export interface AdviseInput<V> {
+  readonly view: V;
+  readonly seat: Seat;
+  readonly query: Json;
+  readonly rng: Rng;
+}
+
 export interface BotChoice<A> {
   readonly action: A;
   /** Reason tags such as "blocks" or "fork"; the text catalogue turns them into words. */
@@ -29,7 +36,9 @@ export interface BotChoice<A> {
 export interface BotSet<V, A> {
   readonly gameId: string;
   readonly levels: readonly BotLevel[];
-  choose(input: BotInput<V>): BotChoice<A>;
+  choose(input: BotInput<V>): BotChoice<A> | Promise<BotChoice<A>>;
+  /** Coach answers for a person's own position. Games without a coach leave it out. */
+  advise?(input: AdviseInput<V>): Json | Promise<Json>;
   encode(action: A): Json;
 }
 

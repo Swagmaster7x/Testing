@@ -229,6 +229,8 @@ select {
 /* Segmented control */
 .segmented {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   padding: 3px;
   gap: 3px;
   border-radius: var(--r-md);
@@ -238,8 +240,8 @@ select {
 
 .segmented button {
   min-height: 38px;
-  min-width: 52px;
-  padding: 0 var(--sp-3);
+  min-width: 40px;
+  padding: 0 10px;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -296,6 +298,10 @@ select {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-2);
   padding: var(--sp-5);
+}
+
+.dialog-wide {
+  width: min(660px, 100%);
 }
 
 .dialog h2 {

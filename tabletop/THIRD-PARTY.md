@@ -14,6 +14,8 @@ APK; the rest are only used to build and test it.
 | `@capacitor/core` | 8.6.3 | MIT | Bridge to the Android wrapper |
 | `@capacitor/filesystem` | 8.1.5 | MIT | APK only: writes the backup file before sharing it |
 | `@capacitor/share` | 8.0.3 | MIT | APK only: the share sheet for "Export" |
+| `chess.js` | 1.4.0 | BSD-2-Clause | Chess rules behind the game contract. Licence: `licenses/chess.js-BSD-2-Clause.txt` |
+| Stockfish 19 (`stockfish`, lite single-threaded build) | 19.0.1 | GPL-3.0 | Chess engine for CPU levels and the coach. Only `stockfish-19-lite-single.js` and `.wasm` ship, as `engines/`. Licence: `licenses/Stockfish-GPL-3.0.txt`; source: github.com/nmrugg/stockfish.js and github.com/official-stockfish/Stockfish |
 | Inter (`@fontsource-variable/inter`) | 5.3.0 | SIL OFL 1.1 | Text font, Latin and Latin Extended. Licence: `licenses/Inter-OFL.txt` |
 | Fraunces (`@fontsource-variable/fraunces`) | 5.3.0 | SIL OFL 1.1 | Heading font, Latin and Latin Extended. Licence: `licenses/Fraunces-OFL.txt` |
 
@@ -46,11 +48,16 @@ APK; the rest are only used to build and test it.
 ## Art and sound
 
 All art is original and drawn as vectors for this app: the app icon (`assets/icon.svg`), the game
-glyphs on the shelf, the interface icons and the noughts-and-crosses board. Sounds are synthesised
+glyphs on the shelf, the interface icons, the noughts-and-crosses board and the chess set
+(`src/kits/board/chess-pieces.tsx`). Sounds are synthesised
 in the app with the Web Audio API; there are no sound files.
 
 ## Coming later
 
-The plan's later dependencies (`chess.js`, Stockfish, `tsshogi`, the Sabaki Go packages,
-`ts-fsrs`, and the test oracles) are added in the milestones that need them, each with a line here.
-Stockfish is GPL-3: see the licence note in PLAN.md 2.1 before publishing the app.
+The plan's later dependencies (`tsshogi`, the Sabaki Go packages, `ts-fsrs`, and the test
+oracles) are added in the milestones that need them, each with a line here.
+
+**Stockfish is GPL-3.** It runs as a separate worker file behind the `Engine` interface
+(`src/ai/uci.ts`). For a personal app that is fine. If this app is ever published, either publish
+its source under a GPL-compatible licence or switch Chess to a built-in engine (PLAN.md 2.1). No
+other GPL library is used, so that choice stays open.

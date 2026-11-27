@@ -19,7 +19,9 @@ import { shortDate, timeAgo } from '../format';
 import { href, navigate } from '../router';
 import { resultFor } from '../results';
 import { useApp } from '../state';
-import { startGame } from '../table/start';
+import { useEscape } from '../useEscape';
+import { importGame, startGame } from '../table/start';
+import { pickTextFile } from '../platform';
 import { useAsync } from '../useAsync';
 import { BackLink, CenterMessage, Screen } from './common';
 
@@ -46,23 +48,35 @@ function Door({ icon, title, blurb, foot, footStrong = false, onOpen }: DoorProp
   );
 }
 
-function PlayDialog({ ui, profileId, active, seed, now, onClose }: { ui: AnyGameUi; profileId: string; active: StoredRecord | undefined; seed: string | undefined; now: number; onClose: () => void }) {
+function PlayDialog({ ui, profileId, active, seed, setup, now, onClose }: { ui: AnyGameUi; profileId: string; active: StoredRecord | undefined; seed: string | undefined; setup: unknown; now: number; onClose: () => void }) {
   const remembered = useApp((s) => s.settings?.levels[ui.def.id]);
+  const rememberedClock = useApp((s) => s.settings?.clocks[ui.def.id]);
   const updateSettings = useApp((s) => s.updateSettings);
   const levels = useApp((s) => s.settings?.levels ?? {});
+  const clockChoices = useApp((s) => s.settings?.clocks ?? {});
+  const clocks = ui.clocks ?? [];
   const [level, setLevel] = useState<number>(remembered ?? ui.levels[0]?.level ?? 1);
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
+  const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
+  useEscape(onClose);
   const start = async () => {
     setBusy(true);
     const choice = ui.sides.find((s) => s.id === side);
-    await updateSettings({ levels: { ...levels, [ui.def.id]: level } });
-    const id = await startGame(ui, profileId, { level, side: choice?.seat ?? 'either', ...(seed ? { seed } : {}) });
+    const clock = clocks.find((c) => c.id === clockId);
+    await updateSettings({ levels: { ...levels, [ui.def.id]: level }, clocks: { ...clockChoices, [ui.def.id]: clockId } });
+    const id = await startGame(ui, profileId, {
+      level,
+      side: choice?.seat ?? 'either',
+      ...(seed ? { seed } : {}),
+      ...(setup !== undefined ? { config: setup } : {}),
+      clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
+    });
     navigate(`/play/${id}`);
   };
   return (
     <div className="dialog-scrim" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="play-title">
+      <div className="dialog dialog-wide" role="dialog" aria-modal="true" aria-labelledby="play-title">
         <div className="card-title">
           <h2 id="play-title">{t('play.title')}</h2>
           <button type="button" className="icon-btn" aria-label={t('common.close')} onClick={onClose}>
@@ -71,7 +85,7 @@ function PlayDialog({ ui, profileId, active, seed, now, onClose }: { ui: AnyGame
         </div>
         <div className="setup">
           {active ? (
-            <a className="link-row" href={href(`/play/${active.id}`)}>
+            <a className="link-row wide" href={href(`/play/${active.id}`)}>
               <Icon name="play" />
               <span className="stack" style={{ gap: 0 }}>
                 <b>{t('play.resume')}</b>
@@ -84,7 +98,7 @@ function PlayDialog({ ui, profileId, active, seed, now, onClose }: { ui: AnyGame
               </span>
             </a>
           ) : null}
-          <div className="setup-row">
+          <div className="setup-row wide">
             <span className="eyebrow">{t('play.level')}</span>
             <Segmented<number> label={t('play.level')} options={ui.levels.map((l) => ({ value: l.level, label: String(l.level) }))} value={level} onChange={setLevel} />
             <p className="level-blurb">{ui.levelBlurb(level)}</p>
@@ -93,6 +107,12 @@ function PlayDialog({ ui, profileId, active, seed, now, onClose }: { ui: AnyGame
             <span className="eyebrow">{t('play.side')}</span>
             <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />
           </div>
+          {clocks.length > 0 ? (
+            <div className="setup-row">
+              <span className="eyebrow">{t('clock.label')}</span>
+              <Segmented<string> label={t('clock.label')} options={clocks.map((c) => ({ value: c.id, label: t(c.label) }))} value={clockId} onChange={setClockId} />
+            </div>
+          ) : null}
         </div>
         <div className="dialog-actions">
           <button type="button" className="btn btn-quiet" onClick={onClose}>
@@ -108,7 +128,22 @@ function PlayDialog({ ui, profileId, active, seed, now, onClose }: { ui: AnyGame
   );
 }
 
-function ReviewDialog({ finished, onClose }: { finished: readonly StoredRecord[]; onClose: () => void }) {
+function ReviewDialog({ ui, profileId, finished, onClose }: { ui: AnyGameUi; profileId: string; finished: readonly StoredRecord[]; onClose: () => void }) {
+  const notify = useApp((s) => s.notify);
+  useEscape(onClose);
+  const openFile = async () => {
+    const format = ui.importRecord;
+    if (!format) return;
+    try {
+      const picked = await pickTextFile(format.accept);
+      if (!picked) return;
+      const id = await importGame(ui, profileId, picked.text);
+      notify(t('play.imported', { file: picked.name }));
+      navigate(`/review/${id}`);
+    } catch (err) {
+      notify(t('play.import.failed', { message: (err as Error).message }));
+    }
+  };
   return (
     <div className="dialog-scrim" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="review-title">
@@ -118,6 +153,12 @@ function ReviewDialog({ finished, onClose }: { finished: readonly StoredRecord[]
             <Icon name="close" />
           </button>
         </div>
+        {ui.importRecord ? (
+          <button type="button" className="btn btn-small" style={{ marginBottom: 'var(--sp-3)' }} onClick={() => void openFile()}>
+            <Icon name="import" size={18} />
+            {t('play.import')}
+          </button>
+        ) : null}
         {finished.length === 0 ? (
           <p className="empty-note">{t('review.none')}</p>
         ) : (
@@ -143,7 +184,7 @@ function ReviewDialog({ finished, onClose }: { finished: readonly StoredRecord[]
   );
 }
 
-function PlayableDoors({ game, seed }: { game: CatalogGame; seed: string | undefined }) {
+function PlayableDoors({ game, seed, setup }: { game: CatalogGame; seed: string | undefined; setup: Record<string, string> }) {
   const profileId = useApp((s) => s.profile?.id ?? '');
   const [open, setOpen] = useState<'play' | 'review' | null>(null);
   const data = useAsync(async () => {
@@ -167,8 +208,10 @@ function PlayableDoors({ game, seed }: { game: CatalogGame; seed: string | undef
         />
         <Door icon="review" title={t('door.review')} blurb={t('review.key-moments')} foot={finished.length > 0 ? tCount('count.finished', finished.length) : t('review.none.short')} footStrong={finished.length > 0} onOpen={() => setOpen('review')} />
       </div>
-      {open === 'play' ? <PlayDialog ui={ui} profileId={profileId} active={active} seed={seed} now={now} onClose={() => setOpen(null)} /> : null}
-      {open === 'review' ? <ReviewDialog finished={finished} onClose={() => setOpen(null)} /> : null}
+      {open === 'play' ? (
+        <PlayDialog ui={ui} profileId={profileId} active={active} seed={seed} setup={Object.keys(setup).length > 0 ? ui.def.codec.config.fromJSON(setup) : undefined} now={now} onClose={() => setOpen(null)} />
+      ) : null}
+      {open === 'review' ? <ReviewDialog ui={ui} profileId={profileId} finished={finished} onClose={() => setOpen(null)} /> : null}
     </>
   );
 }
@@ -185,7 +228,7 @@ function ComingDoors({ game }: { game: CatalogGame }) {
   );
 }
 
-export function HubScreen({ gameId, seed }: { gameId: string; seed: string | undefined }) {
+export function HubScreen({ gameId, seed, setup = {} }: { gameId: string; seed: string | undefined; setup?: Record<string, string> }) {
   const game = catalogGame(gameId);
   const isFocus = useApp((s) => s.settings?.focus.includes(gameId) ?? false);
   const toggleFocus = useApp((s) => s.toggleFocus);
@@ -230,7 +273,7 @@ export function HubScreen({ gameId, seed }: { gameId: string; seed: string | und
           </button>
         ) : null}
       </header>
-      {game.playable ? <PlayableDoors game={game} seed={seed} /> : <ComingDoors game={game} />}
+      {game.playable ? <PlayableDoors game={game} seed={seed} setup={setup} /> : <ComingDoors game={game} />}
       <div className="hub-more">
         <a className="link-row" href={href(`/games/${game.id}/reference`)}>
           <Icon name="reference" />

@@ -60,7 +60,7 @@ export function playRandomGame<S, A, C, V, E extends GameEvent>(
     const roundTrip = def.codec.action.fromJSON(def.codec.action.toJSON(action));
     if (findLegal(def, state, seat, roundTrip) === null) throw new Error(`${def.id}: an action changed through its JSON codec`);
     const text = def.codec.action.toText(action);
-    if (findLegal(def, state, seat, def.codec.action.fromText(text)) === null) throw new Error(`${def.id}: notation "${text}" did not read back`);
+    if (findLegal(def, state, seat, def.codec.action.fromText(text, state)) === null) throw new Error(`${def.id}: notation "${text}" did not read back`);
     const before = stableStringify(def.codec.state.toJSON(state));
     const result = def.apply(state, action);
     if (stableStringify(def.codec.state.toJSON(state)) !== before) throw new Error(`${def.id}: apply changed the state it was given`);
@@ -78,10 +78,10 @@ function checkState<S, A, C, V, E extends GameEvent>(def: GameDef<S, A, C, V, E>
   const json = def.codec.state.toJSON(state);
   const back = def.codec.state.fromJSON(JSON.parse(JSON.stringify(json)) as Json);
   if (stableStringify(def.codec.state.toJSON(back)) !== stableStringify(json)) throw new Error(`${def.id}: state JSON did not round-trip`);
+  // Notation may leave out history (FEN has no repetition record), so it must read back to the
+  // same notation; JSON above must read back exactly.
   const text = def.codec.state.toText(state);
-  if (stableStringify(def.codec.state.toJSON(def.codec.state.fromText(text))) !== stableStringify(json)) {
-    throw new Error(`${def.id}: state notation "${text}" did not round-trip`);
-  }
+  if (def.codec.state.toText(def.codec.state.fromText(text)) !== text) throw new Error(`${def.id}: state notation "${text}" did not round-trip`);
   for (const seat of def.seats(state)) {
     const view = def.view(state, seat);
     // Views cross to the worker by structured clone and must survive JSON.

@@ -419,9 +419,19 @@
 
 /* Play setup */
 .setup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3) var(--sp-4);
+}
+
+.setup > .wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .setup {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .setup-row {

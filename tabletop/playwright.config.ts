@@ -27,11 +27,11 @@ export default defineConfig({
     reuseExistingServer: true,
   },
   projects: [
-    { name: 'phone', testIgnore: /screens\.spec/, use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true } },
+    { name: 'phone', testIgnore: /screens.*\.spec/, use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true } },
     // Offline install and backup do not depend on the layout, so they run once, on the phone.
-    { name: 'tablet', testIgnore: [/screens\.spec/, /offline-backup\.spec/], use: { viewport: { width: 1180, height: 820 }, hasTouch: true } },
-    { name: 'laptop', testIgnore: [/screens\.spec/, /offline-backup\.spec/], use: { viewport: { width: 1440, height: 900 } } },
+    { name: 'tablet', testIgnore: [/screens.*\.spec/, /offline-backup\.spec/], use: { viewport: { width: 1180, height: 820 }, hasTouch: true } },
+    { name: 'laptop', testIgnore: [/screens.*\.spec/, /offline-backup\.spec/], use: { viewport: { width: 1440, height: 900 } } },
     // Screenshots to look at and send: phone landscape at twice the pixels.
-    { name: 'screens', testMatch: /screens\.spec/, use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } },
+    { name: 'screens', testMatch: /screens.*\.spec/, use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } },
   ],
 });

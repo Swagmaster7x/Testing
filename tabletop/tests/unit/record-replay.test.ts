@@ -22,7 +22,7 @@ function recordOf(moves: string[]) {
 describe('game records', () => {
   it('start empty and keep config, seed, rules version and seats', () => {
     const r = recordOf([]);
-    expect(r).toMatchObject({ gameId: 'noughts', rulesVersion: 1, seed: 'seed-1', actions: [], status: 'active', outcome: null, resigned: null });
+    expect(r).toMatchObject({ gameId: 'noughts', rulesVersion: 1, seed: 'seed-1', actions: [], status: 'active', outcome: null, ending: null, clock: null });
     expect(humanSeats(r)).toEqual([0]);
   });
 
@@ -42,8 +42,21 @@ describe('game records', () => {
   it('record a resignation with the other seat as winner', () => {
     const r = withResignation(recordOf(['b2']), 0, [0, 1], 300);
     expect(r.status).toBe('finished');
-    expect(r.resigned).toBe(0);
+    expect(r.ending).toEqual({ kind: 'resigned', seat: 0 });
     expect(r.outcome?.results.find((x) => x.seat === 1)?.place).toBe(1);
+  });
+
+  it('read records saved by 0.1.0, which kept a plain resigned seat', () => {
+    const old = { ...recordOf(['b2']), status: 'finished', resigned: 1 } as Record<string, unknown>;
+    delete old.ending;
+    delete old.clock;
+    expect(parseRecord(old)).toMatchObject({ ending: { kind: 'resigned', seat: 1 }, clock: null });
+  });
+
+  it('start a clock for every seat when asked', () => {
+    const r = newRecord(noughts, { id: 'c', config: {}, seed: 's', players: [{ kind: 'human' }, { kind: 'bot', level: 1 }], appVersion: 'x', training: false, now: 1, clock: { initialMs: 300_000, incrementMs: 2_000 } });
+    expect(r.clock).toEqual({ initialMs: 300_000, incrementMs: 2_000, remainingMs: [300_000, 300_000] });
+    expect(parseRecord(JSON.parse(JSON.stringify(r)))).toEqual(r);
   });
 
   it('survive a trip through JSON and back', () => {

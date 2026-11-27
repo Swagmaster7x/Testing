@@ -10,7 +10,7 @@
  */
 import type { SearchSpace } from '../../ai/alphabeta';
 import { search } from '../../ai/alphabeta';
-import type { BotChoice, BotSet } from '../../ai/bot';
+import type { BotChoice, BotInput, BotSet } from '../../ai/bot';
 import type { Rng } from '../../core/rng';
 import { NOUGHTS_LEVELS } from './levels';
 import type { Cell, Mark, NoughtsAction, NoughtsState, NoughtsView } from './rules';
@@ -118,9 +118,10 @@ function choose(view: NoughtsView, level: number, rng: Rng): BotChoice<NoughtsAc
   return { action: move, tags: reasonTags(state, move), nodes: found.nodes };
 }
 
-export const noughtsBots: BotSet<NoughtsView, NoughtsAction> = {
+export const noughtsBots = {
   gameId: 'noughts',
   levels: NOUGHTS_LEVELS,
-  choose: ({ view, level, rng }) => choose(view, level, rng),
-  encode: (action) => noughts.codec.action.toJSON(action),
-};
+  // Synchronous: noughts and crosses needs no engine.
+  choose: ({ view, level, rng }: BotInput<NoughtsView>): BotChoice<NoughtsAction> => choose(view, level, rng),
+  encode: (action: NoughtsAction) => noughts.codec.action.toJSON(action),
+} satisfies BotSet<NoughtsView, NoughtsAction>;

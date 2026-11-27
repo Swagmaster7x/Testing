@@ -60,7 +60,7 @@ export function TodayScreen() {
           <p className="empty-note">{t('today.session.detail')}</p>
           {next ? (
             <p className="empty-note" style={{ marginTop: 'var(--sp-3)' }}>
-              {t('today.first')}
+              {t('today.first', { game: gameName(next.id), n: next.milestone })}
             </p>
           ) : null}
         </section>

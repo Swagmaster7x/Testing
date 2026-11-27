@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['dist/**', 'android/**', 'node_modules/**', 'test-results/**', 'playwright-report/**', 'out/**', 'screenshots/**'],
+    ignores: ['.scratch/**', 'dist/**', 'android/**', 'node_modules/**', 'test-results/**', 'playwright-report/**', 'out/**', 'screenshots/**'],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

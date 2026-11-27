@@ -88,7 +88,7 @@ export function MoveList({ moves, seatNames, current, linkFor }: { moves: readon
           {Array.from({ length: perRow }, (_, c) => {
             const m = row[c];
             if (!m) return <span key={c} />;
-            const text = `${seatNames[m.seat] ?? ''} ${m.text}`;
+            const text = `${seatNames[m.seat] ?? ''} ${m.text}`.trim();
             return linkFor ? (
               <a key={c} className="mv" href={href(linkFor(m.ply))} data-current={current === m.ply} aria-current={current === m.ply ? 'step' : undefined}>
                 {text}

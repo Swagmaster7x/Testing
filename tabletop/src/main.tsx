@@ -7,6 +7,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/shell.css';
 import './styles/table.css';
+import './styles/board.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('The page has no #root element');

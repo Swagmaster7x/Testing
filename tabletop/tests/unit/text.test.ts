@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOG, GROUPS, SHELF } from '../../src/games/catalog';
 import { NOUGHTS_LEVELS } from '../../src/games/noughts/levels';
+import { CHESS_LEVELS } from '../../src/games/chess/levels';
 import { en } from '../../src/text/en';
 import { gameName, hasText, t, tCount, tDynamic } from '../../src/text';
 
@@ -13,9 +14,12 @@ describe('message catalogue', () => {
   });
 
   it('has words for every bot reason tag, result reason and CPU level', () => {
-    for (const tag of ['wins', 'blocks', 'fork', 'centre']) expect(hasText(`tag.${tag}`)).toBe(true);
-    for (const reason of ['line', 'board-full', 'resigned']) expect(hasText(`reason.${reason}`)).toBe(true);
+    for (const tag of ['wins', 'blocks', 'fork', 'centre', 'takes-p', 'takes-n', 'takes-b', 'takes-r', 'takes-q', 'castles', 'promotes', 'check', 'mate']) expect(hasText(`tag.${tag}`), tag).toBe(true);
+    for (const reason of ['line', 'board-full', 'resigned', 'checkmate', 'stalemate', 'threefold', 'fifty-move', 'insufficient', 'timeout', 'timeout-draw', 'pgn']) expect(hasText(`reason.${reason}`), reason).toBe(true);
     for (const level of NOUGHTS_LEVELS) expect(hasText(`noughts.level.${level.level}`)).toBe(true);
+    for (const level of CHESS_LEVELS) expect(hasText(`chess.level.${level.level}`)).toBe(true);
+    for (const idea of ['mate', 'win-material', 'check', 'fork', 'save-piece', 'defend', 'castle', 'develop', 'centre', 'improve']) expect(hasText(`coach.idea.${idea}`), idea).toBe(true);
+    for (const kind of ['checkmate', 'stalemate', 'threefold', 'fifty-move', 'insufficient']) expect(hasText(`chess.log.end.${kind}`), kind).toBe(true);
   });
 
   it('fills in placeholders and counted phrases', () => {

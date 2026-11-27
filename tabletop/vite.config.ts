@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import brand from './brand.json' with { type: 'json' };
 import pkg from './package.json' with { type: 'json' };
+import { engines } from './scripts/vite-plugin-engines.ts';
 import { precache } from './scripts/vite-plugin-precache.ts';
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
@@ -12,6 +13,10 @@ export default defineConfig({
   base: './',
   plugins: [
     react(),
+    engines([
+      { name: 'stockfish-19-lite-single.js', source: here('./node_modules/stockfish/bin/stockfish-19-lite-single.js'), mime: 'text/javascript' },
+      { name: 'stockfish-19-lite-single.wasm', source: here('./node_modules/stockfish/bin/stockfish-19-lite-single.wasm'), mime: 'application/wasm' },
+    ]),
     precache({
       name: brand.name,
       description: brand.description,
