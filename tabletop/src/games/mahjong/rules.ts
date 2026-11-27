@@ -11,17 +11,18 @@ import type { Codec, GameDef, GameEvent, JsonCodec, Outcome, Seat } from '../../
 import type { Json } from '../../core/json';
 import { isJsonObject, stableStringify } from '../../core/json';
 import type { Rng } from '../../core/rng';
-import type { ClaimWindow, Declaration, Discard, HandResult, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase } from './core/engine';
+import type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase, ReadyMark } from './core/engine';
 import { MahjongEngine, SEATS } from './core/engine';
-import type { HandScore, Meld, ScoreLine, Style, StyleOptions, WinRecord } from './core/style';
+import type { DrawReason, HandScore, Meld, ScoreLine, Style, StyleOptions, WinRecord } from './core/style';
 import { readOptions } from './core/style';
 import type { Kind, TileId } from './core/tiles';
 import { codeOf, isTileId, kindOf, parseKind, parseKinds, tileId, tileSet } from './core/tiles';
 import { HK_DEFAULTS, hongKong } from './styles/hong-kong';
+import { riichi } from './styles/riichi';
 
-export type { ClaimWindow, Declaration, Discard, HandResult, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase } from './core/engine';
+export type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase, ReadyMark } from './core/engine';
 
-export const STYLES: Readonly<Record<string, Style>> = { 'hong-kong': hongKong };
+export const STYLES: Readonly<Record<string, Style>> = { 'hong-kong': hongKong, riichi };
 export const engine = new MahjongEngine(STYLES);
 
 export const DEFAULT_CONFIG: MahjongConfig = { style: 'hong-kong', options: HK_DEFAULTS };
@@ -58,6 +59,14 @@ export interface MahjongView {
   /** What you may do now (empty when it is not your turn). */
   readonly options: readonly MahjongAction[];
   readonly over: boolean;
+  /** Indicators turned up (styles with indicators). */
+  readonly indicators: readonly TileId[];
+  /** Every seat's ready declaration (public). */
+  readonly ready: readonly (ReadyMark | null)[];
+  readonly stakes: number;
+  readonly counter: number;
+  /** Your own furiten from a passed win (null when none). */
+  readonly missed: 'turn' | 'hand' | null;
 }
 
 export function viewOf(s: MahjongState, seat: Seat): MahjongView {
@@ -91,12 +100,17 @@ export function viewOf(s: MahjongState, seat: Seat): MahjongView {
     lastDiscard: s.lastDiscard,
     options: mine ? engine.legal(s, seat) : [],
     over: s.over,
+    indicators: s.indicators ? s.indicators.tiles.slice(0, s.indicators.shown) : [],
+    ready: s.ready,
+    stakes: s.stakes,
+    counter: s.counter,
+    missed: s.missed[seat] ?? null,
   };
 }
 
 /** Every tile a seat can see on the table or in its hand. */
-export function seenTiles(v: Pick<MahjongView, 'hand' | 'melds' | 'discards' | 'bonus'>): TileId[] {
-  return [...v.hand, ...v.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...v.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...v.bonus.flat()];
+export function seenTiles(v: Pick<MahjongView, 'hand' | 'melds' | 'discards' | 'bonus'> & { readonly indicators?: readonly TileId[] }): TileId[] {
+  return [...v.hand, ...v.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...v.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...v.bonus.flat(), ...(v.indicators ?? [])];
 }
 
 /** A full state consistent with a view: the tiles the seat cannot see dealt at random to the other hands and the wall. */
@@ -112,6 +126,15 @@ export function sampleState(v: MahjongView, rng: Rng): MahjongState {
     const n = v.handCounts[seat] ?? 0;
     hands[seat] = unseen.slice(k, k + n);
     k += n;
+  }
+  // Indicators: those turned up are known; the rest (and the tiles under them) are dealt like the wall.
+  let indicators: IndicatorStacks | null = null;
+  if (rules.indicators) {
+    const n = rules.indicators;
+    const shown = v.indicators.length;
+    const hidden = unseen.slice(k, k + 2 * n - shown);
+    k += 2 * n - shown;
+    indicators = { tiles: [...v.indicators, ...hidden], shown, pending: 0 };
   }
   const wall = unseen.slice(k);
   let claim: ClaimWindow | null = null;
@@ -149,7 +172,19 @@ export function sampleState(v: MahjongView, rng: Rng): MahjongState {
     calls: v.calls,
     lastDiscard: v.lastDiscard,
     over: v.over,
+    indicators,
+    ready: v.ready,
+    stakes: v.stakes,
+    counter: v.counter,
+    missed: [0, 1, 2, 3].map((s) => (s === v.seat ? v.missed : null)),
+    forbidden: v.turn === v.seat && v.claimed ? forbiddenFrom(v) : [],
   };
+}
+
+/** The kinds you may not throw after a call, worked out from your legal options. */
+function forbiddenFrom(v: MahjongView): Kind[] {
+  const allowed = new Set(v.options.filter((a) => a.type === 'discard').map((a) => (a as { tile: Kind }).tile));
+  return [...new Set(v.hand.map(kindOf))].filter((k) => !allowed.has(k));
 }
 
 /** The meld a robbable kong sits in: its index, or -1 - index for a concealed kong. */
@@ -172,6 +207,8 @@ export function actionText(a: MahjongAction): string {
       return a.tile === undefined ? 'kong' : `kong ${codeOf(a.tile)}`;
     case 'chow':
       return `chow ${codeOf(a.start)}`;
+    case 'ready':
+      return `riichi ${codeOf(a.tile)}`;
     default:
       return a.type;
   }
@@ -179,12 +216,12 @@ export function actionText(a: MahjongAction): string {
 
 export function parseAction(text: string): MahjongAction {
   const t = text.trim();
-  if (t === 'win' || t === 'pung' || t === 'pass' || t === 'next' || t === 'kong') return { type: t };
-  const m = /^(kong|chow)\s+(\S+)$/.exec(t);
+  if (t === 'win' || t === 'pung' || t === 'pass' || t === 'next' || t === 'kong' || t === 'abort') return { type: t };
+  const m = /^(kong|chow|riichi)\s+(\S+)$/.exec(t);
   if (m) {
     const kind = parseKind(m[2] ?? '');
     if (kind === null) throw new Error(`"${text}" names no tile`);
-    return m[1] === 'kong' ? { type: 'kong', tile: kind } : { type: 'chow', start: kind };
+    return m[1] === 'kong' ? { type: 'kong', tile: kind } : m[1] === 'riichi' ? { type: 'ready', tile: kind } : { type: 'chow', start: kind };
   }
   const kind = parseKind(t);
   if (kind === null) throw new Error(`"${text}" is not a mahjong move, such as 5p, kong 5p, chow 3s, pung, win, pass or next`);
@@ -245,7 +282,17 @@ function scoreFrom(j: Json | undefined): HandScore {
     if (!isJsonObject(l) || typeof l.id !== 'string' || typeof l.value !== 'number') fail('a score line');
     return typeof l.times === 'number' ? { id: l.id, value: l.value, times: l.times } : { id: l.id, value: l.value };
   });
-  return { lines, raw: numberIn(j.raw, 'a score'), total: numberIn(j.total, 'a score'), limit: j.limit === true, unit: typeof j.unit === 'string' ? j.unit : 'faan', base: numberIn(j.base, 'a score') };
+  return {
+    lines,
+    raw: numberIn(j.raw, 'a score'),
+    total: numberIn(j.total, 'a score'),
+    limit: j.limit === true,
+    unit: typeof j.unit === 'string' ? j.unit : 'faan',
+    base: numberIn(j.base, 'a score'),
+    ...(typeof j.fu === 'number' ? { fu: j.fu } : {}),
+    ...(typeof j.yakuman === 'number' ? { yakuman: j.yakuman } : {}),
+    ...(typeof j.band === 'string' ? { band: j.band } : {}),
+  };
 }
 
 function winFrom(j: Json): WinRecord {
@@ -265,7 +312,28 @@ function resultFrom(j: Json): HandResult {
     melds: perSeat(j.melds, 'a hand result', (x) => (Array.isArray(x) ? x.map(meldFrom) : fail('a hand result'))),
     bonus: perSeat(j.bonus, 'a hand result', (x) => tilesFrom(x, 'a hand result')),
     wallLeft: numberIn(j.wallLeft, 'a hand result', 0),
+    ...(typeof j.reason === 'string' && DRAW_REASONS.includes(j.reason as DrawReason) ? { reason: j.reason as DrawReason } : {}),
+    ...(Array.isArray(j.ready) ? { ready: perSeat(j.ready, 'a hand result', (x) => x === true) } : {}),
+    ...(Array.isArray(j.indicators) ? { indicators: tilesFrom(j.indicators, 'a hand result') } : {}),
+    ...(Array.isArray(j.under) ? { under: tilesFrom(j.under, 'a hand result') } : {}),
+    ...(typeof j.counter === 'number' ? { counter: numberIn(j.counter, 'a hand result', 0) } : {}),
+    ...(typeof j.stakes === 'number' ? { stakes: numberIn(j.stakes, 'a hand result', 0) } : {}),
   };
+}
+
+const DRAW_REASONS: readonly DrawReason[] = ['exhausted', 'nine-terminals', 'four-winds', 'four-ready', 'four-kongs', 'too-many-winners'];
+
+function readyFrom(j: Json): ReadyMark | null {
+  if (j === null) return null;
+  if (!isJsonObject(j)) fail('a ready declaration');
+  return { at: numberIn(j.at, 'a ready declaration', 0), first: j.first === true, oneShot: j.oneShot === true, paid: j.paid === true };
+}
+
+function indicatorsFrom(j: Json | undefined): IndicatorStacks | null {
+  if (j === null || j === undefined) return null;
+  if (!isJsonObject(j)) fail('the indicators');
+  const tiles = tilesFrom(j.tiles, 'the indicators');
+  return { tiles, shown: numberIn(j.shown, 'the indicators', 0, tiles.length / 2), pending: numberIn(j.pending ?? 0, 'the indicators', 0) };
 }
 
 function claimFrom(j: Json | undefined): ClaimWindow | null {
@@ -312,6 +380,12 @@ function stateFromJson(json: Json): MahjongState {
     calls: numberIn(json.calls ?? 0, 'the call count', 0),
     lastDiscard: typeof json.lastDiscard === 'string' && isTileId(json.lastDiscard) ? json.lastDiscard : null,
     over: json.over === true,
+    indicators: indicatorsFrom(json.indicators),
+    ready: json.ready === undefined ? [null, null, null, null] : perSeat(json.ready, 'the ready declarations', readyFrom),
+    stakes: numberIn(json.stakes ?? 0, 'the stakes', 0),
+    counter: numberIn(json.counter ?? 0, 'the counter', 0),
+    missed: json.missed === undefined ? [null, null, null, null] : perSeat(json.missed, 'the furiten marks', (x) => (x === 'turn' || x === 'hand' ? x : null)),
+    forbidden: Array.isArray(json.forbidden) ? json.forbidden.map((x) => numberIn(x, 'the forbidden throws', 0, 33)) : [],
   };
   checkConservation(state);
   return state;
@@ -322,8 +396,8 @@ function stateToJson(s: MahjongState): Json {
 }
 
 /** Every tile of the set is in exactly one place: the wall, a hand, a meld, the discards (not taken) or the bonus tiles. */
-export function checkConservation(s: Pick<MahjongState, 'config' | 'wall' | 'hands' | 'melds' | 'discards' | 'bonus'>): void {
-  const all = [...s.wall, ...s.hands.flat(), ...s.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...s.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...s.bonus.flat()];
+export function checkConservation(s: Pick<MahjongState, 'config' | 'wall' | 'hands' | 'melds' | 'discards' | 'bonus'> & { readonly indicators?: IndicatorStacks | null }): void {
+  const all = [...s.wall, ...s.hands.flat(), ...s.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...s.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...s.bonus.flat(), ...(s.indicators?.tiles ?? [])];
   const expected = tileSet(engine.rules(s.config).tiles);
   if (all.length !== expected.length) throw new Error(`Mahjong: ${all.length} tiles, not ${expected.length}`);
   const set = new Set(all);
@@ -397,11 +471,13 @@ export interface MeldSpec {
 }
 
 export interface PositionSpec {
+  /** The style (Hong Kong by default) and its options over the style's defaults. */
+  readonly style?: string;
   readonly options?: Partial<Record<string, string | number>>;
   readonly dealer?: Seat;
   readonly round?: number;
   readonly turn?: Seat;
-  /** Concealed tiles per seat, such as "123m 456p 789s EE S". */
+  /** Concealed tiles per seat, such as "123m 456p 789s EE S" ("0p" is a red five where the style has them). */
   readonly hands: readonly string[];
   readonly melds?: readonly (readonly MeldSpec[])[];
   readonly discards?: readonly string[];
@@ -417,24 +493,63 @@ export interface PositionSpec {
   readonly source?: MahjongState['source'];
   readonly calls?: number;
   readonly scores?: readonly number[];
+  /** Styles with indicators: the indicators turned up (one by default), and the tiles under them. */
+  readonly indicators?: string;
+  readonly under?: string;
+  readonly ready?: readonly (Partial<ReadyMark> | null)[];
+  readonly stakes?: number;
+  readonly counter?: number;
+}
+
+/** Tiles written in a position, each with whether it is a red five ("0p"). */
+export function parseTiles(text: string): { kind: Kind; red: boolean }[] {
+  const out: { kind: Kind; red: boolean }[] = [];
+  for (const word of text.trim().split(/\s+/).filter(Boolean)) {
+    let rest = '';
+    let i = 0;
+    while (i < word.length) {
+      const run = /^(\d+)([mps])/.exec(word.slice(i));
+      if (run) {
+        if (rest) {
+          out.push(...parseKinds(rest).map((kind) => ({ kind, red: false })));
+          rest = '';
+        }
+        const suit = 'mps'.indexOf(run[2] ?? 'm');
+        for (const d of run[1] ?? '') out.push(d === '0' ? { kind: suit * 9 + 4, red: true } : { kind: suit * 9 + Number(d) - 1, red: false });
+        i += run[0].length;
+        continue;
+      }
+      rest += word[i];
+      i++;
+    }
+    if (rest) out.push(...parseKinds(rest).map((kind) => ({ kind, red: false })));
+  }
+  return out;
 }
 
 /** A position in the middle of a hand, phase "act", for tests and lessons. Unnamed tiles fill the wall. */
 export function position(p: PositionSpec): MahjongState {
-  const config: MahjongConfig = { style: 'hong-kong', options: { ...HK_DEFAULTS, ...(p.options as StyleOptions | undefined) } };
+  const styleId = p.style ?? 'hong-kong';
+  const style = STYLES[styleId];
+  if (!style) throw new Error(`Mahjong position: no style ${styleId}`);
+  const config: MahjongConfig = { style: styleId, options: { ...style.defaults, ...(p.options as StyleOptions | undefined) } };
   const rules = engine.rules(config);
+  const reds = (rules.tiles.red ?? 0) > 0;
   const pool = new Map<Kind, TileId[]>();
   for (const t of tileSet(rules.tiles)) {
     const k = kindOf(t);
     pool.set(k, [...(pool.get(k) ?? []), t]);
   }
-  const take = (k: Kind): TileId => {
-    const list = pool.get(k);
-    const t = list?.shift();
-    if (!t) throw new Error(`Mahjong position: no ${codeOf(k)} left`);
+  const take = (k: Kind, red = false): TileId => {
+    const list = pool.get(k) ?? [];
+    // A plain tile is never the red five, when the style has red fives; "0" asks for it.
+    const i = reds && isRedFive(list[0] ?? '', true) ? (red ? 0 : list.length > 1 ? 1 : -1) : red ? -1 : 0;
+    const t = i >= 0 ? list[i] : undefined;
+    if (!t) throw new Error(`Mahjong position: no ${red ? 'red ' : ''}${codeOf(k)} left`);
+    list.splice(i, 1);
     return t;
   };
-  const takeAll = (text: string | undefined): TileId[] => (text ? parseKinds(text).map(take) : []);
+  const takeAll = (text: string | undefined): TileId[] => (text ? parseTiles(text).map((x) => take(x.kind, x.red)) : []);
   const hands = [0, 1, 2, 3].map((seat) => takeAll(p.hands[seat]));
   const melds: Meld[][] = [0, 1, 2, 3].map((seat) =>
     (p.melds?.[seat] ?? []).map((m): Meld => {
@@ -448,21 +563,33 @@ export function position(p: PositionSpec): MahjongState {
   const bonus = [0, 1, 2, 3].map((seat) => takeAll(p.bonus?.[seat]));
   const front = takeAll(p.front);
   const back = takeAll(p.back);
+  const shownIndicators = takeAll(p.indicators);
+  const underIndicators = takeAll(p.under);
   const rest: TileId[] = [];
   for (const list of pool.values()) rest.push(...list);
   // Spare tiles: bonus tiles nobody named are set aside by the seats in turn, the rest fill the wall or the discards.
   const spareBonus = rest.filter((t) => kindOf(t) >= 34);
   const spare = rest.filter((t) => kindOf(t) < 34);
   spareBonus.forEach((t, i) => (bonus[(i + 1) % SEATS] as TileId[]).push(t));
+  // Indicator stacks: those named, then filled from the spare tiles' end.
+  let indicators: IndicatorStacks | null = null;
+  if (rules.indicators) {
+    const n = rules.indicators;
+    const fill = (named: TileId[]) => [...named, ...spare.splice(spare.length - (n - named.length), n - named.length)];
+    const ups = fill(shownIndicators);
+    const unders = fill(underIndicators);
+    indicators = { tiles: [...ups, ...unders], shown: Math.max(1, shownIndicators.length), pending: 0 };
+  }
   const wallSize = p.wall ?? front.length + back.length + spare.length;
   const middle = spare.slice(0, Math.max(0, wallSize - front.length - back.length));
   const filler = spare.slice(middle.length);
   filler.forEach((tile, i) => (discards[i % SEATS] as Discard[]).push({ tile, claimed: false }));
   const wall = [...front, ...middle, ...[...back].reverse()];
   const turn = p.turn ?? 0;
-  const drawnKind = p.drawn ? parseKind(p.drawn) : null;
+  const drawnKind = p.drawn ? (parseTiles(p.drawn)[0] ?? null) : null;
   const hand = hands[turn] as TileId[];
-  const drawn = drawnKind === null ? (hand[hand.length - 1] ?? null) : (hand.find((t) => kindOf(t) === drawnKind) ?? null);
+  const drawn = drawnKind === null ? (hand[hand.length - 1] ?? null) : (hand.find((t) => kindOf(t) === drawnKind.kind && (!reds || isRedFive(t, true) === drawnKind.red)) ?? hand.find((t) => kindOf(t) === drawnKind.kind) ?? null);
+  const start = rules.startScore ?? 0;
   const state: MahjongState = {
     config,
     seed: 'position',
@@ -472,7 +599,7 @@ export function position(p: PositionSpec): MahjongState {
     dealer: p.dealer ?? 0,
     passes: 0,
     repeats: 0,
-    scores: [...(p.scores ?? [0, 0, 0, 0])],
+    scores: [...(p.scores ?? [start, start, start, start])],
     results: [],
     wall,
     hands,
@@ -489,9 +616,25 @@ export function position(p: PositionSpec): MahjongState {
     calls: p.calls ?? 1,
     lastDiscard: null,
     over: false,
+    indicators,
+    ready: [0, 1, 2, 3].map((seat) => {
+      const r = p.ready?.[seat];
+      return r ? { at: r.at ?? 0, first: r.first ?? false, oneShot: r.oneShot ?? false, paid: r.paid ?? true } : null;
+    }),
+    stakes: p.stakes ?? 0,
+    counter: p.counter ?? 0,
+    missed: [null, null, null, null],
+    forbidden: [],
   };
   checkConservation(state);
   return state;
+}
+
+/** A red five: copy 0 of a 5, in a style that plays them (pass `reds` from the style's tile set). */
+export function isRedFive(id: TileId, reds: boolean): boolean {
+  if (!reds || !id) return false;
+  const k = kindOf(id);
+  return k < 27 && k % 9 === 4 && id.endsWith('.0');
 }
 
 /** A tile id of a kind that is not used anywhere else, for building contexts in tests. */

@@ -76,7 +76,12 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       case 'win':
         return 1100;
       case 'exhausted':
+      case 'abort':
         return 900;
+      case 'ready':
+        return 700;
+      case 'indicator':
+        return 450;
       case 'hand-end':
         return 600;
       default:
@@ -107,6 +112,14 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       }
       case 'exhausted':
         return t('mahjong.log.exhausted');
+      case 'ready':
+        return t('mahjong.log.ready', { who: whoName(event.seat, m), tile: tileName(event.tile) });
+      case 'stake':
+        return t('mahjong.log.stake', { who: whoName(event.seat, m), n: event.amount });
+      case 'indicator':
+        return t('mahjong.log.indicator', { tile: tileName(event.tile) });
+      case 'abort':
+        return tDynamic(`mahjong.log.abort.${event.reason}`, { who: event.seat === null ? '' : whoName(event.seat, m) });
       case 'hand-end':
         return null;
       case 'game-end':

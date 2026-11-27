@@ -135,6 +135,8 @@ export interface TileSetSpec {
   readonly bonus: boolean;
   /** Jokers (American: eight). */
   readonly jokers: number;
+  /** Red fives: copy 0 of each suit's 5 is red (Riichi: one per suit). */
+  readonly red?: number;
 }
 
 /** Every tile in a set, in kind order: four of each suited and honour kind, one of each bonus tile. */

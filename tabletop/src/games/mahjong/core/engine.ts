@@ -10,10 +10,10 @@
  */
 import type { Seat } from '../../../core/contract';
 import { createRng } from '../../../core/rng';
-import { isThirteenOrphans, isWinningShape } from './shapes';
-import type { HandScore, Meld, Style, StyleOptions, StyleRules, WinContext, WinRecord } from './style';
+import { isThirteenOrphans, isWinningShape, waitsOf } from './shapes';
+import type { DrawReason, HandEnd, HandScore, Meld, Style, StyleOptions, StyleRules, WinContext, WinRecord } from './style';
 import type { Kind, TileId } from './tiles';
-import { countsOf, isBonus, isSuited, kindOf, rankOf, tileSet } from './tiles';
+import { countsOf, isBonus, isSuited, isTerminalOrHonour, isWind, kindOf, ORPHANS, rankOf, suitOf, tileSet } from './tiles';
 
 export const SEATS = 4;
 
@@ -67,6 +67,38 @@ export interface HandResult {
   readonly melds: readonly (readonly Meld[])[];
   readonly bonus: readonly (readonly TileId[])[];
   readonly wallLeft: number;
+  /** A hand with no winner: why it ended. */
+  readonly reason?: DrawReason;
+  /** At an exhaustive draw, in styles that count it: which seats were ready. */
+  readonly ready?: readonly boolean[];
+  /** Indicators turned up, and (for a winner who declared ready) the tiles under them. */
+  readonly indicators?: readonly TileId[];
+  readonly under?: readonly TileId[];
+  /** The counters and stakes on the table when the hand ended. */
+  readonly counter?: number;
+  readonly stakes?: number;
+}
+
+/** Indicator tiles set aside at the deal (styles with indicators): turned up one by one. */
+export interface IndicatorStacks {
+  /** The indicators first, then the tile under each, in the same order. */
+  readonly tiles: readonly TileId[];
+  /** How many are turned up. */
+  readonly shown: number;
+  /** Indicators owed by an exposed or added kong, turned after its owner's next throw. */
+  readonly pending: number;
+}
+
+/** A seat's ready declaration (riichi) this hand. */
+export interface ReadyMark {
+  /** The index, in the seat's discards, of the throw it was declared with. */
+  readonly at: number;
+  /** Declared on the seat's first throw, before any call. */
+  readonly first: boolean;
+  /** No call since, and the seat has not thrown again: a win now is within one go round. */
+  readonly oneShot: boolean;
+  /** The stake is on the table (the declaring throw passed without a win). */
+  readonly paid: boolean;
 }
 
 export interface MahjongState {
@@ -106,6 +138,18 @@ export interface MahjongState {
   /** The tile discarded last this hand (it may have been called since). */
   readonly lastDiscard: TileId | null;
   readonly over: boolean;
+  /** Styles with indicators: the stacks set aside at this hand's deal. */
+  readonly indicators: IndicatorStacks | null;
+  /** Each seat's ready declaration this hand. */
+  readonly ready: readonly (ReadyMark | null)[];
+  /** Stakes on the table, carried over hands with no winner. */
+  readonly stakes: number;
+  /** Counters on the table (honba), in styles that keep them. */
+  readonly counter: number;
+  /** A seat that passed a win on a discard: until its next throw, or for the hand once it has declared ready. */
+  readonly missed: readonly ('turn' | 'hand' | null)[];
+  /** Kinds the seat to act may not throw (after a call, when swap calling is forbidden). */
+  readonly forbidden: readonly Kind[];
 }
 
 export type MahjongAction =
@@ -116,7 +160,11 @@ export type MahjongAction =
   | { readonly type: 'pung' }
   | { readonly type: 'chow'; readonly start: Kind }
   | { readonly type: 'pass' }
-  | { readonly type: 'next' };
+  | { readonly type: 'next' }
+  /** Throw this tile and declare the hand ready (riichi), with a stake. */
+  | { readonly type: 'ready'; readonly tile: Kind }
+  /** End the hand at once, where the style allows it (nine terminals on the first draw). */
+  | { readonly type: 'abort' };
 
 export type MahjongEvent =
   | { readonly type: 'deal'; readonly handNo: number; readonly round: number; readonly dealer: Seat; readonly wall: number }
@@ -127,6 +175,10 @@ export type MahjongEvent =
   | { readonly type: 'kong'; readonly seat: Seat; readonly meld: Meld; readonly added: boolean }
   | { readonly type: 'win'; readonly win: WinRecord }
   | { readonly type: 'exhausted' }
+  | { readonly type: 'ready'; readonly seat: Seat; readonly tile: TileId }
+  | { readonly type: 'stake'; readonly seat: Seat; readonly amount: number }
+  | { readonly type: 'indicator'; readonly tile: TileId }
+  | { readonly type: 'abort'; readonly reason: DrawReason; readonly seat: Seat | null }
   | { readonly type: 'hand-end'; readonly result: HandResult; readonly scores: readonly number[] }
   | { readonly type: 'game-end'; readonly scores: readonly number[] };
 
@@ -157,6 +209,7 @@ export class MahjongEngine {
     const rng = createRng(`${seed}/table`);
     const table = rng.int(1000);
     const dealer = createRng(`${seed}/dealer`).int(SEATS);
+    const start = this.rules(config).startScore ?? 0;
     const blank: Draft = {
       config,
       seed,
@@ -166,7 +219,7 @@ export class MahjongEngine {
       dealer,
       passes: 0,
       repeats: 0,
-      scores: [0, 0, 0, 0],
+      scores: [start, start, start, start],
       results: [],
       wall: [],
       hands: [[], [], [], []],
@@ -183,6 +236,12 @@ export class MahjongEngine {
       calls: 0,
       lastDiscard: null,
       over: false,
+      indicators: null,
+      ready: [null, null, null, null],
+      stakes: 0,
+      counter: 0,
+      missed: [null, null, null, null],
+      forbidden: [],
     };
     this.deal(blank, []);
     return freeze(blank);
@@ -223,20 +282,68 @@ export class MahjongEngine {
     const counts = countsOf(hand);
     const kinds = [...new Set(hand.map(kindOf))].sort((a, b) => a - b);
     const discards: MahjongAction[] = kinds.map((tile) => ({ type: 'discard', tile }));
-    if (s.claimed) return discards;
+    if (s.claimed) {
+      // Swap calling: the called kind (and a chow's other end) may not be thrown, unless nothing else is left.
+      const allowed = discards.filter((a) => a.type === 'discard' && !s.forbidden.includes(a.tile));
+      return allowed.length > 0 ? allowed : discards;
+    }
     const out: MahjongAction[] = [];
     if (this.canWinSelf(s)) out.push({ type: 'win' });
-    if (s.wall.length > r.deadWall) {
+    const melds = s.melds[seat] ?? [];
+    const kongsOnTable = s.melds.reduce((n, list) => n + list.filter((m) => m.type === 'kong').length, 0);
+    const kongRoom = s.wall.length > r.deadWall && !(r.aborts?.fourKongs && kongsOnTable >= 4);
+    const mark = s.ready[seat] ?? null;
+    if (mark) {
+      // A ready hand is locked: it throws what it draws, or makes a concealed kong of the drawn
+      // tile that leaves its waits as they were.
+      const drawn = s.drawn;
+      if (drawn === null) return [...out, ...discards];
+      const k = kindOf(drawn);
+      if (kongRoom && r.calls.concealedKong && (counts[k] ?? 0) === 4) {
+        const shapes = r.shapes;
+        const before = [...counts];
+        before[k] = (before[k] ?? 0) - 1;
+        const after = [...counts];
+        after[k] = 0;
+        const waitsBefore = waitsOf(before, melds.length, shapes, setsIn(r)).join();
+        const waitsAfter = waitsOf(after, melds.length + 1, shapes, setsIn(r)).join();
+        if (waitsBefore !== '' && waitsBefore === waitsAfter) out.push({ type: 'kong', tile: k });
+      }
+      return [...out, { type: 'discard', tile: k }];
+    }
+    if (kongRoom) {
       if (r.calls.concealedKong) for (const k of kinds) if ((counts[k] ?? 0) === 4) out.push({ type: 'kong', tile: k });
       if (r.calls.addedKong) {
-        for (const m of s.melds[seat] ?? []) {
+        for (const m of melds) {
           if (m.type !== 'pung') continue;
           const k = kindOf(m.tiles[0] as TileId);
           if ((counts[k] ?? 0) >= 1) out.push({ type: 'kong', tile: k });
         }
       }
     }
+    // Declaring ready: a closed hand, enough points, enough tiles left, and a throw that leaves it ready.
+    const decl = r.ready;
+    if (decl && melds.every((m) => m.concealed) && (s.scores[seat] ?? 0) >= decl.minScore && s.wall.length - r.deadWall >= decl.minLeft) {
+      for (const k of kinds) {
+        const c = [...counts];
+        c[k] = (c[k] ?? 0) - 1;
+        if (waitsOf(c, melds.length, r.shapes, setsIn(r)).length > 0) out.push({ type: 'ready', tile: k });
+      }
+    }
+    // Nine different terminals and honours on the first draw, before any call: the seat may end the hand.
+    if (r.aborts?.nineTerminals && s.calls === 0 && (s.discards[seat] ?? []).length === 0 && ORPHANS.filter((k) => (counts[k] ?? 0) > 0).length >= 9) out.push({ type: 'abort' });
     return [...out, ...discards];
+  }
+
+  /** True when a seat may not win on a discard: a wait among its own discards, or a win passed. */
+  furiten(s: MahjongState, seat: Seat): boolean {
+    const r = this.rules(s.config);
+    if (!r.calls.furiten) return false;
+    if (s.missed[seat]) return true;
+    const own = new Set((s.discards[seat] ?? []).map((d) => kindOf(d.tile)));
+    if (own.size === 0) return false;
+    const waits = waitsOf(countsOf(s.hands[seat] ?? []), (s.melds[seat] ?? []).length, r.shapes, setsIn(r));
+    return waits.some((k) => own.has(k));
   }
 
   private claimOptions(s: MahjongState, seat: Seat): MahjongAction[] {
@@ -247,13 +354,16 @@ export class MahjongEngine {
     const anyWin = w.declared.some((x) => x.call === 'win');
     const best = Math.max(0, ...w.declared.map((x) => PRIORITY[x.call]));
     const out: MahjongAction[] = [];
-    if ((r.calls.multipleWinners || !anyWin) && this.canWinOn(s, seat, w)) out.push({ type: 'win' });
+    if ((r.calls.multipleWinners || !anyWin) && !this.furiten(s, seat) && this.canWinOn(s, seat, w)) out.push({ type: 'win' });
+    // A seat that has declared ready may only win.
+    if (s.ready[seat]) return out.length > 0 ? [...out, { type: 'pass' }] : [];
     if (w.kind === 'discard' && !w.last && !anyWin) {
       const hand = s.hands[seat] ?? [];
       const counts = countsOf(hand);
       const n = counts[k] ?? 0;
+      const kongsOnTable = s.melds.reduce((m, list) => m + list.filter((x) => x.type === 'kong').length, 0);
       if (best < 2) {
-        if (r.calls.kong && n >= 3 && s.wall.length > r.deadWall) out.push({ type: 'kong' });
+        if (r.calls.kong && n >= 3 && s.wall.length > r.deadWall && !(r.aborts?.fourKongs && kongsOnTable >= 4)) out.push({ type: 'kong' });
         if (r.calls.pung && n >= 2) out.push({ type: 'pung' });
       }
       if (best < 1 && r.calls.chow && seat === (w.from + 1) % SEATS && isSuited(k)) {
@@ -292,6 +402,22 @@ export class MahjongEngine {
       robbed,
       heavenly: selfDrawn && seat === s.dealer && s.source === 'deal' && s.calls === 0 && totalDiscards === 0,
       earthly: !selfDrawn && !robbed && from === s.dealer && seat !== s.dealer && s.calls === 0 && totalDiscards === 1,
+      firstDraw: selfDrawn && seat !== s.dealer && s.source === 'wall' && s.calls === 0 && (s.discards[seat] ?? []).length === 0,
+      tiles: [...(selfDrawn ? hand : [...hand, tile]), ...(s.melds[seat] ?? []).flatMap((m) => m.tiles)],
+      ...this.indicatorContext(s, seat),
+    };
+  }
+
+  /** The indicators a winner scores, and its ready declaration. */
+  private indicatorContext(s: MahjongState, seat: Seat): Pick<WinContext, 'indicators' | 'underIndicators' | 'ready' | 'oneShot'> {
+    const mark = s.ready[seat] ?? null;
+    const st = s.indicators;
+    const half = st ? st.tiles.length / 2 : 0;
+    return {
+      indicators: st ? st.tiles.slice(0, st.shown).map(kindOf) : [],
+      underIndicators: st && mark ? st.tiles.slice(half, half + st.shown).map(kindOf) : [],
+      ready: mark ? (mark.first ? 2 : 1) : 0,
+      oneShot: mark?.oneShot ?? false,
     };
   }
 
@@ -342,6 +468,19 @@ export class MahjongEngine {
       this.declareKong(d, seat, action.tile, events);
       return;
     }
+    if (action.type === 'abort') {
+      this.endAbortive(d, 'nine-terminals', seat, events);
+      return;
+    }
+    if (action.type === 'ready') {
+      const own = d.discards[seat] as Discard[];
+      d.ready = d.ready.map((m, i) => (i === seat ? { at: own.length, first: d.calls === 0 && own.length === 0, oneShot: true, paid: false } : m));
+      const hand = d.hands[seat] as TileId[];
+      const drawnMatches = d.drawn !== null && kindOf(d.drawn) === action.tile && hand.includes(d.drawn);
+      events.push({ type: 'ready', seat, tile: drawnMatches ? (d.drawn as TileId) : (hand[lastIndexOfKind(hand, action.tile)] as TileId) });
+      this.discard(d, seat, action.tile, events);
+      return;
+    }
     if (action.type === 'discard') this.discard(d, seat, action.tile, events);
   }
 
@@ -351,13 +490,22 @@ export class MahjongEngine {
     const i = drawnMatches ? hand.indexOf(d.drawn as TileId) : lastIndexOfKind(hand, kind);
     const tile = hand[i] as TileId;
     hand.splice(i, 1);
-    (d.discards[seat] as Discard[]).push({ tile, claimed: false });
+    const own = d.discards[seat] as Discard[];
+    own.push({ tile, claimed: false });
     d.lastDiscard = tile;
     events.push({ type: 'discard', seat, tile });
     const r = this.rules(d.config);
     d.drawn = null;
     d.kongs = 0;
     d.claimed = false;
+    d.forbidden = [];
+    // A missed win lasts until the seat's next throw (for the hand, once it has declared ready).
+    if (d.missed[seat] === 'turn') d.missed = d.missed.map((m, i) => (i === seat ? null : m));
+    // The seat's second throw after declaring ends its one-shot chance.
+    const mark = d.ready[seat];
+    if (mark && mark.oneShot && mark.at !== own.length - 1) d.ready = d.ready.map((m, i) => (i === seat && m ? { ...m, oneShot: false } : m));
+    // Indicators owed by an exposed or added kong are turned now.
+    if (d.indicators && d.indicators.pending > 0) this.turnIndicators(d, d.indicators.pending, events);
     d.claim = { kind: 'discard', tile, from: seat, waiting: [1, 2, 3].map((i2) => (seat + i2) % SEATS), declared: [], meld: -1, last: d.wall.length <= r.deadWall };
     d.phase = 'claim';
     this.advanceWindow(d, events);
@@ -390,7 +538,12 @@ export class MahjongEngine {
     if (d.drawn !== null && !hand.includes(d.drawn)) d.drawn = null;
     d.calls++;
     d.kongs++;
+    this.breakOneShot(d);
     events.push({ type: 'kong', seat, meld: melds[meldIndex] as Meld, added });
+    if (d.indicators) {
+      if (!added || r.kongIndicator !== 'late') this.turnIndicators(d, 1, events);
+      else d.indicators = { ...d.indicators, pending: d.indicators.pending + 1 };
+    }
     // Robbing: an added kong, or a concealed kong by thirteen orphans when the style allows it.
     if ((added && r.calls.robKong) || (!added && r.calls.robConcealedWithOrphans)) {
       d.claim = { kind: 'rob', tile, from: seat, waiting: [1, 2, 3].map((i) => (seat + i) % SEATS), declared: [], meld: added ? meldIndex : -1 - meldIndex, last: false };
@@ -403,7 +556,12 @@ export class MahjongEngine {
 
   private declare(d: Draft, seat: Seat, action: MahjongAction, events: MahjongEvent[]): void {
     const w = d.claim as ClaimWindow;
-    const declared = action.type === 'pass' || action.type === 'next' || action.type === 'discard' ? w.declared : [...w.declared, { seat, call: action.type, ...(action.type === 'chow' ? { start: action.start } : {}) }];
+    // Passing a win you could have taken makes you furiten (where the style has furiten).
+    if (action.type !== 'win' && this.rules(d.config).calls.furiten && this.claimOptions(freeze(d), seat).some((a) => a.type === 'win')) {
+      d.missed = d.missed.map((m, i) => (i === seat ? (d.ready[seat] ? 'hand' : 'turn') : m));
+    }
+    const declared: Declaration[] =
+      action.type === 'win' || action.type === 'kong' || action.type === 'pung' || action.type === 'chow' ? [...w.declared, { seat, call: action.type, ...(action.type === 'chow' ? { start: action.start } : {}) }] : [...w.declared];
     d.claim = { ...w, waiting: w.waiting.filter((x) => x !== seat), declared };
     this.advanceWindow(d, events);
   }
@@ -427,7 +585,12 @@ export class MahjongEngine {
 
   private resolveWindow(d: Draft, events: MahjongEvent[]): void {
     const w = d.claim as ClaimWindow;
+    const r = this.rules(d.config);
     const wins = w.declared.filter((x) => x.call === 'win');
+    if (r.calls.maxWinners !== undefined && wins.length > r.calls.maxWinners) {
+      this.endAbortive(d, 'too-many-winners', null, events);
+      return;
+    }
     if (wins.length > 0) {
       const s = freeze(d);
       const records: WinRecord[] = wins.map((x) => ({ seat: x.seat, from: w.from, tile: w.tile, score: this.claimWinScore(s, x.seat, w) as HandScore, robbed: w.kind === 'rob' }));
@@ -440,6 +603,36 @@ export class MahjongEngine {
       d.turn = w.from;
       this.replacement(d, w.from, events);
       return;
+    }
+    // The throw passed without a win: a ready declaration's stake goes on the table.
+    const mark = d.ready[w.from];
+    if (mark && !mark.paid && r.ready) {
+      d.scores = d.scores.map((v, i) => (i === w.from ? v - (r.ready?.stake ?? 0) : v));
+      d.stakes++;
+      d.ready = d.ready.map((m, i) => (i === w.from && m ? { ...m, paid: true } : m));
+      events.push({ type: 'stake', seat: w.from, amount: r.ready.stake });
+    }
+    const aborts = r.aborts;
+    if (aborts) {
+      if (aborts.fourReady && d.ready.every((m) => m?.paid)) {
+        this.endAbortive(d, 'four-ready', null, events);
+        return;
+      }
+      const first = d.discards.map((list) => list[0]?.tile);
+      if (aborts.fourWinds && d.calls === 0 && d.discards.every((list) => list.length === 1)) {
+        const kinds = first.map((t) => (t ? kindOf(t) : -1));
+        if (isWind(kinds[0] ?? -1) && kinds.every((k) => k === kinds[0])) {
+          this.endAbortive(d, 'four-winds', null, events);
+          return;
+        }
+      }
+      if (aborts.fourKongs) {
+        const owners = d.melds.map((list) => list.filter((m) => m.type === 'kong').length);
+        if (owners.reduce((a, b) => a + b, 0) >= 4 && owners.filter((n) => n > 0).length > 1) {
+          this.endAbortive(d, 'four-kongs', null, events);
+          return;
+        }
+      }
     }
     const call = w.declared.find((x) => x.call === 'kong' || x.call === 'pung') ?? w.declared.find((x) => x.call === 'chow');
     if (call) {
@@ -475,15 +668,40 @@ export class MahjongEngine {
     d.turn = seat;
     d.phase = 'act';
     d.drawn = null;
+    this.breakOneShot(d);
+    const r = this.rules(d.config);
     if (type === 'kong') {
       d.claimed = false;
       d.kongs = 1;
+      if (d.indicators) {
+        if (r.kongIndicator === 'late') d.indicators = { ...d.indicators, pending: d.indicators.pending + 1 };
+        else this.turnIndicators(d, 1, events);
+      }
       this.replacement(d, seat, events);
     } else {
       d.claimed = true;
       d.kongs = 0;
       d.source = 'call';
+      d.forbidden = r.calls.noSwapCall ? swapForbidden(type, call.start, k) : [];
     }
+  }
+
+  /** Any call or kong ends every seat's one-shot chance. */
+  private breakOneShot(d: Draft): void {
+    if (d.ready.some((m) => m?.oneShot)) d.ready = d.ready.map((m) => (m ? { ...m, oneShot: false } : m));
+  }
+
+  /** Turns up the next indicators (up to the number set aside). */
+  private turnIndicators(d: Draft, n: number, events: MahjongEvent[]): void {
+    const st = d.indicators;
+    if (!st) return;
+    const max = st.tiles.length / 2;
+    let shown = st.shown;
+    for (let i = 0; i < n && shown < max; i++) {
+      events.push({ type: 'indicator', tile: st.tiles[shown] as TileId });
+      shown++;
+    }
+    d.indicators = { ...st, shown, pending: 0 };
   }
 
   /** The next player draws from the front of the wall, or the hand is drawn when none is left. */
@@ -551,17 +769,35 @@ export class MahjongEngine {
       }
       (d.hands[first.seat] as TileId[]).push(w.tile);
     }
-    const deltas = this.style(d.config).settle({ wins, dealer: d.dealer, seats: SEATS }, d.config.options);
-    this.finishHand(d, wins, deltas, events);
+    const deltas = this.style(d.config).settle({ wins, dealer: d.dealer, seats: SEATS, counter: d.counter, stakes: d.stakes }, d.config.options);
+    const st = d.indicators;
+    const readyWinner = wins.some((x) => d.ready[x.seat]);
+    const extra = st ? { indicators: st.tiles.slice(0, st.shown), ...(readyWinner ? { under: st.tiles.slice(st.tiles.length / 2, st.tiles.length / 2 + st.shown) } : {}) } : {};
+    this.finishHand(d, wins, deltas, events, extra);
+    d.stakes = 0;
   }
 
+  /** The wall ran out: the style may pay for ready hands (or all-terminal discards). */
   private endDrawn(d: Draft, events: MahjongEvent[]): void {
     events.push({ type: 'exhausted' });
-    this.finishHand(d, [], [0, 0, 0, 0], events);
+    const r = this.rules(d.config);
+    const style = this.style(d.config);
+    const ready = d.hands.map((h, seat) => waitsOf(countsOf(h), (d.melds[seat] ?? []).length, r.shapes, setsIn(r)).length > 0);
+    const allTerminalDiscards = d.discards.flatMap((list, seat) => (list.length > 0 && list.every((x) => !x.claimed && isTerminalOrHonour(kindOf(x.tile))) ? [seat] : []));
+    const deltas = style.settleDraw ? style.settleDraw({ dealer: d.dealer, seats: SEATS, reason: 'exhausted', ready, allTerminalDiscards, counter: d.counter }, d.config.options) : [0, 0, 0, 0];
+    this.finishHand(d, [], deltas, events, { reason: 'exhausted', ...(style.settleDraw ? { ready } : {}), ...(d.indicators ? { indicators: d.indicators.tiles.slice(0, d.indicators.shown) } : {}) });
   }
 
-  private finishHand(d: Draft, wins: readonly WinRecord[], deltas: readonly number[], events: MahjongEvent[]): void {
+  /** A hand abandoned by an abortive-draw rule: nobody pays, and the stakes stay on the table. */
+  private endAbortive(d: Draft, reason: DrawReason, seat: Seat | null, events: MahjongEvent[]): void {
+    events.push({ type: 'abort', reason, seat });
+    this.finishHand(d, [], [0, 0, 0, 0], events, { reason, ...(d.indicators ? { indicators: d.indicators.tiles.slice(0, d.indicators.shown) } : {}) });
+  }
+
+  private finishHand(d: Draft, wins: readonly WinRecord[], deltas: readonly number[], events: MahjongEvent[], extra: Partial<HandResult> = {}): void {
     const result: HandResult = {
+      ...extra,
+      ...(this.rules(d.config).ready || d.counter > 0 || d.stakes > 0 ? { counter: d.counter, stakes: d.stakes } : {}),
       handNo: d.handNo,
       round: d.round,
       dealer: d.dealer,
@@ -586,13 +822,22 @@ export class MahjongEngine {
   }
 
   /** Who deals next, the round, and whether the game is over, after the last hand. */
-  afterHand(s: Pick<MahjongState, 'config' | 'results' | 'dealer' | 'round' | 'passes' | 'repeats'>): { dealer: Seat; round: number; passes: number; repeats: number; over: boolean } {
+  afterHand(s: Pick<MahjongState, 'config' | 'results' | 'dealer' | 'round' | 'passes' | 'repeats' | 'scores' | 'counter'>): { dealer: Seat; round: number; passes: number; repeats: number; counter: number; over: boolean } {
     const style = this.style(s.config);
     const r = style.rules(s.config.options);
     const last = s.results[s.results.length - 1];
-    let { dealer, round, passes, repeats } = s;
+    let { dealer, round, passes, repeats, counter } = s;
+    let keeps = false;
     if (last) {
-      const keeps = style.dealerKeeps({ winners: last.wins.map((w) => w.seat), dealer: last.dealer, drawn: last.wins.length === 0 }, s.config.options);
+      const hand: HandEnd = {
+        winners: last.wins.map((w) => w.seat),
+        dealer: last.dealer,
+        drawn: last.wins.length === 0,
+        ...(last.reason && last.reason !== 'exhausted' ? { abortive: last.reason } : {}),
+        ...(last.ready ? { ready: last.ready } : {}),
+      };
+      keeps = style.dealerKeeps(hand, s.config.options);
+      counter = style.nextCounter ? style.nextCounter(hand, s.counter, s.config.options) : 0;
       if (keeps) repeats++;
       else {
         dealer = (dealer + 1) % SEATS;
@@ -604,8 +849,13 @@ export class MahjongEngine {
         }
       }
     }
-    const over = r.rounds === 0 ? s.results.length >= 1 : round >= r.rounds || s.results.length >= r.rounds * r.handsPerRound;
-    return { dealer, round, passes, repeats, over };
+    let over = r.rounds === 0 ? s.results.length >= 1 : round >= r.rounds || s.results.length >= r.rounds * r.handsPerRound;
+    if (last && style.gameOver && r.rounds > 0) {
+      const decided = style.gameOver({ scores: s.scores, round: last.round, passes: s.passes, nextRound: round, dealerKeeps: keeps, dealer: last.dealer, hands: s.results.length, rounds: r.rounds }, s.config.options);
+      // The hand cap still ends a game that would otherwise run on.
+      if (decided !== null) over = decided || s.results.length >= (r.rounds + 1) * r.handsPerRound;
+    }
+    return { dealer, round, passes, repeats, counter, over };
   }
 
   private nextHand(d: Draft, events: MahjongEvent[]): void {
@@ -614,6 +864,7 @@ export class MahjongEngine {
     d.round = next.round;
     d.passes = next.passes;
     d.repeats = next.repeats;
+    d.counter = next.counter;
     d.handNo++;
     this.deal(d, events);
   }
@@ -632,6 +883,11 @@ export class MahjongEngine {
     }
     let last = wall.shift() as TileId;
     (hands[d.dealer] as TileId[]).push(last);
+    // Indicator stacks (and the tiles under them) are set aside from the end of the wall.
+    d.indicators = r.indicators ? { tiles: wall.splice(wall.length - 2 * r.indicators, 2 * r.indicators), shown: 1, pending: 0 } : null;
+    d.ready = [null, null, null, null];
+    d.missed = [null, null, null, null];
+    d.forbidden = [];
     d.wall = wall;
     d.hands = hands;
     d.melds = [[], [], [], []];
@@ -700,9 +956,21 @@ export function actionKey(a: MahjongAction): string {
       return a.tile === undefined ? 'kong' : `kong${a.tile}`;
     case 'chow':
       return `chow${a.start}`;
+    case 'ready':
+      return `ready${a.tile}`;
     default:
       return a.type;
   }
+}
+
+/** Kinds a seat may not throw just after a call, when swap calling is forbidden. */
+export function swapForbidden(type: 'chow' | 'pung', start: Kind | undefined, called: Kind): Kind[] {
+  if (type === 'pung' || start === undefined) return [called];
+  const out = [called];
+  // Called at one end of the run: the tile beyond the other end would make the same run again.
+  if (called === start && rankOf(start) <= 6) out.push(start + 3);
+  if (called === start + 2 && rankOf(start) >= 2 && suitOf(start - 1) === suitOf(start)) out.push(start - 1);
+  return out;
 }
 
 /** A mutable copy of a state, for building the next one inside `apply`. */
@@ -732,6 +1000,12 @@ interface Draft {
   calls: number;
   lastDiscard: TileId | null;
   over: boolean;
+  indicators: IndicatorStacks | null;
+  ready: readonly (ReadyMark | null)[];
+  stakes: number;
+  counter: number;
+  missed: readonly ('turn' | 'hand' | null)[];
+  forbidden: readonly Kind[];
 }
 
 function draft(s: MahjongState): Draft {

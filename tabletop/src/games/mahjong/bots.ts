@@ -29,9 +29,9 @@ import type { Kind } from './core/tiles';
 import { codeOf, isHonour, isSuited, isTerminal, kindOf, PLAYING_KINDS, rankOf } from './core/tiles';
 import { setsIn } from './core/engine';
 import type { MahjongAction, MahjongView } from './rules';
-import { actionText, mahjong } from './rules';
+import { actionText, engine, mahjong } from './rules';
 import type { DiscardEval, SeatPicture, Threats } from './strategy';
-import { dangerOf, dealInCost, evaluateDiscards, expectedPoints, handShanten, picture, pointsFor, readThreats, readyInfo, safetyRanking, turnsLeft, valueEstimate, winChance, winPayout } from './strategy';
+import { dangerOf, dealInCost, evaluateDiscards, expectedPoints, handShanten, picture, pointsFor, possibleWin, readThreats, readyInfo, safetyRanking, turnsLeft, valueEstimate, winChance, winPayout } from './strategy';
 
 export const MAHJONG_LEVELS: readonly BotLevel[] = [
   { level: 1, rating: 400 },
@@ -204,11 +204,60 @@ function discardTags(p: SeatPicture, chosen: Scored, all: readonly Scored[]): st
   return tags;
 }
 
-function chooseDiscard(p: SeatPicture, params: LevelParams, style: PlayStyle, rng: Rng): Decision {
-  const threats = params.riskWeight > 0 ? readThreats(p.view) : null;
-  const scored = scoreDiscards(p, params, style, threats);
-  const chosen = pick(scored, params.slip, rng);
-  return { action: { type: 'discard', tile: chosen.e.kind }, tags: discardTags(p, chosen, scored) };
+/** The kinds the seat may throw now (a call can forbid some; a riichi hand throws its draw). */
+function allowedDiscards(p: SeatPicture): Set<Kind> {
+  return new Set(p.view.options.filter((a) => a.type === 'discard').map((a) => (a as { tile: Kind }).tile));
+}
+
+function chooseDiscard(p: SeatPicture, params: LevelParams, style: PlayStyle, rng: Rng, level: number): Decision {
+  const allowed = allowedDiscards(p);
+  const threats = params.riskWeight > 0 || p.view.ready.some((m, s) => m && s !== p.seat) ? readThreats(p.view) : null;
+  const all = scoreDiscards(p, params, style, params.riskWeight > 0 ? threats : null);
+  const scored = all.filter((x) => allowed.has(x.e.kind));
+  const fold = threats ? foldAgainstRiichi(p, scored, threats, level, style) : null;
+  const chosen = fold ?? pick(scored, params.slip, rng);
+  const tags = discardTags(p, chosen, scored);
+  if (fold && !tags.includes('mj-fold')) tags.unshift('mj-fold');
+  const riichi = declareRiichi(p, chosen, level, rng);
+  return { action: riichi ? { type: 'ready', tile: chosen.e.kind } : { type: 'discard', tile: chosen.e.kind }, tags: riichi ? ['mj-riichi', ...tags] : tags };
+}
+
+/**
+ * Against a declared riichi (from level 3 up): a hand still two or more tiles from ready, or one
+ * away with little value, gives up and throws its safest tile; a defender gives up sooner.
+ */
+function foldAgainstRiichi(p: SeatPicture, scored: readonly Scored[], threats: Threats, level: number, style: PlayStyle): Scored | null {
+  if (level < 3 || !threats.some((t) => t.declared) || p.view.ready[p.seat]) return null;
+  const fastest = Math.min(...scored.map((x) => x.e.shanten));
+  const value = Math.max(...scored.filter((x) => x.e.shanten === fastest).map((x) => x.e.value));
+  const giveUpAt = style === 'defender' ? 1 : style === 'attacker' ? 2 : level >= 4 && value < p.hints.minimum + 1 ? 1 : 2;
+  if (fastest < giveUpAt) return null;
+  const safest = [...scored].map((x) => ({ x, danger: dangerOf(p, x.e.kind, threats) })).sort((a, b) => a.danger - b.danger || a.x.e.shanten - b.x.e.shanten || b.x.e.accept - a.x.e.accept)[0];
+  return safest ? { ...safest.x, fold: true } : null;
+}
+
+/** Declare riichi with this throw? When it is legal and the wait has tiles left (a novice: half the time). */
+function declareRiichi(p: SeatPicture, chosen: Scored, level: number, rng: Rng): boolean {
+  if (!p.view.options.some((a) => a.type === 'ready' && a.tile === chosen.e.kind)) return false;
+  const ready = chosen.e.ready;
+  if (!ready) return false;
+  const left = ready.waits.reduce((n, w) => n + w.left, 0);
+  if (left === 0) return false;
+  if (level === 1) return rng.next() < 0.5;
+  if (level <= 3) return true;
+  // Stronger players stay quiet (dama) with a valuable hand that can already win on a discard.
+  const c = [...p.counts];
+  c[chosen.e.kind] = (c[chosen.e.kind] ?? 0) - 1;
+  const quiet = ready.waits.every((w) => w.left === 0 || (damaValue(p, c, w.kind) ?? 0) >= 4);
+  return !quiet;
+}
+
+/** What a wait wins on a discard without riichi (null when it has no yaku then). */
+function damaValue(p: SeatPicture, counts: readonly number[], k: Kind): number | null {
+  const c = [...counts];
+  c[k] = (c[k] ?? 0) + 1;
+  const s = engine.style(p.view.config).score(possibleWin(p, c, k, false, 0), p.view.config.options);
+  return s ? s.total : null;
 }
 
 // Kongs on your own turn
@@ -356,8 +405,9 @@ export function decide(view: MahjongView, level: number, rng: Rng): Decision {
   if (options.some((a) => a.type === 'win')) return { action: { type: 'win' }, tags: ['mj-win'] };
   const kong = kongDecision(p, options, params);
   if (kong) return kong;
-  return chooseDiscard(p, params, style, rng);
+  return chooseDiscard(p, params, style, rng, level);
 }
+
 
 // Coach answers
 
