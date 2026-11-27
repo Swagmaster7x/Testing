@@ -1,4 +1,4 @@
-/** Milestone 9 screenshots: Mahjong (Hong Kong style) at 844 × 390 (twice the pixels). */
+/** Milestone 9 screenshots: Mahjong (Hong Kong style) at 844 × 390 (twice the pixels), then upright and on a laptop. */
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { playToEnd, startMahjong, takeTurn } from './mahjong-helpers';
@@ -80,4 +80,19 @@ test('milestone 9 screens: mahjong', async ({ page }) => {
   await shot(page, '13-mahjong-reference');
   await page.getByRole('heading', { name: 'The faan table (Hong Kong defaults)' }).scrollIntoViewIfNeeded();
   await shot(page, '14-mahjong-reference-faan');
+
+  // The same table on a phone held upright, and on a laptop.
+  for (const [name, width, height] of [
+    ['15-mahjong-portrait', 390, 844],
+    ['16-mahjong-laptop', 1440, 900],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await startMahjong(page, { seed: 'e2e-1', level: 2, oneHand: true });
+    for (let i = 0; i < 5; i++) {
+      await expect(turn).toHaveText(/Your move|Game over/, { timeout: 45_000 });
+      await takeTurn(page);
+    }
+    await expect(turn).toHaveText(/Your move/, { timeout: 45_000 });
+    await shot(page, name);
+  }
 });

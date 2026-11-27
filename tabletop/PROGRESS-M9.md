@@ -71,7 +71,9 @@ and Practice doors (lessons, drills, the Table-ready track) are milestone 10.
 | The awkward rules | Same file: kong then a replacement-tile win, the double kong, an exposed kong then a win, robbing an added kong (on and off), thirteen orphans robbing a concealed kong, the last discard (only a win), an exhaustive draw paying nothing, the dealer keeping or passing the deal, the minimum, heavenly hand, the rounds |
 | Property tests under every preset | `tests/property/mahjong.property.test.ts`: random games under all six presets and four odd mixes (one-hand and East-round games): nothing crashes, every legal action applies, tiles conserved, payments add up to zero and to the scores, views never leak a hidden tile, the seed or a hidden call, samples agree with the view, records replay to the identical state |
 | Shanten checked against `syanten` | `tests/unit/mahjong-shanten.test.ts`: on 3,000 random hands ours is never higher and equal on more than 99%; each difference is a hand `syanten` reads greedily, and the test checks a real reading reaching our number; a second, plain search of our own agrees on every hand; seven pairs and thirteen orphans agree exactly; acceptance agrees wherever the shanten numbers agree |
-| A full game in e2e | `tests/e2e/mahjong.spec.ts` at 844×390, 1180×820 and 1440×900 (see below) |
+| A full game in e2e | `tests/e2e/mahjong.spec.ts` at 844×390, 1180×820 and 1440×900: a hand to the end with its scoring and review, a call, the coach's helps, the reference card (12 passed) |
+| `npm run check` | Typecheck, lint, 490 unit tests in 41 files, 39 property tests in 8 files, lesson lint: all pass |
+| Screens | `tests/e2e/screens-m9.spec.ts` → `screenshots/m9/` (16 shots at 844×390, then the table at 390×844 and 1440×900), each looked at |
 | At least four CPU levels pass the ladder | All five (table below) |
 
 The ladder (`npm run ladder -- mahjong 120`: East-round games under the default rules, the level
@@ -138,7 +140,15 @@ swapped; a side scores when its two seats together won more points; pass at 0.6)
     `shownTurn`, `eventSeat`) used by the table, the review and the log; a hub door for a shelf
     game that has no lessons yet says they are on the way (was "None for the test table");
     `outcomePoints` rounds its share, so a four-way tie is exactly a half (it was a hair under,
-    and a drawn mahjong hand read as a loss).
+    and a drawn mahjong hand read as a loss); and card and tile tables held upright on a phone
+    (`src/styles/cards.css`) get a 3:4 table with the players and the coach below at their own
+    heights (the stacked layout had left these tables no height at all, in every card game).
+15. **The CPU's reasons at the table are only the public ones** (a win, a kong, a call for value
+    or for speed). "Gets ready", "folds" or "a lone tile" would say what is in a hidden hand; the
+    hint and the review, which only ever speak about your own hand, keep every reason.
+16. **The table scales with the screen**: tiles grow on a tablet or laptop up to a cap; on a
+    narrow table the middle box shortens its text ("East 1", "Pick a tile to discard") and the
+    tag across moves below that player's rack rather than cover it.
 
 ## Not done in M9, or open
 

@@ -452,12 +452,18 @@ function advise(view: MahjongView, query: Json, rng: Rng): Json {
   }
 }
 
+/**
+ * Reasons a CPU seat may show at the table: only those everyone can see for themselves. "Ready
+ * to win", "folding" or "a lone tile" would tell the others what is in a hidden hand.
+ */
+const PUBLIC_TAGS: ReadonlySet<string> = new Set(['mj-win', 'mj-kong', 'mj-call-value', 'mj-call-speed']);
+
 export const mahjongBots: BotSet<MahjongView, MahjongAction> = {
   gameId: 'mahjong',
   levels: MAHJONG_LEVELS,
   choose({ view, level, rng }: BotInput<MahjongView>): BotChoice<MahjongAction> {
     const d = decide(view, level, rng);
-    return { action: d.action, tags: d.tags, nodes: LEVEL_PARAMS[level]?.lookWidth ?? 0 };
+    return { action: d.action, tags: d.tags.filter((tag) => PUBLIC_TAGS.has(tag)), nodes: LEVEL_PARAMS[level]?.lookWidth ?? 0 };
   },
   advise: ({ view, query, rng }) => advise(view, query, rng),
   encode: (action) => mahjong.codec.action.toJSON(action),

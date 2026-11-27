@@ -170,7 +170,7 @@ button.mj-tile:focus-visible {
   max-width: calc(100% - 16px);
   padding: 6px 8px 8px;
   border-radius: var(--r-lg);
-  background: rgb(14 12 9 / 0.88);
+  background: rgb(14 12 9);
   box-shadow: 0 8px 22px rgb(0 0 0 / 0.5);
 }
 

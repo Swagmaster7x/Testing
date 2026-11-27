@@ -357,10 +357,10 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const meldTiles = myMelds.reduce((n, m) => n + m.tiles.length, 0);
   const myBonus = d.bonus[me] ?? [];
   const units = myHand.length + (myDrawn ? 1.35 : 0) + meldTiles * 0.72 + myMelds.length * 0.3 + myBonus.length * 0.5 + 1;
-  const hw = Math.max(20, Math.min(48, (W - 8) / Math.max(10, units), H * 0.135));
+  const hw = Math.max(20, Math.min(70, (W - 8) / Math.max(10, units), H * 0.135));
   const hh = (hw * 4) / 3;
   const bottomH = hh + hw * 0.4 + 6;
-  const bw = Math.max(9, Math.min(20, hw * 0.48, (H - bottomH) / 21));
+  const bw = Math.max(9, Math.min(28, hw * 0.48, (H - bottomH) / 21));
   const bh = (bw * 4) / 3;
   const topH = bh + 8;
   const sideW = bh + bw + 12;
@@ -368,12 +368,14 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const maxDiscards = Math.max(1, ...d.discards.map((list) => list.filter((x) => !x.claimed).length));
   const rowsTB = Math.max(3, Math.ceil(maxDiscards / 8));
   const colsLR = Math.max(4, Math.ceil(maxDiscards / 6));
-  const dw = Math.max(9, Math.min(30, (area.h / (2 * rowsTB + 1.25)) * 0.75, area.w / (8 + 2 * colsLR + 0.6)));
+  const dw = Math.max(9, Math.min(44, (area.h / (2 * rowsTB + 1.25)) * 0.75, area.w / (8 + 2 * colsLR + 0.6)));
   const dh = (dw * 4) / 3;
   const cx = area.x + area.w / 2;
   const cy = area.y + area.h / 2;
   const boxW = 8 * dw;
   const boxH = dh * 1.25;
+  // Held upright the box is narrow: the round and the tip take their short forms.
+  const narrow = boxW < 210;
 
   const placed: Placed[] = [];
   // The latest discard, once it lies in the discards on the table.
@@ -403,6 +405,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   }
 
   // Other players: hidden tiles along the edge, melds and flowers beside them.
+  let topRight = 0;
   for (let seat = 0; seat < 4; seat++) {
     if (seat === me) continue;
     const where = WHERE[relative(seat, me)] as Where;
@@ -413,7 +416,8 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
     const mw = bw * 1.0;
     if (where === 'top') {
       const total = hand.length * bw + melds.reduce((n, m) => n + m.tiles.length * mw + bw * 0.4, 0) + bonus.length * mw * 0.8 + bw;
-      let x = cx + total / 2;
+      topRight = cx + total / 2;
+      let x = topRight;
       const y = 4 + bh / 2;
       // From your view the player across lays tiles right to left.
       hand.forEach((tile, i) => placed.push({ key: tile, kind: open ? kindOf(tile) : null, x: x - bw * (i + 0.5), y, w: bw * 0.96, z: 200 + i, label: open ? tileName(tile) : undefined }));
@@ -507,7 +511,10 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const view = viewOf(state, me);
   const turnSeat = !busy && state.phase === 'act' ? state.turn : null;
 
-  // Seat tags: name, wind, dealer, score.
+  // Seat tags: name, wind, dealer, score. On a narrow table the tag across would cover that
+  // player's rack, so it moves just below it (a rough width from its text is enough).
+  const tagWidth = (seat: number) => `${seatName(seat, me)} ${windName(seatWind(seat, state.dealer))} ${state.scores[seat] ?? 0}`.length * 6.5 + 26 + (seat === state.dealer ? 52 : 0);
+  const acrossLow = topRight + 6 > W - sideW - 4 - tagWidth((me + 2) % 4);
   const tags = [0, 1, 2, 3].map((seat) => {
     const where = WHERE[relative(seat, me)] as Where;
     const wind = windName(seatWind(seat, state.dealer));
@@ -515,7 +522,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       where === 'bottom'
         ? { left: `${sideW + 4}px`, bottom: `${hh + hw * 0.55 + 8}px` }
         : where === 'top'
-          ? { right: `${sideW + 4}px`, top: '2px' }
+          ? { right: `${sideW + 4}px`, top: acrossLow ? `${topH + 2}px` : '2px' }
           : where === 'left'
             ? { left: `${bh + bw + 14}px`, top: `${topH + 2}px` }
             : { right: `${bh + bw + 14}px`, bottom: `${bottomH + 2}px` };
@@ -534,9 +541,13 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       {W > 0 ? (
         <div className="mj-centre" style={{ left: `${cx - boxW / 2}px`, top: `${cy - boxH / 2}px`, width: `${boxW}px`, height: `${boxH}px` }}>
           <span className="mj-centre-round">
-            {t('mahjong.round', { wind: windName(state.round) })} · {t('mahjong.hand-no', { n: state.handNo + 1 })} · <span className="num">{t('mahjong.wall', { n: d.wall })}</span>
+            {narrow ? t('mahjong.round-short', { wind: windName(state.round), n: state.handNo + 1 }) : `${t('mahjong.round', { wind: windName(state.round) })} · ${t('mahjong.hand-no', { n: state.handNo + 1 })}`} · <span className="num">{t('mahjong.wall', { n: d.wall })}</span>
           </span>
-          {myTurn && !claiming ? <span className="mj-centre-tip">{selected && playable.has(kindOf(selected)) ? t('mahjong.tap-again') : state.claimed ? t('mahjong.after-call') : t('mahjong.your-discard')}</span> : null}
+          {myTurn && !claiming ? (
+            <span className="mj-centre-tip">
+              {selected && playable.has(kindOf(selected)) ? t(narrow ? 'mahjong.tap-again-short' : 'mahjong.tap-again') : state.claimed ? t('mahjong.after-call') : t(narrow ? 'mahjong.your-discard-short' : 'mahjong.your-discard')}
+            </span>
+          ) : null}
         </div>
       ) : null}
       {W > 0 ? <TileLayer tiles={placed} duration={duration} learner={learner} onTile={onTile} /> : null}
