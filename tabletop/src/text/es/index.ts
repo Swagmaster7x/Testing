@@ -5,6 +5,7 @@
  */
 import type { MessageKey } from '../en';
 import { esBase } from './base';
+import { esGames } from './games';
 import { esLearn } from './learn';
 
-export const es: Partial<Record<MessageKey, string>> = { ...esBase, ...esLearn };
+export const es: Partial<Record<MessageKey, string>> = { ...esBase, ...esLearn, ...esGames };
