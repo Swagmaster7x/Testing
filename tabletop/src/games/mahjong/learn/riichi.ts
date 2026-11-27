@@ -113,9 +113,9 @@ export const RIICHI_LESSONS: readonly Lesson[] = [
     },
   ]),
   lesson('riichi-yaku', 'The ten yaku you will meet most', 4, SIMPLES, [
-    { kind: 'say', text: `How the hand is won: ${P('riichi')} ({han:riichi} han, closed only), and ${P('menzen-tsumo')} ({han:menzen-tsumo}): win by your own draw with nothing called.` },
-    { kind: 'say', text: `How it is built: ${P('tanyao')} ({han:tanyao}), no ones, nines or honours anywhere; ${P('pinfu')} ({han:pinfu}, closed), four runs, a pair that is not a dragon or your wind, and a two-sided wait; ${P('iipeikou')} ({han:iipeikou}, closed), the same run twice; and ${P('chiitoitsu')} ({han:chiitoitsu}), seven different pairs.` },
-    { kind: 'say', text: `Value pungs (yakuhai): a pung of any dragon, your seat wind or the round’s wind is {han:yakuhai-red} han, called or not. The bigger patterns: ${P('sanshoku')} ({han:sanshoku} closed, {han:open:sanshoku} called), ${P('honitsu')} ({han:honitsu} closed, {han:open:honitsu} called) and ${P('toitoi')} ({han:toitoi}).` },
+    { kind: 'say', text: `How the hand is won. ${P('riichi')}: {han:riichi} han, closed hands only. ${P('menzen-tsumo')}: {han:menzen-tsumo} han for winning on your own draw with nothing called.` },
+    { kind: 'say', text: `How it is built. ${P('tanyao')}: {han:tanyao} han, no ones, nines or honours anywhere. ${P('pinfu')}: {han:pinfu} han, closed: four runs, a pair that is not a dragon or a counting wind, and a two-sided wait. ${P('iipeikou')}: {han:iipeikou} han, closed: the same run twice. ${P('chiitoitsu')}: {han:chiitoitsu} han, seven different pairs.` },
+    { kind: 'say', text: `Value pungs (yakuhai): {han:yakuhai-red} han for a pung of any dragon, your seat wind or the round’s wind, called or not. Bigger: ${P('sanshoku')}, {han:sanshoku} han closed and {han:open:sanshoku} called; ${P('honitsu')}, {han:honitsu} closed and {han:open:honitsu} called; ${P('toitoi')}, {han:toitoi} han.` },
     {
       kind: 'checkpoint',
       text: 'Name a yaku in each hand.',

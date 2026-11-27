@@ -257,6 +257,11 @@
   font-weight: 600;
 }
 
+/* Four digits and more (Riichi payments) take a smaller size to fit the box. */
+.number-entry[data-long='true'] {
+  font-size: var(--fs-lg);
+}
+
 .number-keys {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

@@ -66,7 +66,19 @@ A style is one typed object:
 | `score(context, options)` | Given a complete hand and how it was won (the winning tile, self-drawn or from whom, melds, bonus tiles, seat and prevailing winds, the dealer, last tile or last discard, a kong's replacement, a robbed kong, heavenly or earthly), the scoring lines, the total, whether it is a limit hand, and the base points; or null when the hand may not win (below the minimum, or a shape the style refuses). |
 | `settle(hand, options)` | The payments for a finished hand from each winner's score, who discarded, and the dealer. They must add up to zero. |
 | `dealerKeeps(result, options)` | Whether the dealer deals again after this hand. |
-| `hints(seat, options)` | Rough values of what the scoring rewards, for one family of CPU players to steer by in every style: the minimum and the limit, the value of a pung of each kind (dragons, your winds), one-suit hands, all pungs, all chows, a concealed hand, a self-draw, the bonus tiles already held, the point table, and what each loser pays on a self-draw and on a discard (so the CPU knows how much feeding a ready hand costs at this table). |
+| `hints(seat, options)` | Rough values of what the scoring rewards, for one family of CPU players to steer by in every style: the minimum and the limit, the value of a pung of each kind (dragons, your winds), one-suit hands, all pungs, all chows, a concealed hand, a self-draw, the bonus tiles already held, the point table, and what each loser pays on a self-draw and on a discard (so the CPU knows how much feeding a ready hand costs at this table). Since milestone 11 also, where a style has them: all simples (closed and open), the value of declaring ready, the bonus kinds (dora), and a scale for the cost of feeding. |
+| `scoreAny(context, options)` (optional) | The best score of a complete hand whether or not it may win, for lessons and drills. |
+| `settleDraw(hand, options)` (optional) | The payments at a drawn hand: who was ready, why it ended (an empty wall or an abortive draw), who threw only terminals and honours. Without it a drawn hand pays nothing. |
+| `nextCounter(hand, counter)` and `gameOver(standing, options)` (optional) | The repeat counter after a hand, and whether the game ends now (or `null`: the core's own rounds decide). |
+
+The optional parts of `rules()` added in milestone 11, all off unless a style asks: `startScore`
+(each seat's opening points), `indicators` (indicator tiles set aside at the deal, shown one by
+one, with tiles under them) and `kongIndicator` (when a kong turns the next), `ready` (a declaration
+with a stake, a lowest score to declare and the tiles that must be left), `aborts` (the abortive
+draws), and among the calls `furiten` (no win on a throw while a winning tile lies in your own
+discards, after passing a win until your next throw, and for good after a declaration),
+`noSwapCall` (no throwing back the tile a call just took, or the other end of its run) and
+`maxWinners` (more winners on one tile than this is an abortive draw).
 
 The CPU, the coach and the review share one module (`src/games/mahjong/strategy.ts`) that reads
 only a view, the style's rules and its hints: tiles from ready and useful tiles for every discard,
@@ -75,10 +87,14 @@ hand is worth), and a danger estimate for each tile against each player.
 
 ## What later styles add, and where
 
-- **Riichi** (milestone 11): 136 tiles, a dead wall of 14 with dora indicators, riichi declared with
-  a discard, furiten (a filter on which wins a seat may call), yaku required (a `score` that returns
-  null without one), han and fu (the score's lines carry the unit), an East-South game with
-  repeat counters and riichi sticks (style state kept with the hand).
+- **Riichi** (milestone 11, built: `docs/rules/mahjong-riichi.md`): 136 tiles with red fives (a
+  copy of each five marked in the tile set), a dead wall of four replacement tiles plus ten
+  indicator tiles held apart, riichi as the core's generic ready declaration with its stake,
+  furiten as a filter on which wins a seat may call, yaku required (a `score` that returns null
+  without one), han and fu (the score's lines carry the unit, the score its fu and band), an
+  East-South game with the repeat counter and riichi sticks kept in the state and paid by the
+  style's `settle`, and drawn-hand payments through `settleDraw`. Nothing in the Hong Kong file
+  changed but one line (`scoreAny`).
 - **Chinese Official**: 81 patterns and an eight-point minimum: a scorer only.
 - **Taiwanese**: 16-tile hands (five sets and a pair), so `rules().handSize` is 16; a dead wall of 16.
 - **Sichuan Bloody**: 108 tiles, no chows, a suit to void chosen before play (a phase before the

@@ -532,9 +532,13 @@ function gameOver(st: GameStanding, o: StyleOptions): boolean | null {
   return false;
 }
 
-/** Base points at about 30 fu for each han, as the CPU's rough guide to value. */
+/**
+ * Base points at about 30 fu for each han, as the CPU's rough guide to value, in hundreds: the
+ * CPU weighs expected points against its rules of thumb on the scale of the Hong Kong table (a few
+ * points to a hundred or so), so the same weights serve both styles.
+ */
 function guidePoints(o: StyleOptions): number[] {
-  return Array.from({ length: 14 }, (_, han) => (han === 0 ? 0 : basePoints(han, 30, o).base));
+  return Array.from({ length: 14 }, (_, han) => (han === 0 ? 0 : basePoints(han, 30, o).base / 100));
 }
 
 function hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[]; readonly indicators?: readonly Kind[] }, o: StyleOptions): ValueHints {
@@ -560,6 +564,8 @@ function hints(seat: { readonly seatWind: number; readonly prevailingWind: numbe
     allSimplesOpen: on(o, 'openTanyao') ? 1 : 0,
     readyDeclaration: 1,
     bonusKinds: (seat.indicators ?? []).map(doraOf),
+    // The feeder pays the whole hand: a third of the Hong Kong weight on that cost measured best (PROGRESS-M11.md).
+    riskScale: 0.3,
   };
 }
 

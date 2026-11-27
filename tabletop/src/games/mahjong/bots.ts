@@ -156,7 +156,7 @@ function scoreByValue(p: SeatPicture, params: LevelParams, style: PlayStyle, thr
   const bestEv = Math.max(...base.map((y) => y.ev));
   return base.map((y) => ({
     e: y.x.e,
-    score: y.x.score + params.evWeight * y.ev - params.riskWeight * STYLE_FEAR[style] * y.risk,
+    score: y.x.score + params.evWeight * y.ev - params.riskWeight * (p.hints.riskScale ?? 1) * STYLE_FEAR[style] * y.risk,
     fold: y.x.e.shanten > fastest && y.ev < bestEv * 0.5 && y.risk < (base.find((z) => z.ev === bestEv)?.risk ?? 0),
   }));
 }

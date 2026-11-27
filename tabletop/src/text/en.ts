@@ -99,9 +99,9 @@ const base = {
   'game.shogi.cpu': 'Own engine, seven levels and a handicap ladder.',
 
   'game.mahjong.name': 'Mahjong',
-  'game.mahjong.aka': 'Hong Kong style first, Riichi next',
-  'game.mahjong.launch': 'Hong Kong style, four players.',
-  'game.mahjong.later': 'Riichi, then Chinese Official, Taiwanese, Sichuan Bloody and American-format.',
+  'game.mahjong.aka': 'Hong Kong and Riichi styles',
+  'game.mahjong.launch': 'Hong Kong and Riichi styles, four players.',
+  'game.mahjong.later': 'Chinese Official, Taiwanese, Sichuan Bloody and American-format.',
   'game.mahjong.practice': 'Waits, what to discard, scoring patterns for each style, safe tiles.',
   'game.mahjong.cpu': 'Three CPU seats that attack or fold in their own way.',
 

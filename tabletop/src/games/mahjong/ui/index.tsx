@@ -8,7 +8,7 @@ import { analyseMahjongGame } from '../review';
 import { seatWind } from '../core/engine';
 import { kindOf } from '../core/tiles';
 import { HK_OPTIONS, HK_PRESETS } from '../styles/hong-kong';
-import { doraOf, RIICHI_PRESETS } from '../styles/riichi';
+import { basePoints as riichiBase, COUNTER_VALUE, doraOf, NOTEN_POOL, payments as riichiPayments, RIICHI_PRESETS, STAKE, YAKU_HAN } from '../styles/riichi';
 import { MahjongCoachPanel } from './CoachPanel';
 import { MahjongSeatMark, MahjongSurface } from './MahjongSurface';
 import { kindName, moveName, runName, seatName, tileName, whoName, windName } from './names';
@@ -191,6 +191,12 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       { title: 'ref.mahjong.terms', items: lines('ref.mahjong.terms', 5) },
       { title: 'ref.mahjong.presets', items: lines('ref.mahjong.presets', 4) },
       { title: 'ref.mahjong.ask', items: lines('ref.mahjong.ask', 7) },
+      { title: 'ref.mahjong.riichi', items: lines('ref.mahjong.riichi', 5) },
+      { title: 'ref.mahjong.yaku', items: [...riichiYakuLines(), ...lines('ref.mahjong.yaku', 2)] },
+      { title: 'ref.mahjong.fu', items: lines('ref.mahjong.fu', 4) },
+      { title: 'ref.mahjong.rpay', items: riichiPayLines() },
+      { title: 'ref.mahjong.rterms', items: lines('ref.mahjong.rterms', 5) },
+      { title: 'ref.mahjong.rask', items: lines('ref.mahjong.rask', 6) },
       { title: 'ref.mahjong.levels', items: MAHJONG_LEVELS.map((l) => `${t('common.level', { n: l.level })} (${t('mahjong.rating', { n: l.rating })}): ${tDynamic(`mahjong.level.${l.level}`)}`) },
     ];
   },
@@ -225,6 +231,42 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
   },
   revealSeat: (start, record, seat) => (record.players[seat]?.kind === 'bot' ? t('mahjong.reveal', { style: t(`mahjong.style.${playStyleOf(start.table, seat)}`) }) : null),
 };
+
+/** The Riichi yaku by han, from the rules file: closed-only ones marked, and the open value where it drops. */
+function riichiYakuLines(): string[] {
+  const byHan = new Map<number, string[]>();
+  for (const [id, [closed, open]] of Object.entries(YAKU_HAN)) {
+    const name = tDynamic(`mahjong.pattern.${id}`);
+    const label = open === 0 ? t('ref.mahjong.yaku.closed', { name }) : open < closed ? t('ref.mahjong.yaku.open', { name, n: open }) : name;
+    byHan.set(closed, [...(byHan.get(closed) ?? []), label]);
+  }
+  return [...byHan.entries()].sort((a, b) => a[0] - b[0]).map(([han, names]) => t('ref.mahjong.yaku.han', { n: han, list: names.join('; ') }));
+}
+
+/** The payment table, computed by the Riichi scorer: 1 to 4 han at 30 and 40 fu, then the bands. */
+function riichiPayLines(): string[] {
+  const hans = [1, 2, 3, 4];
+  const ron = (fu: number, dealer: boolean) => hans.map((han) => riichiPayments(riichiBase(han, fu).base, dealer).ron).join(', ');
+  const tsumo = (fu: number) =>
+    hans
+      .map((han) => {
+        const p = riichiPayments(riichiBase(han, fu).base, false);
+        return `${p.tsumoOther}/${p.tsumoDealer}`;
+      })
+      .join(', ');
+  const dealerTsumo = (fu: number) => hans.map((han) => riichiPayments(riichiBase(han, fu).base, true).tsumoOther).join(', ');
+  const band = (name: string, han: number) => {
+    const base = riichiBase(han, 20).base;
+    return t('ref.mahjong.rpay.band', { name: tDynamic(`mahjong.band.${name}`), han, ron: riichiPayments(base, false).ron, dealer: riichiPayments(base, true).ron });
+  };
+  return [
+    t('ref.mahjong.rpay.ron', { fu: 30, list: ron(30, false), dealer: ron(30, true) }),
+    t('ref.mahjong.rpay.ron', { fu: 40, list: ron(40, false), dealer: ron(40, true) }),
+    t('ref.mahjong.rpay.tsumo', { fu: 30, list: tsumo(30), dealer: dealerTsumo(30) }),
+    [band('mangan', 5), band('haneman', 6), band('baiman', 8), band('sanbaiman', 11), band('kazoe', 13)].join('; '),
+    t('ref.mahjong.rpay.extra', { honba: COUNTER_VALUE, stick: STAKE, noten: NOTEN_POOL }),
+  ];
+}
 
 /** Kind names for tests and lessons. */
 export { kindName };

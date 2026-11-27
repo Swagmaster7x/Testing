@@ -294,16 +294,19 @@ function StepBody({ step, question, s, fill, thinking, entry, setEntry, chosen, 
   );
 }
 
+/** Digits the pad takes: enough for Riichi payments (a dealer's yakuman is 48000). */
+const PAD_DIGITS = 6;
+
 function NumberPad({ value, onChange, onSubmit }: { value: string; onChange: (v: string) => void; onSubmit: (n: number) => void }) {
   const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
   return (
     <div className="number-pad">
-      <output className="number-entry num" aria-label={t('lesson.number.entry')}>
+      <output className="number-entry num" aria-label={t('lesson.number.entry')} data-long={value.length > 3}>
         {value || ' '}
       </output>
       <div className="number-keys">
         {digits.map((d) => (
-          <button key={d} type="button" className="key num" onClick={() => onChange((value + d).slice(0, 3))}>
+          <button key={d} type="button" className="key num" onClick={() => onChange((value + d).slice(0, PAD_DIGITS))}>
             {d}
           </button>
         ))}

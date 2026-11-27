@@ -261,6 +261,12 @@ export interface ValueHints {
   readonly readyDeclaration?: number;
   /** Kinds worth this much each when held in a winning hand (dora), once a hand has value. */
   readonly bonusKinds?: readonly Kind[];
+  /**
+   * How much the strongest CPU weighs the cost of feeding a ready hand, against the table its
+   * weights were tuned on (1, Hong Kong). Where the feeder pays the whole hand that cost is several
+   * times larger, and the tuned weight would have the CPU fold far too often.
+   */
+  readonly riskScale?: number;
 }
 
 export interface Style {

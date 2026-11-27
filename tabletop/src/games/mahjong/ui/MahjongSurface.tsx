@@ -279,7 +279,7 @@ function OwnTurnButtons({ legal, counts, onAction, riichi, readyMode, setReadyMo
  * With "Score hands for me" off, a won hand asks you for its faan before the sheet shows, as you
  * would count it at a real table.
  */
-function CountYourself({ faan, onDone }: { faan: number; onDone: (guess: number | null) => void }) {
+function CountYourself({ faan, han, onDone }: { faan: number; han: boolean; onDone: (guess: number | null) => void }) {
   const [entry, setEntry] = useState('');
   const guess = entry.trim() === '' ? null : Number(entry);
   return (
@@ -290,8 +290,8 @@ function CountYourself({ faan, onDone }: { faan: number; onDone: (guess: number 
         if (guess !== null && Number.isFinite(guess)) onDone(guess);
       }}
     >
-      <span className="mj-count-ask">{t('mahjong.self.ask')}</span>
-      <input className="mj-count-input num" type="number" inputMode="numeric" min={0} max={99} aria-label={t('mahjong.self.label')} value={entry} onChange={(e) => setEntry(e.target.value)} />
+      <span className="mj-count-ask">{t(han ? 'mahjong.self.ask.han' : 'mahjong.self.ask')}</span>
+      <input className="mj-count-input num" type="number" inputMode="numeric" min={0} max={99} aria-label={t(han ? 'mahjong.self.label.han' : 'mahjong.self.label')} value={entry} onChange={(e) => setEntry(e.target.value)} />
       <button type="submit" className="btn btn-primary btn-small" disabled={guess === null || !Number.isFinite(guess)}>
         {t('mahjong.self.check')}
       </button>
@@ -343,10 +343,10 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
                 </span>
               ) : null}
             </div>
-            {asking && w === first ? <CountYourself faan={w.score.total} onDone={setCounted} /> : null}
+            {asking && w === first ? <CountYourself faan={w.score.total} han={w.score.unit === 'han'} onDone={setCounted} /> : null}
             {selfScore && w === first && counted !== undefined && counted !== null ? (
               <p className="mj-count-verdict" data-right={counted === w.score.total}>
-                {counted === w.score.total ? t('mahjong.self.right', { n: w.score.total }) : t('mahjong.self.wrong', { guess: counted, n: w.score.total })}
+                {counted === w.score.total ? t(w.score.unit === 'han' ? 'mahjong.self.right.han' : 'mahjong.self.right', { n: w.score.total }) : t('mahjong.self.wrong', { guess: counted, n: w.score.total })}
               </p>
             ) : null}
             {asking ? null : (
