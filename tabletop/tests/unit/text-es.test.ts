@@ -4,21 +4,33 @@ import { currentLanguage, setLanguage, t, tDynamic } from '../../src/text';
 import { en } from '../../src/text/en';
 import { enLearn } from '../../src/text/en-learn';
 import { enGames } from '../../src/text/games';
+import { enBlackjack } from '../../src/text/games/blackjack';
 import { enBrisca } from '../../src/text/games/brisca';
 import { enChineseCheckers } from '../../src/text/games/chinese-checkers';
+import { enClassic } from '../../src/text/games/classic';
 import { enDominoes } from '../../src/text/games/dominoes';
+import { enGinRummy } from '../../src/text/games/gin-rummy';
 import { enGo } from '../../src/text/games/go';
+import { enHearts } from '../../src/text/games/hearts';
 import { enMahjong } from '../../src/text/games/mahjong';
 import { enPoker } from '../../src/text/games/poker';
 import { enShogi } from '../../src/text/games/shogi';
+import { enSpades } from '../../src/text/games/spades';
+import { enTute } from '../../src/text/games/tute';
 import { es } from '../../src/text/es';
+import { esBlackjack } from '../../src/text/es/games/blackjack';
 import { esBrisca } from '../../src/text/es/games/brisca';
 import { esChineseCheckers } from '../../src/text/es/games/chinese-checkers';
+import { esClassic } from '../../src/text/es/games/classic';
 import { esDominoes } from '../../src/text/es/games/dominoes';
+import { esGinRummy } from '../../src/text/es/games/gin-rummy';
 import { esGo } from '../../src/text/es/games/go';
+import { esHearts } from '../../src/text/es/games/hearts';
 import { esMahjong } from '../../src/text/es/games/mahjong';
 import { esPoker } from '../../src/text/es/games/poker';
 import { esShogi } from '../../src/text/es/games/shogi';
+import { esSpades } from '../../src/text/es/games/spades';
+import { esTute } from '../../src/text/es/games/tute';
 
 /** Each translated game: its English file and its Spanish file, which must cover every key. */
 const games: readonly [string, Record<string, string>, Partial<Record<string, string>>][] = [
@@ -29,6 +41,12 @@ const games: readonly [string, Record<string, string>, Partial<Record<string, st
   ['mahjong', enMahjong, esMahjong],
   ['poker', enPoker, esPoker],
   ['shogi', enShogi, esShogi],
+  ['classic', enClassic, esClassic],
+  ['blackjack', enBlackjack, esBlackjack],
+  ['hearts', enHearts, esHearts],
+  ['spades', enSpades, esSpades],
+  ['gin-rummy', enGinRummy, esGinRummy],
+  ['tute', enTute, esTute],
 ];
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
@@ -57,10 +75,12 @@ describe('the Spanish catalogue', () => {
 
   for (const [game, english, spanish] of games) {
     it(`covers every string of ${game}`, () => {
-      const missing = Object.keys(english).filter((k) => !spanish[k]?.trim());
+      // A key empty in English on purpose (no "later" plans, a hand with no outcome yet) stays empty.
+      const keys = Object.keys(english).filter((k) => english[k] !== '');
+      const missing = keys.filter((k) => !spanish[k]?.trim());
       expect(missing, `${missing.length} ${game} strings untranslated`).toEqual([]);
       // The merged catalogue carries the game's Spanish, not another file's text for the same key.
-      for (const k of Object.keys(english)) expect((es as Record<string, string>)[k], k).toBe(spanish[k]);
+      for (const k of keys) expect((es as Record<string, string>)[k], k).toBe(spanish[k]);
     });
   }
 
