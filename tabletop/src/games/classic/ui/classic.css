@@ -408,3 +408,8 @@
   font-size: var(--fs-2xs);
   line-height: 1.35;
 }
+
+/* Two even columns, so a long label does not squeeze the numbers into a narrow column. */
+.classic-counts {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}

@@ -41,7 +41,7 @@ export function HeartsCoachPanel({ state, seat, helps, ask, setOverlay, markTrai
         />
       )}
       {helps.points ? (
-        <dl className="facts coach-counts">
+        <dl className="facts coach-counts classic-counts">
           {[0, 1, 2, 3].map((s) => (
             <div key={s} style={{ display: 'contents' }}>
               <dt>{seatLabel(s, me)}</dt>
