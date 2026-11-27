@@ -10,6 +10,7 @@ import { decide, LEVEL_PARAMS, MAHJONG_LEVELS, mahjongBots, playStyleOf } from '
 import type { MahjongConfig, MahjongState } from '../../src/games/mahjong/rules';
 import { actionText, mahjong, position, viewOf } from '../../src/games/mahjong/rules';
 import { HK_DEFAULTS, HK_PRESETS } from '../../src/games/mahjong/styles/hong-kong';
+import { RIICHI_PRESETS } from '../../src/games/mahjong/styles/riichi';
 import { evaluateDiscards, expectedPoints, picture, readThreats, safetyRanking, winChance } from '../../src/games/mahjong/strategy';
 import { isJsonObject } from '../../src/core/json';
 
@@ -113,4 +114,80 @@ describe('the mahjong CPU', () => {
     // A phone is perhaps four times slower than this machine; three seconds is the plan's bound.
     expect(worst).toBeLessThan(700);
   }, 120_000);
+});
+
+describe('the mahjong CPU at a Riichi table', () => {
+  const R = { length: 'hand' };
+  const riichiOne = (options: Record<string, string | number>): MahjongConfig => ({ style: 'riichi', options: { ...options, length: 'hand' } });
+
+  it('plays only legal moves and finishes the hand, at every level, under every Riichi preset', () => {
+    for (const level of [1, 2, 3, 4, 5]) {
+      RIICHI_PRESETS.forEach((preset, i) => {
+        const s = playOut(riichiOne(preset.options), level, `riichi-legal-${level}-${i}`);
+        expect(s.over).toBe(true);
+      });
+    }
+  }, 240_000);
+
+  it('declares riichi with a closed ready hand; the strongest stay quiet when every wait already scores well', () => {
+    // Throw the West wind: ready on the 4 or 7 bamboo with runs only, worth little without riichi.
+    const plain = position({ style: 'riichi', options: R, turn: 0, hands: ['234m 678m 345p 56s 99s W', '', '', ''], drawn: 'W' });
+    // Throw the North wind: ready on the 5 or 8 bamboo, and either wins tanyao, pinfu and the three-colour run.
+    const rich = position({ style: 'riichi', options: R, turn: 0, hands: ['234m 234p 234s 67s 66p N', '', '', ''], drawn: 'N' });
+    const WEST = 29;
+    const NORTH = 30;
+    for (const level of [2, 3, 4, 5]) {
+      let declared = 0;
+      for (let i = 0; i < 8; i++) {
+        const d = decide(viewOf(plain, 0), level, createRng(`riichi/${level}/${i}`));
+        if ((d.action.type === 'ready' || d.action.type === 'discard') && d.action.tile === WEST) {
+          // Whenever it throws the West wind, it declares with it.
+          expect(d.action.type, `level ${level}`).toBe('ready');
+          expect(d.tags).toContain('mj-riichi');
+          declared++;
+        }
+        const q = decide(viewOf(rich, 0), level, createRng(`dama/${level}/${i}`));
+        if ((q.action.type === 'ready' || q.action.type === 'discard') && q.action.tile === NORTH) expect(q.action.type, `level ${level}`).toBe(level >= 4 ? 'discard' : 'ready');
+      }
+      expect(declared, `level ${level}`).toBeGreaterThan(0);
+    }
+  });
+
+  it('folds against a declared riichi from level 3: a hand far from ready throws a tile the riichi player threw', () => {
+    const s = position({
+      style: 'riichi',
+      options: R,
+      turn: 0,
+      hands: ['1m 4m 7m 2p 5p 8p 3s 6s 9s E S Gd 5m 4s', '', '', ''],
+      drawn: '4s',
+      discards: ['W 1p 9m', 'S 9s 1m E', 'N 1m 9p Wd 4s 2m', 'E 1s 8m Rd'],
+      ready: [null, null, { at: 5 }, null],
+      stakes: 1,
+    });
+    for (const level of [1, 2, 3, 4, 5]) {
+      const d = decide(viewOf(s, 0), level, createRng('fold'));
+      if (level >= 3) {
+        expect(d.tags, `level ${level}`).toContain('mj-fold');
+        expect(['1m', '4s']).toContain(actionText(d.action));
+      } else expect(d.tags).not.toContain('mj-fold');
+    }
+  });
+
+  it('calls with the yaku in mind: the strong levels decline a chow that kills tanyao, the only yaku left, and take one that keeps it', () => {
+    const offer = (tile: string, kind: number) => {
+      const s0 = position({ style: 'riichi', options: R, turn: 0, hands: [`111p 999p 2m 3m 4m 7m 8m 9m N ${tile}`, '23s 66m 77m 35p 44p', '', ''], melds: [[], [{ type: 'chow', tiles: '678p', from: 0 }], [], []], drawn: tile });
+      return mahjong.apply(s0, { type: 'discard', tile: kind }).state;
+    };
+    const kills = offer('1s', 18);
+    const keeps = offer('4s', 21);
+    expect(mahjong.legal(kills, 1).map(actionText)).toEqual(['chow 1s', 'pass']);
+    for (const level of [1, 2, 3, 4, 5]) {
+      expect(decide(viewOf(kills, 1), level, createRng('call')).action.type, `level ${level}`).toBe(level >= 4 ? 'pass' : 'chow');
+      expect(decide(viewOf(keeps, 1), level, createRng('call')).action.type, `level ${level}`).toBe('chow');
+    }
+    // A dragon pung is a yaku on its own: every level takes it.
+    const d0 = position({ style: 'riichi', options: R, turn: 0, hands: ['111p 999p 2m 3m 4m 7m 8m 9m N Rd', '35s 1m 1m 7p 8p 9p 9m 9m RdRd N 6p', '', ''], drawn: 'Rd' });
+    const d = mahjong.apply(d0, { type: 'discard', tile: 33 }).state;
+    for (const level of [1, 2, 3, 4, 5]) expect(decide(viewOf(d, 1), level, createRng('call')).tags, `level ${level}`).toContain('mj-call-value');
+  });
 });

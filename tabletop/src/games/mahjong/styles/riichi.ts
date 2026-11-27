@@ -188,9 +188,59 @@ function yakuman(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[] {
 
 // Regular yaku
 
+/** Each regular yaku's han: closed, then open (0 where it needs a closed hand). Lessons quote this table. */
+export const YAKU_HAN: Readonly<Record<string, readonly [number, number]>> = {
+  riichi: [1, 0],
+  'double-riichi': [2, 0],
+  ippatsu: [1, 0],
+  'menzen-tsumo': [1, 0],
+  haitei: [1, 1],
+  houtei: [1, 1],
+  rinshan: [1, 1],
+  chankan: [1, 1],
+  pinfu: [1, 0],
+  tanyao: [1, 1],
+  chiitoitsu: [2, 0],
+  ryanpeikou: [3, 0],
+  iipeikou: [1, 0],
+  'yakuhai-white': [1, 1],
+  'yakuhai-green': [1, 1],
+  'yakuhai-red': [1, 1],
+  'seat-wind': [1, 1],
+  'prevailing-wind': [1, 1],
+  ittsu: [2, 1],
+  sanshoku: [2, 1],
+  'sanshoku-pungs': [2, 2],
+  sankantsu: [2, 2],
+  toitoi: [2, 2],
+  sanankou: [2, 2],
+  shousangen: [2, 2],
+  junchan: [3, 2],
+  chanta: [2, 1],
+  honroutou: [2, 2],
+  chinitsu: [6, 5],
+  honitsu: [3, 2],
+};
+
+/** The fu a hand's parts add (docs/rules/mahjong-riichi.md, "Fu"). Lessons quote this table. */
+export const FU = {
+  base: 20,
+  closedRon: 10,
+  selfDrawn: 2,
+  /** A pung of simples in the open; terminals and honours double it, concealed doubles it, a kong is four times. */
+  pung: 2,
+  valuePair: 2,
+  wait: 2,
+  sevenPairs: 25,
+  openMinimum: 30,
+  pinfuSelfDrawn: 20,
+  pinfuRon: 30,
+} as const;
+
 function regularYaku(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[] {
   const lines: ScoreLine[] = [];
-  const add = (id: string, closedHan: number, openHan = closedHan) => {
+  const add = (id: string) => {
+    const [closedHan, openHan] = YAKU_HAN[id] ?? [0, 0];
     const han = r.closed ? closedHan : openHan;
     if (han > 0) lines.push({ id, value: han });
   };
@@ -201,73 +251,73 @@ function regularYaku(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[] 
   const isValue = (k: Kind) => isDragon(k) || k === seatWind || k === roundWind;
 
   // Riichi and how the hand was won.
-  if ((ctx.ready ?? 0) === 2) add('double-riichi', 2, 0);
-  else if ((ctx.ready ?? 0) === 1) add('riichi', 1, 0);
-  if ((ctx.ready ?? 0) > 0 && ctx.oneShot && on(o, 'ippatsu')) add('ippatsu', 1, 0);
-  if (ctx.selfDrawn) add('menzen-tsumo', 1, 0);
-  if (ctx.selfDrawn && ctx.lastTile && ctx.kongs === 0) add('haitei', 1);
-  if (!ctx.selfDrawn && ctx.lastDiscard) add('houtei', 1);
-  if (ctx.selfDrawn && ctx.kongs > 0) add('rinshan', 1);
-  if (ctx.robbed) add('chankan', 1);
+  if ((ctx.ready ?? 0) === 2) add('double-riichi');
+  else if ((ctx.ready ?? 0) === 1) add('riichi');
+  if ((ctx.ready ?? 0) > 0 && ctx.oneShot && on(o, 'ippatsu')) add('ippatsu');
+  if (ctx.selfDrawn) add('menzen-tsumo');
+  if (ctx.selfDrawn && ctx.lastTile && ctx.kongs === 0) add('haitei');
+  if (!ctx.selfDrawn && ctx.lastDiscard) add('houtei');
+  if (ctx.selfDrawn && ctx.kongs > 0) add('rinshan');
+  if (ctx.robbed) add('chankan');
 
   // The hand's shape.
   const pinfu = standard && r.closed && r.chows.length === 4 && shape.pair !== null && !isValue(shape.pair) && waitKind(shape, ctx.tile) === 'ryanmen';
-  if (pinfu) add('pinfu', 1, 0);
-  if (r.kinds.every((k) => !isTerminalOrHonour(k)) && (r.closed || on(o, 'openTanyao'))) add('tanyao', 1);
-  if (shape.shape === 'seven-pairs') add('chiitoitsu', 2, 0);
+  if (pinfu) add('pinfu');
+  if (r.kinds.every((k) => !isTerminalOrHonour(k)) && (r.closed || on(o, 'openTanyao'))) add('tanyao');
+  if (shape.shape === 'seven-pairs') add('chiitoitsu');
   if (standard) {
     const chowKinds = r.chows.map((s) => s.kind).sort((a, b) => a - b);
     const twins = new Map<Kind, number>();
     for (const k of chowKinds) twins.set(k, (twins.get(k) ?? 0) + 1);
     const pairsOfRuns = [...twins.values()].reduce((n, c) => n + Math.floor(c / 2), 0);
-    if (pairsOfRuns === 2) add('ryanpeikou', 3, 0);
-    else if (pairsOfRuns === 1) add('iipeikou', 1, 0);
+    if (pairsOfRuns === 2) add('ryanpeikou');
+    else if (pairsOfRuns === 1) add('iipeikou');
     // Value pungs.
     for (const s of r.pungs) {
-      if (s.kind === WHITE) add('yakuhai-white', 1);
-      if (s.kind === GREEN) add('yakuhai-green', 1);
-      if (s.kind === RED) add('yakuhai-red', 1);
-      if (s.kind === seatWind) add('seat-wind', 1);
-      if (s.kind === roundWind) add('prevailing-wind', 1);
+      if (s.kind === WHITE) add('yakuhai-white');
+      if (s.kind === GREEN) add('yakuhai-green');
+      if (s.kind === RED) add('yakuhai-red');
+      if (s.kind === seatWind) add('seat-wind');
+      if (s.kind === roundWind) add('prevailing-wind');
     }
     // Straights and three-colour sets.
     for (let suit = 0; suit < 3; suit++) {
       const b = suit * 9;
       if (chowKinds.includes(b) && chowKinds.includes(b + 3) && chowKinds.includes(b + 6)) {
-        add('ittsu', 2, 1);
+        add('ittsu');
         break;
       }
     }
     for (let rank = 0; rank < 7; rank++) {
       if ([0, 1, 2].every((suit) => chowKinds.includes(suit * 9 + rank))) {
-        add('sanshoku', 2, 1);
+        add('sanshoku');
         break;
       }
     }
     const pungKinds = r.pungs.map((s) => s.kind);
     for (let rank = 0; rank < 9; rank++) {
       if ([0, 1, 2].every((suit) => pungKinds.includes(suit * 9 + rank))) {
-        add('sanshoku-pungs', 2);
+        add('sanshoku-pungs');
         break;
       }
     }
-    if (r.pungs.filter((s) => s.type === 'kong').length === 3) add('sankantsu', 2);
-    if (r.pungs.length === 4) add('toitoi', 2);
-    if (r.pungs.filter((s) => s.concealed).length === 3) add('sanankou', 2);
+    if (r.pungs.filter((s) => s.type === 'kong').length === 3) add('sankantsu');
+    if (r.pungs.length === 4) add('toitoi');
+    if (r.pungs.filter((s) => s.concealed).length === 3) add('sanankou');
     const dragons = r.pungs.filter((s) => isDragon(s.kind)).length;
-    if (dragons === 2 && shape.pair !== null && isDragon(shape.pair)) add('shousangen', 2);
+    if (dragons === 2 && shape.pair !== null && isDragon(shape.pair)) add('shousangen');
     // Terminals in every set and the pair, with at least one run.
     const groups: Kind[][] = [...shape.sets.map(setKinds), shape.pair === null ? [] : [shape.pair]];
     const everyHas = (test: (k: Kind) => boolean) => groups.every((g) => g.some(test));
-    if (r.chows.length > 0 && everyHas(isTerminal)) add('junchan', 3, 2);
-    else if (r.chows.length > 0 && everyHas(isTerminalOrHonour)) add('chanta', 2, 1);
+    if (r.chows.length > 0 && everyHas(isTerminal)) add('junchan');
+    else if (r.chows.length > 0 && everyHas(isTerminalOrHonour)) add('chanta');
   }
-  if (r.kinds.every(isTerminalOrHonour) && !r.kinds.every(isHonour) && !r.kinds.every(isTerminal)) add('honroutou', 2);
+  if (r.kinds.every(isTerminalOrHonour) && !r.kinds.every(isHonour) && !r.kinds.every(isTerminal)) add('honroutou');
   // One suit.
   const suits = new Set(r.kinds.filter(isSuited).map(suitOf));
   const honours = r.kinds.some(isHonour);
-  if (suits.size === 1 && !honours) add('chinitsu', 6, 5);
-  else if (suits.size === 1 && honours) add('honitsu', 3, 2);
+  if (suits.size === 1 && !honours) add('chinitsu');
+  else if (suits.size === 1 && honours) add('honitsu');
   return lines;
 }
 
@@ -275,15 +325,15 @@ function regularYaku(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[] 
 
 function fuOf(r: Reading, ctx: WinContext, o: StyleOptions, pinfu: boolean): number {
   const { shape } = r;
-  if (shape.shape === 'seven-pairs') return 25;
-  if (shape.shape !== 'standard') return 30;
-  if (pinfu) return ctx.selfDrawn ? 20 : 30;
-  let fu = 20;
-  if (r.closed && !ctx.selfDrawn) fu += 10;
-  if (ctx.selfDrawn) fu += 2;
+  if (shape.shape === 'seven-pairs') return FU.sevenPairs;
+  if (shape.shape !== 'standard') return FU.openMinimum;
+  if (pinfu) return ctx.selfDrawn ? FU.pinfuSelfDrawn : FU.pinfuRon;
+  let fu: number = FU.base;
+  if (r.closed && !ctx.selfDrawn) fu += FU.closedRon;
+  if (ctx.selfDrawn) fu += FU.selfDrawn;
   for (const s of shape.sets) {
     if (!isPungLike(s)) continue;
-    let f = isTerminalOrHonour(s.kind) ? 4 : 2;
+    let f = isTerminalOrHonour(s.kind) ? FU.pung * 2 : FU.pung;
     if (s.concealed) f *= 2;
     if (s.type === 'kong') f *= 4;
     fu += f;
@@ -292,14 +342,14 @@ function fuOf(r: Reading, ctx: WinContext, o: StyleOptions, pinfu: boolean): num
   if (pair !== null) {
     const seatWind = WIND_EAST + ctx.seatWind;
     const roundWind = WIND_EAST + ctx.prevailingWind;
-    if (isDragon(pair)) fu += 2;
+    if (isDragon(pair)) fu += FU.valuePair;
     if (pair === seatWind && pair === roundWind) fu += num(o, 'doubleWindFu');
-    else if (pair === seatWind || pair === roundWind) fu += 2;
+    else if (pair === seatWind || pair === roundWind) fu += FU.valuePair;
   }
   const wait = waitKind(shape, ctx.tile);
-  if (wait === 'kanchan' || wait === 'penchan' || wait === 'tanki') fu += 2;
+  if (wait === 'kanchan' || wait === 'penchan' || wait === 'tanki') fu += FU.wait;
   fu = Math.ceil(fu / 10) * 10;
-  if (!r.closed && fu === 20) fu = 30;
+  if (!r.closed && fu === FU.base) fu = FU.openMinimum;
   return fu;
 }
 

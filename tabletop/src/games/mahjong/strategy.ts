@@ -143,6 +143,8 @@ export function possibleWin(p: SeatPicture, counts: readonly number[], tile: Kin
     robbed: false,
     heavenly: false,
     earthly: false,
+    // The dora turned up so far count toward the value (red fives and ura dora are left out).
+    ...(p.view.indicators.length > 0 ? { indicators: p.view.indicators.map(kindOf) } : {}),
     ...(ready > 0 ? { ready, oneShot: false } : {}),
   };
 }

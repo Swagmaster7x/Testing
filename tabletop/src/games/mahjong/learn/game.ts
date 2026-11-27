@@ -10,22 +10,24 @@
  * exactly one place.
  *
  * Numbers in lesson text come from `mahjongComputed`: the set and the hand from the rules, every
- * faan value and point from the Hong Kong rules file, and for the position on the table the
- * tiles from ready and useful tiles of each discard (the coach's own calculator), the waits, the
- * tiles you have not seen, and what a win here would score and collect.
+ * faan value and point from the Hong Kong rules file, every han, fu and payment from the Riichi
+ * rules file, and for the position on the table the tiles from ready and useful tiles of each
+ * discard (the coach's own calculator), the waits, the tiles you have not seen, the dora, and
+ * what a win here would score and collect.
  */
 import type { Seat } from '../../../core/contract';
 import { findLegal } from '../../../core/contract';
 import { createRng } from '../../../core/rng';
 import type { LessonGame } from '../../../teach/runner';
-import type { MahjongAction, MahjongConfig, MahjongState, MeldSpec, PositionSpec } from '../rules';
-import { actionText, DEFAULT_CONFIG, engine, mahjong, position, viewOf } from '../rules';
+import type { MahjongAction, MahjongConfig, MahjongState, MeldSpec, PositionSpec, ReadyMark } from '../rules';
+import { actionText, DEFAULT_CONFIG, engine, isRedFive, mahjong, parseTiles, position, STYLES, viewOf } from '../rules';
 import { seatWind, setsIn, SEATS } from '../core/engine';
 import { bestReading, shanten } from '../core/shanten';
-import type { HandScore, StyleOptions } from '../core/style';
+import type { HandScore, StyleOptions, WinContext } from '../core/style';
 import type { Kind } from '../core/tiles';
 import { codeOf, copiesOf, countsOf, FLOWER_1, isBonus, isDragon, isFlower, isHonour, isSeason, isTerminalOrHonour, isWind, kindOf, parseKind, parseKinds, PLAYING_KINDS, SUIT_KINDS, SUIT_LETTERS, tileSet } from '../core/tiles';
 import { basePoints, HK_DEFAULTS, HK_LIMIT_HANDS, HK_OPTIONS, HK_PATTERNS, hkFaan, hkScoreAny, POINT_TABLES } from '../styles/hong-kong';
+import { basePoints as riichiBase, COUNTER_VALUE, doraOf, FU, NOTEN_POOL, payments, RIICHI_DEFAULTS, RIICHI_TARGET, STAKE, YAKU_HAN } from '../styles/riichi';
 import { evaluateDiscards, handShanten, picture, readyInfo } from '../strategy';
 import { kindName, runName, seatName, windName } from '../ui/names';
 
@@ -37,6 +39,8 @@ export const SEP = ', ';
 export const BASIC: StyleOptions = { flowers: 'off', minFaan: 0, length: 'hand' };
 /** The Hong Kong track: the default table (three faan to win, flowers), a one-hand game. */
 export const HK: StyleOptions = { length: 'hand' };
+/** The Riichi track: the common online table (red fives, open tanyao), a one-hand game. */
+export const RIICHI: StyleOptions = { length: 'hand' };
 
 /** A tile's name from its code: "5 dots", "Red dragon". */
 export function nameOf(code: string): string {
@@ -79,6 +83,15 @@ export interface LessonSpec {
   /** The seed for the dealt tiles. A seed starting "safety" marks a safe-tile question for the verifier. */
   readonly seed?: string;
   readonly scores?: readonly number[];
+  /** The rules family: Hong Kong unless it says "riichi". */
+  readonly style?: 'hong-kong' | 'riichi';
+  /** Riichi: the dora indicators turned up (one by default; the rest are dealt from the seed). */
+  readonly indicators?: string;
+  /** Riichi: the tiles under the indicators (ura dora). */
+  readonly under?: string;
+  /** Riichi: the seats that have declared, each with the index of its riichi throw in its discards. Each has paid its stake. */
+  readonly ready?: readonly (Partial<ReadyMark> | null | undefined)[];
+  readonly counter?: number;
 }
 
 /** Builds a lesson position (in notation) from the tiles a lesson names; the rest is dealt from the seed. */
@@ -97,8 +110,9 @@ export function lessonState(spec: LessonSpec): MahjongState {
 }
 
 function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
-  const options: StyleOptions = { ...HK_DEFAULTS, ...spec.options };
-  const config: MahjongConfig = { style: 'hong-kong', options };
+  const styleId = spec.style ?? 'hong-kong';
+  const options: StyleOptions = { ...(STYLES[styleId]?.defaults ?? HK_DEFAULTS), ...spec.options };
+  const config: MahjongConfig = { style: styleId, options };
   const rules = engine.rules(config);
   const left = new Array<number>(PLAYING_KINDS).fill(0);
   for (const t of tileSet(rules.tiles)) {
@@ -106,7 +120,8 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
     if (k < PLAYING_KINDS) left[k] = (left[k] ?? 0) + 1;
   }
   const take = (text: string | null | undefined) => {
-    for (const k of text ? parseKinds(text) : []) {
+    // Written as a position writes them: "0p" is the red five.
+    for (const k of text ? parseTiles(text).map((x) => x.kind) : []) {
       if (isBonus(k)) continue;
       if ((left[k] ?? 0) <= 0) throw new Error(`Mahjong lesson: no ${codeOf(k)} left for "${text ?? ''}"`);
       left[k] = (left[k] ?? 0) - 1;
@@ -117,6 +132,8 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
   for (const h of spec.hands ?? []) take(h);
   for (const d of spec.discards ?? []) take(d);
   take(spec.front);
+  take(spec.indicators);
+  take(spec.under);
   if (spec.offer) take(spec.offer.tile);
 
   const rng = createRng(`mahjong-lesson/${spec.seed ?? 'lesson'}${attempt > 0 ? `/${attempt}` : ''}`);
@@ -195,7 +212,7 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
     bonus = out;
   }
 
-  const p: PositionSpec = {
+  let p: PositionSpec = {
     options,
     dealer: spec.dealer ?? 0,
     round: spec.round ?? 0,
@@ -207,7 +224,17 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
     ...(spec.front ? { front: spec.front } : {}),
     ...(spec.offer ? { drawn: spec.offer.tile } : spec.drawn ? { drawn: spec.drawn } : {}),
     ...(spec.scores ? { scores: spec.scores } : {}),
+    ...(spec.style ? { style: spec.style } : {}),
+    ...(spec.indicators ? { indicators: spec.indicators } : {}),
+    ...(spec.under ? { under: spec.under } : {}),
+    ...(spec.counter ? { counter: spec.counter } : {}),
   };
+  if (spec.ready) {
+    // Each seat that declared has paid its stake to the table.
+    const start = rules.startScore ?? 0;
+    const declared = [0, 1, 2, 3].map((seat) => spec.ready?.[seat] ?? null);
+    p = { ...p, ready: declared, stakes: declared.filter(Boolean).length, scores: spec.scores ?? declared.map((r) => (r ? start - (rules.ready?.stake ?? 0) : start)) };
+  }
   let state: MahjongState = { ...position(p), seed: spec.seed ?? 'lesson' };
   if (spec.offer) {
     const kind = parseKind(spec.offer.tile);
@@ -337,8 +364,81 @@ const FIXED: Readonly<Record<string, number | string>> = (() => {
   out['pay:full'] = full_.discarder;
   out['pay:self:total'] = pay.selfDrawn * (SEATS - 1);
   out['pay:discard:total'] = pay.discarder + pay.others * (SEATS - 2);
+  Object.assign(out, riichiFixed());
   return out;
 })();
+
+/** The Riichi table: the set, the sticks, each yaku's han, the fu, the bands and the payment table. */
+function riichiFixed(): Record<string, number> {
+  const out: Record<string, number> = {};
+  const o = RIICHI_DEFAULTS;
+  const config: MahjongConfig = { style: 'riichi', options: o };
+  const rules = engine.rules(config);
+  out['riichi:tiles'] = tileSet(rules.tiles).length;
+  out['riichi:red'] = Number(o.red);
+  out['riichi:start'] = Number(o.start);
+  out['riichi:target'] = RIICHI_TARGET;
+  out['riichi:stake'] = STAKE;
+  out['riichi:honba'] = COUNTER_VALUE;
+  out['riichi:noten'] = NOTEN_POOL;
+  out['riichi:min-left'] = rules.ready?.minLeft ?? 0;
+  out['riichi:indicators'] = (rules.indicators ?? 0) * 2;
+  out['riichi:dead-wall'] = rules.deadWall + (rules.indicators ?? 0) * 2;
+  for (const [id, [closed, open]] of Object.entries(YAKU_HAN)) {
+    out[`han:${id}`] = closed;
+    out[`han:open:${id}`] = open;
+  }
+  out['fu:base'] = FU.base;
+  out['fu:closed-ron'] = FU.closedRon;
+  out['fu:self-drawn'] = FU.selfDrawn;
+  out['fu:pung'] = FU.pung;
+  out['fu:pung:terminal'] = FU.pung * 2;
+  out['fu:pung:concealed'] = FU.pung * 2;
+  out['fu:pung:concealed-terminal'] = FU.pung * 4;
+  out['fu:kong:concealed-terminal'] = FU.pung * 16;
+  out['fu:value-pair'] = FU.valuePair;
+  out['fu:wait'] = FU.wait;
+  out['fu:seven-pairs'] = FU.sevenPairs;
+  out['fu:open-minimum'] = FU.openMinimum;
+  out['fu:pinfu-self-drawn'] = FU.pinfuSelfDrawn;
+  out['fu:pinfu-ron'] = FU.pinfuRon;
+  // The column of the payment table most hands with runs land in.
+  out['fu:usual'] = FU.openMinimum;
+  // The bands: the han each starts at (whatever the fu), and its base.
+  for (const name of ['mangan', 'haneman', 'baiman', 'sanbaiman', 'kazoe']) {
+    for (let han = 1; han <= 13; han++) {
+      const b = riichiBase(han, FU.base, o);
+      if (b.band === name) {
+        out[`band:${name}:han`] = han;
+        out[`band:${name}:base`] = b.base;
+        out[`band:${name}:ron`] = payments(b.base, false).ron;
+        out[`band:${name}:ron:dealer`] = payments(b.base, true).ron;
+        break;
+      }
+    }
+  }
+  // The payment table: han by fu, on a discard and self-drawn, for the dealer and the others.
+  for (let han = 1; han <= 4; han++) {
+    for (const fu of [20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110]) {
+      const { base } = riichiBase(han, fu, o);
+      const other = payments(base, false);
+      const dealer = payments(base, true);
+      out[`base:${han}:${fu}`] = fu * 2 ** (han + 2);
+      out[`ron:${han}:${fu}`] = other.ron;
+      out[`ron:dealer:${han}:${fu}`] = dealer.ron;
+      out[`tsumo:${han}:${fu}:dealer-pays`] = other.tsumoDealer;
+      out[`tsumo:${han}:${fu}:others-pay`] = other.tsumoOther;
+      out[`tsumo:dealer:${han}:${fu}`] = dealer.tsumoOther;
+    }
+  }
+  // Each payment as a multiple of the base.
+  out['pay:ron'] = payments(1000, false).ron / 1000;
+  out['pay:ron:dealer'] = payments(1000, true).ron / 1000;
+  out['pay:tsumo:dealer-pays'] = payments(1000, false).tsumoDealer / 1000;
+  out['pay:tsumo:others-pay'] = payments(1000, false).tsumoOther / 1000;
+  out['pay:tsumo:dealer'] = payments(1000, true).tsumoOther / 1000;
+  return out;
+}
 
 /** "a or b", "a, b or c". */
 function orList(items: readonly string[]): string {
@@ -368,16 +468,18 @@ export function mahjongComputed(state: MahjongState): Readonly<Record<string, nu
 export function winOnOffer(state: MahjongState): { score: HandScore; selfDrawn: boolean; from: Seat | null; tile: Kind } | null {
   const o = state.config.options;
   const r = engine.rules(state.config);
+  const style = engine.style(state.config);
+  const scoreAny = (ctx: WinContext, options: StyleOptions) => (style.scoreAny ? style.scoreAny(ctx, options) : hkScoreAny(ctx, options));
   if (state.phase === 'act' && state.turn === STUDENT && state.drawn !== null && !state.claimed) {
     const ctx = engine.winContext(state, STUDENT, state.drawn, true, null, false);
-    const score = hkScoreAny(ctx, o);
+    const score = scoreAny(ctx, o);
     return score ? { score, selfDrawn: true, from: null, tile: kindOf(state.drawn) } : null;
   }
   const w = state.claim;
   if ((state.phase === 'claim' || state.phase === 'rob') && w && state.turn === STUDENT) {
     const ctx = engine.winContext(state, STUDENT, w.tile, false, w.from, w.kind === 'rob');
     if (ctx.concealed.length + 3 * ctx.melds.length !== r.handSize + 1) return null;
-    const score = hkScoreAny(ctx, o);
+    const score = scoreAny(ctx, o);
     return score ? { score, selfDrawn: false, from: w.from, tile: kindOf(w.tile) } : null;
   }
   return null;
@@ -397,14 +499,30 @@ function computeAll(state: MahjongState): Record<string, number | string> {
   out['wind:seat'] = windName(seatWind(STUDENT, state.dealer));
   out['wind:round'] = windName(state.round);
   out['flower:seat'] = seatWind(STUDENT, state.dealer) + 1;
-  out['min'] = Number(o.minFaan);
-  out['limit'] = Number(o.limit);
+  const riichi = state.config.style === 'riichi';
+  if (!riichi) {
+    out['min'] = Number(o.minFaan);
+    out['limit'] = Number(o.limit);
+  }
   out['bonus:mine'] = (state.bonus[STUDENT] ?? []).length;
   out['bonus:faan'] = p.hints.bonus;
   for (let k = 0; k < PLAYING_KINDS; k++) out[`unseen:${codeOf(k)}`] = p.unseen[k] ?? 0;
   if (state.claim) {
     out['claim:from'] = seatName(state.claim.from, STUDENT);
     out['claim:tile'] = kindName(kindOf(state.claim.tile));
+  }
+  if (riichi && state.indicators) {
+    // The dora: what each indicator turned up points to, and how many your tiles hold.
+    const shown = state.indicators.tiles.slice(0, state.indicators.shown).map(kindOf);
+    const mineAll = [...mine, ...melds.flatMap((m) => m.tiles)];
+    out['indicator:names'] = andList(shown.map(kindName));
+    out['dora:names'] = andList(shown.map((k) => kindName(doraOf(k))));
+    out['hand:dora'] = shown.reduce((n, k) => n + mineAll.filter((t) => kindOf(t) === doraOf(k)).length, 0);
+    out['hand:red'] = mineAll.filter((t) => isRedFive(t, (r.tiles.red ?? 0) > 0)).length;
+    out['hand:dora:all'] = Number(out['hand:dora']) + Number(out['hand:red']);
+    out['furiten'] = engine.furiten(state, STUDENT) ? 1 : 0;
+    out['sticks'] = state.stakes;
+    out['honba'] = state.counter;
   }
 
   const counts = countsOf(mine);
@@ -452,14 +570,23 @@ function computeAll(state: MahjongState): Record<string, number | string> {
   const win = winOnOffer(state);
   if (win) {
     const { score } = win;
+    if (riichi) {
+      const doraIds = ['dora', 'aka-dora', 'ura-dora'];
+      out['win:han'] = score.total;
+      out['win:fu'] = score.fu ?? 0;
+      out['win:yaku'] = score.lines.filter((l) => !doraIds.includes(l.id)).length;
+      out['win:dora'] = score.lines.filter((l) => doraIds.includes(l.id)).reduce((n, l) => n + l.value, 0);
+    }
     out['win:faan'] = score.total;
     out['win:raw'] = score.raw;
     out['win:base'] = score.base;
     out['win:lines'] = score.lines.length;
-    out['win:ok'] = score.total >= Number(o.minFaan) ? 1 : 0;
-    out['win:short'] = Math.max(0, Number(o.minFaan) - score.total);
+    if (!riichi) {
+      out['win:ok'] = score.total >= Number(o.minFaan) ? 1 : 0;
+      out['win:short'] = Math.max(0, Number(o.minFaan) - score.total);
+    }
     for (const line of score.lines) out[`win:line:${line.id}`] = line.value;
-    const deltas = engine.style(state.config).settle({ wins: [{ seat: STUDENT, from: win.from, tile: mine[0] ?? '1m.0', score, robbed: false }], dealer: state.dealer, seats: SEATS }, o);
+    const deltas = engine.style(state.config).settle({ wins: [{ seat: STUDENT, from: win.from, tile: mine[0] ?? '1m.0', score, robbed: false }], dealer: state.dealer, seats: SEATS, counter: state.counter, stakes: state.stakes }, o);
     out['win:total'] = deltas[STUDENT] ?? 0;
     for (let seat = 1; seat < SEATS; seat++) out[`win:pay:${seat}`] = -(deltas[seat] ?? 0);
     if (win.from !== null) {

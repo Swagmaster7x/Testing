@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '../../src/core/rng';
 import { MAHJONG_LESSONS } from '../../src/games/mahjong/learn';
-import { BASIC, lessonPosition, lessonState, mahjongComputed, mahjongLessonGame as g, othersPlay, after, stripMahjongNotation, winOnOffer } from '../../src/games/mahjong/learn/game';
+import { BASIC, lessonPosition, lessonState, mahjongComputed, mahjongLessonGame as g, othersPlay, after, RIICHI, stripMahjongNotation, winOnOffer } from '../../src/games/mahjong/learn/game';
+import { YAKU_HAN } from '../../src/games/mahjong/styles/riichi';
 import { efficiencyProblems, mahjongVerifier, positionProblems, safetyProblems } from '../../src/games/mahjong/learn/verify';
 import { loadMahjongPractice, MAHJONG_DRILLS, provedDiscards } from '../../src/games/mahjong/practice';
 import { engine, mahjong, viewOf } from '../../src/games/mahjong/rules';
@@ -69,6 +70,35 @@ describe('the numbers lessons quote', () => {
   });
 });
 
+describe('the Riichi numbers lessons quote', () => {
+  it('come from the Riichi rules file: the set, the sticks, the yaku, the fu and the payment table', () => {
+    const c = mahjongComputed(g.position(lessonPosition({ hand: '234m 567m 345p 77s 88s', style: 'riichi', options: RIICHI, dealer: 3, indicators: 'N', offer: { seat: 3, tile: '8s' }, avoid: '7s 8s', seed: 'unit-ron' })));
+    expect([c['riichi:tiles'], c['riichi:start'], c['riichi:stake'], c['riichi:honba'], c['riichi:dead-wall']]).toEqual([136, 25000, 1000, 300, 14]);
+    for (const [id, [closed, open]] of Object.entries(YAKU_HAN)) expect([c[`han:${id}`], c[`han:open:${id}`]], id).toEqual([closed, open]);
+    expect([c['ron:1:30'], c['ron:2:30'], c['ron:3:30'], c['ron:4:30'], c['ron:dealer:4:30']]).toEqual([1000, 2000, 3900, 7700, 11600]);
+    expect([c['band:mangan:han'], c['band:mangan:ron'], c['band:haneman:han'], c['band:baiman:han'], c['band:sanbaiman:han'], c['band:kazoe:ron']]).toEqual([5, 8000, 6, 8, 11, 32000]);
+    expect([c['pay:ron'], c['pay:ron:dealer'], c['pay:tsumo:dealer-pays'], c['pay:tsumo:others-pay'], c['pay:tsumo:dealer']]).toEqual([4, 6, 2, 1, 2]);
+    // The win on offer: tanyao, a pung completed by the throw: one han, forty fu, as the table pays.
+    expect([c['win:han'], c['win:fu'], c['win:total']]).toEqual([1, 40, 1300]);
+    expect(c['dora:names']).toBe('East wind');
+  });
+
+  it('agree with the table: a won Riichi hand pays what the lesson said, riichi stick included', () => {
+    const start = lessonState({ hand: '234m 678m 345p 56s 99s W', drawn: 'W', style: 'riichi', options: RIICHI, dealer: 3, indicators: 'N', under: '5s', front: 'Gd 1p E 7s', avoid: '4s 7s', seed: 'unit-declare' });
+    const declared = after(g.notation(start), 'riichi W');
+    const ready = g.position(after(declared, othersPlay(declared)));
+    const c = mahjongComputed(ready);
+    expect(ready.ready[0]).not.toBeNull();
+    const won = mahjong.apply(ready, { type: 'win' }).state;
+    const result = won.results[0];
+    expect(result?.wins[0]?.score.total).toBe(c['win:han']);
+    expect(result?.deltas[0]).toBe(c['win:total']);
+    // Riichi, ippatsu, menzen tsumo, pinfu and one ura dora: a mangan, plus the stick back.
+    expect(result?.wins[0]?.score.lines.map((l) => l.id)).toEqual(['riichi', 'ippatsu', 'menzen-tsumo', 'pinfu', 'ura-dora']);
+    expect(c['win:total']).toBe(8000 + 1000);
+  });
+});
+
 describe('lesson positions', () => {
   it('put every tile in one place, the other hands far from winning, and leave a throw on offer to you alone', () => {
     const p = lessonState({ hand: '234m 678m 3p 5p 99p 2s RdRd', options: BASIC, offer: { seat: 2, tile: 'Rd' }, avoid: 'Rd', seed: 'unit-offer' });
@@ -123,10 +153,12 @@ describe('the verifier', () => {
 });
 
 describe('lessons', () => {
-  it('cover stages 0 to 2, the Hong Kong track and Table-ready, in order, with real checklist items', () => {
+  it('cover stages 0 to 2, the Hong Kong and Riichi tracks and Table-ready, in order, with real checklist items', () => {
     const count = (stage: string) => MAHJONG_LESSONS.filter((l) => l.stage === stage).length;
     expect(count('stage-0')).toBeGreaterThanOrEqual(2);
-    for (const stage of ['stage-1', 'stage-2', 'stage-3', 'table']) expect(count(stage), stage).toBeGreaterThanOrEqual(6);
+    for (const stage of ['stage-1', 'stage-2', 'stage-3', 'stage-4', 'table']) expect(count(stage), stage).toBeGreaterThanOrEqual(6);
+    // The Riichi track sits on Riichi tables only.
+    for (const l of MAHJONG_LESSONS.filter((x) => x.stage === 'stage-4')) expect(g.position(l.start).config.style, l.id).toBe('riichi');
     const stages = MAHJONG_LESSONS.map((l) => l.stage);
     expect(stages).toEqual([...stages].sort((a, b) => STAGES.indexOf(a) - STAGES.indexOf(b)));
     const ids = new Set(MAHJONG_LESSONS.map((l) => l.id));
@@ -213,6 +245,31 @@ describe('drills', () => {
       if (ask?.kind !== 'askChoice') throw new Error('not a choice');
       const named = (text: string) => HK_PATTERNS.find((id) => text === patternName(id));
       for (const o of ask.options) expect(lines.includes(named(o.text) ?? '?'), o.text).toBe(o.correct === true);
+
+      // Riichi han and fu: what the scorer says, and what the table pays once you win.
+      const hanFu = make('drill-mahjong-han-fu', `unit/han-fu/${i}`);
+      const hs = g.position(hanFu.start);
+      const hw = g.play(hs, 'win');
+      const hr = hw?.results[hw.results.length - 1];
+      expect(hs.config.style).toBe('riichi');
+      expect([hr?.wins[0]?.score.total, hr?.wins[0]?.score.fu, hr?.deltas[0]]).toEqual([mahjongComputed(hs)['win:han'], mahjongComputed(hs)['win:fu'], mahjongComputed(hs)['win:total']]);
+
+      // Name the yaku: the right answer is on the sheet, the others are not.
+      const yaku = make('drill-mahjong-yaku', `unit/yaku/${i}`);
+      const ys = g.position(yaku.start);
+      const yLines = winOnOffer(ys)?.score.lines.map((l) => l.id) ?? [];
+      const yAsk = yaku.steps[0];
+      if (yAsk?.kind !== 'askChoice') throw new Error('not a choice');
+      const yNamed = (text: string) => Object.keys(YAKU_HAN).find((id) => text === patternName(id));
+      for (const o of yAsk.options) expect(yLines.includes(yNamed(o.text) ?? '?'), o.text).toBe(o.correct === true);
+
+      // Safe tile against a riichi: the safest by the coach's ranking, against a declared seat.
+      const rsafe = make('drill-mahjong-riichi-safe', `unit/riichi-safe/${i}`);
+      const rs = g.position(rsafe.start);
+      const rmove = rsafe.steps[0];
+      if (rmove?.kind !== 'askMove') throw new Error('not a move');
+      expect(rs.ready.some(Boolean)).toBe(true);
+      expect(rmove.accept).toEqual([codeOf(safetyRanking(picture(viewOf(rs, 0)))[0]?.kind ?? -1)]);
 
       // Safe tile: the safest by the coach's ranking.
       const safe = make('drill-mahjong-safe', `unit/safe/${i}`);
