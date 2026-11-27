@@ -1,6 +1,7 @@
 /** The Mahjong score calculator in Tools: the same scorer and payments as the table. */
 import { describe, expect, it } from 'vitest';
-import { calculate, EMPTY_INPUT, overused, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
+import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
+import { STYLES } from '../../src/games/mahjong/rules';
 import { HK_DEFAULTS, hongKong } from '../../src/games/mahjong/styles/hong-kong';
 
 const m = (n: number) => n - 1;
@@ -46,5 +47,36 @@ describe('the Mahjong calculator', () => {
     expect(setFits('chow', m(8))).toBe(false);
     expect(setFits('chow', s(7))).toBe(true);
     expect(setFits('pung', EAST)).toBe(true);
+  });
+
+  describe('Riichi', () => {
+    const riichi = STYLES['riichi']!;
+    // South (seat wind 1), on a discard from across.
+    const base = { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2 as const, seatWind: 1 };
+
+    it('a riichi ron of 1 han 30 fu is 1,000 from the discarder, with the concealed-ron fu', () => {
+      const r = calculate(riichi, riichi.defaults, { ...base, ready: 1 });
+      expect(r.score?.lines.map((l) => l.id)).toContain('riichi');
+      expect(r.payments).toEqual([1300, 0, -1300, 0]);
+    });
+
+    it('riichi, ippatsu, a dora and a red five make mangan', () => {
+      const r = calculate(riichi, riichi.defaults, { ...base, ready: 1, oneShot: true, indicators: [m(4)], redFives: 1 });
+      expect(r.score?.total).toBe(4);
+      expect(r.payments).toEqual([8000, 0, -8000, 0]);
+    });
+
+    it('ura indicators count only after a riichi; double riichi is two han', () => {
+      const plain = calculate(riichi, riichi.defaults, { ...base, ready: 0, underIndicators: [s(4)], oneShot: true });
+      expect(plain.score).toBeNull();
+      const r = calculate(riichi, riichi.defaults, { ...base, ready: 2, underIndicators: [s(4)] });
+      expect(r.score?.total).toBe(4);
+      expect(r.payments).toEqual([8000, 0, -8000, 0]);
+    });
+
+    it('counts the fives in the hand and its sets for the red-five choice', () => {
+      expect(fivesIn({ ...EMPTY_INPUT, hand: ALL_CHOWS })).toBe(3);
+      expect(fivesIn({ ...EMPTY_INPUT, hand: [], sets: [{ type: 'chow', kind: p(3), concealed: false }] })).toBe(1);
+    });
   });
 });

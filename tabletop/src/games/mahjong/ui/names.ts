@@ -61,5 +61,9 @@ export function moveName(action: MahjongAction): string {
       return t('mahjong.move.pass');
     case 'next':
       return t('mahjong.move.next');
+    case 'ready':
+      return t('mahjong.move.ready', { tile: kindName(action.tile) });
+    case 'abort':
+      return t('mahjong.move.abort');
   }
 }

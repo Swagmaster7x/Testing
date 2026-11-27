@@ -372,6 +372,7 @@ export const hongKong: Style = {
   presets: HK_PRESETS,
   rules,
   score,
+  scoreAny: hkScoreAny,
   settle,
   dealerKeeps(hand, o) {
     if (o.dealerKeeps === 'never') return false;

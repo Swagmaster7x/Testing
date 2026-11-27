@@ -5,6 +5,7 @@
  * every tile is in one place and every hand the right size; the drills then check what they ask
  * with the same calculators the coach and the scorer use.
  */
+import type { Seat } from '../../../core/contract';
 import type { MeldSpec } from '../rules';
 import type { Kind } from '../core/tiles';
 import { codeOf, PLAYING_KINDS, SUIT_KINDS } from '../core/tiles';
@@ -99,4 +100,9 @@ export function randomTiles(random: Random, n: number, used: number[], allow: (k
   const out = shuffle(random, pool).slice(0, n);
   for (const k of out) used[k] = (used[k] ?? 0) + 1;
   return out;
+}
+
+/** "The player on your right", and so on. */
+export function playerPhrase(seat: Seat): string {
+  return ['You', 'The player on your right', 'The player across', 'The player on your left'][seat % 4] ?? 'A player';
 }

@@ -47,7 +47,7 @@ export function picture(view: MahjongView): SeatPicture {
     seat,
     rules,
     shapes: { shapes: rules.shapes, sets: setsIn(rules) },
-    hints: style.hints({ seatWind: seatWind(seat, view.dealer), prevailingWind: view.round % 4, bonus: (view.bonus[seat] ?? []).map(kindOf) }, view.config.options),
+    hints: style.hints({ seatWind: seatWind(seat, view.dealer), prevailingWind: view.round % 4, bonus: (view.bonus[seat] ?? []).map(kindOf), indicators: view.indicators.map(kindOf) }, view.config.options),
     counts: countsOf(view.hand),
     melds,
     concealed: melds.every((m) => m.concealed),
@@ -101,11 +101,27 @@ export function valueEstimate(p: SeatPicture, counts: readonly number[], melds: 
     v += full * ([1, 0.45, 0.22, 0.08][others] ?? 0);
   }
   if (chowMelds === 0) v += h.allPungs * (pairs >= 5 ? 0.7 : pairs >= 4 ? 0.3 : 0);
+  // Simples only (tanyao), where the style rewards it: in full, or in part when one tile is off.
+  const simples = concealed ? (h.allSimples ?? 0) : (h.allSimplesOpen ?? 0);
+  if (simples > 0) {
+    let off = 0;
+    for (let k = 0; k < PLAYING_KINDS; k++) if (isHonour(k) || (isSuited(k) && (rankOf(k) === 1 || rankOf(k) === 9))) off += counts[k] ?? 0;
+    const meldOff = melds.some((m) => m.tiles.some((t) => !isSimple(kindOf(t))));
+    if (!meldOff) v += simples * (off === 0 ? 1 : off === 1 ? 0.5 : off === 2 ? 0.2 : 0);
+  }
+  // Bonus kinds (dora): each one held, at a discount until the hand has a value of its own.
+  if (h.bonusKinds && h.bonusKinds.length > 0) {
+    let held = 0;
+    for (const k of h.bonusKinds) held += (counts[k] ?? 0) + melds.reduce((n, m) => n + m.tiles.filter((t) => kindOf(t) === k).length, 0);
+    v += held * (v >= h.minimum ? 1 : 0.5);
+  }
   return Math.min(v, h.limit);
 }
 
-/** The context of a possible win, from a seat's own tiles (no special timing). */
-export function possibleWin(p: SeatPicture, counts: readonly number[], tile: Kind, selfDrawn: boolean): WinContext {
+const isSimple = (k: Kind): boolean => isSuited(k) && rankOf(k) !== 1 && rankOf(k) !== 9;
+
+/** The context of a possible win, from a seat's own tiles (no special timing); `ready` for a declared (or declarable) riichi. */
+export function possibleWin(p: SeatPicture, counts: readonly number[], tile: Kind, selfDrawn: boolean, ready = 0): WinContext {
   const concealed: Kind[] = [];
   counts.forEach((n, k) => {
     for (let i = 0; i < n; i++) concealed.push(k);
@@ -127,6 +143,9 @@ export function possibleWin(p: SeatPicture, counts: readonly number[], tile: Kin
     robbed: false,
     heavenly: false,
     earthly: false,
+    // The dora turned up so far count toward the value (red fives and ura dora are left out).
+    ...(p.view.indicators.length > 0 ? { indicators: p.view.indicators.map(kindOf) } : {}),
+    ...(ready > 0 ? { ready, oneShot: false } : {}),
   };
 }
 
@@ -152,11 +171,13 @@ export function readyInfo(p: SeatPicture, counts: readonly number[], melds: read
   const sets = setsIn(p.rules);
   const waits: Wait[] = [];
   const pp: SeatPicture = melds === p.melds ? p : { ...p, melds };
+  // A closed ready hand in a style with riichi wins with it (declared, or declared when it gets there).
+  const declared = p.view.ready[p.seat] ? 1 : p.hints.readyDeclaration && melds.every((m) => m.concealed) ? 1 : 0;
   for (const k of waitsOf(counts, melds.length, p.rules.shapes, sets)) {
     const c = [...counts];
     c[k] = (c[k] ?? 0) + 1;
     const score = (selfDrawn: boolean): number | null => {
-      const s: HandScore | null = style.score(possibleWin(pp, c, k, selfDrawn), p.view.config.options);
+      const s: HandScore | null = style.score(possibleWin(pp, c, k, selfDrawn, declared), p.view.config.options);
       return s ? s.total : null;
     };
     waits.push({ kind: k, left: p.unseen[k] ?? 0, ron: score(false), tsumo: score(true) });
@@ -306,6 +327,8 @@ export function handShanten(p: SeatPicture): number {
 
 export interface Threat {
   readonly seat: Seat;
+  /** The seat has declared its hand ready (riichi): surely ready, and locked. */
+  readonly declared: boolean;
   /** 0 (no sign of a ready hand) to 1 (surely ready). */
   readonly level: number;
   /** The suit their sets point to (a one-suit hand), or null. */
@@ -324,7 +347,8 @@ export function readThreats(view: MahjongView): Threats {
     const melds = (view.melds[s] ?? []).filter((m) => !m.concealed);
     const kongs = (view.melds[s] ?? []).filter((m) => m.concealed).length;
     const thrown = (view.discards[s] ?? []).length;
-    let level = [0.08, 0.22, 0.45, 0.75, 0.95][Math.min(4, melds.length)] ?? 0.95;
+    const declared = view.ready[s] !== null && view.ready[s] !== undefined;
+    let level = declared ? 1 : ([0.08, 0.22, 0.45, 0.75, 0.95][Math.min(4, melds.length)] ?? 0.95);
     level += thrown >= 14 ? 0.3 : thrown >= 10 ? 0.2 : thrown >= 7 ? 0.1 : 0;
     level += kongs * 0.05;
     let suit: number | null = null;
@@ -333,7 +357,7 @@ export function readThreats(view: MahjongView): Threats {
       if (suits.size === 1) suit = [...suits][0] ?? null;
     }
     if (suit !== null) level += 0.15;
-    out.push({ seat: s, level: Math.min(1, level), suit, threw: new Set((view.discards[s] ?? []).map((d) => kindOf(d.tile))) });
+    out.push({ seat: s, declared, level: Math.min(1, level), suit, threw: new Set((view.discards[s] ?? []).map((d) => kindOf(d.tile))) });
   }
   return out;
 }
@@ -349,7 +373,11 @@ export function tileDanger(p: SeatPicture, kind: Kind, t: Threat): number {
     // Neighbours all out of sight make runs through this tile less likely.
     if (left === 0) d *= 0.6;
   }
-  if (t.threw.has(kind)) d *= 0.25;
+  // A tile the player threw: safe for good where furiten forbids winning on it, safer elsewhere.
+  if (t.threw.has(kind)) {
+    if (p.rules.calls.furiten) return 0;
+    d *= 0.25;
+  }
   else if (isSuited(kind)) {
     const r = rankOf(kind);
     const suji = (r > 3 && t.threw.has(kind - 3)) || (r < 7 && t.threw.has(kind + 3));

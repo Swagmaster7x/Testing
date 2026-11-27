@@ -118,6 +118,8 @@ export interface OptionField {
 export interface GameOptions<C> {
   readonly presets: readonly { readonly id: string; readonly label: string; readonly config: C }[];
   readonly fields: readonly OptionField[];
+  /** The fields for a config, when they depend on it (a game with several rule families); `fields` when absent. */
+  fieldsFor?(config: C): readonly OptionField[];
   /** The value of a field in a config, and a config with one field changed. */
   get(config: C, key: string): string | number;
   set(config: C, key: string, value: string | number): C;

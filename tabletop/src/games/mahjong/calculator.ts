@@ -32,9 +32,23 @@ export interface CalcInput {
   readonly lastDiscard: boolean;
   readonly afterKong: boolean;
   readonly robbed: boolean;
+  /** Riichi: 0 none, 1 declared, 2 declared on the first throw (double riichi). */
+  readonly ready: 0 | 1 | 2;
+  /** Riichi: won within a go round of declaring (ippatsu). */
+  readonly oneShot: boolean;
+  /** Riichi: how many of the hand's fives are red. */
+  readonly redFives: number;
+  /** Riichi: the dora indicators turned up, and the ura indicators under them. */
+  readonly indicators: readonly Kind[];
+  readonly underIndicators: readonly Kind[];
 }
 
-export const EMPTY_INPUT: CalcInput = { hand: [], winning: -1, sets: [], seatWind: 0, prevailingWind: 0, from: null, bonus: [], lastTile: false, lastDiscard: false, afterKong: false, robbed: false };
+export const EMPTY_INPUT: CalcInput = { hand: [], winning: -1, sets: [], seatWind: 0, prevailingWind: 0, from: null, bonus: [], lastTile: false, lastDiscard: false, afterKong: false, robbed: false, ready: 0, oneShot: false, redFives: 0, indicators: [], underIndicators: [] };
+
+/** The fives in a hand and its sets (each could be a red five). */
+export function fivesIn(input: CalcInput): number {
+  return [...input.hand, ...input.sets.flatMap(setKinds)].filter((k) => isSuited(k) && rankOf(k) === 5).length;
+}
 
 /** The tiles of a set, as kinds. */
 export function setKinds(set: CalcSet): Kind[] {
@@ -65,8 +79,19 @@ export function overused(input: CalcInput): Kind | null {
 
 /** The engine's view of the hand, seat 0 the winner. */
 export function contextOf(input: CalcInput): WinContext {
-  let copy = 0;
-  const id = (k: Kind) => tileId(k, copy++ % 4);
+  // Tile ids: copy 0 of a five is the red one, so red fives take copy 0 and the rest copies 1 to 3.
+  let red = input.redFives;
+  const used = new Map<Kind, number>();
+  const id = (k: Kind) => {
+    if (isSuited(k) && rankOf(k) === 5 && red > 0 && !used.has(-1 - k)) {
+      red--;
+      used.set(-1 - k, 1);
+      return tileId(k, 0);
+    }
+    const n = (used.get(k) ?? 0) + 1;
+    used.set(k, n);
+    return tileId(k, Math.min(3, n));
+  };
   const melds: Meld[] = input.sets.map((s) => {
     const tiles = setKinds(s).map(id);
     const exposed = !(s.type === 'kong' && s.concealed);
@@ -74,7 +99,13 @@ export function contextOf(input: CalcInput): WinContext {
   });
   const tile = input.hand[input.winning] ?? input.hand[input.hand.length - 1] ?? 0;
   const selfDrawn = input.from === null;
+  const tiles = [...input.hand.map(id), ...melds.flatMap((m) => m.tiles)];
   return {
+    tiles,
+    indicators: [...input.indicators],
+    underIndicators: input.ready > 0 ? [...input.underIndicators] : [],
+    ready: input.ready,
+    oneShot: input.ready > 0 && input.oneShot,
     seat: 0,
     tile,
     selfDrawn,

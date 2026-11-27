@@ -50,6 +50,7 @@ APK; the rest are only used to build and test it.
 | `fontkit` and `@fontsource/shippori-mincho-b1` | 3.0.0, 5.3.0 | MIT, SIL OFL 1.1 | Used once by `scripts/shogi-glyphs.mjs` to turn the shogi kanji into SVG paths; installed with `--no-save` when the script is run, so not in `package.json` |
 | `fontkit` and `@fontsource/lxgw-wenkai-tc` | 3.0.0, 5.3.1 | MIT, SIL OFL 1.1 | Used once by `scripts/mahjong-glyphs.mjs` to turn the mahjong tile characters into SVG paths; installed with `--no-save` (or in another folder, `GLYPH_MODULES`) when the script is run, so not in `package.json` |
 | `syanten` | 1.6.0 | MIT | Mahjong: a second shanten (tiles from ready) and acceptance calculator; the tests check ours against it on thousands of random hands (milestone 9). Not shipped |
+| `riichi` (with its dependency `agari` 1.1.0) | 1.2.0 | MIT | Riichi mahjong: a second scorer (yaku, han, fu, points); the tests check ours against it on generated hands (milestone 11). A dev dependency only: not shipped |
 | `@sabaki/go-board` | 1.4.3 | MIT | Go: a second implementation of the rules; the tests check our captures, legality and handicap points against it (milestone 6) |
 | `pokersolver` | 2.1.4 | MIT | Hold'em: a second hand evaluator; the tests check our seven-card evaluator against it on thousands of random showdowns (milestone 5). Not shipped |
 | `@sabaki/sgf` | 3.5.0 | MIT | Go: a second SGF parser; the tests check that it reads our SGF files the same way. Not shipped: it needs Node's `fs` and optional encoding libraries, so the app has its own small reader and writer (`src/games/go/sgf.ts`) |
@@ -95,8 +96,8 @@ in the app with the Web Audio API; there are no sound files.
 
 The plan's later dependencies are added in the milestones that need them, each with a line here:
 `pokersolver` arrived with milestone 5, the Sabaki Go packages with milestone 6, `tsshogi` with
-milestone 8 and `syanten` with milestone 9 (above). `riichi`, the second scorer for Riichi, comes
-with milestone 11.
+milestone 8, `syanten` with milestone 9 and `riichi`, the second scorer for Riichi, with
+milestone 11 (above).
 
 **Stockfish is GPL-3.** It runs as a separate worker file behind the `Engine` interface
 (`src/ai/uci.ts`). For a personal app that is fine. If this app is ever published, either publish

@@ -37,6 +37,34 @@ export interface CallRules {
   readonly robConcealedWithOrphans: boolean;
   /** Several players may win on one discard; otherwise the first in turn after the discarder. */
   readonly multipleWinners: boolean;
+  /** With several winners allowed: more than this many on one tile makes an abortive draw. */
+  readonly maxWinners?: number;
+  /** Furiten: no win on a discard with a wait among your own discards, or after passing a win. */
+  readonly furiten?: boolean;
+  /** After a chow or pung you may not throw the called kind (nor, for a chow, the other end). */
+  readonly noSwapCall?: boolean;
+}
+
+/** A declaration of a ready hand with a stake on the table (riichi), when the style has one. */
+export interface ReadyDeclaration {
+  /** Points put on the table when the declaring throw passes without a win. */
+  readonly stake: number;
+  /** Points a seat needs to declare. */
+  readonly minScore: number;
+  /** Tiles that must be left to draw. */
+  readonly minLeft: number;
+}
+
+/** Hands abandoned before their end, each when the style plays it. */
+export interface AbortRules {
+  /** A seat with nine different terminals and honours on its first draw, before any call, may end the hand. */
+  readonly nineTerminals: boolean;
+  /** All four throw the same wind on the first go round, with no call. */
+  readonly fourWinds: boolean;
+  /** All four have declared ready. */
+  readonly fourReady: boolean;
+  /** Four kongs on the table, not all one player's. */
+  readonly fourKongs: boolean;
 }
 
 /** What the engine needs from a style, from its options. */
@@ -54,6 +82,14 @@ export interface StyleRules {
   readonly rounds: number;
   /** A game also ends after this many hands for each round. */
   readonly handsPerRound: number;
+  /** Indicator stacks set aside from the dead wall at the deal (each with a tile under it), or none. */
+  readonly indicators?: number;
+  /** Kong indicators: "immediate", or "late" (an exposed or added kong turns its indicator after the throw). */
+  readonly kongIndicator?: 'immediate' | 'late';
+  /** Each seat's points at the start of a game (0 when absent). */
+  readonly startScore?: number;
+  readonly ready?: ReadyDeclaration;
+  readonly aborts?: AbortRules;
 }
 
 /** Everything a scorer needs to know about a complete hand and how it was won. */
@@ -84,6 +120,17 @@ export interface WinContext {
   readonly heavenly: boolean;
   /** Another player won on the dealer's first discard. */
   readonly earthly: boolean;
+  /** Self-drawn on the seat's first draw, before any call or throw (not the dealer's deal). */
+  readonly firstDraw?: boolean;
+  /** Every tile of the hand by id, melds and the winning tile included (red fives are copies). */
+  readonly tiles?: readonly TileId[];
+  /** Indicator tiles turned up, and the ones under them (for a winner who declared ready). */
+  readonly indicators?: readonly Kind[];
+  readonly underIndicators?: readonly Kind[];
+  /** 0: no ready declaration; 1: declared; 2: declared on the first throw. */
+  readonly ready?: number;
+  /** Declared ready and winning within a go round of it, with no call in between. */
+  readonly oneShot?: boolean;
 }
 
 /** One scoring pattern in a hand, by id; the text catalogue names it. */
@@ -107,6 +154,12 @@ export interface HandScore {
   readonly unit: string;
   /** Base points the payments are made from. */
   readonly base: number;
+  /** Fu, in styles that count them. */
+  readonly fu?: number;
+  /** Limit hands as multiples (1 for a limit hand, 2 for a double one), in styles that count them. */
+  readonly yakuman?: number;
+  /** The name of the score's band ("mangan"), when it has one. */
+  readonly band?: string;
 }
 
 export interface WinRecord {
@@ -122,6 +175,50 @@ export interface SettleInput {
   readonly wins: readonly WinRecord[];
   readonly dealer: Seat;
   readonly seats: number;
+  /** Counters on the table (honba), for styles that pay them. */
+  readonly counter?: number;
+  /** Stakes on the table, collected by the winner (the first in turn after the thrower). */
+  readonly stakes?: number;
+}
+
+/** A hand that ended without a winner, for styles that pay something at a draw. */
+export interface DrawInput {
+  readonly dealer: Seat;
+  readonly seats: number;
+  /** Why it ended: the wall ran out, or an abortive draw by its rule. */
+  readonly reason: DrawReason;
+  /** Seats ready (one tile from a winning shape) when the wall ran out. */
+  readonly ready: readonly boolean[];
+  /** Seats whose discards were all terminals and honours, none of them called. */
+  readonly allTerminalDiscards: readonly Seat[];
+  readonly counter: number;
+}
+
+export type DrawReason = 'exhausted' | 'nine-terminals' | 'four-winds' | 'four-ready' | 'four-kongs' | 'too-many-winners';
+
+/** What the next hand starts with, from the hand just finished, for the style to decide. */
+export interface HandEnd {
+  readonly winners: readonly Seat[];
+  readonly dealer: Seat;
+  readonly drawn: boolean;
+  /** An abortive draw's reason (an exhausted wall is not abortive). */
+  readonly abortive?: DrawReason;
+  /** Seats ready at an exhaustive draw. */
+  readonly ready?: readonly boolean[];
+}
+
+/** Where a game stands after a hand, for a style that ends games its own way. */
+export interface GameStanding {
+  readonly scores: readonly number[];
+  /** The hand just finished: its round and how many times the deal had passed in it. */
+  readonly round: number;
+  readonly passes: number;
+  /** The next hand's round, and whether its dealer is the same seat. */
+  readonly nextRound: number;
+  readonly dealerKeeps: boolean;
+  readonly dealer: Seat;
+  readonly hands: number;
+  readonly rounds: number;
 }
 
 /** One option of a style, with every value it may take. */
@@ -157,22 +254,43 @@ export interface ValueHints {
   readonly points: readonly number[];
   /** What each loser pays, in base points: on a self-draw, the discarder, and the others on a discard win. */
   readonly pay: { readonly selfDrawn: number; readonly discarder: number; readonly others: number };
+  /** A hand of simples only (2 to 8), closed and with calls, in styles that reward it. */
+  readonly allSimples?: number;
+  readonly allSimplesOpen?: number;
+  /** A closed ready hand can always be declared ready for this much (riichi). */
+  readonly readyDeclaration?: number;
+  /** Kinds worth this much each when held in a winning hand (dora), once a hand has value. */
+  readonly bonusKinds?: readonly Kind[];
+  /**
+   * How much the strongest CPU weighs the cost of feeding a ready hand, against the table its
+   * weights were tuned on (1, Hong Kong). Where the feeder pays the whole hand that cost is several
+   * times larger, and the tuned weight would have the CPU fold far too often.
+   */
+  readonly riskScale?: number;
 }
 
 export interface Style {
   readonly id: string;
   /** Rough values of a seat's prospects, for bots and the coach. */
-  hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[] }, options: StyleOptions): ValueHints;
+  hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[]; readonly indicators?: readonly Kind[] }, options: StyleOptions): ValueHints;
   readonly options: readonly OptionSpec[];
   readonly defaults: StyleOptions;
   readonly presets: readonly { readonly id: string; readonly options: StyleOptions }[];
   rules(options: StyleOptions): StyleRules;
   /** The hand's score, or null when it may not win (below the minimum, or a shape the style refuses). */
   score(ctx: WinContext, options: StyleOptions): HandScore | null;
+  /** The score of a complete hand whatever the minimum (no yaku, too few faan), for teaching. */
+  scoreAny?(ctx: WinContext, options: StyleOptions): HandScore | null;
   /** Each seat's gain or loss for a finished hand with winners. Adds up to zero. */
   settle(hand: SettleInput, options: StyleOptions): number[];
   /** Whether the dealer deals the next hand too. */
-  dealerKeeps(hand: { readonly winners: readonly Seat[]; readonly dealer: Seat; readonly drawn: boolean }, options: StyleOptions): boolean;
+  dealerKeeps(hand: HandEnd, options: StyleOptions): boolean;
+  /** Payments at a hand with no winner (none when absent). */
+  settleDraw?(hand: DrawInput, options: StyleOptions): number[];
+  /** The counter (honba) for the next hand (0 when absent). */
+  nextCounter?(hand: HandEnd, counter: number, options: StyleOptions): number;
+  /** Whether the game is over after a hand; null leaves it to the rounds. */
+  gameOver?(standing: GameStanding, options: StyleOptions): boolean | null;
 }
 
 /** Reads a style's options from JSON, keeping only known values (defaults for the rest). */

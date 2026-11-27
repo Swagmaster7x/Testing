@@ -9,14 +9,14 @@ import { t, tDynamic } from '../../../text';
 import { Segmented } from '../../../shell/components/Segmented';
 import { BackLink, Screen } from '../../../shell/screens/common';
 import type { CalcInput, CalcSet } from '../calculator';
-import { calculate, EMPTY_INPUT, overused, setFits, setKinds, tilesWanted } from '../calculator';
+import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, setKinds, tilesWanted } from '../calculator';
 import type { Kind } from '../core/tiles';
 import { FLOWER_1, isBonus, PLAYING_KINDS } from '../core/tiles';
 import { STYLES } from '../rules';
 import { kindName, patternName, windName } from './names';
 import { TileFace } from './tiles';
 
-type AddMode = 'hand' | 'chow' | 'pung' | 'kong' | 'concealed-kong' | 'flower';
+type AddMode = 'hand' | 'chow' | 'pung' | 'kong' | 'concealed-kong' | 'flower' | 'dora' | 'ura';
 const FLOWERS: readonly Kind[] = Array.from({ length: 8 }, (_, i) => FLOWER_1 + i);
 const KINDS: readonly Kind[] = Array.from({ length: PLAYING_KINDS }, (_, i) => i);
 
@@ -63,7 +63,14 @@ export function MahjongCalculator() {
   const tooMany = overused(input);
   const update = (patch: Partial<CalcInput>) => setInput({ ...input, ...patch });
 
+  // Riichi's own inputs: the declaration, ippatsu, red fives and the indicators.
+  const riichi = style.id === 'riichi';
   const add = (kind: Kind) => {
+    if (mode === 'dora' || mode === 'ura') {
+      const key = mode === 'dora' ? 'indicators' : 'underIndicators';
+      if (input[key].length < 5) update({ [key]: [...input[key], kind] });
+      return;
+    }
     if (mode === 'flower') {
       update({ bonus: input.bonus.includes(kind) ? input.bonus.filter((k) => k !== kind) : [...input.bonus, kind] });
       return;
@@ -89,7 +96,7 @@ export function MahjongCalculator() {
       </header>
       <div className="calc-grid">
         <section className="card" aria-label={t('tools.calc.hand')}>
-          {styleIds.length > 1 ? <Segmented label={t('tools.calc.style')} value={styleId} options={styleIds.map((id) => ({ value: id, label: tDynamic(`tools.calc.style.${id}`) }))} onChange={(id) => (setStyleId(id), setPresetId(STYLES[id]?.presets[0]?.id ?? ''))} /> : null}
+          {styleIds.length > 1 ? <Segmented label={t('tools.calc.style')} value={styleId} options={styleIds.map((id) => ({ value: id, label: tDynamic(`tools.calc.style.${id}`) }))} onChange={(id) => (setStyleId(id), setPresetId(STYLES[id]?.presets[0]?.id ?? ''), setMode('hand'), update({ bonus: [] }))} /> : null}
           <label className="calc-field">
             <span className="eyebrow">{t('tools.calc.rules')}</span>
             <select className="field" value={presetId} onChange={(e) => setPresetId(e.target.value)}>
@@ -119,6 +126,16 @@ export function MahjongCalculator() {
               <Tile key={`b${k}`} kind={k} label={kindName(k)} onClick={() => update({ bonus: input.bonus.filter((x) => x !== k) })} />
             ))}
           </div>
+          {riichi && input.indicators.length + input.underIndicators.length > 0 ? (
+            <div className="calc-row" aria-label={t('tools.calc.mode.dora')}>
+              {(['indicators', 'underIndicators'] as const).flatMap((key) =>
+                input[key].map((k, i) => (
+                  <Tile key={`${key}${i}`} kind={k} label={t(key === 'indicators' ? 'tools.calc.dora-of' : 'tools.calc.ura-of', { tile: kindName(k) })} onClick={() => update({ [key]: input[key].filter((_, j) => j !== i) })} />
+                )),
+              )}
+              <span className="muted">{t('tools.calc.indicator-note')}</span>
+            </div>
+          ) : null}
           <p className="muted calc-status" role="status">
             {tooMany !== null ? t('tools.calc.too-many-of', { tile: kindName(tooMany) }) : wanted > 0 ? t('tools.calc.more', { n: wanted }) : wanted < 0 ? t('tools.calc.fewer', { n: -wanted }) : t('tools.calc.tap-winning')}
           </p>
@@ -134,7 +151,7 @@ export function MahjongCalculator() {
             <Segmented
               label={t('tools.calc.add-to')}
               value={mode}
-              options={(['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'flower'] as const).map((m) => ({ value: m, label: tDynamic(`tools.calc.mode.${m}`) }))}
+              options={(riichi ? (['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'dora', 'ura'] as const) : (['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'flower'] as const)).map((m) => ({ value: m, label: tDynamic(`tools.calc.mode.${m}`) }))}
               onChange={setMode}
             />
           </Labelled>
@@ -185,7 +202,24 @@ export function MahjongCalculator() {
           <Labelled label={t('tools.calc.how')}>
             <Segmented label={t('tools.calc.how')} value={input.from ?? 'self'} options={fromOptions} onChange={(v) => update({ from: v === 'self' ? null : v })} />
           </Labelled>
+          {riichi ? (
+            <>
+              <Labelled label={t('tools.calc.riichi')}>
+                <Segmented label={t('tools.calc.riichi')} value={input.ready} options={([0, 1, 2] as const).map((v) => ({ value: v, label: tDynamic(`tools.calc.riichi.${v}`) }))} onChange={(ready) => update({ ready })} />
+              </Labelled>
+              {fivesIn(input) > 0 ? (
+                <Labelled label={t('tools.calc.red')}>
+                  <Segmented label={t('tools.calc.red')} value={Math.min(input.redFives, fivesIn(input))} options={Array.from({ length: Math.min(3, fivesIn(input)) + 1 }, (_, n) => ({ value: n, label: String(n) }))} onChange={(redFives) => update({ redFives })} />
+                </Labelled>
+              ) : null}
+            </>
+          ) : null}
           <div className="tool-buttons">
+            {riichi && input.ready > 0 ? (
+              <button type="button" className="btn btn-small" aria-pressed={input.oneShot} data-on={input.oneShot} onClick={() => update({ oneShot: !input.oneShot })}>
+                {t('tools.calc.oneShot')}
+              </button>
+            ) : null}
             {(input.from === null ? (['lastTile', 'afterKong'] as const) : (['lastDiscard', 'robbed'] as const)).map((key) => (
               <button key={key} type="button" className="btn btn-small" aria-pressed={input[key]} data-on={input[key]} onClick={() => update({ [key]: !input[key] })}>
                 {tDynamic(`tools.calc.${key}`)}

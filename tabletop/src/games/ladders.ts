@@ -42,6 +42,7 @@ import { decide as mahjongDecide, mahjongBots } from './mahjong/bots';
 import type { MahjongAction, MahjongConfig, MahjongEvent, MahjongState, MahjongView } from './mahjong/rules';
 import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
+import { RIICHI_DEFAULTS } from './mahjong/styles/riichi';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
 import { tuteBots } from './tute/bots';
@@ -251,21 +252,24 @@ function chineseCheckersLadder(): Ladder<CcState, CcAction, CcConfig, CcView, Cc
 
 /** Mahjong: a side's score is whether its two seats together won more points than the other two. */
 export function mahjongSideScore(outcome: Outcome, seats: readonly Seat[]): number {
-  const net = outcome.results.filter((r) => seats.includes(r.seat)).reduce((sum, r) => sum + r.score, 0);
+  // The side's points against the other side's: Hong Kong scores start at nothing, Riichi's at a stack.
+  const sum = (mine: boolean) => outcome.results.filter((r) => seats.includes(r.seat) === mine).reduce((total, r) => total + r.score, 0);
+  const net = sum(true) - sum(false);
   return net > 0 ? 1 : net < 0 ? 0 : 0.5;
 }
 
 /**
- * Mahjong rungs are East-round games under the default Hong Kong rules: the level under test sits
- * in seats 0 and 2 against the other level in 1 and 3, and every deal is played twice with the
- * seats swapped, so the luck of the tiles cancels out.
+ * Mahjong rungs are East-round games under the default Hong Kong rules (`mahjong-riichi`:
+ * East-South games under the common online Riichi rules): the level under test sits in seats 0
+ * and 2 against the other level in 1 and 3, and every deal is played twice with the seats
+ * swapped, so the luck of the tiles cancels out.
  */
-function mahjongLadder(): Ladder<MahjongState, MahjongAction, MahjongConfig, MahjongView, MahjongEvent> {
+function mahjongLadder(config: MahjongConfig = { style: 'hong-kong', options: { ...HK_DEFAULTS, length: 'east' } }, top = 5): Ladder<MahjongState, MahjongAction, MahjongConfig, MahjongView, MahjongEvent> {
   return {
     spec: {
       def: mahjong,
-      config: { style: 'hong-kong', options: { ...HK_DEFAULTS, length: 'east' } },
-      levels: mahjongBots.levels.map((l) => l.level),
+      config,
+      levels: mahjongBots.levels.map((l) => l.level).filter((l) => l <= top),
       bot: (level) => ({ name: `L${level}`, choose: (view, _seat, rng) => mahjongDecide(view, level, rng).action }),
       margin: 0.6,
       paired: true,
@@ -417,5 +421,9 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     'gin-rummy': ginLadder() as unknown as Ladder<never, never, never, never, never>,
     blackjack: blackjackLadder() as unknown as Ladder<never, never, never, never, never>,
     tute: tuteLadder() as unknown as Ladder<never, never, never, never, never>,
+    // The same rungs at a Riichi table: full East-South games under the common online rules (the
+    // Riichi default; a single East round leaves too much to the tiles). Levels 1 to 4: level 5
+    // scores only about 0.61 against level 4 at this table, short of the margin (PROGRESS-M11.md).
+    'mahjong-riichi': mahjongLadder({ style: 'riichi', options: RIICHI_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
   };
 }

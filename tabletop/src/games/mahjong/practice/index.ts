@@ -11,8 +11,9 @@
  * - **score the hand**: count the faan and what you collect, checked by the Hong Kong scorer;
  * - **safe tile**: one player has called three sets; throw the tile the safe-tile ranking
  *   (the coach's) puts clearly safest.
+ *
+ * The Riichi drills (name the yaku, han and fu, safe tile against a riichi) are in riichi.ts.
  */
-import type { Seat } from '../../../core/contract';
 import type { Lesson, LessonStep } from '../../../teach/lesson';
 import type { Problem } from '../../../teach/problem';
 import type { DrillDef, PracticePack } from '../../practice';
@@ -26,7 +27,8 @@ import { BASIC, HK, lessonPosition, lessonState, mahjongComputed, mahjongLessonG
 import { efficiencyProblems, safetyProblems } from '../learn/verify';
 import { kindName, patternName } from '../ui/names';
 import type { Complete, Knobs, Random } from './build';
-import { buildComplete, calledMeld, codes, completeKinds, pick, randomTiles, shuffle } from './build';
+import { buildComplete, calledMeld, codes, completeKinds, pick, playerPhrase, randomTiles, shuffle } from './build';
+import { RIICHI_DRILLS } from './riichi';
 
 function lesson(id: string, title: string, start: string, steps: LessonStep[]): Lesson {
   return { id: `mahjong.drill.${id}`, gameId: 'mahjong', stage: 'table', title, minutes: 1, start, steps };
@@ -196,11 +198,6 @@ export function winningHand(random: Random, target: string | null): WinningHand 
   }
 }
 
-/** "The player on your right", and so on. */
-export function playerPhrase(seat: Seat): string {
-  return ['You', 'The player on your right', 'The player across', 'The player on your left'][seat % 4] ?? 'A player';
-}
-
 /** How the hand is being won, and where you sit, in words. */
 function situation(h: WinningHand): string {
   const s = h.state;
@@ -304,6 +301,7 @@ export const MAHJONG_DRILLS: readonly DrillDef[] = [
   { id: 'drill-mahjong-patterns', make: patternsDrill },
   { id: 'drill-mahjong-score', make: scoreDrill },
   { id: 'drill-mahjong-safe', make: safeDrill },
+  ...RIICHI_DRILLS,
 ];
 
 interface DiscardFile {

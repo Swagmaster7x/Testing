@@ -101,5 +101,24 @@ test.describe('tools', () => {
     await expect(page.locator('.calc-total')).toHaveText('3 faan');
     await expect(page.locator('.calc-result')).toContainText('South -16');
   });
-});
 
+  test('the Mahjong calculator takes a Riichi hand: riichi, ippatsu, a dora and a red five', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'Riichi' }).click();
+    const picker = page.getByRole('group', { name: 'Tiles to add' });
+    for (const tile of ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '7 dots', '8 dots', '9 dots', '2 bamboo', '3 bamboo', '4 bamboo', '5 bamboo', '5 bamboo']) {
+      await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+    }
+    // No yaku yet on a discard: it is not a hand.
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On West’s discard' }).click();
+    await page.getByRole('radiogroup', { name: 'Riichi' }).getByRole('radio', { name: 'Riichi', exact: true }).click();
+    await expect(page.locator('.calc-lines')).toContainText('Riichi');
+    await expect(page.locator('.calc-result')).toContainText('West -2000');
+    await page.getByRole('button', { name: 'Ippatsu' }).click();
+    await page.getByRole('radiogroup', { name: 'Red fives in the hand' }).getByRole('radio', { name: '1' }).click();
+    await page.getByRole('radiogroup', { name: 'Add', exact: true }).getByRole('radio', { name: 'Dora indicators' }).click();
+    await picker.getByRole('button', { name: 'Add the 4 characters', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Dora indicator: 4 characters' })).toBeVisible();
+    await expect(page.locator('.calc-result')).toContainText('West -12000');
+  });
+});

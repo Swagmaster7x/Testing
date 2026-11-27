@@ -273,6 +273,8 @@ describe('rounds', () => {
       round,
       passes,
       repeats: 0,
+      scores: [0, 0, 0, 0],
+      counter: 0,
     });
 
   it('the dealer keeps the deal after winning; it passes after another player wins', () => {
