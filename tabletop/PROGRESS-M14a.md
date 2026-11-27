@@ -118,8 +118,10 @@ tablet or laptop they run straight up and down from the spinner first.
   (sleeping tiles and the boneyard included), replays, and samples that keep every pass.
 - Lesson lint: 26 Dominoes lessons (5 new) pass, with the "I already know this" checks.
 - End to end (`E2E_PORT=4891`, after a build): `tests/e2e/dominoes-styles.spec.ts` plays a whole
-  All Fives match against level 1 and reviews it, plays a Cuban hand to the end, and finishes an
-  All Fives lesson; with `dominoes.spec.ts`, 21 tests pass at 844×390, 1180×820 and 1440×900.
+  All Fives match against level 1 and reviews it, plays a Cuban hand to the end, finishes an
+  All Fives lesson, and runs the axe scan (serious and critical findings, as `a11y.spec.ts`) on an
+  All Fives table with tiles down and on a Cuban table; with `dominoes.spec.ts`, 24 tests pass at
+  844×390, 1180×820 and 1440×900.
 - Screenshots: `tests/e2e/screens-m14a.spec.ts` writes 24 shots to `screenshots/m14a/` (phone
   landscape at twice the pixels, plus tablet and laptop tables). Looked at every one, and fixed:
   - the count of the ends showed in a lesson and the drill that ask for it (now a coach help, off
@@ -142,7 +144,7 @@ tablet or laptop they run straight up and down from the spinner first.
 | L3 vs L2 | 0.717 | 0.640 |
 | L4 vs L3 | 0.667 | **0.440 (fails)** |
 | L5 vs L4 | 0.650 | 0.630 |
-| L6 vs L5 | 0.600 | see below |
+| L6 vs L5 | 0.600 | **0.580 (fails)** |
 
 Level 5 against level 1 (100 paired games): All Fives 0.910; Cuban (to 100) 0.650.
 
@@ -158,7 +160,9 @@ All Fives passes every rung. Cuban needed work and one rung is still open:
   on the same sampled deals by more than the convention margin (scaled by the set's pips) and by two
   standard errors. That lifted level 4 to about level 3 (0.44 to 0.56 over different seeds), but not
   past it: even level 5 beats level 3 by only 0.60, and level 4 with 48 or 64 deals measured 0.56 to
-  0.59. So the gap from 3 to 4 is open; level 5 and level 6 stay ahead of 4 and 5.
+  0.59. So the gap from 3 to 4 is open. Level 5 beats level 4 by 0.63, and level 6 beats level 5
+  by 0.58, just under the margin: with the double nine more sampled deals buy less than with the
+  double six. Each Cuban rung to 500 takes about five minutes (level 6 about half an hour).
 
 ## Decisions
 
@@ -196,7 +200,12 @@ All Fives passes every rung. Cuban needed work and one rung is still open:
 
 ## Not done, or open
 
-- The Cuban ladder's level 4 against level 3 (above).
+- The Cuban ladder: level 4 against level 3 (0.44) and level 6 against level 5 (0.58) are below
+  the 0.6 margin (above). Every rung is still at or above an even score except 4 against 3.
+- A shell finding, left alone: once the move list and the log are long enough to scroll, axe reports
+  them as scrollable regions that cannot take the keyboard focus (`scrollable-region-focusable`).
+  `a11y.spec.ts` scans tables before any move, so it does not see it; the styles spec leaves that
+  one rule out.
 - Not implemented on purpose (see the rules document): drawing while holding a playable tile, an
   exact target, each side losing its own pips, scores divided by five, Five Up and Sniff, the Cuban
   side choosing its leader, Lankford's Cuban draw game.
