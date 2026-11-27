@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Kibitz app icon: an ivory card and a go stone on green felt. Original artwork. -->
+  <defs>
+    <radialGradient id="felt" cx="0.42" cy="0.34" r="0.85">
+      <stop offset="0" stop-color="#2f6f55"/>
+      <stop offset="0.55" stop-color="#1b4434"/>
+      <stop offset="1" stop-color="#102a20"/>
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbf6ea"/>
+      <stop offset="1" stop-color="#e6dbc4"/>
+    </linearGradient>
+    <radialGradient id="stone" cx="0.36" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#4a423a"/>
+      <stop offset="0.45" stop-color="#1d1915"/>
+      <stop offset="1" stop-color="#070605"/>
+    </radialGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8c987"/>
+      <stop offset="1" stop-color="#b48a45"/>
+    </linearGradient>
+  </defs>
+  <g id="art">
+    <g transform="rotate(-11 232 236)">
+      <rect x="132" y="96" width="200" height="282" rx="22" fill="#000" opacity="0.32" transform="translate(9 12)"/>
+      <rect x="132" y="96" width="200" height="282" rx="22" fill="url(#card)"/>
+      <rect x="144" y="108" width="176" height="258" rx="14" fill="none" stroke="#c9a25a" stroke-opacity="0.55" stroke-width="3"/>
+      <path d="M232 168 L272 237 L232 306 L192 237 Z" fill="url(#brass)"/>
+      <path d="M232 186 L262 237 L232 288 L202 237 Z" fill="none" stroke="#fbf3df" stroke-opacity="0.45" stroke-width="3"/>
+      <path d="M168 128 L178 145 L168 162 L158 145 Z" fill="#b48a45"/>
+      <path d="M296 312 L306 329 L296 346 L286 329 Z" fill="#b48a45"/>
+    </g>
+    <circle cx="346" cy="352" r="84" fill="#000" opacity="0.35" transform="translate(8 11)"/>
+    <circle cx="346" cy="352" r="84" fill="url(#stone)"/>
+    <ellipse cx="318" cy="320" rx="30" ry="18" fill="#fff" opacity="0.13" transform="rotate(-30 318 320)"/>
+  </g>
+</svg>

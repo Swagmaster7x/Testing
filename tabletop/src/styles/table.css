@@ -1,0 +1,472 @@
+/*
+ * The table screen (PLAN.md 1.4): a status bar, the play surface, the player panel and the
+ * collapsible coach rail. A square board takes the full height; the spare width holds the rail
+ * on one side and the players on the other. The rail can sit on the left for left-handed play.
+ */
+.table {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  background: var(--ink-900);
+  padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+}
+
+.table-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-2);
+  background: var(--ink-850);
+  border-bottom: 1px solid var(--line-1);
+  min-width: 0;
+}
+
+.status-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.status-title {
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-meta {
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+.status-meta::before {
+  content: '·';
+  margin-right: var(--sp-2);
+}
+
+.status-turn {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  padding: 0 var(--sp-2);
+}
+
+.status-turn[data-mine='true'] {
+  color: var(--brass-1);
+}
+
+.table-body {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr) var(--rail-w);
+  grid-template-areas: 'side surface rail';
+  min-height: 0;
+  background:
+    radial-gradient(120% 90% at 50% 45%, rgb(255 255 255 / 0.035), transparent 60%),
+    linear-gradient(180deg, var(--felt-700), var(--felt-800));
+}
+
+.table-body[data-rail='left'] {
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) minmax(150px, 190px);
+  grid-template-areas: 'rail surface side';
+}
+
+.table-body[data-rail-open='false'] {
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  grid-template-areas: 'side surface';
+}
+
+.table-body[data-rail-open='false'][data-rail='left'] {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 190px);
+  grid-template-areas: 'surface side';
+}
+
+.table-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  min-height: 0;
+  overflow-y: auto;
+  background: rgb(14 12 9 / 0.5);
+  border-right: 1px solid rgb(0 0 0 / 0.25);
+}
+
+.table-body[data-rail='left'] .table-side {
+  border-right: 0;
+  border-left: 1px solid rgb(0 0 0 / 0.25);
+}
+
+.table-surface {
+  grid-area: surface;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--sp-3);
+}
+
+.board-frame {
+  width: 100cqmin;
+  height: 100cqmin;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.board-frame svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Players */
+.players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 46px;
+  padding: var(--sp-2);
+  border-radius: var(--r-md);
+  background: rgb(255 255 255 / 0.03);
+  border: 1px solid transparent;
+}
+
+.player[data-turn='true'] {
+  border-color: var(--brass-3);
+  background: var(--brass-wash);
+}
+
+.player-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+.player-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.player-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.player-detail {
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+}
+
+.turn-dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brass-1);
+  flex: none;
+}
+
+.thinking .turn-dot {
+  animation: pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.side-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: auto;
+}
+
+.result-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--ivory-1);
+  color: var(--ivory-ink);
+  box-shadow: var(--shadow-2);
+  animation: rise-in var(--dur-2) var(--ease);
+}
+
+.result-card h2 {
+  font-size: var(--fs-xl);
+}
+
+.result-card p {
+  font-size: var(--fs-sm);
+  color: #5b4a37;
+}
+
+.side-note {
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+}
+
+/* Coach rail */
+.rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: rgb(14 12 9 / 0.62);
+  border-left: 1px solid rgb(0 0 0 / 0.3);
+  scrollbar-color: var(--ink-600) transparent;
+}
+
+.table-body[data-rail='left'] .rail {
+  border-left: 0;
+  border-right: 1px solid rgb(0 0 0 / 0.3);
+}
+
+.rail-section {
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--line-1);
+}
+
+.rail-section:last-child {
+  border-bottom: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rail-section h2 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-2xs);
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: var(--sp-2);
+}
+
+.moves {
+  display: grid;
+  grid-template-columns: 2.2em 1fr 1fr;
+  gap: 1px var(--sp-2);
+  font-size: var(--fs-sm);
+  max-height: 9.5em;
+  overflow-y: auto;
+}
+
+.moves .n {
+  color: var(--text-3);
+}
+
+.moves .mv {
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.moves .mv[data-current='true'] {
+  background: var(--brass-wash);
+  color: var(--brass-1);
+}
+
+.moves a.mv {
+  text-decoration: none;
+}
+
+.moves a.mv:hover {
+  background: var(--line-1);
+}
+
+.counters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.counters .value {
+  color: var(--text-1);
+  font-weight: 600;
+  text-align: right;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  min-height: 3.2em;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-600) transparent;
+}
+
+.log li {
+  line-height: 1.35;
+}
+
+.log .who {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.log .why {
+  color: var(--brass-1);
+}
+
+.log .end {
+  color: var(--text-1);
+  font-style: italic;
+}
+
+/* Review controls */
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-1);
+}
+
+.stepper .icon-btn {
+  width: 100%;
+  background: rgb(255 255 255 / 0.04);
+}
+
+.ply-label {
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+/* Noughts and crosses board */
+.nc-cell {
+  fill: transparent;
+  cursor: default;
+  outline: none;
+}
+
+.nc-cell.legal {
+  cursor: pointer;
+}
+
+.nc-cell.legal:hover {
+  fill: rgb(243 236 220 / 0.07);
+}
+
+.nc-cell:focus-visible {
+  fill: rgb(226 194 127 / 0.14);
+  stroke: var(--brass-1);
+  stroke-width: 3;
+}
+
+.nc-mark path,
+.nc-mark circle,
+.nc-line {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.nc-mark.drawing .s1 {
+  stroke-dasharray: 1;
+  animation: nc-draw calc(var(--dur) * 0.55) var(--ease) both;
+}
+
+.nc-mark.drawing .s2 {
+  stroke-dasharray: 1;
+  animation: nc-draw calc(var(--dur) * 0.55) var(--ease) calc(var(--dur) * 0.45) both;
+}
+
+.nc-mark.drawing .shadow {
+  animation: fade-in var(--dur) var(--ease) both;
+}
+
+.nc-line.drawing {
+  stroke-dasharray: 1;
+  animation: nc-draw var(--dur) var(--ease) both;
+}
+
+@keyframes nc-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Portrait: everything stacked */
+@media (orientation: portrait) and (max-width: 700px) {
+  .table-body,
+  .table-body[data-rail='left'],
+  .table-body[data-rail-open='false'],
+  .table-body[data-rail-open='false'][data-rail='left'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas: 'surface' 'side' 'rail';
+    overflow-y: auto;
+  }
+
+  .table-surface {
+    container-type: inline-size;
+  }
+
+  .board-frame {
+    width: 100cqw;
+    height: 100cqw;
+  }
+
+  .table-side {
+    border: 0;
+  }
+
+  .rail {
+    border: 0;
+    overflow: visible;
+  }
+
+  .status-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .status-meta.score {
+    display: none;
+  }
+}

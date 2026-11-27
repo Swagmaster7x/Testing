@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kibitz</string>
+    <string name="title_activity_main">Kibitz</string>
+    <string name="package_name">com.personal.kibitz</string>
+    <string name="custom_url_scheme">com.personal.kibitz</string>
+</resources>

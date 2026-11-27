@@ -1,0 +1,107 @@
+/*
+ * Design tokens: a quiet club room (PLAN.md 1.5). Dark warm neutrals, green felt, walnut boards,
+ * ivory cards and tiles, one brass accent. A light "daylight" look arrives with the polish
+ * milestone as another [data-look] block that redefines these same names.
+ */
+:root,
+:root[data-look='club'] {
+  color-scheme: dark;
+
+  /* Warm neutrals, darkest first */
+  --ink-950: #0e0c09;
+  --ink-900: #15120e;
+  --ink-850: #1a1611;
+  --ink-800: #201b15;
+  --ink-750: #26201a;
+  --ink-700: #2e271f;
+  --ink-600: #3b3228;
+  --ink-500: #54493c;
+
+  /* Text on the dark room */
+  --text-1: #efe6d6;
+  --text-2: #c7bba7;
+  --text-3: #978b78;
+
+  /* Materials */
+  --felt-800: #10291f;
+  --felt-700: #163628;
+  --felt-600: #1d4434;
+  --felt-500: #275a45;
+  --walnut-800: #2f1f13;
+  --walnut-700: #43301f;
+  --walnut-600: #5a3e27;
+  --walnut-500: #7a5636;
+  --walnut-300: #b08659;
+  --ivory-1: #f3ecdc;
+  --ivory-2: #e3d8c1;
+  --ivory-ink: #2a2118;
+
+  /* The one accent */
+  --brass-1: #e2c27f;
+  --brass-2: #c9a25a;
+  --brass-3: #8f7140;
+  --brass-wash: rgb(201 162 90 / 0.14);
+
+  /* Signals, kept muted */
+  --good: #9cba84;
+  --warn: #d9a45b;
+  --bad: #d4836a;
+
+  /* Lines and surfaces */
+  --line-1: rgb(239 230 214 / 0.07);
+  --line-2: rgb(239 230 214 / 0.13);
+  --surface-1: var(--ink-850);
+  --surface-2: var(--ink-800);
+  --surface-3: var(--ink-750);
+  --scrim: rgb(8 6 4 / 0.62);
+
+  /* Type */
+  --font-serif: 'Fraunces', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fs-2xs: 0.6875rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.9375rem;
+  --fs-lg: 1.0625rem;
+  --fs-xl: 1.3125rem;
+  --fs-2xl: 1.625rem;
+  --lh-tight: 1.2;
+  --lh-body: 1.45;
+
+  /* Space, shape, depth */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 28px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-pill: 999px;
+  --shadow-1: 0 1px 0 rgb(255 240 210 / 0.035) inset, 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-2: 0 10px 30px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.35);
+
+  /* Motion */
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Touch: the smallest target */
+  --tap: 44px;
+
+  /* Notch and camera cut-outs (the short edges in landscape). Browsers set env(); inside the
+     APK, Capacitor's SystemBars plugin also sets --safe-area-inset-* for older WebViews. */
+  --safe-t: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-r: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+  --safe-b: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --safe-l: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+
+  --nav-w: 76px;
+  --rail-w: 236px;
+}
+
+:root[data-motion='reduced'] {
+  --dur-1: 0ms;
+  --dur-2: 0ms;
+}

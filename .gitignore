@@ -17,3 +17,17 @@ keystore.properties
 *.jks
 upload-keystore*
 __pycache__/
+
+# Kibitz (tabletop/): dependencies, builds, test output and the APK
+tabletop/node_modules/
+tabletop/dist/
+tabletop/out/
+tabletop/test-results/
+tabletop/playwright-report/
+tabletop/screenshots/
+tabletop/android/.gradle/
+tabletop/android/build/
+tabletop/android/app/build/
+tabletop/android/capacitor-cordova-android-plugins/
+tabletop/android/app/src/main/assets/public/
+tabletop/android/local.properties
