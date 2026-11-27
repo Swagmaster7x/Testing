@@ -44,10 +44,16 @@ the first. The game behind the contract is `mahjong` in `src/games/mahjong/rules
   passing it, the wind moving on after four passes, the game's length, a cap of eight hands a
   round.
 - **Views and samples**: a seat sees its own hand and drawn tile, every meld (a concealed kong
-  shows its tiles), every discard and bonus tile, how many tiles each hand and the wall hold, the
-  scores and past hands, and its own options when it is to act. It never sees another hand, the
-  wall, another seat's choice in an open claim window, who else is being asked, or the seed.
-  `sample` deals the tiles it cannot see at random to the other hands and the wall.
+  shows its tiles), every discard and bonus tile, the last discard, how many tiles each hand and
+  the wall hold, the scores and past hands, and its own options when it is to act (the view lists
+  them, because a seat's choices in a claim window depend on calls it may not see). It never sees
+  another hand, the wall, another seat's choice in an open claim window, who else is being asked,
+  or the seed. `sample` deals the tiles it cannot see at random to the other hands and the wall;
+  in a claim window it treats the seats asked earlier as having passed, so it may offer a seat
+  more calls than the view does, never fewer.
+- **The end of a hand**: the scores are shown in a `scored` phase that waits for the first seat
+  to play `next` (a person reads the faan; the CPU goes on at once). The last hand of a game ends
+  it without waiting.
 
 ## The rules file (`core/style.ts`)
 
@@ -60,6 +66,12 @@ A style is one typed object:
 | `score(context, options)` | Given a complete hand and how it was won (the winning tile, self-drawn or from whom, melds, bonus tiles, seat and prevailing winds, the dealer, last tile or last discard, a kong's replacement, a robbed kong, heavenly or earthly), the scoring lines, the total, whether it is a limit hand, and the base points; or null when the hand may not win (below the minimum, or a shape the style refuses). |
 | `settle(hand, options)` | The payments for a finished hand from each winner's score, who discarded, and the dealer. They must add up to zero. |
 | `dealerKeeps(result, options)` | Whether the dealer deals again after this hand. |
+| `hints(seat, options)` | Rough values of what the scoring rewards, for one family of CPU players to steer by in every style: the minimum and the limit, the value of a pung of each kind (dragons, your winds), one-suit hands, all pungs, all chows, a concealed hand, a self-draw, the bonus tiles already held, the point table, and what each loser pays on a self-draw and on a discard (so the CPU knows how much feeding a ready hand costs at this table). |
+
+The CPU, the coach and the review share one module (`src/games/mahjong/strategy.ts`) that reads
+only a view, the style's rules and its hints: tiles from ready and useful tiles for every discard,
+what a ready hand can win, expected points (the chance to win in the turns left times what the
+hand is worth), and a danger estimate for each tile against each player.
 
 ## What later styles add, and where
 

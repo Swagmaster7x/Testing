@@ -44,6 +44,12 @@ takes off the CPU's level), and `GameUi.replayConfig` says which options "Play a
 beside `exportRecord` in the game and review menus (shogi saves KIF, CSA and SFEN). All three are
 optional; shogi (milestone 8) is the first game to use them.
 
+Games where some choices stay secret until several seats have made them (mahjong's calls on a
+discard, milestone 9) have three more optional hooks: `GameUi.moveVisible` leaves a move out of
+the move list (the table passes the people's seats; the review passes every seat),
+`GameUi.shownTurn` says which seat the player list marks as acting (null hides it), and
+`GameUi.eventSeat` names the seat a log line belongs to when it is not the seat that moved.
+
 Interface text goes in `src/text/games/<game>.ts` (keys prefixed with the game id), spread into
 `src/text/games/index.ts`. The `game.<id>.*` lines in `src/text/en.ts` describe the game on the
 shelf; update them when the game arrives.

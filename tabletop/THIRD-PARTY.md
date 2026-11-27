@@ -1,7 +1,7 @@
 # Third-party software
 
 Every dependency of Kibitz gets a line here (PLAN.md 2.1). Versions are the ones in
-`package-lock.json` on 2026-11-27 (milestones 0 to 2, and 6). "Shipped" means it ends up inside the app or the
+`package-lock.json` on 2026-11-27 (milestones 0 to 2, 6 and 9). "Shipped" means it ends up inside the app or the
 APK; the rest are only used to build and test it.
 
 ## Shipped in the app (web build and APK)
@@ -21,6 +21,7 @@ APK; the rest are only used to build and test it.
 | Fraunces (`@fontsource-variable/fraunces`) | 5.3.0 | SIL OFL 1.1 | Heading font, Latin and Latin Extended. Licence: `licenses/Fraunces-OFL.txt` |
 | `tsshogi` | 2.3.4 | MIT | Shogi game files (milestone 8): reads KIF, KI2, CSA and JKF and writes KIF and CSA for the standard board (`src/games/shogi/formats.ts`); in the tests, a second implementation that checks our move legality move by move. The rules and the engine are our own. Loaded only with the shogi table |
 | Shippori Mincho B1 ExtraBold (outlines only) | Shippori Mincho v24, via `@fontsource/shippori-mincho-b1` 5.3.0 | SIL OFL 1.1 | The 30 kanji on the shogi pieces and board, converted once to SVG path data (`src/games/shogi/ui/glyphs.ts`, made by `scripts/shogi-glyphs.mjs`); no font file ships. Copyright 2021 The Shippori Mincho Project Authors. Licence: `licenses/ShipporiMincho-OFL.txt` |
+| LXGW WenKai TC Bold (outlines only) | LXGW WenKai TC v11, via `@fontsource/lxgw-wenkai-tc` 5.3.1 | SIL OFL 1.1 | The 24 Chinese characters on the mahjong tiles (the numerals and 萬 of the characters suit, the winds, the red and green dragons, the flowers and seasons), converted once to SVG path data (`src/games/mahjong/ui/glyphs.ts`, made by `scripts/mahjong-glyphs.mjs`); no font file ships. Copyright 2024 The LXGW WenKai Project Authors. Licence: `licenses/LXGW-WenKai-TC-OFL.txt` |
 
 ## Shipped in the APK only (Android libraries, pulled in by Gradle)
 
@@ -47,6 +48,8 @@ APK; the rest are only used to build and test it.
 | `@capacitor/cli` | 8.6.3 | MIT | `cap sync` for the Android project |
 | `@types/react`, `@types/react-dom`, `@types/node` | 19.3.3, 19.3.0, 22.20.7 | MIT | Type definitions |
 | `fontkit` and `@fontsource/shippori-mincho-b1` | 3.0.0, 5.3.0 | MIT, SIL OFL 1.1 | Used once by `scripts/shogi-glyphs.mjs` to turn the shogi kanji into SVG paths; installed with `--no-save` when the script is run, so not in `package.json` |
+| `fontkit` and `@fontsource/lxgw-wenkai-tc` | 3.0.0, 5.3.1 | MIT, SIL OFL 1.1 | Used once by `scripts/mahjong-glyphs.mjs` to turn the mahjong tile characters into SVG paths; installed with `--no-save` (or in another folder, `GLYPH_MODULES`) when the script is run, so not in `package.json` |
+| `syanten` | 1.6.0 | MIT | Mahjong: a second shanten (tiles from ready) and acceptance calculator; the tests check ours against it on thousands of random hands (milestone 9). Not shipped |
 | `@sabaki/go-board` | 1.4.3 | MIT | Go: a second implementation of the rules; the tests check our captures, legality and handicap points against it (milestone 6) |
 | `pokersolver` | 2.1.4 | MIT | Hold'em: a second hand evaluator; the tests check our seven-card evaluator against it on thousands of random showdowns (milestone 5). Not shipped |
 | `@sabaki/sgf` | 3.5.0 | MIT | Go: a second SGF parser; the tests check that it reads our SGF files the same way. Not shipped: it needs Node's `fs` and optional encoding libraries, so the app has its own small reader and writer (`src/games/go/sgf.ts`) |
@@ -82,14 +85,18 @@ the Spanish deck and card backs (`src/kits/cards/spanish.tsx`), the domino tiles
 (`src/kits/tiles/domino.tsx`), the French deck, card backs and chips (`src/kits/cards/french.tsx`,
 `src/kits/chips/ChipKit.tsx`), the poker starting-hand table (computed by
 `scripts/generate-holdem-preflop.ts`), and the shogi pieces, their symbol faces and movement marks
-(`src/games/shogi/ui/pieces.tsx`; only the kanji outlines come from the font above). Sounds are synthesised
+(`src/games/shogi/ui/pieces.tsx`; only the kanji outlines come from the font above), and the mahjong
+tiles: faces, backs, the coins, bamboo sticks and bird, the white dragon's frame, the flower marks
+and the learner overlay (`src/games/mahjong/ui/tiles.tsx`; only the Chinese characters come from
+the LXGW WenKai TC outlines above). Sounds are synthesised
 in the app with the Web Audio API; there are no sound files.
 
 ## Coming later
 
 The plan's later dependencies are added in the milestones that need them, each with a line here:
-`pokersolver` arrived with milestone 5, the Sabaki Go packages with milestone 6 and `tsshogi` with
-milestone 8 (above).
+`pokersolver` arrived with milestone 5, the Sabaki Go packages with milestone 6, `tsshogi` with
+milestone 8 and `syanten` with milestone 9 (above). `riichi`, the second scorer for Riichi, comes
+with milestone 11.
 
 **Stockfish is GPL-3.** It runs as a separate worker file behind the `Engine` interface
 (`src/ai/uci.ts`). For a personal app that is fine. If this app is ever published, either publish

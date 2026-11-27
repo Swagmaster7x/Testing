@@ -113,8 +113,10 @@ function Unseen({ p, learner }: { p: SeatPicture; learner: boolean }) {
       <div className="mj-unseen" role="list" aria-label={t('mahjong.coach.unseen.title')}>
         {kinds.map((k) => (
           <span key={k} className="mj-unseen-cell" role="listitem" data-left={p.unseen[k] ?? 0} aria-label={`${kindName(k)}: ${p.unseen[k] ?? 0}`}>
-            <MiniTile kind={k} learner={learner} width={19} />
-            <span className="mj-unseen-count num">{p.unseen[k] ?? 0}</span>
+            <MiniTile kind={k} learner={learner} width={20} />
+            <span className="mj-unseen-count num" aria-hidden="true">
+              {p.unseen[k] ?? 0}
+            </span>
           </span>
         ))}
       </div>

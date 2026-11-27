@@ -11,9 +11,9 @@ test.describe('mahjong', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
   });
 
-  test('plays a hand against level 1 to the end, shows the scoring, then reviews it', async ({ page }) => {
+  test('plays a hand against level 2 to the end, shows the scoring, then reviews it', async ({ page }) => {
     test.setTimeout(300_000);
-    await startMahjong(page, { seed: 'e2e-17', level: 1, oneHand: true });
+    await startMahjong(page, { seed: 'e2e-17', level: 2, oneHand: true });
     await expect(page.locator('button.mj-tile').first()).toBeVisible();
     await noHorizontalScroll(page);
     await playToEnd(page);
@@ -32,7 +32,7 @@ test.describe('mahjong', () => {
 
   test('a call: the prompt says what each call takes, and a chow is laid down', async ({ page }) => {
     test.setTimeout(240_000);
-    await startMahjong(page, { seed: 'e2e-5', level: 1, oneHand: true });
+    await startMahjong(page, { seed: 'e2e-5', level: 2, oneHand: true });
     const prompt = page.locator('.mj-prompt');
     for (let i = 0; i < 40 && !(await prompt.isVisible()); i++) {
       await expect(page.locator('.status-turn')).toHaveText(/Your move|Game over/, { timeout: 45_000 });
@@ -51,7 +51,7 @@ test.describe('mahjong', () => {
 
   test('the coach: learner tiles, tiles from ready, tiles not seen and safe tiles', async ({ page }) => {
     test.setTimeout(180_000);
-    await startMahjong(page, { seed: 'e2e-coach', level: 1 });
+    await startMahjong(page, { seed: 'e2e-coach', level: 2 });
     await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 45_000 });
     // Learner tiles are on by default: every tile in your hand carries its number and suit letter.
     await expect(page.getByRole('switch', { name: 'Learner tiles (numbers and letters)' })).toHaveAttribute('aria-checked', 'true');

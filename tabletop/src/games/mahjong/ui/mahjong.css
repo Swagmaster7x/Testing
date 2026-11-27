@@ -358,27 +358,25 @@ button.mj-tile:focus-visible {
 }
 
 .mj-unseen-cell {
-  position: relative;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .mj-unseen-cell[data-left='0'] {
   opacity: 0.35;
 }
 
+.mj-unseen-cell[data-left='1'] .mj-unseen-count {
+  color: var(--brass-1);
+}
+
 .mj-unseen-count {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  min-width: 13px;
-  padding: 0 2px;
-  border-radius: 6px;
-  background: rgb(14 12 9 / 0.85);
   color: var(--text-1);
-  font-size: 10px;
-  line-height: 13px;
-  text-align: center;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 12px;
 }
 
 .mj-safety-list {
