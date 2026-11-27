@@ -41,8 +41,10 @@ export function handName(value: number): string {
 /** The players' names round the table; a person's own seat is "You". */
 export const NAMES: readonly string[] = ['Ana', 'Beto', 'Carmen', 'Diego', 'Elisa', 'Félix'];
 
-export function seatName(seat: Seat, me: Seat | null): string {
-  return seat === me ? t('poker.seat.you') : (NAMES[seat] ?? `#${seat + 1}`);
+/** A seat's name: "You", a person's name at a pass-and-play table, or the CPU player's name. */
+export function seatName(seat: Seat, me: Seat | null, names?: (seat: Seat) => string | null): string {
+  if (seat === me) return t('poker.seat.you');
+  return names?.(seat) ?? NAMES[seat] ?? `#${seat + 1}`;
 }
 
 /** A hand's name inside a sentence: "two pair, kings and nines". */

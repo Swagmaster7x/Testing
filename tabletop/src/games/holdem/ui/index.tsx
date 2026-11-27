@@ -1,4 +1,5 @@
 import type { Seat } from '../../../core/contract';
+import { isPassAndPlay } from '../../../core/record';
 import { t, tDynamic } from '../../../text';
 import type { GameOptions, GameUi, OptionField, ReferenceSection } from '../../types';
 import { HOLDEM_LEVELS, STYLES, styleOf } from '../bots';
@@ -36,8 +37,8 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
   SeatMark: PokerSeatMark,
   sides: [{ id: 'you', label: 'poker.side.you', seat: 0 }],
   sideName: (seat) => seatName(seat, null),
-  movePrefix: (seat, mySeats) => seatName(seat, me(mySeats)),
-  playerName: (seat, mySeats) => seatName(seat, me(mySeats)),
+  movePrefix: (seat, mySeats, _seats, names) => seatName(seat, me(mySeats), names),
+  playerName: (seat, mySeats, _seats, names) => seatName(seat, me(mySeats), names),
   moveText: (action) => actionWords(holdem.codec.action.toText(action)),
   eventDuration(event) {
     switch (event.type) {
@@ -72,11 +73,11 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
         return 0;
     }
   },
-  describeEvent(event, mySeats) {
+  describeEvent(event, mySeats, _seats, names) {
     const m = me(mySeats);
     switch (event.type) {
       case 'deal':
-        return t('poker.log.deal', { n: event.handNo, name: seatName(event.button, m) });
+        return t('poker.log.deal', { n: event.handNo, name: seatName(event.button, m, names) });
       case 'post':
         return t(`poker.log.post.${event.kind}`, { n: event.amount });
       case 'act':
@@ -93,9 +94,9 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
       case 'win':
         return event.value === null ? t('poker.log.win', { n: event.amount }) : t('poker.log.win.hand', { n: event.amount, hand: handName(event.value) });
       case 'bust':
-        return t('poker.log.bust', { name: seatName(event.seat, m), n: event.place });
+        return t('poker.log.bust', { name: seatName(event.seat, m, names), n: event.place });
       case 'rebuy':
-        return t('poker.log.rebuy', { name: seatName(event.seat, m), n: event.amount });
+        return t('poker.log.rebuy', { name: seatName(event.seat, m, names), n: event.amount });
       case 'level':
         return event.blinds.ante > 0 ? t('poker.log.level.ante', { sb: event.blinds.sb, bb: event.blinds.bb, ante: event.blinds.ante }) : t('poker.log.level', { sb: event.blinds.sb, bb: event.blinds.bb });
       case 'match-end':
@@ -160,7 +161,8 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
     const outcome = record.outcome;
     const seat = record.players.findIndex((p) => p.kind === 'human');
     const mine = outcome?.results.find((r) => r.seat === seat);
-    if (!outcome || !mine || record.ending) return null;
+    // At a pass-and-play table the shell names each person's place instead.
+    if (!outcome || !mine || record.ending || isPassAndPlay(record)) return null;
     const n = outcome.results.length;
     const place = tDynamic(`poker.place.${mine.place}`);
     if (outcome.reason === 'holdem-session') return t('poker.result.cash', { place, n, net: mine.score > 0 ? `+${mine.score}` : mine.score < 0 ? `−${-mine.score}` : '0' });

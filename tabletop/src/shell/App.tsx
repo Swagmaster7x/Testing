@@ -109,7 +109,9 @@ export function App() {
       else if (second && third === 'practice') screen = <PracticeScreen gameId={second} />;
       else if (second && !third) {
         const fen = route.query.get('fen');
-        screen = <HubScreen gameId={second} seed={route.query.get('seed') ?? undefined} setup={fen ? { fen } : {}} />;
+        // A starting position by link: FEN for chess, the game's own position text for others (?position=...).
+        const position = route.query.get('position');
+        screen = <HubScreen gameId={second} seed={route.query.get('seed') ?? undefined} setup={fen ? { fen } : position ? { position } : {}} />;
       }
       else if (!second) screen = <GamesScreen />;
       else screen = <NotFound />;

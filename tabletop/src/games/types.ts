@@ -40,6 +40,8 @@ export interface SurfaceProps<S, A, E> {
   readonly overlay: SurfaceOverlay;
   /** Once the game is over, what each seat turned out to be (see GameUi.revealSeat), by seat. */
   readonly reveal?: readonly (string | null)[];
+  /** At a pass-and-play table, the other people's names by seat (null for a CPU or the viewer). */
+  readonly names?: SeatNames;
 }
 
 export interface CounterRow {
@@ -138,6 +140,13 @@ export interface SetupPreset<C> {
   readonly ratingOffset?: number;
 }
 
+/**
+ * Pass-and-play (several people at one device): the name of a seat played by another person at
+ * this device, or null for the CPU's seats and the person holding the device. Games that call
+ * other players "the CPU" use it to name people instead.
+ */
+export type SeatNames = (seat: Seat) => string | null;
+
 export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly def: GameDef<S, A, C, V, E>;
   readonly levels: readonly BotLevel[];
@@ -151,14 +160,18 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly sides: readonly SideChoice[];
   sideName(seat: Seat): string;
   /** What the move list puts before each move; the side name when absent (chess uses none). `seats` is how many sit at the table. */
-  readonly movePrefix?: (seat: Seat, mySeats?: readonly Seat[], seats?: number) => string;
+  readonly movePrefix?: (seat: Seat, mySeats?: readonly Seat[], seats?: number, names?: SeatNames) => string;
   /** How a move reads in the move list; its notation when absent. */
   readonly moveText?: (action: A) => string;
   /** A player's name in the player list and the log ("Partner", "Right"); "You" or "CPU" when absent. */
-  readonly playerName?: (seat: Seat, mySeats: readonly Seat[], seats: number) => string;
+  readonly playerName?: (seat: Seat, mySeats: readonly Seat[], seats: number, names?: SeatNames) => string;
   eventDuration(event: E): number;
-  /** A line for the log, or null to leave the event out. `mySeats` are the people at this device; `seats` how many sit at the table. */
-  describeEvent(event: E, mySeats?: readonly Seat[], seats?: number): string | null;
+  /**
+   * A line for the log, or null to leave the event out. `mySeats` is the person holding the device
+   * (all people at it, outside pass-and-play); `seats` how many sit at the table; `names` names the
+   * other people at the device in pass-and-play.
+   */
+  describeEvent(event: E, mySeats?: readonly Seat[], seats?: number, names?: SeatNames): string | null;
   counters(state: S, mySeats: readonly Seat[]): readonly CounterRow[];
   sound(event: E): SoundName | null;
   reference(): readonly ReferenceSection[];
@@ -190,6 +203,11 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   resultText?(record: GameRecord): string | null;
   /** After a game, what a CPU seat turned out to be (poker: its playing style), from the opening position; null shows nothing. */
   revealSeat?(start: S, record: GameRecord, seat: Seat): string | null;
+  /**
+   * Pass-and-play: true when a seat's view hides something from the others (cards, tiles), so the
+   * table covers itself between two people's turns. Worked out from the views when absent.
+   */
+  readonly hiddenInfo?: boolean;
 }
 
 export type AnyGameUi = GameUi<unknown, unknown, unknown, unknown, GameEvent>;

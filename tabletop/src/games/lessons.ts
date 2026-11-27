@@ -32,6 +32,10 @@ const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
     const m = await import('./go/learn');
     return { lessons: m.GO_LESSONS, game: m.goLessonGame };
   },
+  'chinese-checkers': async () => {
+    const m = await import('./chinese-checkers/learn');
+    return { lessons: m.CC_LESSONS, game: m.ccLessonGame };
+  },
 };
 
 export function hasLessons(gameId: string): boolean {

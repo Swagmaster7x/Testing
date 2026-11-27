@@ -215,7 +215,7 @@ function presetsFor(state: HoldemState, seat: Seat, min: number, max: number): B
     .sort((a, b) => a.to - b.to);
 }
 
-export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, onSkip, helps, reveal }: SurfaceProps<HoldemState, HoldemAction, HoldemEvent>) {
+export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, onSkip, helps, reveal, names }: SurfaceProps<HoldemState, HoldemAction, HoldemEvent>) {
   const [ref, size] = useSize<HTMLDivElement>();
   const me: Seat = mySeats[0] ?? 0;
   const open = helps.openHand === true;
@@ -280,9 +280,9 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
         const showdown = value === null ? null : handName(value);
         return (
           <div key={seat} className="poker-seat-wrap">
-            <div className="poker-seat" style={style} data-me={seat === me} data-acting={acting} data-folded={s.folded} data-out={s.out} data-won={s.won > 0} aria-label={t('poker.seat.label', { name: seatName(seat, me), stack: s.stack })}>
+            <div className="poker-seat" style={style} data-me={seat === me} data-acting={acting} data-folded={s.folded} data-out={s.out} data-won={s.won > 0} aria-label={t('poker.seat.label', { name: seatName(seat, me, names), stack: s.stack })}>
               <span className="poker-name">
-                {seatName(seat, me)}
+                {seatName(seat, me, names)}
                 {seat === d.button ? <span className="dealer-button" aria-label={t('poker.button')}>D</span> : null}
               </span>
               <span className="poker-stack num">{s.out ? t('poker.out') : s.stack}</span>
@@ -293,7 +293,7 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
             </div>
             {s.bet > 0 ? (
               <div className="poker-bet" style={toward(0.42)}>
-                <ChipStack amount={s.bet} label={t('poker.bet-of', { name: seatName(seat, me), n: s.bet })} />
+                <ChipStack amount={s.bet} label={t('poker.bet-of', { name: seatName(seat, me, names), n: s.bet })} />
               </div>
             ) : null}
           </div>
@@ -345,7 +345,7 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
             const value = first === undefined ? null : (handOver.values[first] ?? null);
             const you = pot.winners.length === 1 && first === me;
             const key = pot.winners.length > 1 ? (pot.winners.includes(me) ? 'poker.split.you' : 'poker.split') : k === 0 ? (you ? 'poker.wins.you' : 'poker.wins') : you ? 'poker.wins.side.you' : 'poker.wins.side';
-            const name = pot.winners.map((s) => seatName(s, me)).join(' & ');
+            const name = pot.winners.map((s) => seatName(s, me, names)).join(' & ');
             return <p key={k}>{tDynamic(key, { name, n: pot.amount, hand: value === null ? t('poker.no-showdown') : handNameInline(value) })}</p>;
           })}
         </div>

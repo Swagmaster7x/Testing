@@ -35,8 +35,8 @@ export const dominoesUi: GameUi<DominoesState, DominoesAction, DominoesConfig, D
   SeatMark: DominoesSeatMark,
   sides: [{ id: 'you', label: 'dominoes.side.you', seat: 0 }],
   sideName: (seat) => tDynamic(`dominoes.seat.${seat}`),
-  movePrefix: (seat, mySeats, seats) => seatName(seat, me(mySeats), seats ?? 4),
-  playerName: (seat, mySeats, seats) => seatName(seat, me(mySeats), seats),
+  movePrefix: (seat, mySeats, seats, names) => seatName(seat, me(mySeats), seats ?? 4, names),
+  playerName: (seat, mySeats, seats, names) => seatName(seat, me(mySeats), seats, names),
   moveText: (action) => {
     if (action.type !== 'play') return t(`dominoes.move.${action.type}`);
     const tile = tileLabel(action.tile);
@@ -60,7 +60,7 @@ export const dominoesUi: GameUi<DominoesState, DominoesAction, DominoesConfig, D
         return 0;
     }
   },
-  describeEvent(event, mySeats, seats) {
+  describeEvent(event, mySeats, seats, names) {
     const m = me(mySeats);
     const n = seats ?? 4;
     switch (event.type) {
@@ -72,15 +72,15 @@ export const dominoesUi: GameUi<DominoesState, DominoesAction, DominoesConfig, D
         return event.seat === m ? t('dominoes.log.draw.you', { tile: tileLabel(event.tile) }) : t('dominoes.log.draw.other');
       case 'deal':
         return event.mustLead
-          ? t('dominoes.log.deal.must', { n: event.handNo + 1, who: whoName(event.leader, m, n), tile: tileLabel(event.mustLead) })
-          : t('dominoes.log.deal', { n: event.handNo + 1, who: whoName(event.leader, m, n) });
+          ? t('dominoes.log.deal.must', { n: event.handNo + 1, who: whoName(event.leader, m, n, names), tile: tileLabel(event.mustLead) })
+          : t('dominoes.log.deal', { n: event.handNo + 1, who: whoName(event.leader, m, n, names) });
       case 'bonus':
         return tDynamic(`dominoes.log.bonus.${event.bonus.kind}`, { points: event.bonus.points });
       case 'hand-end': {
         const r = event.result;
         const side = r.winner === null ? '' : r.winner === sideOf(m, n) ? t('dominoes.side.us') : t('dominoes.side.them');
         if (r.winner === null) return t('dominoes.log.hand-end.tie');
-        return t(r.reason === 'domino' ? 'dominoes.log.hand-end.domino' : 'dominoes.log.hand-end.block', { who: whoName(r.by, m, n), side, n: r.points[r.winner] ?? 0 });
+        return t(r.reason === 'domino' ? 'dominoes.log.hand-end.domino' : 'dominoes.log.hand-end.block', { who: whoName(r.by, m, n, names), side, n: r.points[r.winner] ?? 0 });
       }
       case 'match-end':
         return t('dominoes.log.match-end');

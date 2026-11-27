@@ -13,6 +13,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join } from 'node:path';
 import type { Engine, SearchRequest, SearchResult } from '../src/ai/uci';
 import { BRISCA_LESSONS, briscaLessonGame } from '../src/games/brisca/learn';
+import { CC_LESSONS, ccLessonGame } from '../src/games/chinese-checkers/learn';
+import { ccVerifier } from '../src/games/chinese-checkers/learn/verify';
 import { briscaVerifier } from '../src/games/brisca/learn/verify';
 import { DOMINOES_LESSONS, dominoesLessonGame } from '../src/games/dominoes/learn';
 import { dominoesVerifier } from '../src/games/dominoes/learn/verify';
@@ -108,6 +110,7 @@ const SUITES: Record<string, Suite> = {
   dominoes: { lessons: DOMINOES_LESSONS, game: dominoesLessonGame, verifier: () => dominoesVerifier },
   shogi: { lessons: SHOGI_LESSONS, game: shogiLessonGame, verifier: () => shogiVerifier(shogiCache) },
   go: { lessons: GO_LESSONS, game: goLessonGame, verifier: () => goVerifier() },
+  'chinese-checkers': { lessons: CC_LESSONS, game: ccLessonGame, verifier: () => ccVerifier() },
 };
 
 const problems: string[] = [];

@@ -7,6 +7,7 @@ import type { AnyGameUi } from '../../games/types';
 import { appDb } from '../../store/db';
 import { newId } from '../../store/ids';
 import { saveRecord } from '../../store/records';
+import { t } from '../../text';
 
 export interface StartOptions {
   readonly level: number;
@@ -17,6 +18,8 @@ export interface StartOptions {
   readonly clock?: { readonly initialMs: number; readonly incrementMs: number } | null;
   /** The game's options, such as a starting position (#/games/chess?fen=...). */
   readonly config?: unknown;
+  /** Pass-and-play: who sits in each seat, a person (with a name) or a CPU. Overrides `side`. */
+  readonly players?: readonly SeatPlayer[];
 }
 
 /** Opens a game file (PGN for chess) as a finished game, for review. */
@@ -51,7 +54,16 @@ export async function startGame(ui: AnyGameUi, profileId: string, options: Start
   const config = options.config ?? def.defaultConfig;
   const seats = def.seats(def.setup(config, createRng(seed)));
   const human = options.side === 'either' ? (seats[createRng(seed).fork('seat').int(seats.length)] ?? 0) : options.side;
-  const players: SeatPlayer[] = seats.map((seat) => (seat === human ? { kind: 'human' } : { kind: 'bot', level: options.level }));
+  const chosen = options.players && options.players.length === seats.length && options.players.some((p) => p.kind === 'human') ? options.players : null;
+  // Pass-and-play seats always carry a name ("Player 2" unless one was typed), which also marks the game as one between people.
+  let people = 0;
+  const players: SeatPlayer[] = chosen
+    ? chosen.map((p) => {
+        if (p.kind === 'bot') return { kind: 'bot', level: p.level ?? options.level };
+        people++;
+        return { kind: 'human', name: p.name ?? t('pnp.player', { n: people }) };
+      })
+    : seats.map((seat) => (seat === human ? { kind: 'human' } : { kind: 'bot', level: options.level }));
   const record = newRecord(def, {
     id: newId('g'),
     config,

@@ -4,9 +4,10 @@
  * Add a game by importing its file here and spreading it into `enGames`.
  */
 import { enBrisca } from './brisca';
+import { enChineseCheckers } from './chinese-checkers';
 import { enDominoes } from './dominoes';
 import { enGo } from './go';
 import { enPoker } from './poker';
 import { enShogi } from './shogi';
 
-export const enGames = { ...enBrisca, ...enDominoes, ...enGo, ...enShogi, ...enPoker } as const;
+export const enGames = { ...enBrisca, ...enChineseCheckers, ...enDominoes, ...enGo, ...enShogi, ...enPoker } as const;

@@ -1,15 +1,15 @@
 /** The live table: loads a saved game, resumes it and plays it against the CPU, with the coach. */
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { GameEvent, Seat } from '../../core/contract';
 import { outcomePoints } from '../../core/contract';
 import { EventQueue } from '../../core/events';
 import type { Json } from '../../core/json';
 import { isJsonObject } from '../../core/json';
 import type { GameRecord } from '../../core/record';
-import { canOpen, humanSeats, parseRecord } from '../../core/record';
+import { canOpen, humanSeats, isPassAndPlay, parseRecord } from '../../core/record';
 import { startState } from '../../core/replay';
 import { loadGameUi } from '../../games/registry';
-import type { AnyGameUi, SurfaceOverlay } from '../../games/types';
+import type { AnyGameUi, SeatNames, SurfaceOverlay } from '../../games/types';
 import { NO_OVERLAY } from '../../games/types';
 import { appDb } from '../../store/db';
 import type { StoredRecord } from '../../store/db';
@@ -21,7 +21,7 @@ import { ConfirmDialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 import { useReducedMotion } from '../motion';
 import { saveTextFile } from '../platform';
-import { resultFor } from '../results';
+import { resultTitle } from '../results';
 import { href, navigate } from '../router';
 import { CenterMessage } from '../screens/common';
 import { playSound } from '../sound';
@@ -33,6 +33,8 @@ import { CoachSection, useHelps } from './coach';
 import { startGame } from './start';
 import { Counters, MoveList, RailSection, TableShell } from './TableShell';
 import { levelAndReveal, playerName } from './names';
+import { PassCover } from './PassCover';
+import { hasHiddenInformation, namesFor, personName, placesLine, viewerOf } from './passplay';
 
 type Session = { queue: EventQueue<GameEvent>; controller: TableController<unknown, unknown, unknown, unknown, GameEvent> };
 
@@ -71,7 +73,7 @@ export function formatClock(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-function LogLines({ log, ui, record }: { log: readonly LogEntry<GameEvent>[]; ui: AnyGameUi; record: GameRecord }) {
+function LogLines({ log, ui, record, viewSeats, names }: { log: readonly LogEntry<GameEvent>[]; ui: AnyGameUi; record: GameRecord; viewSeats: readonly Seat[]; names: SeatNames }) {
   const list = useRef<HTMLUListElement>(null);
   useEffect(() => {
     // Keep the newest line in view inside the log, without moving the rest of the rail.
@@ -81,10 +83,10 @@ function LogLines({ log, ui, record }: { log: readonly LogEntry<GameEvent>[]; ui
   return (
     <ul className="log" ref={list}>
       {log.map((entry, i) => {
-        const text = ui.describeEvent(entry.event, humanSeats(record), record.players.length);
+        const text = ui.describeEvent(entry.event, viewSeats, record.players.length, names);
         if (!text) return null;
         const first = i === 0 || log[i - 1]?.ply !== entry.ply;
-        const who = entry.seat === null ? null : playerName(ui, record, entry.seat);
+        const who = entry.seat === null ? null : playerName(ui, record, entry.seat, viewSeats);
         return (
           <li key={entry.id}>
             {first && who ? (
@@ -155,6 +157,15 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
     [controller, mySeat, ui],
   );
 
+  // Pass-and-play: the table is shown for the person holding the device; with hidden cards or
+  // tiles it is covered until the next person takes it.
+  const pnp = isPassAndPlay(record);
+  const hidden = useMemo(() => hasHiddenInformation(ui, startOf(ui, initial)), [ui, initial]);
+  const [holder, setHolder] = useState<Seat | null>(null);
+  const viewer = viewerOf(record, snap.turn, snap.history, hidden, holder, snap.checking || snap.warning !== null);
+  const viewSeats: readonly Seat[] = viewer.seat !== null ? [viewer.seat] : mySeats.length > 0 ? [mySeat] : [];
+  const names = namesFor(record, viewer.seat);
+
   // Blunder warnings: the controller checks each of the person's moves before the CPU answers.
   const coach = ui.coach;
   useEffect(() => {
@@ -182,6 +193,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const results = useAsync(async () => {
     // Wait for the last move to be saved, so a game that just ended is counted.
     await controller.flush();
+    if (pnp) return null;
     const done = await finishedRecords(appDb(), profileId, ui.def.id);
     let w = 0;
     let d = 0;
@@ -206,14 +218,15 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
       : ui.rules || ui.options
         ? ui.def.codec.config.fromJSON(recorded)
         : undefined;
-    const id = await startGame(ui, profileId, { level, side: mySeat, clock, ...(config !== undefined ? { config } : {}) });
+    const id = await startGame(ui, profileId, { level, side: mySeat, clock, ...(config !== undefined ? { config } : {}), ...(pnp ? { players: record.players } : {}) });
+    setHolder(null);
     navigate(`/play/${id}`, { replace: true });
   };
 
   const exportGame = async (format = ui.exportRecord) => {
     if (!format) return;
     await controller.flush();
-    const names = ui.def.seats(state).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
+    const names = ui.def.seats(state).map((s) => personName(record, s) ?? (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
     const fileName = `${ui.def.id}-${new Date(record.createdAt).toISOString().slice(0, 10)}.${format.extension}`;
     try {
       await saveTextFile(fileName, format.write(controller.snapshot().record, names), gameName(ui.def.id));
@@ -223,20 +236,35 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
     }
   };
 
-  const resultKey: MessageKey | null = over ? resultFor(record) : null;
-  const turnText = over ? t('table.turn.over') : snap.checking ? t('coach.checking') : snap.humanTurn ? t('table.turn.you') : t('table.turn.cpu');
+  const result = over ? resultTitle(ui, record) : null;
+  const places = over ? placesLine(record, (seat) => playerName(ui, record, seat, viewSeats)) : null;
+  const turnName = snap.turn !== null ? personName(record, snap.turn) : null;
+  const turnText = over ? t('table.turn.over') : snap.checking ? t('coach.checking') : snap.humanTurn ? (turnName ? t('pnp.turn', { name: turnName }) : t('table.turn.you')) : t('table.turn.cpu');
   const name = gameName(ui.def.id);
   const SeatMark = ui.SeatMark;
   const SeatExtra = ui.SeatExtra;
   const Surface = ui.Surface;
   const moves = snap.history.map((h) => ({ ply: h.ply, seat: h.seat, text: ui.moveText ? ui.moveText(h.action) : ui.def.codec.action.toText(h.action) }));
-  const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record), record.players.length) : ui.sideName(s)));
+  const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s, viewSeats, record.players.length, names) : ui.sideName(s)));
   const score = results.status === 'done' ? results.value : null;
-  const flipped = (ui.flipForSeat?.(mySeat) ?? false) !== flipOverride;
+  const flipped = (ui.flipForSeat?.(viewSeats[0] ?? mySeat) ?? false) !== flipOverride;
   const clock = controller.clock();
   const canTakeBack = !over && snap.history.some((h) => record.players[h.seat]?.kind === 'human');
   const shownOverlay = snap.warning ? snap.warning.overlay : overlay;
   const start = startOf(ui, record);
+
+  if (viewer.passTo !== null) {
+    return (
+      <PassCover
+        name={personName(record, viewer.passTo) ?? ''}
+        side={ui.sideName(viewer.passTo)}
+        seat={viewer.passTo}
+        SeatMark={ui.SeatMark}
+        backTo={`/games/${ui.def.id}`}
+        onReady={() => setHolder(viewer.passTo)}
+      />
+    );
+  }
 
   return (
     <>
@@ -245,7 +273,8 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
         label={name}
         title={name}
         meta={[
-          { key: 'level', text: t('common.level', { n: level }) },
+          ...(pnp ? [{ key: 'pnp', text: t('pnp.title') }] : []),
+          ...(!pnp || bot ? [{ key: 'level', text: t('common.level', { n: level }) }] : []),
           ...(score ? [{ key: 'score', className: 'score', text: t('table.score', score), label: t('table.score.label', score) }] : []),
         ]}
         turn={{ text: turnText, mine: snap.humanTurn }}
@@ -347,7 +376,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
                       <SeatMark seat={seat} />
                     </span>
                     <span className="player-text">
-                      <span className="player-name">{playerName(ui, record, seat)}</span>
+                      <span className="player-name">{playerName(ui, record, seat, viewSeats)}</span>
                       <span className="player-detail">{player?.kind === 'bot' ? levelAndReveal(ui, start, record, seat, over) : ui.sideName(seat)}</span>
                       {SeatExtra ? <SeatExtra state={state} start={start} seat={seat} /> : null}
                     </span>
@@ -376,9 +405,10 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
                 </div>
               </div>
             ) : null}
-            {resultKey && record.outcome ? (
+            {result && record.outcome ? (
               <div className="result-card" role="status">
-                <h2>{ui.resultText?.(record) ?? t(resultKey)}</h2>
+                <h2>{ui.resultText?.(record) ?? result}</h2>
+                {places ? <p className="places num">{places}</p> : null}
                 <p>{tDynamic(`reason.${record.outcome.reason}`)}</p>
               </div>
             ) : null}
@@ -407,7 +437,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
         surface={
           <Surface
             state={state}
-            mySeats={mySeats}
+            mySeats={viewSeats}
             canAct={snap.humanTurn && !snap.warning && !snap.checking}
             legal={snap.legal}
             lastAction={snap.lastAction}
@@ -422,6 +452,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
             helps={helps}
             overlay={shownOverlay}
             reveal={over && ui.revealSeat ? record.players.map((_, seat) => ui.revealSeat?.(start, record, seat) ?? null) : undefined}
+            names={names}
           />
         }
         rail={
@@ -435,10 +466,10 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
               <MoveList moves={moves} seatNames={seatNames} />
             </RailSection>
             <RailSection title={t('rail.counters')}>
-              <Counters rows={ui.counters(state, mySeats)} />
+              <Counters rows={ui.counters(state, viewSeats)} />
             </RailSection>
             <RailSection title={t('rail.log')}>
-              <LogLines log={snap.log} ui={ui} record={record} />
+              <LogLines log={snap.log} ui={ui} record={record} viewSeats={viewSeats} names={names} />
             </RailSection>
           </>
         }
@@ -451,7 +482,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
           onCancel={() => setConfirmResign(false)}
           onConfirm={() => {
             setConfirmResign(false);
-            controller.resign();
+            controller.resign(viewer.seat ?? undefined);
           }}
         >
           {t('table.resign.body')}

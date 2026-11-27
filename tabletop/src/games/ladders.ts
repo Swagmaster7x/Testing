@@ -7,6 +7,9 @@ import { randomChoice } from '../ai/random-bot';
 import type { Engine } from '../ai/uci';
 import type { GameEvent, Outcome, Seat } from '../core/contract';
 import { briscaBots } from './brisca/bots';
+import { ccBots } from './chinese-checkers/bots';
+import type { CcAction, CcConfig, CcEvent, CcState, CcView } from './chinese-checkers/rules';
+import { chineseCheckers } from './chinese-checkers/rules';
 import type { BriscaAction, BriscaConfig, BriscaEvent, BriscaState, BriscaView } from './brisca/rules';
 import { brisca, PUERTO_RICO } from './brisca/rules';
 import { chessBots } from './chess/bots';
@@ -202,6 +205,24 @@ function pokerLadder(): Ladder<HoldemState, HoldemAction, HoldemConfig, HoldemVi
   };
 }
 
+/** Chinese Checkers for two under the default rules: random play wanders and loses at the turn limit. */
+function chineseCheckersLadder(): Ladder<CcState, CcAction, CcConfig, CcView, CcEvent> {
+  return {
+    spec: {
+      def: chineseCheckers,
+      config: chineseCheckers.defaultConfig,
+      levels: ccBots.levels.map((l) => l.level),
+      bot: (level) => ({
+        name: `L${level}`,
+        choose: async (view, seat, rng) => (await ccBots.choose({ view, seat, level, rng })).action,
+      }),
+      margin: 0.6,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(chineseCheckers, view, seat, rng) },
+    games: 30,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
@@ -211,5 +232,6 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     shogi: shogiLadder() as unknown as Ladder<never, never, never, never, never>,
     go: goLadder() as unknown as Ladder<never, never, never, never, never>,
     poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,
+    'chinese-checkers': chineseCheckersLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }
