@@ -63,7 +63,8 @@ plain suit, **40** (*las cuarenta*) in trumps. The two cards are shown and stay 
 - The cante for a trick is made during the next trick, on your turn, before you play your card.
   With the default (`singer: side`) either partner of the side that won may make it: the winner
   before leading, or the partner before playing to that next trick. Once one of them has sung, the
-  other cannot sing for the same trick.
+  other cannot sing for the same trick. With `singer: both` each partner may sing one cante for
+  the same trick (pagat's variation).
 - With **40 first** (default on), a player holding the trump pair and a plain pair must sing the
   40 before the 20.
 - Singing is never compulsory, and a pair not sung now can be sung after a later trick your side
@@ -72,15 +73,17 @@ plain suit, **40** (*las cuarenta*) in trumps. The two cards are shown and stay 
 **Tute**: holding **all four Reyes or all four Caballos** in one hand, you may declare a tute,
 under the same conditions as a cante (after your side wins a trick, on your turn). The cards must
 all be in one player's hand; partners cannot combine. A tute ends the hand at once and, by default,
-**wins the game** (see `tute` for the other values).
+**wins the game** (see `tute` for the other values; with `tute: none`, as in tute americano, there
+is no such declaration).
 
 ## Two players, with a stock (preset)
 
-1. The dealer deals eight cards each, one at a time, starting with the other player. The next card
+1. The dealer deals eight cards each (option `twoHand`: six in tute corriente, ten in pagat's
+   individual Tute), one at a time, starting with the other player. The next card
    is turned face up for trumps and slid under the stock, so it is drawn last.
 2. The non-dealer leads. The winner of each trick draws the top card of the stock, the loser the
-   next; the loser of the twelfth trick draws the turned card. The last eight tricks are played
-   without drawing.
+   next; the loser of the last drawing trick draws the turned card. The last tricks (as many as
+   the cards each was dealt) are played without drawing.
 3. **While the stock lasts** the obligations are relaxed (option `stockRules`): by default there
    are none at all and you may play any card. **Once the stock is gone**, the full obligations
    above apply: follow, beat, trump, overtrump.
@@ -98,11 +101,14 @@ all be in one player's hand; partners cannot combine. A tute ends the hand at on
   cantes.
 - **Who wins the hand** (option `handWin`): by default the side with **more points** once the hand
   is played out; a tie goes to the side that took the last trick (option `tie`). With
-  `reach101`, a side wins the hand the moment it reaches **101** (the app announces it); if the
-  cards run out with neither side there, a new hand is dealt and both sides keep their points (a
-  **vuelta**), until one reaches 101.
+  `reach101`, a side wins the hand the moment it reaches **101** (option `target`: **121** in tute
+  americano; the app announces it); if the cards run out with neither side there, a new hand is
+  dealt and both sides keep their points (a **vuelta**), until one gets there.
+- **A big win** (option `bigWin`, off by default): with `most`, a hand won with 101 points or more
+  counts two games.
 - Each hand won scores one game (*juego*, also called a stone, *piedra*). The first side to win the
-  agreed number of games (option `matchTo`, default three) wins the match.
+  agreed number of games (option `matchTo`, default three) wins the match. With `margin: 2` the
+  match goes on past the target until one side is two games ahead.
 - A tute ends the hand and, by default, the whole match.
 - **Capote** (option, off by default): a side that takes every trick of a hand played out (with
   two players, every trick after the stock is gone) scores two games for it.
@@ -117,15 +123,19 @@ all be in one player's hand; partners cannot combine. A tute ends the hand at on
 | `partner`: when your partner is winning the trick | `same` (the obligations still hold), `relaxed` (you need only follow suit; void, you may play anything) | `same` |
 | `underTrump`: void, and you cannot beat the trump already played | `free` (play any card), `must` (you must still play a trump if you hold one) | `free` |
 | `stockRules`: two players, while the stock lasts | `free` (no obligations), `trumps` (when a trump is led you must play a trump if you hold one), `full` (all obligations from the first trick, *arrastrado*) | `free` |
-| `singer`: who may sing for a trick | `side` (either partner, during the next trick), `winner` (only the player who won it, before leading) | `side` |
+| `singer`: who may sing for a trick | `side` (either partner, during the next trick), `winner` (only the player who won it, before leading), `both` (each partner may sing one) | `side` |
 | `fortyFirst`: the 40 before the 20 | `yes`, `no` | `yes` |
-| `tute`: what a tute is worth | `game` (wins the match), `two` (ends the hand; counts as two games), `hand` (ends the hand; counts as one) | `game` |
-| `handWin`: who wins a hand | `most` (more points when played out), `reach101` (first to 101, with vueltas) | `most` |
+| `tute`: what a tute is worth | `game` (wins the match), `two` (ends the hand; counts as two games), `hand` (ends the hand; counts as one), `none` (no tute) | `game` |
+| `handWin`: who wins a hand | `most` (more points when played out), `reach101` (first to the target, with vueltas) | `most` |
+| `target`: the points to reach with `reach101` | 101, 121 | 101 |
+| `bigWin`: a hand won with 101 or more under `most` | `off` (one game), `two` (two games) | `off` |
 | `tie`: equal points with `most` | `last-trick` (the side that took the last trick wins), `draw` (nobody scores the hand) | `last-trick` |
 | `capote`: every trick taken | `off`, `two` (counts as two games) | `off` |
 | `swap`: which exchanges for the turned card exist | `seven-and-two`, `seven`, `none`. With four players the exchange is made with the dealer, while the dealer still holds the turned card | `none` |
 | `swapWhen`: when an exchange may be made | `after-own-trick` (once your side has won a trick), `any-turn` | `after-own-trick` |
 | `matchTo`: games to win the match | 1, 2, 3, 4, 5, 7 | 3 |
+| `margin`: games the match must be won by | 1, 2 | 1 |
+| `twoHand`: cards each with two players | 8, 6, 10 | 8 |
 
 ## Presets
 
@@ -137,19 +147,23 @@ all be in one player's hand; partners cannot combine. A tute ends the hand at on
 | **Two players (habanero)** | Two players with a stock: no obligations while the stock lasts; the 7 and the 2 of trumps take the turned card once you have won a trick; first to 101 with vueltas; three games. |
 | **Two players, arrastrado** | As habanero, but the full obligations apply from the first trick. |
 | **Two players, trumps must follow** | As habanero, but while the stock lasts a trump led must be answered with a trump. |
+| **Two players (corriente)** | As habanero, but six cards each: the oldest two-player form. |
+| **Two players (americano)** | Eight cards each; while the stock lasts a trump led must be answered with a trump; no tute; first to 121 with vueltas. |
+| **Two players, ten cards each** | Pagat's individual Tute for two: ten cards each, every obligation from the first trick as with four, no exchange, more points wins the hand. |
 
 ## Ask before you sit
 
 1. Must you beat the card on the table when you can, or only follow suit?
 2. If you cannot follow and cannot beat the trump already played, must you still play a trump?
 3. When your partner is winning the trick, do the obligations still apply?
-4. Who may sing after a trick: only the winner, or either partner? Must the 40 come before the 20?
-5. What is a tute worth: the whole game, two games, or one?
-6. Does a hand go to the side with more points, or to the first side to reach 101? What happens on
-   a tie?
-7. How many games make a match? Is capote played?
-8. (Two players) Are there obligations while the stock lasts? May the 7 or the 2 take the turned
-   card, and only after winning a trick?
+4. Who may sing after a trick: only the winner, either partner, or both? Must the 40 come before
+   the 20?
+5. What is a tute worth: the whole game, two games, one, or nothing?
+6. Does a hand go to the side with more points, or to the first side to reach 101 (or 121)? What
+   happens on a tie? Does a hand won with 101 or more count double?
+7. How many games make a match, and must it be won by two? Is capote played?
+8. (Two players) How many cards each: six, eight or ten? Are there obligations while the stock
+   lasts? May the 7 or the 2 take the turned card, and only after winning a trick?
 
 ## Golden cases (tested)
 
@@ -203,9 +217,14 @@ all be in one player's hand; partners cannot combine. A tute ends the hand at on
 
 ## Sources
 
-Read 2026-11-27. The build environment's network policy refused www.pagat.com, es.wikipedia.org and
-en.wikipedia.org, so every rule above was taken from search-engine extracts of these pages and
-checked against at least one other source:
+Read 2026-11-27. When this was first written the build environment's network policy refused
+www.pagat.com, es.wikipedia.org and en.wikipedia.org, so the rules were taken from search-engine
+extracts and checked against at least one other source. Later the same day pagat's page was read in
+full (www.pagat.com/marriage/tute.html, last updated 15 June 2015): it agreed with everything above,
+and added the options `singer: both`, `bigWin`, `margin`, `tute: none`, `target: 121` and
+`twoHand`, with the corriente, americano and ten-card presets. Its partnership rule that a player who
+has sung a 20 may never sing a 40 needs no option: with four players nobody draws, so a player who
+holds the trump pair later held it at the 20, and the 40 had to come first. The other sources:
 
 - Tute, pagat.com (www.pagat.com/marriage/tute.html), via search extracts: partnership play, the
   duty to follow and to beat the best card so far, trumping and overtrumping, a tute declared after

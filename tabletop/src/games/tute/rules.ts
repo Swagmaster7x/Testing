@@ -33,8 +33,10 @@ export const LAST_TEN = 10;
 export const HAND_POINTS = TOTAL_POINTS + LAST_TEN;
 export const CANTE_PLAIN = 20;
 export const CANTE_TRUMPS = 40;
-/** What a side needs with `handWin: reach101`. */
+/** What a side needs with `handWin: reach101` (the default `target`). */
 export const REACH = 101;
+/** The points a side needs with `handWin: reach101`: 101, or 121 in tute americano. */
+export const reachOf = (config: Pick<TuteConfig, 'target'>): number => config.target;
 
 export interface TuteConfig {
   readonly players: 2 | 4;
@@ -42,15 +44,23 @@ export interface TuteConfig {
   readonly partner: 'same' | 'relaxed';
   readonly underTrump: 'free' | 'must';
   readonly stockRules: 'free' | 'trumps' | 'full';
-  readonly singer: 'side' | 'winner';
+  readonly singer: 'side' | 'winner' | 'both';
   readonly fortyFirst: 'yes' | 'no';
-  readonly tute: 'game' | 'two' | 'hand';
+  readonly tute: 'game' | 'two' | 'hand' | 'none';
   readonly handWin: 'most' | 'reach101';
+  /** With `handWin: reach101`: the points a side needs. */
+  readonly target: 101 | 121;
+  /** With `handWin: most`: a hand won with 101 points or more counts two games. */
+  readonly bigWin: 'off' | 'two';
   readonly tie: 'last-trick' | 'draw';
   readonly capote: 'off' | 'two';
   readonly swap: 'seven-and-two' | 'seven' | 'none';
   readonly swapWhen: 'after-own-trick' | 'any-turn';
   readonly matchTo: number;
+  /** Games the match must be won by: 1, or 2 (play on until one side is two games ahead). */
+  readonly margin: 1 | 2;
+  /** Cards each player holds with two players: 6 (corriente), 8 (habanero) or 10. */
+  readonly twoHand: 6 | 8 | 10;
   /** A position to start from instead of a deal ("play on from here"), in state notation. */
   readonly start?: string;
 }
@@ -65,11 +75,15 @@ export const SPAIN_PAIRS: TuteConfig = {
   fortyFirst: 'yes',
   tute: 'game',
   handWin: 'most',
+  target: 101,
+  bigWin: 'off',
   tie: 'last-trick',
   capote: 'off',
   swap: 'none',
   swapWhen: 'after-own-trick',
   matchTo: 3,
+  margin: 1,
+  twoHand: 8,
 };
 
 const HABANERO: TuteConfig = { ...SPAIN_PAIRS, players: 2, swap: 'seven-and-two', handWin: 'reach101' };
@@ -81,6 +95,9 @@ export const PRESETS: Readonly<Record<string, TuteConfig>> = {
   'two-habanero': HABANERO,
   'two-arrastrado': { ...HABANERO, stockRules: 'full' },
   'two-trumps': { ...HABANERO, stockRules: 'trumps' },
+  'two-corriente': { ...HABANERO, twoHand: 6 },
+  'two-americano': { ...HABANERO, stockRules: 'trumps', tute: 'none', target: 121 },
+  'two-ten': { ...HABANERO, twoHand: 10, stockRules: 'full', swap: 'none', handWin: 'most' },
 };
 
 /** Every option and its values, in the order the rules screen shows them. */
@@ -90,15 +107,19 @@ export const CONFIG_CHOICES = {
   partner: ['same', 'relaxed'],
   underTrump: ['free', 'must'],
   stockRules: ['free', 'trumps', 'full'],
-  singer: ['side', 'winner'],
+  singer: ['side', 'winner', 'both'],
   fortyFirst: ['yes', 'no'],
-  tute: ['game', 'two', 'hand'],
+  tute: ['game', 'two', 'hand', 'none'],
   handWin: ['most', 'reach101'],
+  target: [101, 121],
+  bigWin: ['off', 'two'],
   tie: ['last-trick', 'draw'],
   capote: ['off', 'two'],
   swap: ['none', 'seven-and-two', 'seven'],
   swapWhen: ['after-own-trick', 'any-turn'],
   matchTo: [1, 2, 3, 4, 5, 7],
+  margin: [1, 2],
+  twoHand: [8, 6, 10],
 } as const satisfies { readonly [K in keyof Omit<TuteConfig, 'start'>]: readonly TuteConfig[K][] };
 
 /** A match never runs past this many hands; if it does (ties, vueltas), the side with more games wins. */
@@ -123,6 +144,8 @@ export interface Cante {
   readonly seat: Seat;
   readonly suit: Suit;
   readonly points: number;
+  /** The tricks complete when it was sung (it is sung for the last of them). */
+  readonly trick?: number;
 }
 
 export type HandEnd = 'played' | 'reach' | 'tute';
@@ -255,7 +278,7 @@ export function canteValue(suit: Suit, trumpSuit: Suit): number {
 // Seats and sides
 
 export const seatCount = (config: Pick<TuteConfig, 'players'>): number => (config.players === 2 ? 2 : 4);
-export const handSize = (config: Pick<TuteConfig, 'players'>): number => (config.players === 2 ? 8 : 10);
+export const handSize = (config: Pick<TuteConfig, 'players' | 'twoHand'>): number => (config.players === 2 ? config.twoHand : 10);
 
 /** Partners share a side: seats 0 and 2 against 1 and 3. With two players each seat is a side. */
 export function sideOf(seat: Seat, players: number): number {
@@ -389,6 +412,8 @@ export function maySing(s: SingFacts, seat: Seat): boolean {
   if (!last) return false;
   const players = seatCount(s.config);
   if (sideOf(last.winner, players) !== sideOf(seat, players)) return false;
+  // Both partners may each sing once for the same trick.
+  if (s.config.singer === 'both') return !s.cantes.some((c) => c.seat === seat && c.trick === s.tricks.length);
   return s.config.singer === 'side' || last.winner === seat;
 }
 
@@ -403,7 +428,7 @@ export function singable(s: SingFacts, seat: Seat, hand: readonly Card[]): Suit[
 
 /** The tutes `seat` may declare now: four Reyes, four Caballos. */
 export function tutes(s: SingFacts, seat: Seat, hand: readonly Card[]): ('R' | 'C')[] {
-  if (!maySing(s, seat)) return [];
+  if (s.config.tute === 'none' || !maySing(s, seat)) return [];
   return (['R', 'C'] as const).filter((rank) => SUITS.every((suit) => hand.includes(`${rank}${suit}`)));
 }
 
@@ -505,7 +530,7 @@ function canteTotals(s: TuteState): number[] {
 /** The side that has reached 101 (with what it carried in), under `handWin: reach101`. */
 function reached(s: TuteState): number | null {
   if (s.config.handWin !== 'reach101') return null;
-  const side = [0, 1].find((x) => (s.carry[x] ?? 0) + sidePoints(s, x) >= REACH);
+  const side = [0, 1].find((x) => (s.carry[x] ?? 0) + sidePoints(s, x) >= reachOf(s.config));
   return side ?? null;
 }
 
@@ -534,6 +559,7 @@ function finishHand(s: TuteState, end: HandEnd, winnerSide: number | null, tuteS
       capote = true;
       value = 2;
     }
+    if (winner !== null && config.handWin === 'most' && config.bigWin === 'two' && (points[winner] ?? 0) >= REACH) value = 2;
   }
   if (end === 'tute') value = config.tute === 'two' ? 2 : 1;
   const result: HandResult = { points, carried: [...s.carry], cantes: canteTotals(s), lastTrick, end, winner, value, capote, vuelta, tute: tuteSeat };
@@ -547,8 +573,8 @@ function finishHand(s: TuteState, end: HandEnd, winnerSide: number | null, tuteS
   if (end === 'tute' && config.tute === 'game') {
     champion = winner;
     done = true;
-  } else if (matchWins.some((w) => w >= target)) {
-    champion = matchWins.findIndex((w) => w >= target);
+  } else if (matchWins.some((w, i) => w >= target && w - (matchWins[1 - i] ?? 0) >= config.margin)) {
+    champion = matchWins.findIndex((w, i) => w >= target && w - (matchWins[1 - i] ?? 0) >= config.margin);
     done = true;
   } else if (target === 1 && winner === null && !vuelta) {
     // A drawn single hand is a drawn game.
@@ -595,7 +621,8 @@ function applyAction(s: TuteState, action: TuteAction): { state: TuteState; even
     const points = canteValue(action.suit, s.trumpSuit);
     const shown: Card[] = [`R${action.suit}`, `C${action.suit}`];
     const known = s.known.map((k, i) => (i === seat ? [...k, ...shown.filter((c) => !k.includes(c))] : k));
-    const after: TuteState = { ...s, cantes: [...s.cantes, { seat, suit: action.suit, points }], canteOpen: false, known };
+    const both = s.config.singer === 'both';
+    const after: TuteState = { ...s, cantes: [...s.cantes, { seat, suit: action.suit, points, ...(both ? { trick: s.tricks.length } : {}) }], canteOpen: both, known };
     const events: TuteEvent[] = [{ type: 'sing', seat, suit: action.suit, points }];
     const reach = reached(after);
     if (reach !== null) return finishHand(after, 'reach', reach, null, [...events, { type: 'reach', side: reach, points: (after.carry[reach] ?? 0) + sidePoints(after, reach) }]);
@@ -746,7 +773,7 @@ function stateFromJson(json: Json): TuteState {
   const cantes: Cante[] = Array.isArray(json.cantes)
     ? json.cantes.map((c) => {
         if (!isJsonObject(c) || typeof c.seat !== 'number' || typeof c.suit !== 'string' || !SUITS.includes(c.suit as Suit) || typeof c.points !== 'number') throw new Error('Tute: a cante is damaged');
-        return { seat: c.seat, suit: c.suit as Suit, points: c.points };
+        return { seat: c.seat, suit: c.suit as Suit, points: c.points, ...(typeof c.trick === 'number' ? { trick: c.trick } : {}) };
       })
     : [];
   const hands = Array.isArray(json.hands) ? json.hands.map((h) => cardsOf(h, 'a hand')) : [];
@@ -813,7 +840,7 @@ function stateToJson(s: TuteState): Json {
     leader: s.leader,
     tricks: s.tricks.map((t) => ({ leader: t.leader, winner: t.winner, plays: t.plays.map((p) => ({ seat: p.seat, card: p.card })), stock: t.stock, ...(t.setup ? { setup: true } : {}) })),
     won: s.won.map((w) => [...w]),
-    cantes: s.cantes.map((c) => ({ seat: c.seat, suit: c.suit, points: c.points })),
+    cantes: s.cantes.map((c) => ({ seat: c.seat, suit: c.suit, points: c.points, ...(c.trick !== undefined ? { trick: c.trick } : {}) })),
     canteOpen: s.canteOpen,
     known: s.known.map((k) => [...k]),
     carry: [...s.carry],

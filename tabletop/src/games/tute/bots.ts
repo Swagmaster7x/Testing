@@ -258,7 +258,7 @@ const solveCache = new Map<string, number>();
 
 function solveKey(s: TuteState, side: number, bonus: boolean): string {
   const c = s.config;
-  return `${side}${bonus ? 'b' : 'p'}|${s.trumpSuit}|${c.mustBeat}${c.partner}${c.underTrump}${c.handWin}${c.singer}${c.fortyFirst}${c.tute}${c.capote}|${s.hands.map((h) => [...h].sort().join('')).join('/')}|${s.trick.map((p) => `${p.seat}${p.card}`).join('')}|${s.leader}|${s.won.map((w) => w.length).join(',')}|${s.cantes.map((x) => x.suit).join('')}${s.canteOpen ? '!' : ''}|${s.tricks[s.tricks.length - 1]?.winner ?? ''}|${handValue(s, s.handNo, side, false)}`;
+  return `${side}${bonus ? 'b' : 'p'}|${s.trumpSuit}|${c.mustBeat}${c.partner}${c.underTrump}${c.handWin}${c.target}${c.bigWin}${c.singer}${c.fortyFirst}${c.tute}${c.capote}|${s.hands.map((h) => [...h].sort().join('')).join('/')}|${s.trick.map((p) => `${p.seat}${p.card}`).join('')}|${s.leader}|${s.won.map((w) => w.length).join(',')}|${s.cantes.map((x) => `${x.seat}${x.suit}${x.trick ?? ''}`).join('')}${s.canteOpen ? '!' : ''}|${s.tricks[s.tricks.length - 1]?.winner ?? ''}|${handValue(s, s.handNo, side, false)}`;
 }
 
 /**

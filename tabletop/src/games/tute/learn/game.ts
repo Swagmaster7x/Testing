@@ -38,7 +38,7 @@ function parse(state: TuteState, move: string) {
   }
 }
 
-const TWO = { players: 2 } as const;
+const TWO = { players: 2, twoHand: 8 } as const;
 
 /** Numbers that do not depend on the position. */
 const FIXED: Record<string, number> = {

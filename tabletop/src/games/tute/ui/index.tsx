@@ -9,7 +9,7 @@ import { TuteCoachPanel } from './CoachPanel';
 import { cardName, seatName, suitName, whoName } from './names';
 import { TuteSeatMark, TuteSurface } from './TuteSurface';
 
-const FIELDS: readonly (keyof typeof CONFIG_CHOICES)[] = ['players', 'matchTo', 'handWin', 'tie', 'tute', 'mustBeat', 'partner', 'underTrump', 'stockRules', 'singer', 'fortyFirst', 'swap', 'swapWhen', 'capote'];
+const FIELDS: readonly (keyof typeof CONFIG_CHOICES)[] = ['players', 'twoHand', 'matchTo', 'margin', 'handWin', 'target', 'tie', 'bigWin', 'tute', 'mustBeat', 'partner', 'underTrump', 'stockRules', 'singer', 'fortyFirst', 'swap', 'swapWhen', 'capote'];
 
 export const tuteOptions: GameOptions<TuteConfig> = {
   presets: Object.entries(PRESETS).map(([id, config]) => ({ id, label: tDynamic(`tute.preset.${id}`), config })),

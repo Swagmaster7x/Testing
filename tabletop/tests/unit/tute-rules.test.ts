@@ -357,3 +357,77 @@ describe('dealing for four, codecs, presets', () => {
     expect(x.hands).toEqual(s.hands);
   });
 });
+
+describe('more house rules (pagat, read in full 2026-11-27)', () => {
+  it('singer "both": each partner may sing once for the same trick', () => {
+    // Seat 0 won the last trick and leads; it holds a pair, and so does its partner, seat 2.
+    const s = at(
+      position({
+        trump: 'b',
+        hands: [['Rc', 'Cc', '4o', '5o'], ['7o', '2c', '3c', 'Co'], ['Re', 'Ce', '7e', '6e'], ['5c', '6c', '7c', '4c']],
+        leader: 0,
+        lastWinner: 0,
+        config: { singer: 'both' },
+      }),
+    );
+    const sung = play(s, 'sing-c');
+    expect(sung.cantes).toEqual([{ seat: 0, suit: 'c', points: CANTE_PLAIN, trick: sung.tricks.length }]);
+    expect(legal(sung).some((a) => a.startsWith('sing'))).toBe(false);
+    // Seat 0 leads, seat 1 follows; on its turn seat 2 may still sing its 20.
+    const partner = play(sung, '4o', '7o');
+    expect(tute.turn(partner)).toBe(2);
+    expect(legal(partner)).toContain('sing-e');
+    // With "side", one cante closes the trick for both partners.
+    const side = play(at(position({ trump: 'b', hands: [['Rc', 'Cc', '4o', '5o'], ['7o', '2c', '3c', 'Co'], ['Re', 'Ce', '7e', '6e'], ['5c', '6c', '7c', '4c']], leader: 0, lastWinner: 0 })), 'sing-c', '4o', '7o');
+    expect(legal(side)).not.toContain('sing-e');
+    // The trick number survives the codec.
+    expect(tute.codec.state.fromText(tute.codec.state.toText(partner)).cantes).toEqual(partner.cantes);
+  });
+
+  it('tute "none": four Reyes are no declaration (tute americano)', () => {
+    const s = at(position({ trump: 'b', hands: [['Ro', 'Rc', 'Re', 'Rb', '4o'], ['5o', '6o', '7o', '2c', '3c'], ['4e', '5e', '6e', '7e', 'Se'], ['4c', '5c', '6c', '7c', 'Sc']], leader: 0, lastWinner: 0, config: { tute: 'none' } }));
+    expect(legal(s)).not.toContain('tute-R');
+  });
+
+  it('bigWin "two": a hand won with 101 or more counts two games', () => {
+    // Side 0 has taken every card point but the last trick's: it wins 130 to 0.
+    const hands: Card[][] = [['Ao'], ['2o'], ['3o'], ['4o']];
+    const rest = DECK.filter((c) => !hands.flat().includes(c));
+    const end = (config: Partial<TuteConfig>) => play(at(position({ trump: 'b', hands, leader: 0, won: [rest, []], lastWinner: 0, canteOpen: false, config })), 'Ao', '2o', '3o', '4o');
+    expect(end({}).matchWins).toEqual([1, 0]);
+    expect(end({ bigWin: 'two' }).matchWins).toEqual([2, 0]);
+  });
+
+  it('margin 2: at the target the match goes on until a side is two games ahead', () => {
+    const hands: Card[][] = [['Ao'], ['2o'], ['3o'], ['4o']];
+    const rest = DECK.filter((c) => !hands.flat().includes(c));
+    const s = (config: Partial<TuteConfig>) => {
+      const base = at(position({ trump: 'b', hands, leader: 0, won: [rest, []], lastWinner: 0, canteOpen: false, config: { matchTo: 3, ...config } }));
+      return { ...base, matchWins: [2, 2] };
+    };
+    expect(play(s({}), 'Ao', '2o', '3o', '4o').over).toBe(true);
+    const on = play(s({ margin: 2 }), 'Ao', '2o', '3o', '4o');
+    expect(on.over).toBe(false);
+    expect(on.matchWins).toEqual([3, 2]);
+  });
+
+  it('target 121 (americano) and two-player hands of six (corriente) and ten', () => {
+    for (const [id, size] of [['two-corriente', 6], ['two-habanero', 8], ['two-ten', 10], ['two-americano', 8]] as const) {
+      const config = PRESETS[id] as TuteConfig;
+      const s = tute.setup(config, createRng(id));
+      expect(s.hands.map((h) => h.length)).toEqual([size, size]);
+      expect(s.stock.length).toBe(DECK.length - 2 * size);
+      expect(presetOf(config)).toBe(id);
+    }
+    expect(PRESETS['two-americano']?.target).toBe(121);
+    // A hand of six plays out: every card drawn, the last six tricks without the stock.
+    const config = PRESETS['two-corriente'] as TuteConfig;
+    let s = tute.setup(config, createRng('corriente-out'));
+    const rng = createRng('corriente-moves');
+    for (let i = 0; i < 400 && s.handNo === 0 && !s.over; i++) s = tute.apply(s, rng.pick(tute.legal(s, tute.turn(s) ?? 0))).state;
+    const first = s.results[0];
+    expect(first).toBeDefined();
+    if (first?.end === 'played') expect((first.points[0] ?? 0) + (first.points[1] ?? 0) - (first.cantes[0] ?? 0) - (first.cantes[1] ?? 0)).toBe(HAND_POINTS);
+    checkConservation(s);
+  });
+});
