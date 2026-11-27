@@ -155,7 +155,8 @@ describe('the verifier', () => {
     expect(claimProblems(shove('Kc 9d', 'top:0.25'), ['r16'], false)).toEqual([]);
     expect(claimProblems(shove('7c 2d', 'top:0.5'), ['fold'], false)).toEqual([]);
     expect(claimProblems(shove('Kc 9d', 'top:0.25'), ['fold'], false)[0]).toMatch(/best play is r16/);
-  });
+    // Exact equity over every hand in the range: a few seconds, more on a busy machine.
+  }, 30_000);
 
   it('flags positions that break the lesson conventions', () => {
     const good = state(lessonPosition({ button: 0, holes: [] }));

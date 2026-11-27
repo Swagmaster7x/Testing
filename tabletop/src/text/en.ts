@@ -58,9 +58,9 @@ const base = {
 
   'game.brisca.name': 'Brisca',
   'game.brisca.aka': 'Briscas, Spanish 40-card deck',
-  'game.brisca.launch': 'Two players, Spanish 40-card deck, every house-rule preset.',
-  'game.brisca.later': 'Four players in pairs with señas, then Tute.',
-  'game.brisca.practice': 'Card values, who wins the trick, count the pile, count trumps, solved endgames.',
+  'game.brisca.launch': 'Two players, or four in pairs with señas; Spanish 40-card deck, every house-rule preset.',
+  'game.brisca.later': 'Tute, on the same deck, as a game of its own.',
+  'game.brisca.practice': 'Card values, who wins the trick, count the pile, count trumps, señas flash cards, solved endgames.',
   'game.brisca.cpu': 'Card-counting bots, six levels.',
 
   'game.dominoes.name': 'Dominoes',

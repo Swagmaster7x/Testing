@@ -1,11 +1,14 @@
 /**
- * Brisca for two players (docs/rules/brisca.md), behind the game contract. Every disputed rule is
- * an option in the config, and the presets are named configs. Cards are written as rank and suit:
- * "Ao" is the As de oros, "Rb" the Rey de bastos, "7e" the siete de espadas.
+ * Brisca for two players, or four in pairs (docs/rules/brisca.md), behind the game contract. Every
+ * disputed rule is an option in the config, and the presets are named configs. Cards are written as
+ * rank and suit: "Ao" is the As de oros, "Rb" the Rey de bastos, "7e" the siete de espadas.
+ *
+ * Four players: seats 0 and 2 play against 1 and 3; play goes round the seats in order. Points,
+ * hands won and results are kept per side (with two players a side is one seat).
  *
  * Hidden information: a seat's view holds its own hand, the public history (every card played and
- * who won it, swaps, the turned card) and counts, never the other hand, the order of the stock or
- * the seed that deals later hands.
+ * who won it, swaps, the turned card) and counts, never another hand, the order of the stock or
+ * the seed that deals later hands. With señas on, it also holds the cards its partner has signed.
  */
 import type { Codec, GameDef, GameEvent, JsonCodec, Outcome, Seat } from '../../core/contract';
 import type { Json } from '../../core/json';
@@ -20,8 +23,10 @@ export type Card = `${Rank}${Suit}`;
 export const SUITS: readonly Suit[] = ['o', 'c', 'e', 'b'];
 export const RANKS: readonly Rank[] = ['A', '2', '3', '4', '5', '6', '7', 'S', 'C', 'R'];
 export const DECK: readonly Card[] = SUITS.flatMap((s) => RANKS.map((r): Card => `${r}${s}`));
-export const SEATS = 2;
 export const HAND_SIZE = 3;
+/** The high trumps a partner may sign (señas): the As, the second brisca (the Tres, or the 7), Rey, Caballo, Sota. */
+export type Sign = 'A' | 'second' | 'R' | 'C' | 'S';
+export const SIGNS: readonly Sign[] = ['A', 'second', 'R', 'C', 'S'];
 
 export interface BriscaConfig {
   readonly swap: 'seven-and-two' | 'seven' | 'none';
@@ -33,6 +38,10 @@ export interface BriscaConfig {
   readonly trumps: 'turned' | 'rotate';
   readonly arrastre: 'off' | 'on';
   readonly secondBrisca: 'three' | 'seven';
+  /** Two players, or four in pairs (partners opposite). */
+  readonly players: 2 | 4;
+  /** Four players: whether partners may sign their high trumps to each other (señas). */
+  readonly signals: 'off' | 'señas';
   /** A position to start from instead of a deal ("play on from here"), in state notation. */
   readonly start?: string;
 }
@@ -47,6 +56,8 @@ export const PUERTO_RICO: BriscaConfig = {
   trumps: 'turned',
   arrastre: 'off',
   secondBrisca: 'three',
+  players: 2,
+  signals: 'off',
 };
 
 export const PRESETS: Readonly<Record<string, BriscaConfig>> = {
@@ -54,6 +65,8 @@ export const PRESETS: Readonly<Record<string, BriscaConfig>> = {
   spain: { ...PUERTO_RICO, swapWhen: 'after-own-trick', tie: 'most-cards' },
   italy: { ...PUERTO_RICO, swap: 'none' },
   'open-table': { ...PUERTO_RICO, matchTo: 3 },
+  'four-pairs': { ...PUERTO_RICO, players: 4 },
+  'four-señas': { ...PUERTO_RICO, players: 4, signals: 'señas', swapWhen: 'after-own-trick', tie: 'most-cards' },
 };
 
 export const MATCH_LENGTHS: readonly number[] = [1, 2, 3, 5, 7];
@@ -66,10 +79,17 @@ export interface PlayedCard {
 }
 
 export interface HandResult {
+  /** Points per side (with two players, per seat). */
   readonly points: readonly number[];
   readonly cards: readonly number[];
-  /** The seat that won the hand, or null for a tie. */
-  readonly winner: Seat | null;
+  /** The side that won the hand, or null for a tie. */
+  readonly winner: number | null;
+}
+
+/** A sign one partner made to the other. */
+export interface Signal {
+  readonly seat: Seat;
+  readonly sign: Sign;
 }
 
 export interface BriscaState {
@@ -93,17 +113,22 @@ export interface BriscaState {
   readonly known: readonly (readonly Card[])[];
   /** The lead of this trick was "arrastro" with the As of trumps. */
   readonly arrastre: boolean;
+  /** The signs made this hand (señas). Each seat's view holds only its own side's. */
+  readonly signals: readonly Signal[];
+  /** Hands won per side. */
   readonly matchWins: readonly number[];
   readonly results: readonly HandResult[];
   readonly over: boolean;
 }
 
-export type BriscaAction = { readonly type: 'play'; readonly card: Card; readonly call?: boolean } | { readonly type: 'swap' };
+export type BriscaAction = { readonly type: 'play'; readonly card: Card; readonly call?: boolean } | { readonly type: 'swap' } | { readonly type: 'sign'; readonly sign: Sign };
 
 export type BriscaEvent =
   | { readonly type: 'deal'; readonly handNo: number; readonly dealer: Seat; readonly trumpSuit: Suit; readonly turned: Card | null }
   | { readonly type: 'play'; readonly seat: Seat; readonly card: Card; readonly call: boolean }
   | { readonly type: 'swap'; readonly seat: Seat; readonly gave: Card; readonly took: Card }
+  /** A seña: only the signing side's interface may show it. */
+  | { readonly type: 'sign'; readonly seat: Seat; readonly sign: Sign }
   | { readonly type: 'trick'; readonly winner: Seat; readonly plays: readonly PlayedCard[]; readonly points: number }
   | { readonly type: 'draw'; readonly seat: Seat; readonly card: Card; readonly turned: boolean }
   | { readonly type: 'hand-end'; readonly points: readonly number[]; readonly winner: Seat | null; readonly matchWins: readonly number[] }
@@ -125,10 +150,25 @@ export interface BriscaView {
   readonly tricksWon: readonly number[];
   readonly known: readonly (readonly Card[])[];
   readonly arrastre: boolean;
+  /** Signs made by this seat's side. */
+  readonly signals: readonly Signal[];
   readonly matchWins: readonly number[];
   readonly results: readonly HandResult[];
   readonly over: boolean;
 }
+
+// Seats and sides
+
+/** The number of seats at the table. */
+export const seatCount = (s: { readonly config: Pick<BriscaConfig, 'players'> }): number => s.config.players;
+/** A seat's side: 0 for seats 0 and 2, 1 for seats 1 and 3. */
+export const sideOf = (seat: Seat): number => seat % 2;
+/** The seat after `seat` in the order of play. */
+export const nextSeat = (seat: Seat, n: number): Seat => (seat + 1) % n;
+/** Four players: a seat's partner. */
+export const partnerOf = (seat: Seat): Seat => (seat + 2) % 4;
+/** The seats of a side. */
+export const sideSeats = (side: number, n: number): Seat[] => Array.from({ length: n }, (_, i) => i).filter((i) => sideOf(i) === side);
 
 // Cards
 
@@ -184,6 +224,12 @@ export function trickWinner(trick: readonly PlayedCard[], trumpSuit: Suit, confi
   return best.seat;
 }
 
+/** The trump card a sign stands for. */
+export function signCard(sign: Sign, trumpSuit: Suit, config: Pick<BriscaConfig, 'secondBrisca'>): Card {
+  const rank: Rank = sign === 'second' ? (config.secondBrisca === 'seven' ? '7' : '3') : sign;
+  return `${rank}${trumpSuit}`;
+}
+
 /** The card that may be swapped for the turned card, if any, under the options. */
 export function swapCardFor(turned: Card, config: BriscaConfig): Card | null {
   if (config.swap === 'none' || config.trumps !== 'turned') return null;
@@ -196,7 +242,6 @@ export function swapCardFor(turned: Card, config: BriscaConfig): Card | null {
   return null;
 }
 
-const other = (seat: Seat): Seat => (seat === 0 ? 1 : 0);
 
 // Dealing
 
@@ -207,11 +252,13 @@ function shuffled(rng: Rng): Card[] {
 function deal(config: BriscaConfig, seed: string, handNo: number, dealer: Seat, matchWins: readonly number[], results: readonly HandResult[]): { state: BriscaState; event: BriscaEvent } {
   const rng = createRng(`${seed}/hand/${handNo}`);
   const deck = shuffled(rng);
-  const hands: Card[][] = [[], []];
-  let seat = other(dealer);
-  for (let i = 0; i < HAND_SIZE * SEATS; i++) {
+  const n = config.players;
+  const hands: Card[][] = Array.from({ length: n }, () => []);
+  // One at a time, starting with the player after the dealer.
+  let seat = nextSeat(dealer, n);
+  for (let i = 0; i < HAND_SIZE * n; i++) {
     (hands[seat] as Card[]).push(deck.shift() as Card);
-    seat = other(seat);
+    seat = nextSeat(seat, n);
   }
   let turned: Card | null = null;
   let trumpSuit: Suit;
@@ -237,11 +284,12 @@ function deal(config: BriscaConfig, seed: string, handNo: number, dealer: Seat, 
     hands,
     stock: deck,
     trick: [],
-    leader: other(dealer),
-    won: [[], []],
-    tricksWon: [0, 0],
-    known: [[], []],
+    leader: nextSeat(dealer, n),
+    won: hands.map(() => []),
+    tricksWon: hands.map(() => 0),
+    known: hands.map(() => []),
     arrastre: false,
+    signals: [],
     matchWins,
     results,
     over: false,
@@ -251,7 +299,13 @@ function deal(config: BriscaConfig, seed: string, handNo: number, dealer: Seat, 
 
 function toMove(s: BriscaState): Seat | null {
   if (s.over) return null;
-  return (s.leader + s.trick.length) % SEATS;
+  return (s.leader + s.trick.length) % seatCount(s);
+}
+
+/** The signs a seat may make now: for each high trump it holds, once a hand, with señas on. */
+export function signsAllowed(s: { readonly config: BriscaConfig; readonly trumpSuit: Suit; readonly signals: readonly Signal[]; readonly over: boolean }, seat: Seat, hand: readonly Card[]): Sign[] {
+  if (s.over || s.config.players !== 4 || s.config.signals !== 'señas') return [];
+  return SIGNS.filter((sign) => hand.includes(signCard(sign, s.trumpSuit, s.config)) && !s.signals.some((x) => x.seat === seat && x.sign === sign));
 }
 
 /** Under "arrastro", the cards the follower may play: the best trumps, or the best cards. */
@@ -274,6 +328,7 @@ function legalActions(s: BriscaState, seat: Seat): BriscaAction[] {
     if (!following && s.config.arrastre === 'on' && card === `A${s.trumpSuit}`) out.push({ type: 'play', card, call: true });
   }
   if (swapAllowed(s, seat, hand)) out.push({ type: 'swap' });
+  for (const sign of signsAllowed(s, seat, hand)) out.push({ type: 'sign', sign });
   return out;
 }
 
@@ -286,12 +341,23 @@ export function swapAllowed(s: { readonly turned: Card | null; readonly config: 
   return hand.includes(card);
 }
 
+/** Points and cards won per side so far this hand. */
+export function sidePiles(s: Pick<BriscaState, 'won' | 'config'>): { points: number[]; cards: number[] } {
+  const points = [0, 0];
+  const cards = [0, 0];
+  s.won.forEach((pile, seat) => {
+    const side = sideOf(seat);
+    points[side] = (points[side] ?? 0) + pointsOf(pile, s.config);
+    cards[side] = (cards[side] ?? 0) + pile.length;
+  });
+  return { points, cards };
+}
+
 function handOver(s: BriscaState): { state: BriscaState; events: BriscaEvent[] } {
   const config = s.config;
-  const points = s.won.map((cards) => pointsOf(cards, config));
-  const cards = s.won.map((c) => c.length);
+  const { points, cards } = sidePiles(s);
   const [a = 0, b = 0] = points;
-  let winner: Seat | null = a > b ? 0 : b > a ? 1 : null;
+  let winner: number | null = a > b ? 0 : b > a ? 1 : null;
   if (winner === null && config.tie === 'most-cards') {
     const [ca = 0, cb = 0] = cards;
     winner = ca > cb ? 0 : cb > ca ? 1 : null;
@@ -307,7 +373,7 @@ function handOver(s: BriscaState): { state: BriscaState; events: BriscaEvent[] }
     events.push({ type: 'match-end', winner: matchWinner });
     return { state: { ...s, matchWins, results, over: true }, events };
   }
-  const next = deal(config, s.seed, s.handNo + 1, other(s.dealer), matchWins, results);
+  const next = deal(config, s.seed, s.handNo + 1, nextSeat(s.dealer, seatCount(s)), matchWins, results);
   events.push(next.event);
   return { state: next.state, events };
 }
@@ -318,6 +384,10 @@ function applyAction(s: BriscaState, action: BriscaAction): { state: BriscaState
   const legal = legalActions(s, seat);
   const key = actionText(action);
   if (!legal.some((a) => actionText(a) === key)) throw new Error(`${key} is not legal here`);
+
+  if (action.type === 'sign') {
+    return { state: { ...s, signals: [...s.signals, { seat, sign: action.sign }] }, events: [{ type: 'sign', seat, sign: action.sign }] };
+  }
 
   if (action.type === 'swap') {
     const turned = s.turned as Card;
@@ -334,7 +404,8 @@ function applyAction(s: BriscaState, action: BriscaAction): { state: BriscaState
   const trick = [...s.trick, { seat, card }];
   const events: BriscaEvent[] = [{ type: 'play', seat, card, call: action.call === true }];
   const arrastre = s.trick.length === 0 ? action.call === true : s.arrastre;
-  if (trick.length < SEATS) return { state: { ...s, hands, known, trick, arrastre }, events };
+  const n = seatCount(s);
+  if (trick.length < n) return { state: { ...s, hands, known, trick, arrastre }, events };
 
   // The trick is complete.
   const winner = trickWinner(trick, s.trumpSuit, s.config);
@@ -342,12 +413,13 @@ function applyAction(s: BriscaState, action: BriscaAction): { state: BriscaState
   const won = s.won.map((w, i) => (i === winner ? [...w, ...cards] : w));
   const tricksWon = s.tricksWon.map((n, i) => (i === winner ? n + 1 : n));
   events.push({ type: 'trick', winner, plays: trick, points: pointsOf(cards, s.config) });
-  // Draw: the winner first, then the other. The turned card comes out last.
+  // Draw: the winner first, then round the table. The turned card comes out last.
   const stock = [...s.stock];
   const drawn = hands.map((h) => [...h]);
   const knownAfter = known.map((k) => [...k]);
   let turned = s.turned;
-  for (const drawer of [winner, other(winner)]) {
+  for (let k = 0; k < n; k++) {
+    const drawer = (winner + k) % n;
     const next = stock.shift();
     if (!next) break;
     (drawn[drawer] as Card[]).push(next);
@@ -370,19 +442,25 @@ function applyAction(s: BriscaState, action: BriscaAction): { state: BriscaState
 
 export function actionText(a: BriscaAction): string {
   if (a.type === 'swap') return 'swap';
+  if (a.type === 'sign') return `sign:${a.sign}`;
   return a.call ? `${a.card}!` : a.card;
 }
 
 function parseAction(text: string): BriscaAction {
   const t = text.trim();
   if (t === 'swap') return { type: 'swap' };
+  if (t.startsWith('sign:')) {
+    const sign = t.slice(5) as Sign;
+    if (!SIGNS.includes(sign)) throw new Error(`"${text}" is not a seña: sign:A, sign:second, sign:R, sign:C or sign:S`);
+    return { type: 'sign', sign };
+  }
   const call = t.endsWith('!');
   const card = call ? t.slice(0, -1) : t;
   if (!isCard(card)) throw new Error(`"${text}" is not a Brisca card, such as Ao or 7e`);
   return call ? { type: 'play', card, call: true } : { type: 'play', card };
 }
 
-const CONFIG_KEYS = ['swap', 'swapWhen', 'tie', 'turnedBrisca', 'bigWin', 'matchTo', 'trumps', 'arrastre', 'secondBrisca'] as const;
+const CONFIG_KEYS = ['swap', 'swapWhen', 'tie', 'turnedBrisca', 'bigWin', 'matchTo', 'trumps', 'arrastre', 'secondBrisca', 'players', 'signals'] as const;
 
 function readConfig(json: Json): BriscaConfig {
   if (!isJsonObject(json)) return PUERTO_RICO;
@@ -400,6 +478,8 @@ function readConfig(json: Json): BriscaConfig {
     trumps: pick('trumps', ['turned', 'rotate']),
     arrastre: pick('arrastre', ['off', 'on']),
     secondBrisca: pick('secondBrisca', ['three', 'seven']),
+    players: pick('players', [2, 4]),
+    signals: pick('signals', ['off', 'señas']),
     ...(typeof json.start === 'string' ? { start: json.start } : {}),
   };
 }
@@ -435,9 +515,19 @@ function stateFromJson(json: Json): BriscaState {
         return { points: nums(r.points, 'a result'), cards: nums(r.cards, 'a result'), winner: typeof r.winner === 'number' ? r.winner : null };
       })
     : [];
-  const hands = Array.isArray(json.hands) ? json.hands.map((h) => cards(h, 'a hand')) : [[], []];
-  const won = Array.isArray(json.won) ? json.won.map((w) => cards(w, 'a pile')) : [[], []];
-  const known = Array.isArray(json.known) ? json.known.map((k) => cards(k, 'a known card')) : [[], []];
+  const n = config.players;
+  const empty = (): Card[][] => Array.from({ length: n }, () => []);
+  const hands = Array.isArray(json.hands) ? json.hands.map((h) => cards(h, 'a hand')) : empty();
+  const won = Array.isArray(json.won) ? json.won.map((w) => cards(w, 'a pile')) : empty();
+  const known = Array.isArray(json.known) ? json.known.map((k) => cards(k, 'a known card')) : empty();
+  if (hands.length !== n || won.length !== n || known.length !== n) throw new Error(`Brisca: a table of ${n} needs ${n} hands and piles`);
+  const signals = Array.isArray(json.signals)
+    ? json.signals.map((x) => {
+        if (!isJsonObject(x) || typeof x.seat !== 'number' || typeof x.sign !== 'string' || !SIGNS.includes(x.sign as Sign)) throw new Error('Brisca: a seña is damaged');
+        return { seat: x.seat, sign: x.sign as Sign };
+      })
+    : [];
+  const seatOf = (j: Json | undefined, fallback: Seat): Seat => (typeof j === 'number' && Number.isInteger(j) && j >= 0 && j < n ? j : fallback);
   const stock = cards(json.stock ?? [], 'the stock');
   const turned = typeof json.turned === 'string' && isCard(json.turned) ? json.turned : null;
   const trumpSuit = typeof json.trumpSuit === 'string' && SUITS.includes(json.trumpSuit as Suit) ? (json.trumpSuit as Suit) : turned ? suitOf(turned) : 'o';
@@ -445,17 +535,18 @@ function stateFromJson(json: Json): BriscaState {
     config,
     seed: typeof json.seed === 'string' ? json.seed : 'lesson',
     handNo: typeof json.handNo === 'number' ? json.handNo : 0,
-    dealer: json.dealer === 0 || json.dealer === 1 ? json.dealer : 1,
+    dealer: seatOf(json.dealer, n - 1),
     trumpSuit,
     turned,
     hands,
     stock,
     trick,
-    leader: json.leader === 1 ? 1 : 0,
+    leader: seatOf(json.leader, 0),
     won,
-    tricksWon: Array.isArray(json.tricksWon) ? nums(json.tricksWon, 'tricks won') : won.map((w) => Math.floor(w.length / SEATS)),
+    tricksWon: Array.isArray(json.tricksWon) ? nums(json.tricksWon, 'tricks won') : won.map((w) => Math.floor(w.length / n)),
     known,
     arrastre: json.arrastre === true,
+    signals,
     matchWins: Array.isArray(json.matchWins) ? nums(json.matchWins, 'the match score') : [0, 0],
     results,
     over: json.over === true,
@@ -488,6 +579,7 @@ function stateToJson(s: BriscaState): Json {
     tricksWon: [...s.tricksWon],
     known: s.known.map((k) => [...k]),
     arrastre: s.arrastre,
+    ...(s.signals.length > 0 ? { signals: s.signals.map((x) => ({ seat: x.seat, sign: x.sign })) } : {}),
     matchWins: [...s.matchWins],
     results: s.results.map((r) => ({ points: [...r.points], cards: [...r.cards], winner: r.winner })),
     over: s.over,
@@ -513,21 +605,25 @@ const actionCodec: Codec<BriscaAction> = {
 
 const configCodec: JsonCodec<BriscaConfig> = { toJSON: configJson, fromJSON: readConfig };
 
+/** Four players: the two sides, seats 0 and 2 against 1 and 3. */
+const teamsOf = (n: number): Seat[][] | undefined => (n === 4 ? [sideSeats(0, n), sideSeats(1, n)] : undefined);
+
 function outcomeOf(s: BriscaState): Outcome | null {
   if (!s.over) return null;
+  const n = seatCount(s);
   const single = Math.max(1, s.config.matchTo) === 1;
   const last = s.results[s.results.length - 1];
-  const score = (seat: Seat) => (single ? (last?.points[seat] ?? 0) : (s.matchWins[seat] ?? 0));
+  const score = (seat: Seat) => (single ? (last?.points[sideOf(seat)] ?? 0) : (s.matchWins[sideOf(seat)] ?? 0));
   const winner = single ? (last?.winner ?? null) : s.matchWins.findIndex((w) => w >= Math.max(1, s.config.matchTo));
+  const seats = Array.from({ length: n }, (_, i) => i);
+  const teams = teamsOf(n);
   if (winner === null || winner < 0) {
-    return { reason: 'brisca-tie', results: [0, 1].map((seat) => ({ seat, place: 1, score: score(seat) })) };
+    return { reason: 'brisca-tie', ...(teams ? { teams } : {}), results: seats.map((seat) => ({ seat, place: 1, score: score(seat) })) };
   }
   return {
     reason: single ? 'brisca-points' : 'brisca-match',
-    results: [
-      { seat: winner, place: 1, score: score(winner) },
-      { seat: other(winner), place: 2, score: score(other(winner)) },
-    ],
+    ...(teams ? { teams } : {}),
+    results: [...seats].sort((a, b) => Number(sideOf(b) === winner) - Number(sideOf(a) === winner)).map((seat) => ({ seat, place: sideOf(seat) === winner ? 1 : 2, score: score(seat) })),
   };
 }
 
@@ -548,10 +644,21 @@ export function viewOf(s: BriscaState, seat: Seat): BriscaView {
     tricksWon: s.tricksWon,
     known: s.known,
     arrastre: s.arrastre,
+    signals: s.signals.filter((x) => sideOf(x.seat) === sideOf(seat)),
     matchWins: s.matchWins,
     results: s.results,
     over: s.over,
   };
+}
+
+/**
+ * The cards a seat knows another seat holds: the turned card once drawn or swapped (public), and
+ * with señas the high trumps its partner signed and has not played yet.
+ */
+export function knownHeld(v: Pick<BriscaView, 'seat' | 'known' | 'signals' | 'trumpSuit' | 'config' | 'trick' | 'won' | 'hand'>, seat: Seat): Card[] {
+  const played = new Set<Card>([...v.trick.map((p) => p.card), ...v.won.flat(), ...v.hand]);
+  const signed = seat === v.seat ? [] : v.signals.filter((x) => x.seat === seat).map((x) => signCard(x.sign, v.trumpSuit, v.config));
+  return [...new Set([...(v.known[seat] ?? []), ...signed])].filter((c) => !played.has(c));
 }
 
 /** The cards a seat cannot see: everything not in its hand, played, turned or known to be held. */
@@ -561,14 +668,18 @@ export function unseenCards(v: BriscaView): Card[] {
   return DECK.filter((c) => !seen.has(c));
 }
 
-/** A full state consistent with a view: the unseen cards dealt at random to the other hand and the stock. */
+/** A full state consistent with a view: the unseen cards dealt at random to the other hands and the stock. */
 export function sampleState(v: BriscaView, rng: Rng): BriscaState {
-  const unseen = rng.shuffle(unseenCards(v));
-  const hands: Card[][] = [[], []];
-  hands[v.seat] = [...v.hand];
-  const them = other(v.seat);
-  const theirKnown = (v.known[them] ?? []).filter((c) => !v.hand.includes(c));
-  hands[them] = [...theirKnown, ...unseen.splice(0, (v.handCounts[them] ?? 0) - theirKnown.length)];
+  const n = v.handCounts.length;
+  const held = v.handCounts.map((_, seat) => (seat === v.seat ? [] : knownHeld(v, seat)));
+  const placed = new Set(held.flat());
+  const unseen = rng.shuffle(unseenCards(v).filter((c) => !placed.has(c)));
+  const hands: Card[][] = Array.from({ length: n }, (_, seat) => (seat === v.seat ? [...v.hand] : [...(held[seat] ?? [])]));
+  for (let seat = 0; seat < n; seat++) {
+    if (seat === v.seat) continue;
+    const hand = hands[seat] as Card[];
+    hand.push(...unseen.splice(0, (v.handCounts[seat] ?? 0) - hand.length));
+  }
   const stock = [...unseen.splice(0, v.stockCount - (v.turned ? 1 : 0)), ...(v.turned ? [v.turned] : [])];
   return {
     config: v.config,
@@ -585,6 +696,7 @@ export function sampleState(v: BriscaView, rng: Rng): BriscaState {
     tricksWon: v.tricksWon,
     known: v.known,
     arrastre: v.arrastre,
+    signals: v.signals,
     matchWins: v.matchWins,
     results: v.results,
     over: v.over,
@@ -602,9 +714,10 @@ export const brisca: GameDef<BriscaState, BriscaAction, BriscaConfig, BriscaView
       const from = stateFromJson(JSON.parse(config.start) as Json);
       return { ...from, config, seed };
     }
-    return deal(config, seed, 0, 1, [0, 0], []).state;
+    return deal(config, seed, 0, config.players - 1, [0, 0], []).state;
   },
-  seats: () => [0, 1],
+  seats: (s) => Array.from({ length: seatCount(s) }, (_, i) => i),
+  teams: (s) => teamsOf(seatCount(s)) ?? [[0], [1]],
   turn: toMove,
   legal: legalActions,
   apply: applyAction,
@@ -623,12 +736,15 @@ export function presetOf(config: BriscaConfig): string | null {
 /**
  * A position for lessons and problems, from a short description; seat 0 is the student. Cards not
  * named go face down into the stock (when no stock is given) or, for endgames with a given stock,
- * into the two piles in turn, so every position holds all forty cards.
+ * into the two piles in turn, so every position holds all forty cards. With four players, `others`
+ * holds seats 1, 2 (the partner) and 3; the piles are seat 0's and seat 1's.
  */
 export function position(p: {
   trump: Card | Suit;
   me: readonly Card[];
   them: readonly Card[];
+  others?: readonly (readonly Card[])[];
+  signals?: readonly Signal[];
   stock?: readonly Card[];
   wonMe?: readonly Card[];
   wonThem?: readonly Card[];
@@ -637,7 +753,10 @@ export function position(p: {
   config?: Partial<BriscaConfig>;
 }): string {
   const turned = p.trump.length === 2 ? (p.trump as Card) : null;
-  const named = new Set<Card>([...p.me, ...p.them, ...(p.stock ?? []), ...(p.wonMe ?? []), ...(p.wonThem ?? []), ...(p.trick ?? []).map((t) => t.card), ...(turned ? [turned] : [])]);
+  const config: BriscaConfig = { ...PUERTO_RICO, ...p.config };
+  const n = config.players;
+  const hands: Card[][] = n === 4 ? [[...p.me], ...[0, 1, 2].map((i) => [...(p.others?.[i] ?? [])])] : [[...p.me], [...p.them]];
+  const named = new Set<Card>([...hands.flat(), ...(p.stock ?? []), ...(p.wonMe ?? []), ...(p.wonThem ?? []), ...(p.trick ?? []).map((t) => t.card), ...(turned ? [turned] : [])]);
   const rest = DECK.filter((c) => !named.has(c));
   const wonMe = [...(p.wonMe ?? [])];
   const wonThem = [...(p.wonThem ?? [])];
@@ -651,20 +770,22 @@ export function position(p: {
     rest.forEach((c, i) => (i % 2 === 0 ? wonMe : wonThem).push(c));
   }
   p = { ...p, wonMe, wonThem };
+  const won = hands.map((_, seat) => (seat === 0 ? [...(p.wonMe ?? [])] : seat === 1 ? [...(p.wonThem ?? [])] : []));
   const state: BriscaState = {
-    config: { ...PUERTO_RICO, ...p.config },
+    config,
     seed: 'lesson',
     handNo: 0,
-    dealer: 1,
+    dealer: n - 1,
     trumpSuit: turned ? suitOf(turned) : (p.trump as Suit),
     turned: turned && stock.length > 0 && stock[stock.length - 1] === turned ? turned : null,
-    hands: [[...p.me], [...p.them]],
+    hands,
     stock,
     trick: [...(p.trick ?? [])],
     leader: p.leader ?? 0,
-    won: [[...(p.wonMe ?? [])], [...(p.wonThem ?? [])]],
-    tricksWon: [Math.floor((p.wonMe ?? []).length / 2), Math.floor((p.wonThem ?? []).length / 2)],
-    known: [[], []],
+    won,
+    tricksWon: won.map((w) => Math.floor(w.length / n)),
+    known: hands.map(() => []),
+    signals: [...(p.signals ?? [])],
     arrastre: false,
     matchWins: [0, 0],
     results: [],

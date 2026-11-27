@@ -12,7 +12,7 @@ import type { GameAnalysis, MoveVerdict, Reason } from '../../teach/analysis';
 import { ANALYSIS_VERSION, keyMoments, moveAccuracy, seatAccuracy, verdictFor } from '../../teach/analysis';
 import type { AskCoach } from '../types';
 import type { BriscaAction, BriscaState, Card } from './rules';
-import { actionText, brisca, cardPoints, isCard, suitOf, trickWinner } from './rules';
+import { actionText, brisca, cardPoints, isCard, sideOf, suitOf, trickWinner } from './rules';
 import { tDynamic } from '../../text';
 import { cardName } from './ui/names';
 
@@ -39,8 +39,9 @@ function reasonFor(before: BriscaState, played: BriscaAction, best: string, loss
     const led = before.trick[0];
     const config = before.config;
     if (led) {
-      const ledPoints = cardPoints(led.card, config);
-      const wins = trickWinner([led, { seat, card: played.card }], before.trumpSuit, config) === seat;
+      const ledPoints = before.trick.reduce((a, p) => a + cardPoints(p.card, config), 0);
+      // With four players, the trick going to your partner counts as yours.
+      const wins = sideOf(trickWinner([...before.trick, { seat, card: played.card }], before.trumpSuit, config)) === sideOf(seat);
       if (wins && suitOf(played.card) === before.trumpSuit && suitOf(led.card) !== before.trumpSuit && ledPoints === 0) return { key: 'why.brisca-wasted-trump', params: { n: ledPoints } };
       if (!wins && cardPoints(played.card, config) >= 3) return { key: 'why.brisca-gave-points', params: { n: cardPoints(played.card, config) } };
       if (!wins && ledPoints >= 3 && best !== actionText(played)) return { key: 'why.brisca-missed-points', params: { move: nameOf(best), n: ledPoints } };
@@ -55,7 +56,8 @@ export async function analyseBriscaGame(record: GameRecord, ask: AskCoach, onPro
   const humans = record.players.flatMap((p, seat) => (p.kind === 'human' ? [seat] : []));
   const start = startState(brisca, record);
   const { steps } = replay(brisca, record);
-  const mine = steps.map((s, i) => ({ s, i })).filter(({ s }) => humans.includes(s.seat));
+  // Señas are not rated: they are not plays.
+  const mine = steps.map((s, i) => ({ s, i })).filter(({ s }) => humans.includes(s.seat) && s.action.type !== 'sign');
   const moves: MoveVerdict[] = [];
   let done = 0;
   for (const { s, i } of mine) {

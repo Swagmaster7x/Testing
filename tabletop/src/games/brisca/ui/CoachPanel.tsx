@@ -9,7 +9,7 @@ import { t, tDynamic } from '../../../text';
 import type { CoachPanelProps } from '../../types';
 import { NO_OVERLAY } from '../../types';
 import type { BriscaState, Card } from '../rules';
-import { cardPoints, isCard, pointsOf, RANKS, SUITS, suitOf, unseenCards, viewOf } from '../rules';
+import { cardPoints, isCard, RANKS, sideOf, sidePiles, SUITS, suitOf, unseenCards, viewOf } from '../rules';
 import { cardName, suitName } from './names';
 
 interface Hint {
@@ -25,7 +25,7 @@ export function BriscaCoachPanel({ state, seat, helps, ask, setOverlay, markTrai
   const [hint, setHint] = useState<Hint | null>(null);
   const [busy, setBusy] = useState(false);
   const me = seat ?? 0;
-  const them = me === 0 ? 1 : 0;
+  const them = (me + 1) % state.hands.length;
   // A hint belongs to one decision: the hand, the trick and the cards in it.
   const key = `${state.handNo}/${state.won.flat().length}/${state.trick.length}/${state.hands[me]?.join('') ?? ''}`;
   const current = hint?.key === key ? hint : null;
@@ -79,9 +79,9 @@ export function BriscaCoachPanel({ state, seat, helps, ask, setOverlay, markTrai
       )}
       {helps.counts ? (
         <dl className="facts coach-counts">
-          <dt>{t('brisca.counter.points')}</dt>
+          <dt>{t(state.hands.length === 4 ? 'brisca.counter.points.sides' : 'brisca.counter.points')}</dt>
           <dd className="num">
-            {pointsOf(state.won[me] ?? [], state.config)} · {pointsOf(state.won[them] ?? [], state.config)}
+            {sidePiles(state).points[sideOf(me)] ?? 0} · {sidePiles(state).points[sideOf(them)] ?? 0}
           </dd>
           <dt>{t('brisca.counter.trumps')}</dt>
           <dd className="num">

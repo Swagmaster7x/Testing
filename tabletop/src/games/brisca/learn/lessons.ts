@@ -8,6 +8,16 @@ import { position } from '../rules';
 
 const MID = position({ trump: 'Rc', me: ['Ao', '5b', 'Sc'], them: ['2o', '7e', 'Cb'] });
 
+// Four players: seats 1 (right), 2 (your partner) and 3 (left). Oros are trumps.
+const FOUR = { players: 4 as const };
+const SENAS = { players: 4 as const, signals: 'señas' as const };
+/** Your right-hand player led a blank card, your partner took it with the As of trumps, the left played low: you play last. */
+const LOAD = position({ trump: 'Co', me: ['Ac', '2e', '6b'], them: [], others: [['5e', '7b'], ['Ro', '6c'], ['7c', '4e']], trick: [{ seat: 1, card: '4c' }, { seat: 2, card: 'Ao' }, { seat: 3, card: '5c' }], leader: 1, config: FOUR });
+/** Your hand holds the As of trumps, with señas on. */
+const SIGN_AS = position({ trump: 'Co', me: ['Ao', '4c', '5e'], them: [], others: [['6e', '7b', 'Sb'], ['Ro', '6c', '3b'], ['7c', '4e', 'Cb']], config: SENAS });
+/** Your partner has signed the Rey of trumps; the table shows the sign without its name. */
+const PARTNER_REY = position({ trump: 'Co', me: ['6o', '4c', '5e'], them: [], others: [['6e', '7b', 'Sb'], ['Ro', '6c', '3b'], ['7c', '4e', 'Cb']], signals: [{ seat: 2, sign: 'R' }], config: SENAS });
+
 export const BRISCA_LESSONS: readonly Lesson[] = [
   // Stage 0
   {
@@ -272,6 +282,59 @@ export const BRISCA_LESSONS: readonly Lesson[] = [
   },
 
   // Table-ready
+  // Stage 3: four players in pairs, and the señas
+  {
+    id: 'brisca.3.four',
+    gameId: 'brisca',
+    stage: 'stage-3',
+    title: 'Brisca for four',
+    minutes: 3,
+    start: LOAD,
+    steps: [
+      { kind: 'say', text: 'Most Brisca is played by four, in two pairs: your partner sits across from you. Everyone holds three cards, play goes round to the right, and the player on the dealer’s right leads first.' },
+      { kind: 'say', text: 'After each trick the winner draws first, then the others in turn. The stock lasts {tricks:four-drawing} draws; then the last {tricks:last} tricks are played without drawing, {tricks:four} tricks in all. Your side counts the points both of you took: {points:win} wins.' },
+      {
+        kind: 'askMove',
+        text: 'Your partner took the trick with the As of trumps, and you play last: nobody can beat it now. Load it: throw the card with the most points.',
+        accept: ['Ac'],
+        wrong: { '2e': 'The trick is already your side’s. Give your partner points, not a blank card.', '6b': 'The trick is already your side’s. Give your partner points, not a blank card.' },
+        claim: 'legal',
+        success: 'Cargar: when your partner has the trick won, pile your points on it. The As of copas goes into your side’s tricks.',
+      },
+      {
+        kind: 'askChoice',
+        text: 'Your partner is winning a trick with a Sota of copas, and the player after you has not played yet. Should you throw your As of copas on it?',
+        options: [
+          { text: 'No: the next player may still take it, As and all', correct: true, why: 'Right. Load your partner’s trick when nobody after you can beat it: when you play last, or when your partner’s card is the best still out.' },
+          { text: 'Yes: always give your partner points', why: 'Only when the trick is safe. A Sota is easily beaten, and then your As goes to the other side.' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'brisca.3.senas',
+    gameId: 'brisca',
+    stage: 'stage-3',
+    title: 'Señas: signs to your partner',
+    minutes: 3,
+    start: SIGN_AS,
+    steps: [
+      { kind: 'say', text: 'Many tables let partners tell each other about their high trumps with discreet signs, the señas. Others play in silence, or let partners talk: ask before you sit. The other side must not see your signs.' },
+      { kind: 'say', text: 'A common set: for the As, stretch the lips over the teeth; for the Tres, twist the mouth to one side; for the Rey, glance upwards; for the Caballo, show the tip of the tongue; for the Sota, shrug one shoulder.' },
+      { kind: 'askMove', text: 'You hold the As of trumps. Tell your partner: open Señas and choose the As.', accept: ['sign:A'], claim: 'legal', success: 'Signed. Now your partner knows your side holds the strongest card in the game, and can play their points more freely.' },
+      {
+        kind: 'askChoice',
+        position: PARTNER_REY,
+        marks: ['hide-sign-names'],
+        text: 'Your partner makes the sign shown by their name. Which card of trumps do they hold?',
+        options: [
+          { text: 'The Rey', correct: true, why: 'Yes: a glance upwards is the Rey.' },
+          { text: 'The As', why: 'The As is the lips stretched over the teeth. A glance upwards is the Rey.' },
+          { text: 'The Caballo', why: 'The Caballo is the tip of the tongue. A glance upwards is the Rey.' },
+        ],
+      },
+    ],
+  },
   {
     id: 'brisca.table.deal',
     gameId: 'brisca',

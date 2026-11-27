@@ -26,6 +26,8 @@ const FIXED: Record<string, number> = {
   'tricks:total': DECK.length / 2,
   'tricks:drawing': (DECK.length - 2 * HAND_SIZE) / 2,
   'tricks:last': HAND_SIZE,
+  'tricks:four': DECK.length / 4,
+  'tricks:four-drawing': (DECK.length - 4 * HAND_SIZE) / 4,
   'value:A': cardPoints('Ao', PUERTO_RICO),
   'value:3': cardPoints('3o', PUERTO_RICO),
   'value:R': cardPoints('Ro', PUERTO_RICO),

@@ -4,13 +4,13 @@ import type { GameOptions, GameUi, OptionField, ReferenceSection, SeatNames } fr
 import { BRISCA_LEVELS } from '../bots';
 import { analyseBriscaGame } from '../review';
 import type { BriscaAction, BriscaConfig, BriscaEvent, BriscaState, BriscaView } from '../rules';
-import { brisca, MATCH_LENGTHS, PRESETS } from '../rules';
+import { brisca, MATCH_LENGTHS, PRESETS, sideOf } from '../rules';
 import { BriscaCoachPanel } from './CoachPanel';
-import { cardName, suitName } from './names';
+import { cardName, seatName, suitName } from './names';
 import { BriscaSeatMark, BriscaSurface } from './BriscaSurface';
 
-/** You, the CPU, or at a pass-and-play table the other person's name. */
-const who = (seat: Seat, mySeats: readonly Seat[] | undefined, names?: SeatNames): string => ((mySeats ?? [0]).includes(seat) ? t('brisca.who.you') : (names?.(seat) ?? t('brisca.who.cpu')));
+/** You, the CPU (or right, partner, left), or at a pass-and-play table another person's name. */
+const who = (seat: Seat, mySeats: readonly Seat[] | undefined, names?: SeatNames, n = 2): string => ((mySeats ?? [0]).includes(seat) ? t('brisca.who.you') : seatName(seat, (mySeats ?? [0])[0] ?? 0, n, names));
 
 const FIELDS: readonly { key: keyof BriscaConfig; values: readonly (string | number)[] }[] = [
   { key: 'swap', values: ['seven-and-two', 'seven', 'none'] },
@@ -22,6 +22,8 @@ const FIELDS: readonly { key: keyof BriscaConfig; values: readonly (string | num
   { key: 'trumps', values: ['turned', 'rotate'] },
   { key: 'arrastre', values: ['off', 'on'] },
   { key: 'secondBrisca', values: ['three', 'seven'] },
+  { key: 'players', values: [2, 4] },
+  { key: 'signals', values: ['off', 'señas'] },
 ];
 
 export const briscaOptions: GameOptions<BriscaConfig> = {
@@ -50,7 +52,10 @@ export const briscaUi: GameUi<BriscaState, BriscaAction, BriscaConfig, BriscaVie
     { id: 'either', label: 'play.side.either', seat: 'either' },
   ],
   sideName: (seat) => tDynamic(`brisca.seat.${seat}`),
-  movePrefix: (seat, mySeats, _seats, names) => ((mySeats ?? [0]).includes(seat) ? t('brisca.you') : (names?.(seat) ?? t('brisca.cpu'))),
+  movePrefix: (seat, mySeats, seats, names) => ((mySeats ?? [0]).includes(seat) ? t('brisca.you') : (seats ?? 2) === 4 ? seatName(seat, (mySeats ?? [0])[0] ?? 0, 4, names) : (names?.(seat) ?? t('brisca.cpu'))),
+  playerName: (seat, mySeats, seats, names) => (mySeats.includes(seat) ? t('common.you') : seats === 4 ? seatName(seat, mySeats[0] ?? 0, 4, names) : t('common.cpu')),
+  // A seña is seen only by the side that made it.
+  moveVisible: (action, seat, mySeats) => action.type !== 'sign' || mySeats.some((m) => sideOf(m) === sideOf(seat)),
   eventDuration(event) {
     switch (event.type) {
       case 'play':
@@ -61,6 +66,8 @@ export const briscaUi: GameUi<BriscaState, BriscaAction, BriscaConfig, BriscaVie
         return 230;
       case 'swap':
         return 480;
+      case 'sign':
+        return 500;
       case 'deal':
         return 650;
       case 'hand-end':
@@ -69,25 +76,32 @@ export const briscaUi: GameUi<BriscaState, BriscaAction, BriscaConfig, BriscaVie
         return 0;
     }
   },
-  describeEvent(event, mySeats, _seats, names) {
+  describeEvent(event, mySeats, seats, names) {
+    const n = seats ?? 2;
     switch (event.type) {
       case 'play':
-        return t(event.call ? 'brisca.log.call' : 'brisca.log.play', { who: who(event.seat, mySeats, names), card: cardName(event.card) });
+        return t(event.call ? 'brisca.log.call' : 'brisca.log.play', { who: who(event.seat, mySeats, names, n), card: cardName(event.card) });
       case 'swap':
-        return t('brisca.log.swap', { who: who(event.seat, mySeats, names), gave: cardName(event.gave), took: cardName(event.took) });
+        return t('brisca.log.swap', { who: who(event.seat, mySeats, names, n), gave: cardName(event.gave), took: cardName(event.took) });
+      case 'sign':
+        // Only the signing side sees a seña.
+        if (!(mySeats ?? [0]).some((m) => sideOf(m) === sideOf(event.seat))) return null;
+        return t('brisca.log.sign', { who: who(event.seat, mySeats, names, n), card: tDynamic(`brisca.sign.${event.sign}`) });
       case 'trick':
-        return event.points > 0 ? t('brisca.log.trick', { who: who(event.winner, mySeats, names), n: event.points }) : t('brisca.log.trick.none', { who: who(event.winner, mySeats, names) });
+        return event.points > 0 ? t('brisca.log.trick', { who: who(event.winner, mySeats, names, n), n: event.points }) : t('brisca.log.trick.none', { who: who(event.winner, mySeats, names, n) });
       case 'draw': {
-        if (event.turned) return t('brisca.log.draw.turned', { who: who(event.seat, mySeats, names), card: cardName(event.card) });
+        if (event.turned) return t('brisca.log.draw.turned', { who: who(event.seat, mySeats, names, n), card: cardName(event.card) });
         if ((mySeats ?? [0]).includes(event.seat)) return t('brisca.log.draw.you', { card: cardName(event.card) });
         const person = names?.(event.seat);
-        return person ? t('brisca.log.draw.other', { who: person }) : t('brisca.log.draw.cpu');
+        if (person) return t('brisca.log.draw.other', { who: person });
+        return n === 4 ? t('brisca.log.draw.other', { who: who(event.seat, mySeats, names, n) }) : t('brisca.log.draw.cpu');
       }
       case 'deal':
         return t('brisca.log.deal', { n: event.handNo + 1, suit: suitName(event.trumpSuit) });
       case 'hand-end': {
         const me = (mySeats ?? [0])[0] ?? 0;
         const them = me === 0 ? 1 : 0;
+        if (n === 4) return t('brisca.log.hand-end.sides', { a: event.points[sideOf(me)] ?? 0, b: event.points[1 - sideOf(me)] ?? 0 });
         const person = names?.(them);
         return person
           ? t('brisca.log.hand-end.named', { a: event.points[me] ?? 0, who: person, b: event.points[them] ?? 0 })
@@ -100,6 +114,16 @@ export const briscaUi: GameUi<BriscaState, BriscaAction, BriscaConfig, BriscaVie
   counters(state, mySeats) {
     const me = mySeats[0] ?? 0;
     const them = me === 0 ? 1 : 0;
+    if (state.hands.length === 4) {
+      const side = sideOf(me);
+      const tricks = (s: number) => state.tricksWon.reduce((a, k, seat) => a + (sideOf(seat) === s ? k : 0), 0);
+      const four = [
+        { label: t('brisca.counter.stock'), value: String(state.stock.length) },
+        { label: t('brisca.counter.tricks.sides'), value: `${tricks(side)} · ${tricks(1 - side)}` },
+      ];
+      if (state.config.matchTo > 1) four.push({ label: t('brisca.counter.match.sides'), value: `${state.matchWins[side] ?? 0} · ${state.matchWins[1 - side] ?? 0}` });
+      return four;
+    }
     const rows = [
       { label: t('brisca.counter.stock'), value: String(state.stock.length) },
       { label: t('brisca.counter.tricks'), value: `${state.tricksWon[me] ?? 0} · ${state.tricksWon[them] ?? 0}` },

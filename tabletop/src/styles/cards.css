@@ -465,3 +465,65 @@ button.line-end[data-usable='true'] {
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
 }
+
+/* Brisca for four: the other players' names, the partner's señas, and the señas tray. */
+.brisca-seat-tag {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 250;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(14 12 9 / 0.62);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.brisca-seat-tag[data-acting='true'] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.brisca-signed {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.brisca-signed-one {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 500;
+}
+
+.brisca-signs {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.brisca-sign-tray {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.75);
+}
+
+.brisca-sign-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 48px;
+  padding: 2px 4px;
+  font-size: var(--fs-2xs);
+}
