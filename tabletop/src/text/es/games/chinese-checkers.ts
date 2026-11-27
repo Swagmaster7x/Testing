@@ -42,7 +42,7 @@ export const esChineseCheckers: Partial<Record<MessageKey, string>> = {
   'cc.level.5': 'Planea su próximo salto cada vez: arma escaleras y las usa.',
   'cc.level.6': 'El nivel más fuerte: lee cinco jugadas adelante.',
 
-  'cc.help.reach': 'Mostrar adónde puede ir una canica',
+  'cc.help.reach': 'Adónde puede ir una canica',
   'cc.help.race': 'Contar la carrera',
   'cc.help.blunder': 'Avisar antes de una jugada lenta',
 

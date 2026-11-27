@@ -144,7 +144,7 @@ export const esBrisca: Partial<Record<MessageKey, string>> = {
   'brisca.preset.puerto-rico': 'Puerto Rico',
   'brisca.preset.spain': 'España',
   'brisca.preset.italy': 'Italia (briscola)',
-  'brisca.preset.open-table': 'Puerto Rico, a tres manos',
+  'brisca.preset.open-table': 'Puerto Rico, a tres manos ganadas',
   'brisca.preset.four-pairs': 'Cuatro jugadores en parejas',
   'brisca.preset.four-señas': 'Cuatro en parejas, con señas',
   'brisca.option.swap': 'Cambiar por la carta boca arriba',

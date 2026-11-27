@@ -64,7 +64,7 @@ export const esDominoes: Partial<Record<MessageKey, string>> = {
   'dominoes.counter.target.hand': 'Una mano',
   'dominoes.counter.hand': 'Mano',
   'dominoes.counter.boneyard': 'Pozo',
-  'dominoes.help.tilesOut': 'Fichas jugadas y números que quedan',
+  'dominoes.help.tilesOut': 'Fichas jugadas y las que quedan',
   'dominoes.help.cantHave': 'Lo que cada uno no puede tener',
   'dominoes.help.pips': 'Total de puntos',
   'dominoes.help.openHand': 'Fichas arriba (todas boca arriba)',
