@@ -18,7 +18,9 @@ import type { HoldemState } from '../../src/games/holdem/rules';
 import { holdem, positionName } from '../../src/games/holdem/rules';
 import { inSet } from '../../src/games/practice';
 import { readyItems } from '../../src/games/ready';
-import { typedNumbers } from '../../src/teach/lesson';
+import type { LessonStep } from '../../src/teach/lesson';
+import { fillText, typedNumbers } from '../../src/teach/lesson';
+import { currentStep, next, startLesson, submitMove, submitNumber, valuesAt } from '../../src/teach/runner';
 import { lintLesson } from '../../src/teach/lint';
 
 const h = (text: string): Card[] => text.split(' ') as Card[];
@@ -166,16 +168,79 @@ describe('the verifier', () => {
 
 describe('lessons', () => {
   it('cover stages 0 to 2 and the Table-ready track, and the checklist names real lessons', () => {
-    for (const stage of ['stage-0', 'stage-1', 'stage-2', 'table'] as const) expect(POKER_LESSONS.filter((l) => l.stage === stage).length, stage).toBeGreaterThanOrEqual(7);
+    const count = (stage: string) => POKER_LESSONS.filter((l) => l.stage === stage).length;
+    expect(count('stage-0')).toBeGreaterThanOrEqual(2);
+    for (const stage of ['stage-1', 'stage-2', 'stage-3', 'table']) expect(count(stage), stage).toBeGreaterThanOrEqual(6);
+    // In order: the Learn screen suggests the first lesson not yet done.
+    const stages = POKER_LESSONS.map((l) => l.stage);
+    expect(stages).toEqual([...stages].sort((a, b) => ['stage-0', 'stage-1', 'stage-2', 'stage-3', 'table'].indexOf(a) - ['stage-0', 'stage-1', 'stage-2', 'stage-3', 'table'].indexOf(b)));
     const ids = new Set(POKER_LESSONS.map((l) => l.id));
     expect(ids.size).toBe(POKER_LESSONS.length);
     for (const item of readyItems('poker')) for (const id of item.lessons ?? []) expect(ids.has(id), id).toBe(true);
     expect(readyItems('poker').some((item) => item.drill?.id === 'drill-poker-winner')).toBe(true);
   });
 
+  it('name only players who are still in the hand at that step', () => {
+    for (const lesson of POKER_LESSONS) {
+      let position = lesson.start;
+      const check = (text: string, at: string, where: string) => {
+        const s = state(at);
+        const last = s.log[s.log.length - 1];
+        for (const m of text.matchAll(/\{name:(\d)\}/g)) {
+          const seat = Number(m[1]);
+          const p = s.players[seat];
+          // In the hand, or the player whose fold was the last thing that happened.
+          const ok = (p !== undefined && p.hole.length === 2 && !p.folded) || (last?.seat === seat && last.kind === 'fold');
+          expect(ok, `${lesson.id} ${where}: ${m[0]} is not in the hand`).toBe(true);
+        }
+      };
+      lesson.steps.forEach((step, i) => {
+        if (step.position) position = step.position;
+        const texts = [step.text, ...(step.kind === 'askChoice' ? step.options.flatMap((o) => [o.text, o.why ?? '']) : []), ...(step.kind === 'askMove' ? [step.success] : [])];
+        for (const t of texts) check(t, position, `step ${i + 1}`);
+        if (step.kind === 'checkpoint') {
+          let qp = position;
+          for (const q of step.questions) {
+            if (q.position) qp = q.position;
+            check(q.text, qp, `step ${i + 1}`);
+          }
+        }
+        if (step.kind === 'show') position = after(position, step.moves.join(' '));
+        if (step.kind === 'askMove') position = after(position, [step.accept[0], step.reply].filter(Boolean).join(' '));
+      });
+    }
+  });
+
+  it('keep a question’s numbers from where it was asked once the move is played', () => {
+    const lesson = POKER_LESSONS.find((l) => l.id === 'poker.2.pot-odds');
+    if (!lesson) throw new Error('no pot-odds lesson');
+    let s = startLesson(lesson);
+    while (currentStep(s)?.kind !== 'askMove') s = currentStep(s)?.kind === 'askNumber' ? next(pokerLessonGame, submitNumber(pokerLessonGame, s, Number(valuesAt(pokerLessonGame, s).need))) : next(pokerLessonGame, s);
+    const before = s.position;
+    s = submitMove(pokerLessonGame, s, 'call');
+    expect(s.phase).toBe('correct');
+    expect(s.position).not.toBe(before);
+    expect(s.asked).toBe(before);
+    const step = currentStep(s);
+    if (step?.kind !== 'askMove') throw new Error('not the move');
+    expect(fillText(step.text, pokerComputed(state(s.asked)))).toMatch(/^Your \d+% beats the \d+% you need/);
+  });
+
   it('never mention money: play chips only', () => {
-    const all = JSON.stringify(POKER_LESSONS).toLowerCase();
-    for (const word of ['money', 'dollar', 'cash out', '$', '€', 'bankroll', 'buy chips']) expect(all.includes(word), word).toBe(false);
+    // Everything a student reads: titles, steps, options, feedback, and the drills' text too.
+    const read = (steps: readonly LessonStep[]): string[] =>
+      steps.flatMap((step) => [
+        step.text,
+        ...(step.kind === 'askChoice' ? step.options.flatMap((o) => [o.text, o.why ?? '']) : []),
+        ...(step.kind === 'askMove' ? [step.success, ...Object.values(step.wrong ?? {})] : []),
+        ...(step.kind === 'askNumber' ? [step.success] : []),
+        ...(step.kind === 'checkpoint' ? read(step.questions) : []),
+      ]);
+    const next = random('unit/words');
+    const drills = POKER_DRILLS.flatMap((d) => Array.from({ length: 5 }, () => d.make(next)));
+    // Placeholder names ({cash:stack}) are never shown; their values are numbers.
+    const all = [...POKER_LESSONS, ...drills].flatMap((l) => [l.title, ...read(l.steps)]).join('\n').replace(/\{[\w:.-]+\}/g, '').toLowerCase();
+    for (const word of ['money', 'dollar', 'cash', '$', '€', 'bankroll', 'buy', 'purchase', 'wager', 'gambl']) expect(all.includes(word), word).toBe(false);
   });
 });
 
