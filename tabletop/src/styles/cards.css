@@ -24,6 +24,19 @@
   -webkit-user-select: none;
 }
 
+/*
+ * Held upright, the stacked layout left a card or tile table no height of its own (it fills its
+ * box): a 3:4 table first, then the players and the coach at their own heights below.
+ */
+@media (orientation: portrait) and (max-width: 700px) {
+  .table-body[data-wide='true'],
+  .table-body[data-wide='true'][data-rail='left'],
+  .table-body[data-wide='true'][data-rail-open='false'],
+  .table-body[data-wide='true'][data-rail-open='false'][data-rail='left'] {
+    grid-template-rows: calc(100vw * 4 / 3) max-content max-content;
+  }
+}
+
 .table-card {
   position: absolute;
   left: 0;
