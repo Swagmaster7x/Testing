@@ -107,3 +107,49 @@
   font-size: var(--fs-xs);
   color: var(--text-3);
 }
+
+/* Review: score and ownership from the network (M15). */
+.go-insight {
+  display: grid;
+  gap: var(--sp-2);
+  justify-items: start;
+}
+
+.go-insight-lead {
+  font-family: var(--font-head, inherit);
+  font-size: var(--fs-lg);
+  color: var(--text-1);
+}
+
+.go-lead-graph {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.go-lead-black {
+  fill: rgb(27 24 20 / 0.55);
+}
+
+.go-lead-white {
+  fill: rgb(246 241 231 / 0.16);
+}
+
+.go-lead-zero {
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.go-lead-now {
+  stroke: var(--brass-2);
+  stroke-width: 1.5;
+}
+
+.go-lead-line {
+  fill: none;
+  stroke: var(--brass-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}

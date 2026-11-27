@@ -6,11 +6,14 @@
  *   their quiescence, so drop tactics catch them out. The choice comes from the game's seed.
  * - Levels 4 to 7 play the engine's best move at rising node budgets.
  * Handicap games (presets.ts) give further honest steps below the strong levels.
+ * - Level 8 (M15) is Fairy-Stockfish, offered only where it can run (strong.ts); review analysis
+ *   uses it too when asked. Anywhere else level 8 plays as level 7.
  *
  * Strength comes from node budgets only, so a level plays the same on a phone and in tests.
  */
 import type { AdviseInput, BotChoice, BotInput, BotSet } from '../../ai/bot';
 import type { PvsResult } from '../../ai/pvs';
+import type { Engine } from '../../ai/uci';
 import { isMateScore, matePlies } from '../../ai/pvs';
 import type { Json } from '../../core/json';
 import { isJsonObject } from '../../core/json';
@@ -26,6 +29,7 @@ import { canonicalOf, toCanonical } from './notation';
 import { IMPASSE_24 } from './presets';
 import type { ShogiAction, ShogiState, ShogiView } from './rules';
 import { canDeclare, canonicalAction, impassePoints, legalPairs, PIECE_NAMES, shogi } from './rules';
+import { STRONG_LEVEL, STRONG_NODES, strongAnalyse, strongMove, strongPlays } from './strong';
 
 /** Node budget for coach questions: enough to catch blunders, quick on a phone. */
 export const COACH_NODES = 120_000;
@@ -331,31 +335,93 @@ function advise(view: ShogiView, query: Json): Json {
   }
 }
 
+function chooseBuiltIn({ view, level, rng }: BotInput<ShogiView>): BotChoice<ShogiAction> {
+  const params = LEVEL_PARAMS[level];
+  if (!params) throw new Error(`Shogi has no level ${level}`);
+  const state = view;
+  if (shogi.turn(state) === null) throw new Error('No move to make: the game is over');
+  const { p, actions } = legalPairs(state);
+  if (shouldDeclare(state, p)) {
+    const declare = actions.find((a) => a.type === 'declare');
+    if (declare) return { action: declare, tags: ['shogi-impasse'], nodes: 0 };
+  }
+  const { result, p: searched } = searchState(state, {
+    nodes: params.nodes,
+    maxDepth: params.maxDepth,
+    exact: params.exact,
+    checkDrops: params.checkDrops,
+    quiescence: params.quiescence,
+    noise: params.noise,
+    salt: rng.int(0x7fffffff),
+  });
+  const m = params.exact ? pickWithErrors(result, params, rng) : result.best;
+  return { action: actionFor(state, m), tags: moveTags(searched, m), nodes: result.nodes };
+}
+
+/**
+ * The shogi bots. With `strong` (a way to start Fairy-Stockfish where it can run), level 8 and
+ * strong review analysis are on; the engine starts on first use and stays up. If it fails to start
+ * it is not tried again, and the built-in engine answers instead.
+ */
+export function shogiBotsWith(strong: (() => Engine) | null): BotSet<ShogiView, ShogiAction> {
+  let engine: Engine | null = null;
+  let broken = strong === null;
+  const strongEngine = (): Engine | null => {
+    if (broken || !strong) return null;
+    engine ??= strong();
+    return engine;
+  };
+  const giveUp = () => {
+    broken = true;
+    engine?.terminate();
+    engine = null;
+  };
+  return {
+    gameId: 'shogi',
+    levels: strong ? [...SHOGI_LEVELS, STRONG_LEVEL] : SHOGI_LEVELS,
+    async choose(input: BotInput<ShogiView>): Promise<BotChoice<ShogiAction>> {
+      const state = input.view;
+      if (input.level !== STRONG_LEVEL.level) return chooseBuiltIn(input);
+      const fallback = { ...input, level: SHOGI_LEVELS[SHOGI_LEVELS.length - 1]!.level };
+      const fsf = strongPlays(state) ? strongEngine() : null;
+      if (!fsf) return chooseBuiltIn(fallback);
+      const { p, moves, actions } = legalPairs(state);
+      if (shouldDeclare(state, p)) {
+        const declare = actions.find((a) => a.type === 'declare');
+        if (declare) return { action: declare, tags: ['shogi-impasse'], nodes: 0 };
+      }
+      try {
+        const action = await strongMove(fsf, state);
+        if (!action) return chooseBuiltIn(fallback);
+        const m = moves[actions.findIndex((a) => canonicalAction(a) === canonicalAction(action))];
+        return { action, tags: m === undefined ? [] : moveTags(p, m), nodes: STRONG_NODES };
+      } catch {
+        giveUp();
+        return chooseBuiltIn(fallback);
+      }
+    },
+    async advise({ view, query }: AdviseInput<ShogiView>): Promise<Json> {
+      if (isJsonObject(query) && query.type === 'analyse' && query.engine === 'strong' && strongPlays(view) && shogi.turn(view) !== null) {
+        const fsf = strongEngine();
+        if (fsf) {
+          try {
+            return await strongAnalyse(fsf, view, clampNodes(query.nodes, COACH_NODES), typeof query.multiPv === 'number' ? Math.min(3, Math.max(1, Math.round(query.multiPv))) : 2);
+          } catch {
+            giveUp();
+          }
+        }
+      }
+      return advise(view, query);
+    },
+    encode: (action) => canonicalAction(action),
+  };
+}
+
+/** The bots with the built-in engine only: ladders, tests and anywhere the strong engine cannot run. */
 export const shogiBots: BotSet<ShogiView, ShogiAction> = {
   gameId: 'shogi',
   levels: SHOGI_LEVELS,
-  choose({ view, level, rng }: BotInput<ShogiView>): BotChoice<ShogiAction> {
-    const params = LEVEL_PARAMS[level];
-    if (!params) throw new Error(`Shogi has no level ${level}`);
-    const state = view;
-    if (shogi.turn(state) === null) throw new Error('No move to make: the game is over');
-    const { p, actions } = legalPairs(state);
-    if (shouldDeclare(state, p)) {
-      const declare = actions.find((a) => a.type === 'declare');
-      if (declare) return { action: declare, tags: ['shogi-impasse'], nodes: 0 };
-    }
-    const { result, p: searched } = searchState(state, {
-      nodes: params.nodes,
-      maxDepth: params.maxDepth,
-      exact: params.exact,
-      checkDrops: params.checkDrops,
-      quiescence: params.quiescence,
-      noise: params.noise,
-      salt: rng.int(0x7fffffff),
-    });
-    const m = params.exact ? pickWithErrors(result, params, rng) : result.best;
-    return { action: actionFor(state, m), tags: moveTags(searched, m), nodes: result.nodes };
-  },
+  choose: chooseBuiltIn,
   advise: ({ view, query }: AdviseInput<ShogiView>) => advise(view, query),
   encode: (action) => canonicalAction(action),
 };

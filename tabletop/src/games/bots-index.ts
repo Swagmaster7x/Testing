@@ -12,13 +12,21 @@ const loaders: Record<string, Loader> = {
   noughts: () => import('./noughts/bots').then((m) => m.noughtsBots as BotSet<unknown, unknown>),
   brisca: () => import('./brisca/bots').then((m) => m.briscaBots as unknown as BotSet<unknown, unknown>),
   dominoes: () => import('./dominoes/bots').then((m) => m.dominoesBots as unknown as BotSet<unknown, unknown>),
-  go: () => import('./go/bots').then((m) => m.goBots as BotSet<unknown, unknown>),
+  // The review's score and ownership map come from a small KataGo network shipped under engines/ (M15).
+  go: (context) =>
+    Promise.all([import('./go/bots'), import('./go/net/load')]).then(([m, net]) => m.goBotsWith(() => net.loadNetFrom(context.assetsBase)) as BotSet<unknown, unknown>),
   poker: () => import('./holdem/bots').then((m) => m.holdemBots as unknown as BotSet<unknown, unknown>),
   chess: (context) =>
     Promise.all([import('./chess/bots'), import('../ai/uci'), import('../ai/engines/stockfish-web')]).then(
       ([bots, uci, web]) => bots.chessBots(() => new uci.UciEngine(web.stockfishWebTransport(context.assetsBase))) as BotSet<unknown, unknown>,
     ),
-  shogi: () => import('./shogi/bots').then((m) => m.shogiBots as BotSet<unknown, unknown>),
+  // Level 8 and strong review analysis run on Fairy-Stockfish where the page is cross-origin isolated (M15).
+  shogi: (context) =>
+    Promise.all([import('./shogi/bots'), import('../ai/uci'), import('../ai/engines/fairy-stockfish-web')]).then(([bots, uci, web]) =>
+      (web.strongEngineAvailable()
+        ? bots.shogiBotsWith(() => new uci.UciEngine(web.fairyStockfishWebTransport(context.assetsBase), web.FAIRY_USI))
+        : bots.shogiBots) as BotSet<unknown, unknown>,
+    ),
   'chinese-checkers': () => import('./chinese-checkers/bots').then((m) => m.ccBots as unknown as BotSet<unknown, unknown>),
   mahjong: () => import('./mahjong/bots').then((m) => m.mahjongBots as unknown as BotSet<unknown, unknown>),
   blackjack: () => import('./blackjack/bots').then((m) => m.blackjackBots as unknown as BotSet<unknown, unknown>),

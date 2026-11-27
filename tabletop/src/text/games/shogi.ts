@@ -78,6 +78,7 @@ export const enShogi = {
   'shogi.level.5': 'A longer search: a solid club player of the lower ranks.',
   'shogi.level.6': 'A strong club player for a beginner to aim at.',
   'shogi.level.7': 'The full engine. Give it a handicap ladder to climb.',
+  'shogi.level.8': 'Fairy-Stockfish, a far stronger engine. Offered only where this device can run it.',
   'shogi.eval.black-mates': 'Sente mates in {n}',
   'shogi.eval.white-mates': 'Gote mates in {n}',
   'shogi.idea.promote': 'A piece can promote and grow stronger.',

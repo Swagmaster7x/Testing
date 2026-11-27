@@ -21,6 +21,8 @@ APK; the rest are only used to build and test it.
 | Fraunces (`@fontsource-variable/fraunces`) | 5.3.0 | SIL OFL 1.1 | Heading font, Latin and Latin Extended. Licence: `licenses/Fraunces-OFL.txt` |
 | `tsshogi` | 2.3.4 | MIT | Shogi game files (milestone 8): reads KIF, KI2, CSA and JKF and writes KIF and CSA for the standard board (`src/games/shogi/formats.ts`); in the tests, a second implementation that checks our move legality move by move. The rules and the engine are our own. Loaded only with the shogi table |
 | Shippori Mincho B1 ExtraBold (outlines only) | Shippori Mincho v24, via `@fontsource/shippori-mincho-b1` 5.3.0 | SIL OFL 1.1 | The 30 kanji on the shogi pieces and board, converted once to SVG path data (`src/games/shogi/ui/glyphs.ts`, made by `scripts/shogi-glyphs.mjs`); no font file ships. Copyright 2021 The Shippori Mincho Project Authors. Licence: `licenses/ShipporiMincho-OFL.txt` |
+| Fairy-Stockfish (`fairy-stockfish-nnue.wasm`, threaded WebAssembly build) | 1.1.12 | GPL-3.0 | Shogi level 8 and strong review analysis (milestone 15), only where the page is cross-origin isolated; never in the APK's WebView, which has no SharedArrayBuffer. `stockfish.js`, `stockfish.worker.js` and `stockfish.wasm` ship unmodified as `engines/fairy-stockfish/`, started by the app's own `host.js` (`scripts/engines/fairy-stockfish-host.js`) and spoken to over USI. No NNUE network ships; the engine uses its own evaluation. Licence: `licenses/Fairy-Stockfish-GPL-3.0.txt`; source: github.com/fairy-stockfish/fairy-stockfish.wasm |
+| KataGo network `g170-b6c96-s175395328-d26788732` | from KataGo's repository (`cpp/tests/models/`), fetched 2026-11-27 | MIT (the KataGo repository's licence) | The Go review's score and ownership map (milestone 15). Shipped as `engines/katago/g170-b6c96-f16.bin`, weights rounded to 16-bit floats by `scripts/katago-net.ts` (2.0 MB). The reader and the forward pass are this app's own (`src/games/go/net/`), written from KataGo's model format; no KataGo code ships. Licence: `licenses/KataGo-MIT.txt` |
 | LXGW WenKai TC Bold (outlines only) | LXGW WenKai TC v11, via `@fontsource/lxgw-wenkai-tc` 5.3.1 | SIL OFL 1.1 | The 24 Chinese characters on the mahjong tiles (the numerals and 萬 of the characters suit, the winds, the red and green dragons, the flowers and seasons), converted once to SVG path data (`src/games/mahjong/ui/glyphs.ts`, made by `scripts/mahjong-glyphs.mjs`); no font file ships. Copyright 2024 The LXGW WenKai Project Authors. Licence: `licenses/LXGW-WenKai-TC-OFL.txt` |
 
 ## Shipped in the APK only (Android libraries, pulled in by Gradle)
@@ -91,6 +93,15 @@ and the learner overlay (`src/games/mahjong/ui/tiles.tsx`; only the Chinese char
 the LXGW WenKai TC outlines above). Sounds are synthesised
 in the app with the Web Audio API; there are no sound files.
 
+## Looked at for milestone 15, not used
+
+- `katago-web` 1.0.0 (MIT): its parser and TensorFlow.js model were read to check our reading of
+  KataGo's file format. It needs TensorFlow.js or ONNX Runtime and a network from
+  katagotraining.org (refused by the build environment's network policy), so the app runs the
+  small network with its own forward pass instead. Not shipped.
+- `onnxruntime-web` 1.31.1 (MIT): about 150 MB unpacked, with WebAssembly files of several MB;
+  not needed for a six-block network. Not installed.
+
 ## Coming later
 
 The plan's later dependencies are added in the milestones that need them, each with a line here:
@@ -98,7 +109,8 @@ The plan's later dependencies are added in the milestones that need them, each w
 milestone 8 and `syanten` with milestone 9 (above). `riichi`, the second scorer for Riichi, comes
 with milestone 11.
 
-**Stockfish is GPL-3.** It runs as a separate worker file behind the `Engine` interface
-(`src/ai/uci.ts`). For a personal app that is fine. If this app is ever published, either publish
-its source under a GPL-compatible licence or switch Chess to a built-in engine (PLAN.md 2.1). No
-other GPL library is used, so that choice stays open.
+**Stockfish and Fairy-Stockfish are GPL-3.** Each runs as separate worker files behind the
+`Engine` interface (`src/ai/uci.ts`). For a personal app that is fine. If this app is ever
+published, either publish its source under a GPL-compatible licence or switch Chess to a built-in
+engine and drop shogi level 8 (PLAN.md 2.1); shogi's built-in engine stays the default. No other
+GPL library is used, so that choice stays open.

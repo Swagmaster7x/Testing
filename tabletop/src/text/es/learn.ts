@@ -158,6 +158,7 @@ export const esLearn: Partial<Record<MessageKey, string>> = {
   'door.practice.rating': 'Puntuación de problemas {rating}',
 
   'review.moments': 'Momentos clave',
+  'review.insight': 'Posición',
   'review.lens.up': 'Cartas arriba: ver todas las manos',
   'review.lens.knew': 'Volver a lo que sabías',
   'result.side-wins': 'Gana {side}',

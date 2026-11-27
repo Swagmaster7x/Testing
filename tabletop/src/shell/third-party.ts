@@ -13,4 +13,6 @@ export const SHIPPED: readonly { name: string; licence: string; use: string }[] 
   { name: 'tsshogi', licence: 'MIT', use: 'Shogi game files (KIF, CSA)' },
   { name: 'Shippori Mincho B1 (kanji outlines)', licence: 'SIL OFL 1.1', use: 'Shogi piece lettering' },
   { name: 'LXGW WenKai TC (character outlines)', licence: 'SIL OFL 1.1', use: 'Mahjong tile characters' },
+  { name: 'Fairy-Stockfish', licence: 'GPL-3.0', use: 'Strong shogi engine, where the browser allows it' },
+  { name: 'KataGo network (b6c96)', licence: 'MIT', use: 'Go review: score and ownership' },
 ];

@@ -85,6 +85,7 @@ export const esShogi: Partial<Record<MessageKey, string>> = {
   'shogi.level.5': 'Una búsqueda más larga: un jugador de club firme de los rangos bajos.',
   'shogi.level.6': 'Un jugador de club fuerte, una meta para un principiante.',
   'shogi.level.7': 'El motor completo. Dale una escalera de hándicaps para subir.',
+  'shogi.level.8': 'Fairy-Stockfish, un motor mucho más fuerte. Solo aparece donde este aparato puede usarlo.',
   'shogi.eval.black-mates': 'Sente da mate en {n}',
   'shogi.eval.white-mates': 'Gote da mate en {n}',
   'shogi.idea.promote': 'Una pieza puede promover y hacerse más fuerte.',

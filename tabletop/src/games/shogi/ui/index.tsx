@@ -7,16 +7,21 @@ import type { CoachWarning, GameUi, ReferenceSection, SetupPreset } from '../../
 import { NO_OVERLAY } from '../../types';
 import { GEOMETRY } from '../core';
 import { canWriteCsa, readGameFile, writeCsa, writeKif, writeUsi } from '../formats';
+import { strongEngineAvailable } from '../../../ai/engines/fairy-stockfish-web';
 import { SHOGI_LEVELS } from '../levels';
 import type { ShogiConfig } from '../presets';
 import { DECLARE_BLACK, DECLARE_PIECES, DECLARE_WHITE, HANDICAPS, IMPASSE_24, IMPASSE_BIG, IMPASSE_SMALL, POINTS_PER_RANK, PRESETS, REPETITIONS } from '../presets';
 import { analyseShogiGame } from '../review';
 import type { ShogiAction, ShogiEvent, ShogiState, ShogiView } from '../rules';
 import { canonicalAction, checksInARow, handOf, impassePoints, material, PIECE_NAMES, positionOf, repetitionCount, shogi, TEACHING_VALUE } from '../rules';
+import { STRONG_LEVEL } from '../strong';
 import { ShogiCoachPanel } from './CoachPanel';
 import { MARKS_HELP } from './look';
 import { pieceWord, ShogiSeatMark, ShogiSurface } from './ShogiSurface';
 import './shogi.css';
+
+/** Level 8, Fairy-Stockfish, is offered only where this page can run it (cross-origin isolated, M15). */
+const LEVELS = strongEngineAvailable() ? [...SHOGI_LEVELS, STRONG_LEVEL] : SHOGI_LEVELS;
 
 const PIECE_KEY: Record<string, MessageKey> = Object.fromEntries(PIECE_NAMES.map((name) => [name, `shogi.piece.${name}` as MessageKey]));
 
@@ -44,7 +49,7 @@ const SETUP_PRESETS: readonly SetupPreset<ShogiConfig>[] = PRESETS.map((p) => {
 
 export const shogiUi: GameUi<ShogiState, ShogiAction, ShogiConfig, ShogiView, ShogiEvent> = {
   def: shogi,
-  levels: SHOGI_LEVELS,
+  levels: LEVELS,
   levelBlurb: (level) => tDynamic(`shogi.level.${level}`),
   layout: 'board',
   Surface: ShogiSurface,
@@ -111,7 +116,7 @@ export const shogiUi: GameUi<ShogiState, ShogiAction, ShogiConfig, ShogiView, Sh
       { title: 'ref.shogi.terms', items: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => tDynamic(`ref.shogi.terms.${i}`)) },
       { title: 'ref.shogi.values', items: [t('ref.shogi.values.1', { list: values }), t('ref.shogi.values.2')] },
       { title: 'ref.shogi.ask', items: [1, 2, 3, 4, 5, 6].map((i) => tDynamic(`ref.shogi.ask.${i}`)) },
-      { title: 'ref.shogi.levels', items: SHOGI_LEVELS.map((l) => `${t('common.level', { n: l.level })} (${t('shogi.rating', { n: l.rating })}): ${tDynamic(`shogi.level.${l.level}`)}`) },
+      { title: 'ref.shogi.levels', items: LEVELS.map((l) => `${t('common.level', { n: l.level })} (${t('shogi.rating', { n: l.rating })}): ${tDynamic(`shogi.level.${l.level}`)}`) },
     ];
   },
   flipForSeat: (seat) => seat === 1,
@@ -154,7 +159,7 @@ export const shogiUi: GameUi<ShogiState, ShogiAction, ShogiConfig, ShogiView, Sh
     { extension: 'sfen', mime: 'text/plain', write: (record) => writeUsi(record, true) },
   ],
   review: {
-    analyse: analyseShogiGame,
+    analyse: (record, ask, onProgress, cancelled) => analyseShogiGame(record, ask, onProgress, cancelled, strongEngineAvailable()),
     configAt: (state) => ({
       position: state.sfen,
       ...(state.rules.impasse !== 'declare-27' ? { impasse: state.rules.impasse } : {}),

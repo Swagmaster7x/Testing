@@ -8,10 +8,11 @@
 import type { LadderRung } from '../src/ai/ladder';
 import { runLadder } from '../src/ai/ladder';
 import { buildLadders } from '../src/games/ladders';
+import { fairyNodeEngine } from '../tests/harness/fairy-node';
 import { nodeEngine } from '../tests/harness/stockfish-node';
 
 const [only, gamesArg] = process.argv.slice(2);
-const ladders = buildLadders({ chessEngine: nodeEngine });
+const ladders = buildLadders({ chessEngine: nodeEngine, shogiStrong: fairyNodeEngine });
 const ids = only ? [only] : Object.keys(ladders);
 let failed = false;
 
