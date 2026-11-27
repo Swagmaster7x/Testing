@@ -141,6 +141,8 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   moveSquares?(action: A): { from: string; to: string } | null;
   /** Import a game from its own file format into a record's config and actions. */
   readonly importRecord?: { readonly accept: string; read(text: string): { config: C; actions: readonly Json[]; outcome: Outcome | null; names: readonly string[] } };
+  /** "Rules at this table" (PLAN.md 2.3): the game's own picker for a new game's options, presets first. */
+  readonly rules?: { readonly Picker: ComponentType<{ value: C; onChange: (config: C) => void }> };
 }
 
 export type AnyGameUi = GameUi<unknown, unknown, unknown, unknown, GameEvent>;

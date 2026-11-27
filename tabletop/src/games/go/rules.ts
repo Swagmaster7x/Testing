@@ -131,6 +131,8 @@ export interface GoState {
   readonly history: readonly string[];
   /** Moves made in this game (stones, passes and handicap placements). */
   readonly moveNumber: number;
+  /** The point of the last stone played, -1 after a pass, -2 before any move. */
+  readonly last: number;
   /** Scoring: points of stones marked dead, ascending. */
   readonly dead: readonly number[];
   /** Scoring: the seat that has accepted the current marking. */
@@ -154,7 +156,7 @@ export type GoEvent =
   | { readonly type: 'pass'; readonly seat: Seat }
   | { readonly type: 'atari'; readonly seat: Seat; readonly stones: readonly string[] }
   | { readonly type: 'scoring'; readonly scorer: Seat }
-  | { readonly type: 'mark'; readonly seat: Seat; readonly stones: readonly string[]; readonly dead: boolean }
+  | { readonly type: 'mark'; readonly seat: Seat; readonly name: string; readonly stones: readonly string[]; readonly dead: boolean }
   | { readonly type: 'agree'; readonly seat: Seat }
   | { readonly type: 'resume'; readonly seat: Seat }
   | { readonly type: 'end'; readonly result: GoResult };
@@ -224,6 +226,7 @@ function freshState(game: NewGame): GoState {
     prisoners: [0, 0],
     history: [positionKey(board, toMove)],
     moveNumber: 0,
+    last: -2,
     dead: [],
     agreed: null,
     scorer: 0,
@@ -330,6 +333,7 @@ function applyStone(state: GoState, p: number, events: GoEvent[]): GoState {
       phase: placeLeft > 0 ? 'handicap' : 'play',
       history: [...state.history, positionKey(board, toMove)],
       moveNumber: state.moveNumber + 1,
+      last: p,
     };
   }
   if (!board.isLegal(i, c, state.rules.suicide)) throw new Error(`${pointName(p, state.size)} is not a legal move`);
@@ -369,6 +373,7 @@ function applyStone(state: GoState, p: number, events: GoEvent[]): GoState {
     prisoners,
     history: [...state.history, key],
     moveNumber: state.moveNumber + 1,
+    last: p,
   };
   const target = state.rules.captureTarget;
   if (target > 0 && (ofSeat(prisoners, mover) >= target || ofSeat(prisoners, next) >= target)) {
@@ -396,6 +401,7 @@ function applyPass(state: GoState, events: GoEvent[]): GoState {
     prisoners,
     history: [...state.history, positionKey(board, next)],
     moveNumber: state.moveNumber + 1,
+    last: -1,
   };
   const ends = passes >= 2 && (!state.rules.whitePassesLast || mover === 1);
   if (!ends) return after;
@@ -415,7 +421,7 @@ function applyMark(state: GoState, p: number, events: GoEvent[]): GoState {
     if (nowDead) dead.add(q);
     else dead.delete(q);
   }
-  events.push({ type: 'mark', seat: state.scorer, stones: names(chain, state.size), dead: nowDead });
+  events.push({ type: 'mark', seat: state.scorer, name: pointName(p, state.size), stones: names(chain, state.size), dead: nowDead });
   return { ...state, dead: [...dead].sort((a, b) => a - b), agreed: null };
 }
 
@@ -610,6 +616,7 @@ export function parsePosition(text: string): GoState {
     prisoners,
     history: [positionKey(board, toMove)],
     moveNumber: 0,
+    last: -2,
     dead,
     agreed,
     scorer,
@@ -630,14 +637,15 @@ export function parsePosition(text: string): GoState {
 // Codecs
 
 const stateCodec: Codec<GoState> = {
-  toJSON: (s) => ({ position: positionText(s), history: [...s.history], moves: s.moveNumber }),
+  toJSON: (s) => ({ position: positionText(s), history: [...s.history], moves: s.moveNumber, last: s.last }),
   fromJSON(json: Json) {
     if (!isJsonObject(json) || typeof json.position !== 'string') throw new Error('Not a Go position');
     const base = parsePosition(json.position);
     const history = Array.isArray(json.history) && json.history.length > 0 && json.history.every((h) => typeof h === 'string' && /^[0-9a-f]{16}[bw]$/.test(h)) ? (json.history as string[]) : base.history;
     if (history[history.length - 1]?.slice(0, 16) !== base.history[0]?.slice(0, 16)) throw new Error('The position history does not end at this position');
     const moves = typeof json.moves === 'number' && Number.isInteger(json.moves) && json.moves >= 0 ? json.moves : 0;
-    return { ...base, history, moveNumber: moves };
+    const last = typeof json.last === 'number' && Number.isInteger(json.last) && json.last >= -2 && json.last < base.size * base.size ? json.last : -2;
+    return { ...base, history, moveNumber: moves, last };
   },
   toText: positionText,
   fromText: (text) => parsePosition(text),

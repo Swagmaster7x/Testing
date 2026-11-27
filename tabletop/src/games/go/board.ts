@@ -62,6 +62,8 @@ export class Board {
   /** Offsets to the four neighbours: up, left, right, down. */
   readonly dirs: Int32Array;
   readonly color: Uint8Array;
+  /** One buffer behind all the Int32 arrays below, so a copy is a single block copy. */
+  readonly data: Int32Array;
   /** The chain's head (its id) for each stone. */
   readonly head: Int32Array;
   /** The next stone in the same chain (a circular list). */
@@ -94,14 +96,15 @@ export class Board {
     this.dirs = Int32Array.of(-this.width, -1, 1, this.width);
     const n = this.cells;
     this.color = new Uint8Array(n).fill(EDGE);
-    this.head = new Int32Array(n);
-    this.next = new Int32Array(n);
-    this.libs = new Int32Array(n);
-    this.libSum = new Int32Array(n);
-    this.libSumSq = new Int32Array(n);
-    this.stones = new Int32Array(n);
-    this.empties = new Int32Array(size * size);
-    this.emptyAt = new Int32Array(n).fill(-1);
+    this.data = new Int32Array(n * 7 + size * size);
+    this.head = this.data.subarray(0, n);
+    this.next = this.data.subarray(n, 2 * n);
+    this.libs = this.data.subarray(2 * n, 3 * n);
+    this.libSum = this.data.subarray(3 * n, 4 * n);
+    this.libSumSq = this.data.subarray(4 * n, 5 * n);
+    this.stones = this.data.subarray(5 * n, 6 * n);
+    this.emptyAt = this.data.subarray(6 * n, 7 * n).fill(-1);
+    this.empties = this.data.subarray(7 * n);
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const i = this.index(x, y);
@@ -136,15 +139,18 @@ export class Board {
     w.width = this.width;
     w.cells = this.cells;
     w.dirs = this.dirs;
+    const n = this.cells;
+    const data = this.data.slice();
     w.color = this.color.slice();
-    w.head = this.head.slice();
-    w.next = this.next.slice();
-    w.libs = this.libs.slice();
-    w.libSum = this.libSum.slice();
-    w.libSumSq = this.libSumSq.slice();
-    w.stones = this.stones.slice();
-    w.empties = this.empties.slice();
-    w.emptyAt = this.emptyAt.slice();
+    w.data = data;
+    w.head = data.subarray(0, n);
+    w.next = data.subarray(n, 2 * n);
+    w.libs = data.subarray(2 * n, 3 * n);
+    w.libSum = data.subarray(3 * n, 4 * n);
+    w.libSumSq = data.subarray(4 * n, 5 * n);
+    w.stones = data.subarray(5 * n, 6 * n);
+    w.emptyAt = data.subarray(6 * n, 7 * n);
+    w.empties = data.subarray(7 * n);
     b.emptyCount = this.emptyCount;
     b.ko = this.ko;
     b.hashHi = this.hashHi;
@@ -249,22 +255,27 @@ export class Board {
   /** Removes a chain from the board and returns how many stones it had. */
   private removeChain(h: number): number {
     const c = this.color[h] as number;
-    const stones = this.chain(h);
-    for (const s of stones) {
+    let count = 0;
+    let s = h;
+    do {
       this.color[s] = EMPTY;
       this.hashHi ^= zHi(c, s);
       this.hashLo ^= zLo(c, s);
       this.giveEmpty(s);
-    }
+      count++;
+      s = this.next[s] as number;
+    } while (s !== h);
     const dirs = this.dirs;
-    for (const s of stones) {
+    s = h;
+    do {
       for (let d = 0; d < 4; d++) {
         const n = s + (dirs[d] as number);
         const nc = this.color[n];
         if (nc === BLACK || nc === WHITE) this.addLib(this.head[n] as number, s);
       }
-    }
-    return stones.length;
+      s = this.next[s] as number;
+    } while (s !== h);
+    return count;
   }
 
   /** Puts a stone down with no checks at all (used to set up positions). */

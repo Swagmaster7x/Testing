@@ -67,6 +67,9 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
   const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
+  // The rules at this table, for games that have options (a link's set-up wins).
+  const [rules, setRules] = useState<unknown>(() => (setup !== undefined ? setup : ui.rules ? ui.def.defaultConfig : undefined));
+  const RulesPicker = ui.rules?.Picker;
   useEscape(onClose);
   const start = async () => {
     setBusy(true);
@@ -77,7 +80,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
       level,
       side: choice?.seat ?? 'either',
       ...(seed ? { seed } : {}),
-      ...(setup !== undefined ? { config: setup } : {}),
+      ...(rules !== undefined ? { config: rules } : {}),
       clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
     });
     navigate(`/play/${id}`);
@@ -127,6 +130,11 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
             <span className="eyebrow">{t('play.side')}</span>
             <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />
           </div>
+          {RulesPicker && setup === undefined ? (
+            <div className="setup-row wide">
+              <RulesPicker value={rules} onChange={setRules} />
+            </div>
+          ) : null}
           {clocks.length > 0 ? (
             <div className="setup-row">
               <span className="eyebrow">{t('clock.label')}</span>

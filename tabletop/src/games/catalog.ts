@@ -20,7 +20,7 @@ export const CATALOG: readonly CatalogGame[] = [
   { id: 'brisca', group: 'cards', milestone: 3, playable: false, onShelf: true },
   { id: 'poker', group: 'cards', milestone: 5, playable: false, onShelf: true },
   { id: 'chess', group: 'boards', milestone: 1, playable: true, onShelf: true },
-  { id: 'go', group: 'boards', milestone: 6, playable: false, onShelf: true },
+  { id: 'go', group: 'boards', milestone: 6, playable: true, onShelf: true },
   { id: 'chinese-checkers', group: 'boards', milestone: 7, playable: false, onShelf: true },
   { id: 'shogi', group: 'boards', milestone: 8, playable: false, onShelf: true },
   { id: 'dominoes', group: 'tiles', milestone: 4, playable: false, onShelf: true },

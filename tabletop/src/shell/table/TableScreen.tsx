@@ -197,7 +197,8 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const playAgain = async () => {
     await controller.flush();
     const clock = record.clock ? { initialMs: record.clock.initialMs, incrementMs: record.clock.incrementMs } : null;
-    const id = await startGame(ui, profileId, { level, side: mySeat, clock });
+    // Games with table rules play again under the same rules (board size, preset, handicap).
+    const id = await startGame(ui, profileId, { level, side: mySeat, clock, ...(ui.rules ? { config: ui.def.codec.config.fromJSON(record.config) } : {}) });
     navigate(`/play/${id}`, { replace: true });
   };
 

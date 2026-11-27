@@ -79,10 +79,10 @@ const base = {
 
   'game.go.name': 'Go',
   'game.go.aka': 'Igo, weiqi, baduk',
-  'game.go.launch': '9×9, 13×13 and 19×19, handicaps, Capture-Go.',
+  'game.go.launch': '9×9, 13×13 and 19×19 under Chinese, Japanese, AGA and other rules, handicaps, and Capture-Go.',
   'game.go.later': 'A stronger engine and joseki basics.',
-  'game.go.practice': 'Capture, ladders and nets, life and death, count the board.',
-  'game.go.cpu': 'Own engine, strongest on 9×9.',
+  'game.go.practice': 'Capturing, ladders and nets, life and death, and counting the board.',
+  'game.go.cpu': 'Six levels on a Monte Carlo search, strongest on 9×9.',
 
   'game.chinese-checkers.name': 'Chinese Checkers',
   'game.chinese-checkers.aka': 'Star halma',

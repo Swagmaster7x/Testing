@@ -9,6 +9,9 @@ import type { GameEvent } from '../core/contract';
 import { chessBots } from './chess/bots';
 import type { ChessAction, ChessConfig, ChessEvent, ChessState, ChessView } from './chess/rules';
 import { chess } from './chess/rules';
+import { goBots } from './go/bots';
+import type { GoAction, GoConfig, GoEvent, GoState, GoView } from './go/rules';
+import { go, makeConfig } from './go/rules';
 import { noughtsBots } from './noughts/bots';
 import type { NoughtsAction, NoughtsConfig, NoughtsEvent, NoughtsState, NoughtsView } from './noughts/rules';
 import { noughts } from './noughts/rules';
@@ -68,9 +71,34 @@ function chessLadder(deps: LadderDeps): Ladder<ChessState, ChessAction, ChessCon
   };
 }
 
+/** Go on 9×9 under the default rules. Random play places stones or passes, and accepts the count. */
+function goLadder(): Ladder<GoState, GoAction, GoConfig, GoView, GoEvent> {
+  return {
+    spec: {
+      def: go,
+      config: makeConfig(9, 'chinese'),
+      levels: goBots.levels.map((l) => l.level),
+      bot: (level) => ({
+        name: `L${level}`,
+        choose: async (view, seat, rng) => (await goBots.choose({ view, seat, level, rng })).action,
+      }),
+      margin: 0.6,
+    },
+    random: {
+      name: 'random',
+      choose: (view, seat, rng) => {
+        const legal = go.legal(view, seat);
+        return view.phase === 'scoring' ? (legal.find((a) => a.type === 'done') as GoAction) : rng.pick(legal);
+      },
+    },
+    games: 20,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
     chess: chessLadder(deps) as unknown as Ladder<never, never, never, never, never>,
+    go: goLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }
