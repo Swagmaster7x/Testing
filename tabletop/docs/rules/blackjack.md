@@ -10,8 +10,9 @@ chips only (PLAN.md decision 6): nothing is bought, nothing is money. Code: `src
   house and plays by fixed rules, so the dealer is not a seat.
 - A shoe of 1, 2, 6 or 8 standard packs (option). It is shuffled at the start and again before a
   round once the cut card is reached (option: 50%, 75% or 85% of the shoe dealt).
-- Every box starts with 1,000 play chips. Bets go in steps of 5 between the table limits (option:
-  10 to 500 by default, 5 to 250, or 25 to 1,000). A session is a set number of rounds (option:
+- Every box starts with 1,000 play chips. Bets go in steps of 10 between the table limits (option:
+  10 to 500 by default, 20 to 1,000, or 50 to 2,500), so every payout (3 to 2, 6 to 5, insurance
+  at half the bet, surrender) is a whole number of chips. A session is a set number of rounds (option:
   20, 10, 50 or 100); a box that cannot cover the minimum sits out, and the session ends early if
   every box is out.
 
@@ -94,7 +95,7 @@ The app works out the right play for every hand against every dealer card from t
 | Insurance | offered · not offered |
 | Five-card Charlie | off · on |
 | Cut card | 75% · 50% · 85% |
-| Table limits | 10 to 500 · 5 to 250 · 25 to 1,000 |
+| Table limits | 10 to 500 · 20 to 1,000 · 50 to 2,500 |
 | Rounds | 20 · 10 · 50 · 100 |
 | Players at the table | you alone · two boxes · three boxes |
 
