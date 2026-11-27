@@ -9,6 +9,7 @@ import './styles/shell.css';
 import './styles/table.css';
 import './styles/board.css';
 import './styles/learn.css';
+import './styles/cards.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('The page has no #root element');

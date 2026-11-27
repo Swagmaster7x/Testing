@@ -18,6 +18,8 @@ export interface Problem {
   /** Difficulty on the rating scale. */
   readonly rating: number;
   readonly themes: readonly string[];
+  /** Card games: show the other hand face up (in endgames it can be worked out anyway). */
+  readonly openHand?: boolean;
 }
 
 export type ProblemPhase = 'setup' | 'solving' | 'reply' | 'solved' | 'failed' | 'shown';
@@ -87,16 +89,28 @@ export function submitProblemMove<S>(game: LessonGame<S>, run: ProblemRun, move:
   if (!isRight(game, run, move)) return { ...run, ...apply(game, run, move), phase: 'failed', wrong: game.canonical(state, move), spoiled: true };
   const moved = apply(game, run, move);
   const index = run.index + 1;
-  return { ...run, ...moved, index, phase: index >= run.problem.line.length ? 'solved' : 'reply' };
+  if (index >= run.problem.line.length) return { ...run, ...moved, index, phase: 'solved' };
+  // Usually the other side answers; in card games the student may also lead the next trick.
+  const next = game.toMove(game.position(moved.position));
+  return { ...run, ...moved, index, phase: next === solverSeat(game, run.problem) ? 'solving' : 'reply' };
 }
 
-/** The opponent's reply from the line. */
+/** The seat the student plays: the side to move once the setup move is played. */
+export function solverSeat<S>(game: LessonGame<S>, problem: Problem): number | null {
+  return game.toMove(game.position(solverPosition(game, problem)));
+}
+
+/** The opponent's reply from the line. In card games it may move twice running (it wins, then leads). */
 export function playProblemReply<S>(game: LessonGame<S>, run: ProblemRun): ProblemRun {
   if (run.phase !== 'reply' && run.phase !== 'shown') return run;
   const move = run.problem.line[run.index];
   if (move === undefined) return run;
   const index = run.index + 1;
-  return { ...run, ...apply(game, run, move), index, phase: run.phase === 'shown' ? 'shown' : index >= run.problem.line.length ? 'solved' : 'solving' };
+  const moved = apply(game, run, move);
+  if (run.phase === 'shown') return { ...run, ...moved, index };
+  if (index >= run.problem.line.length) return { ...run, ...moved, index, phase: 'solved' };
+  const next = game.toMove(game.position(moved.position));
+  return { ...run, ...moved, index, phase: next === solverSeat(game, run.problem) ? 'solving' : 'reply' };
 }
 
 /** Starts again from the problem's position (after the setup move); the try no longer counts. */

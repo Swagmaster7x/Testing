@@ -3,7 +3,7 @@ import type { ProfileSettings, TabletopDb } from './db';
 export const MAX_FOCUS = 3;
 
 export function defaultSettings(profileId: string): ProfileSettings {
-  return { profileId, look: 'club', railSide: 'right', railOpen: true, motion: 'system', sound: true, focus: [], levels: {}, coach: {}, clocks: {} };
+  return { profileId, look: 'club', railSide: 'right', railOpen: true, motion: 'system', sound: true, focus: [], levels: {}, coach: {}, clocks: {}, rules: {} };
 }
 
 /** A profile's settings, with defaults filled in for anything added since they were saved. */

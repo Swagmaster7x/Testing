@@ -39,6 +39,8 @@ export interface MoveVerdict {
   readonly reason: Reason | null;
   /** Moves that count as right if this position becomes a practice card. */
   readonly accept: readonly string[];
+  /** How to name the moment ("Trick 5: As de oros"); a move number is used when absent. */
+  readonly label?: string;
 }
 
 export interface GameAnalysis {

@@ -79,7 +79,7 @@ function LogLines({ log, ui, record }: { log: readonly LogEntry<GameEvent>[]; ui
   return (
     <ul className="log" ref={list}>
       {log.map((entry, i) => {
-        const text = ui.describeEvent(entry.event);
+        const text = ui.describeEvent(entry.event, humanSeats(record));
         if (!text) return null;
         const first = i === 0 || log[i - 1]?.ply !== entry.ply;
         const who = entry.seat === null ? null : record.players[entry.seat]?.kind === 'bot' ? t('common.cpu') : t('common.you');
@@ -222,7 +222,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const SeatExtra = ui.SeatExtra;
   const Surface = ui.Surface;
   const moves = snap.history.map((h) => ({ ply: h.ply, seat: h.seat, text: ui.def.codec.action.toText(h.action) }));
-  const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s) : ui.sideName(s)));
+  const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record)) : ui.sideName(s)));
   const score = results.status === 'done' ? results.value : null;
   const flipped = (ui.flipForSeat?.(mySeat) ?? false) !== flipOverride;
   const clock = controller.clock();
@@ -233,6 +233,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   return (
     <>
       <TableShell
+      wide={ui.layout === 'table'}
         label={name}
         title={name}
         meta={[

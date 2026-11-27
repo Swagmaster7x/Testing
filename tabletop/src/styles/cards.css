@@ -1,0 +1,171 @@
+/*
+ * Card and tile tables (PLAN.md 1.4): the table uses the full width; cards are DOM elements that
+ * slide between places with CSS transforms.
+ */
+.table-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.table-surface[data-wide='true'] {
+  container-type: normal;
+  display: block;
+  padding: var(--sp-2);
+}
+
+.card-table {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.table-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  background: none;
+  border-radius: 7%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.28);
+  transition-property: transform, box-shadow;
+  transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+button.table-card {
+  cursor: pointer;
+}
+
+button.table-card:focus-visible {
+  outline: 3px solid var(--brass-1);
+  outline-offset: 2px;
+}
+
+.table-card[data-selected='true'] {
+  box-shadow:
+    0 0 0 2.5px var(--brass-1),
+    0 8px 16px rgb(0 0 0 / 0.45);
+}
+
+.table-card[data-tone='win'] {
+  box-shadow:
+    0 0 0 2.5px var(--good),
+    0 2px 5px rgb(0 0 0 / 0.35);
+}
+
+.table-card[data-tone='win'][data-selected='true'] {
+  box-shadow:
+    0 0 0 2.5px var(--good),
+    0 0 0 5px var(--brass-1),
+    0 8px 16px rgb(0 0 0 / 0.45);
+}
+
+.card-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[data-motion='reduced'] .table-card {
+  transition-duration: 0ms !important;
+}
+
+.trump-badge {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 999px;
+  background: rgb(14 12 9 / 0.55);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pile-points {
+  position: absolute;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.55);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+}
+
+.swap-btn,
+.call-btn {
+  position: absolute;
+  z-index: 400;
+  white-space: nowrap;
+}
+
+.table-tip {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.6);
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  z-index: 300;
+  white-space: nowrap;
+}
+
+.hand-over {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 500;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: var(--ivory-1);
+  color: var(--ivory-ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-xl);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+}
+
+/* The cards-seen grid in the coach rail. */
+.seen-grid {
+  display: grid;
+  grid-template-columns: auto repeat(10, minmax(0, 1fr));
+  gap: 2px;
+  font-size: var(--fs-2xs);
+  align-items: center;
+}
+
+.seen-grid span {
+  text-align: center;
+  border-radius: 3px;
+  padding: 1px 0;
+}
+
+.seen-grid span[data-seen='true'] {
+  background: var(--surface-3);
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.seen-grid span[data-seen='false'] {
+  background: var(--brass-wash);
+  color: var(--text-1);
+}
+
+.seen-grid .seen-suit {
+  text-align: left;
+  padding-right: 4px;
+  color: var(--text-2);
+}

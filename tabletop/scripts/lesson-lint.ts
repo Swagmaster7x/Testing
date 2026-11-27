@@ -12,6 +12,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Engine, SearchRequest, SearchResult } from '../src/ai/uci';
+import { BRISCA_LESSONS, briscaLessonGame } from '../src/games/brisca/learn';
+import { briscaVerifier } from '../src/games/brisca/learn/verify';
 import { CHESS_LESSONS, chessLessonGame } from '../src/games/chess/learn';
 import { chessVerifier } from '../src/games/chess/learn/verify';
 import { lessonGames } from '../src/games/lessons';
@@ -78,6 +80,7 @@ interface Suite {
 
 const SUITES: Record<string, Suite> = {
   chess: { lessons: CHESS_LESSONS, game: chessLessonGame, verifier: chessVerifier },
+  brisca: { lessons: BRISCA_LESSONS, game: briscaLessonGame, verifier: () => briscaVerifier },
 };
 
 const problems: string[] = [];

@@ -4,6 +4,7 @@ import type { AnyGameUi } from './types';
 const loaders: Record<string, () => Promise<AnyGameUi>> = {
   noughts: () => import('./noughts/ui').then((m) => m.noughtsUi as unknown as AnyGameUi),
   chess: () => import('./chess/ui').then((m) => m.chessUi as unknown as AnyGameUi),
+  brisca: () => import('./brisca/ui').then((m) => m.briscaUi as unknown as AnyGameUi),
 };
 
 export function isPlayable(gameId: string): boolean {

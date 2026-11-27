@@ -25,6 +25,10 @@ interface StepBase {
   readonly position?: string;
   readonly arrows?: readonly Arrow[];
   readonly marks?: readonly string[];
+  /** Card and tile games: show the other hands face up during this step. */
+  readonly openHand?: boolean;
+  /** Card games: show the tricks already won face up (for counting drills). */
+  readonly openPiles?: boolean;
 }
 
 export interface SayStep extends StepBase {
@@ -74,7 +78,7 @@ export interface AskNumberStep extends StepBase {
   readonly success: string;
 }
 
-export type FreePlayGoal = 'mate' | 'promote' | 'win-material';
+export type FreePlayGoal = 'mate' | 'promote' | 'win-material' | 'win';
 
 export interface FreePlayStep extends StepBase {
   readonly kind: 'freePlay';

@@ -54,6 +54,7 @@ export async function runMatch<S, A, C, V, E extends GameEvent>(
   b: Contender<V, A>,
   games: number,
   seedPrefix: string,
+  paired = false,
 ): Promise<MatchResult> {
   let total = 0;
   let wins = 0;
@@ -62,7 +63,8 @@ export async function runMatch<S, A, C, V, E extends GameEvent>(
   for (let i = 0; i < games; i++) {
     const aSeat: Seat = i % 2;
     const bySeat = aSeat === 0 ? [a, b] : [b, a];
-    const outcome = await playGame(def, config, bySeat, `${seedPrefix}:${i}`);
+    // Paired games deal the same cards twice with the seats swapped, so luck cancels out.
+    const outcome = await playGame(def, config, bySeat, `${seedPrefix}:${paired ? Math.floor(i / 2) : i}`);
     const points = outcomePoints(outcome, aSeat);
     total += points;
     if (points > 0.5) wins++;
@@ -79,6 +81,8 @@ export interface LadderSpec<S, A, C, V, E extends GameEvent> {
   bot(level: number): Contender<V, A>;
   /** A rung passes when the stronger side scores at least this share (a draw counts half). */
   readonly margin: number;
+  /** Card and tile games: play each deal twice with the seats swapped. */
+  readonly paired?: boolean;
 }
 
 export interface LadderRung {
@@ -100,7 +104,7 @@ export async function runLadder<S, A, C, V, E extends GameEvent>(
   let lower: Contender<V, A> = random;
   for (const level of spec.levels) {
     const higher = spec.bot(level);
-    const result = await runMatch(spec.def, spec.config, higher, lower, games, `${seedPrefix}:${higher.name}-${lower.name}`);
+    const result = await runMatch(spec.def, spec.config, higher, lower, games, `${seedPrefix}:${higher.name}-${lower.name}`, spec.paired ?? false);
     const rung = { higher: higher.name, lower: lower.name, result, passed: result.score >= spec.margin };
     rungs.push(rung);
     onRung?.(rung);

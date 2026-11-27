@@ -19,6 +19,8 @@ export interface LessonGame<S> {
   over(state: S): boolean;
   /** Every legal move here, in canonical form. */
   moves(state: S): string[];
+  /** The seat to move, or null when the game is over. */
+  toMove(state: S): number | null;
   /** Values for {placeholders} in lesson text, computed from the rules module for a position. */
   computed(state: S): Readonly<Record<string, number | string>>;
 }
@@ -150,7 +152,7 @@ function judgeMove<S>(game: LessonGame<S>, s: RunnerState, q: AskMoveStep, move:
 export function submitMove<S>(game: LessonGame<S>, s: RunnerState, move: string, computed: Computed = valuesAt(game, s)): RunnerState {
   const step = currentStep(s);
   if (!step || s.phase === 'correct' || s.phase === 'revealed' || s.phase === 'done') return s;
-  if (step.kind === 'freePlay') return freeMove(game, s, step.goal, step.maxMoves, move, computed, step.success);
+  if (step.kind === 'freePlay') return freeMove(game, s, step.goal, move, computed, step.success);
   const q = currentQuestion(s);
   if (!q || q.kind !== 'askMove') return s;
   const verdict = judgeMove(game, s, q, move);
@@ -163,23 +165,32 @@ export function submitMove<S>(game: LessonGame<S>, s: RunnerState, move: string,
   return { ...s, phase: 'wrong', attempts: s.attempts + 1, feedback: fillText(verdict.feedback, computed), mistakes: s.attempts === 0 ? s.mistakes + 1 : s.mistakes };
 }
 
-function freeMove<S>(game: LessonGame<S>, s: RunnerState, goal: FreePlayGoal, maxMoves: number, move: string, computed: Computed, success: string): RunnerState {
+function freeMove<S>(game: LessonGame<S>, s: RunnerState, goal: FreePlayGoal, move: string, computed: Computed, success: string): RunnerState {
   const before = game.position(s.position);
   const after = game.play(before, move);
   if (!after) return s;
   const moves = s.freeMoves + 1;
   const canonicalMove = game.canonical(before, move);
   if (game.goalMet(goal, before, after, move)) return { ...s, phase: 'correct', position: game.notation(after), freeMoves: moves, lastMove: canonicalMove, feedback: fillText(success, computed) };
-  if (moves >= maxMoves || game.over(after)) return { ...s, phase: 'failed', position: game.notation(after), freeMoves: moves, lastMove: canonicalMove, feedback: 'out-of-moves', mistakes: s.mistakes + 1 };
+  // Out of moves only counts once the other side has answered (its reply can still end the game).
+  if (game.over(after)) return { ...s, phase: 'failed', position: game.notation(after), freeMoves: moves, lastMove: canonicalMove, feedback: 'out-of-moves', mistakes: s.mistakes + 1 };
   return { ...s, position: game.notation(after), freeMoves: moves, lastMove: canonicalMove, feedback: null };
 }
 
-/** The other side's answer during free play (from the engine), or a scripted reply. */
-export function opponentMove<S>(game: LessonGame<S>, s: RunnerState, move: string): RunnerState {
-  const after = game.play(game.position(s.position), move);
+/**
+ * The other side's answer during free play (from the engine). The goal is checked again, from the
+ * student's side: in card games the last trick is often finished by the other player's card.
+ */
+export function opponentMove<S>(game: LessonGame<S>, s: RunnerState, move: string, computed: Computed = valuesAt(game, s)): RunnerState {
+  const before = game.position(s.position);
+  const after = game.play(before, move);
   if (!after) throw new Error(`Opponent move ${move} is not legal`);
-  const failed = game.over(after) && s.phase !== 'correct';
-  return { ...s, position: game.notation(after), lastMove: game.canonical(game.position(s.position), move), ...(failed ? { phase: 'failed' as const, feedback: 'out-of-moves' } : {}) };
+  const base = { ...s, position: game.notation(after), lastMove: game.canonical(before, move) };
+  const step = currentStep(s);
+  if (step?.kind !== 'freePlay' || s.phase === 'correct') return base;
+  if (game.goalMet(step.goal, game.position(step.position), after, move)) return { ...base, phase: 'correct', feedback: fillText(step.success, computed) };
+  if (game.over(after) || s.freeMoves >= step.maxMoves) return { ...base, phase: 'failed', feedback: 'out-of-moves', mistakes: s.mistakes + 1 };
+  return base;
 }
 
 /** Starts a free-play or other step over from its own position. */

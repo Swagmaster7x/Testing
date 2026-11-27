@@ -33,7 +33,7 @@ import { Counters, MoveList, RailSection, TableShell } from './TableShell';
 const MARK: Record<string, string> = { inaccuracy: '?!', mistake: '?', blunder: '??' };
 
 function moveLabel(m: MoveVerdict): string {
-  return `${Math.floor(m.ply / 2) + 1}${m.seat === 0 ? '.' : '…'} ${m.played}`;
+  return m.label ?? `${Math.floor(m.ply / 2) + 1}${m.seat === 0 ? '.' : '…'} ${m.played}`;
 }
 
 function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRecord; ply: number | null; initial: GameAnalysis | null }) {
@@ -46,6 +46,8 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
   const current = Math.max(0, Math.min(ply ?? total, total));
   const previous = useRef(current);
   const [flipOverride, setFlipOverride] = useState(false);
+  // Hidden-card games have two lenses: what you knew (the default) and every card face up.
+  const [cardsUp, setCardsUp] = useState(false);
   const notify = useApp((s) => s.notify);
   const anim = useSyncExternalStore(queue.subscribe, queue.snapshot);
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(initial);
@@ -112,8 +114,9 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
   const SeatMark = ui.SeatMark;
   const SeatExtra = ui.SeatExtra;
   const verdicts = analysis?.moves ?? [];
-  const moves = steps.map((s, i) => ({ ply: s.ply, seat: s.seat, text: `${ui.def.codec.action.toText(s.action)}${MARK[verdicts[i]?.verdict ?? ''] ?? ''}` }));
-  const here = verdicts[current];
+  const verdictAt = new Map(verdicts.map((v) => [v.ply, v]));
+  const moves = steps.map((s, i) => ({ ply: s.ply, seat: s.seat, text: `${ui.def.codec.action.toText(s.action)}${MARK[verdictAt.get(i)?.verdict ?? ''] ?? ''}` }));
+  const here = verdictAt.get(current);
   const flagged = here && (here.verdict === 'inaccuracy' || here.verdict === 'mistake' || here.verdict === 'blunder') ? here : null;
   const overlay: SurfaceOverlay = flagged
     ? {
@@ -137,11 +140,12 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
     const added = await addCard(appDb(), profileId, ui.def.id, { kind: 'position', position: ui.def.codec.state.toText(before), accept: m.accept, played: m.played, recordId: record.id, ply: m.ply }, Date.now());
     notify(added ? t('practice.added') : t('practice.added.already'));
   };
-  const seatNames = ui.def.seats(start).map((s) => (ui.movePrefix ? ui.movePrefix(s) : ui.sideName(s)));
+  const seatNames = ui.def.seats(start).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record)) : ui.sideName(s)));
   const positionText = current === 0 ? t('review.start') : t('review.of', { n: current, total });
 
   return (
     <TableShell
+      wide={ui.layout === 'table'}
       label={`${t('review.title')}: ${name}`}
       title={`${t('review.title')} · ${name}`}
       meta={bot ? [{ key: 'level', text: t('review.vs', { n: bot.level ?? 1 }) }] : []}
@@ -163,6 +167,20 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
             >
               <Icon name="again" size={20} />
               {t('table.flip')}
+            </button>
+          ) : null}
+          {ui.layout === 'table' ? (
+            <button
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={cardsUp}
+              onClick={() => {
+                close();
+                setCardsUp((v) => !v);
+              }}
+            >
+              <Icon name="review" size={20} />
+              {cardsUp ? t('review.lens.knew') : t('review.lens.up')}
             </button>
           ) : null}
           {ui.exportRecord ? (
@@ -252,7 +270,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
           onAction={() => undefined}
           onSkip={() => queue.skip()}
           flipped={(ui.flipForSeat?.(mySeats[0] ?? 0) ?? false) !== flipOverride}
-          helps={{}}
+          helps={{ openHand: cardsUp }}
           overlay={overlay}
         />
       }
@@ -325,7 +343,7 @@ function KeyMoments({ analysis, progress, error, ui, record, supported }: { anal
     );
   }
   const seats = ui.def.seats(startState(ui.def, record));
-  const moments = analysis.keyMoments.map((p) => analysis.moves[p]).filter((m): m is MoveVerdict => m !== undefined);
+  const moments = analysis.keyMoments.map((p) => analysis.moves.find((m) => m.ply === p)).filter((m): m is MoveVerdict => m !== undefined);
   return (
     <div className="moments">
       <p className="accuracy num">

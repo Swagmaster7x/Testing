@@ -3,6 +3,7 @@
  * reference card. Unbuilt games show their doors as coming.
  */
 import { useState } from 'react';
+import { stableStringify } from '../../core/json';
 import type { CatalogGame } from '../../games/catalog';
 import { catalogGame } from '../../games/catalog';
 import { hasLessons, loadLessons } from '../../games/lessons';
@@ -63,6 +64,20 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
   const levels = useApp((s) => s.settings?.levels ?? {});
   const clockChoices = useApp((s) => s.settings?.clocks ?? {});
   const clocks = ui.clocks ?? [];
+  const rulesChosen = useApp((s) => s.settings?.rules ?? {});
+  const options = setup === undefined ? ui.options : undefined;
+  const [config, setConfig] = useState<unknown>(() => {
+    const remembered = rulesChosen[ui.def.id];
+    if (remembered === undefined) return ui.def.defaultConfig;
+    try {
+      return ui.def.codec.config.fromJSON(remembered);
+    } catch {
+      return ui.def.defaultConfig;
+    }
+  });
+  const [showRules, setShowRules] = useState(false);
+  const configKey = (c: unknown) => stableStringify(ui.def.codec.config.toJSON(c));
+  const presetId = options?.presets.find((p) => configKey(p.config) === configKey(config))?.id ?? null;
   const [level, setLevel] = useState<number>(remembered ?? suggested);
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
   const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
@@ -72,12 +87,16 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
     setBusy(true);
     const choice = ui.sides.find((s) => s.id === side);
     const clock = clocks.find((c) => c.id === clockId);
-    await updateSettings({ levels: { ...levels, [ui.def.id]: level }, clocks: { ...clockChoices, [ui.def.id]: clockId } });
+    await updateSettings({
+      levels: { ...levels, [ui.def.id]: level },
+      clocks: { ...clockChoices, [ui.def.id]: clockId },
+      ...(options ? { rules: { ...rulesChosen, [ui.def.id]: ui.def.codec.config.toJSON(config) } } : {}),
+    });
     const id = await startGame(ui, profileId, {
       level,
       side: choice?.seat ?? 'either',
       ...(seed ? { seed } : {}),
-      ...(setup !== undefined ? { config: setup } : {}),
+      ...(setup !== undefined ? { config: setup } : options ? { config } : {}),
       clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
     });
     navigate(`/play/${id}`);
@@ -127,6 +146,35 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
             <span className="eyebrow">{t('play.side')}</span>
             <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />
           </div>
+          {options ? (
+            <div className="setup-row wide">
+              <span className="eyebrow">{t('rules.title')}</span>
+              <div className="row" style={{ gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                <Segmented<string>
+                  label={t('rules.title')}
+                  options={[...options.presets.map((p) => ({ value: p.id, label: p.label })), ...(presetId ? [] : [{ value: 'custom', label: t('rules.custom') }])]}
+                  value={presetId ?? 'custom'}
+                  onChange={(id) => {
+                    const preset = options.presets.find((p) => p.id === id);
+                    if (preset) setConfig(preset.config);
+                  }}
+                />
+                <button type="button" className="link-button inline" aria-expanded={showRules} onClick={() => setShowRules((v) => !v)}>
+                  {showRules ? t('rules.hide') : t('rules.change')}
+                </button>
+              </div>
+              {showRules ? (
+                <div className="rule-fields">
+                  {options.fields.map((f) => (
+                    <div key={f.key} className="rule-field">
+                      <span className="rule-label">{f.label}</span>
+                      <Segmented<string | number> label={f.label} options={f.choices.map((c) => ({ value: c.value, label: c.label }))} value={options.get(config, f.key)} onChange={(v) => setConfig(options.set(config, f.key, v))} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {clocks.length > 0 ? (
             <div className="setup-row">
               <span className="eyebrow">{t('clock.label')}</span>

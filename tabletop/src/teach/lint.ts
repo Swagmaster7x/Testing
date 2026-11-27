@@ -269,7 +269,8 @@ async function freePlay<S>(game: LessonGame<S>, verifier: LessonVerifier<S>, sta
     if (s.phase === 'failed') return `the goal "${step.goal}" was not reached in ${step.maxMoves} moves against the engine's defence`;
     const theirs = await verifier.freePlayMove(game.position(s.position), 'opponent', step);
     s = opponentMove(game, s, theirs);
-    if (s.phase === 'failed') return `the game ended before the goal "${step.goal}" was reached`;
+    if (s.phase === 'correct') return s;
+    if (s.phase === 'failed') return `the goal "${step.goal}" was not reached within ${step.maxMoves} moves against the engine's defence`;
   }
   return 'free play did not finish';
 }

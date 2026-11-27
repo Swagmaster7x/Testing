@@ -55,6 +55,7 @@ export const chessLessonGame: LessonGame<ChessState> = {
     const lead = (m: { w: number; b: number }) => (mover === 0 ? m.w - m.b : m.b - m.w);
     return lead(a) - lead(b) >= 3;
   },
+  toMove: (state) => chess.turn(state),
   over: (state) => state.result !== null,
   moves(state) {
     const seat = chess.turn(state);

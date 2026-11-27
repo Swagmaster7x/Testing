@@ -8,7 +8,7 @@ import { appDb } from '../../store/db';
 import { attemptsFor, cardsFor } from '../../store/learning';
 import { SETTLED_AFTER } from '../../teach/rating';
 import { problemRating } from '../../teach/progress';
-import { gameName, t, tCount, tDynamic } from '../../text';
+import { gameName, practiceText, t, tCount, tDynamic } from '../../text';
 import { Icon } from '../components/Icon';
 import { href } from '../router';
 import { useApp } from '../state';
@@ -71,10 +71,10 @@ export function PracticeScreen({ gameId }: { gameId: string }) {
           return (
             <section key={set.id} className="card practice-card" aria-labelledby={`set-${set.id}`}>
               <div className="card-title">
-                <h2 id={`set-${set.id}`}>{tDynamic(`practice.set.${set.id}`)}</h2>
+                <h2 id={`set-${set.id}`}>{practiceText(gameId, set.id)}</h2>
                 <span className="faint num">{t('practice.count', { n: count })}</span>
               </div>
-              <p className="muted">{tDynamic(`practice.set.${set.id}.blurb`)}</p>
+              <p className="muted">{practiceText(gameId, set.id, '.blurb')}</p>
               <div className="practice-actions">
                 <a className="btn btn-primary" href={href(`/practice/${gameId}/${set.id}`)}>
                   <Icon name="play" size={18} />
@@ -92,10 +92,10 @@ export function PracticeScreen({ gameId }: { gameId: string }) {
         {pack.drills.map((drill) => (
           <section key={drill.id} className="card practice-card" aria-labelledby={`drill-${drill.id}`}>
             <div className="card-title">
-              <h2 id={`drill-${drill.id}`}>{tDynamic(`practice.set.${drill.id}`)}</h2>
+              <h2 id={`drill-${drill.id}`}>{practiceText(gameId, drill.id)}</h2>
               <span className="faint">{t('practice.generated')}</span>
             </div>
-            <p className="muted">{tDynamic(`practice.set.${drill.id}.blurb`)}</p>
+            <p className="muted">{practiceText(gameId, drill.id, '.blurb')}</p>
             <div className="practice-actions">
               <a className="btn btn-primary" href={href(`/practice/${gameId}/${drill.id}`)}>
                 <Icon name="play" size={18} />

@@ -14,7 +14,7 @@ import { addAttempt, addCard, attemptsFor, dueCards, gradeCard, hasCard } from '
 import type { Problem, ProblemRun } from '../../teach/problem';
 import { expectedMove, pickProblem, playProblemReply, playSetup, retryProblem, showSolution, startProblem, submitProblemMove, takeHint } from '../../teach/problem';
 import { problemRating } from '../../teach/progress';
-import { gameName, t, tDynamic } from '../../text';
+import { gameName, practiceText, t, tDynamic } from '../../text';
 import { Icon } from '../components/Icon';
 import { href, navigate } from '../router';
 import { useApp } from '../state';
@@ -141,7 +141,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
   };
 
   const backTo = `/games/${gameId}/practice`;
-  const title = isReview ? t('practice.review.title') : theme ? `${tDynamic(`practice.set.${setId}`)}: ${tDynamic(`theme.${theme}`)}` : tDynamic(`practice.set.${setId}`);
+  const title = isReview ? t('practice.review.title') : theme ? `${practiceText(gameId, setId)}: ${tDynamic(`theme.${theme}`)}` : practiceText(gameId, setId);
   if (!run) {
     return (
       <StudyShell label={title} title={title} backTo={backTo} board={null} panel={
@@ -160,7 +160,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
 
   const seat = ui.def.turn(board.state);
   const solverSeat = solverSeatOf(ui, run, game);
-  const interactive = run.phase === 'solving' && seat !== null;
+  const interactive = run.phase === 'solving' && seat !== null && seat === solverSeat;
   const legal = interactive && seat !== null ? ui.def.legal(board.state, seat) : [];
   const expected = expectedMove(run);
   const overlay: SurfaceOverlay = {
@@ -188,7 +188,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
       board={
         <Surface
           state={board.state}
-          mySeats={interactive && seat !== null ? [seat] : []}
+          mySeats={solverSeat !== null ? [solverSeat] : []}
           canAct={interactive}
           legal={legal}
           lastAction={board.lastAction}
@@ -200,7 +200,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
           }}
           onSkip={board.skip}
           flipped={solverSeat !== null && (ui.flipForSeat?.(solverSeat) ?? false)}
-          helps={{ legal: true }}
+          helps={{ legal: true, openHand: run.problem.openHand === true }}
           overlay={overlay}
         />
       }
@@ -208,7 +208,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
         <div className="lesson-panel" data-problem={run.problem.id}>
           <p className="eyebrow">{isReview ? t('practice.review.eyebrow') : run.problem.rating > 0 ? t('practice.problem.rated', { rating: run.problem.rating }) : t('practice.problem')}</p>
           <p className="lesson-text">
-            {run.phase === 'setup' ? t('practice.watch') : run.phase === 'solving' ? t('practice.find', { side: sideName }) : run.phase === 'reply' ? t('practice.good-reply') : null}
+            {run.phase === 'setup' ? t('practice.watch') : run.phase === 'solving' ? (ui.layout === 'table' ? t('practice.find.play') : t('practice.find', { side: sideName })) : run.phase === 'reply' ? t('practice.good-reply') : null}
           </p>
           {run.phase === 'solving' && run.hints >= 2 ? <p className="faint">{themeNames.length > 0 ? t('practice.hint.idea', { idea: themeNames[0] ?? '' }) : t('practice.hint.idea.none')}</p> : null}
           {run.phase === 'solved' ? (

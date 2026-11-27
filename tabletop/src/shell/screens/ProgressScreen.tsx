@@ -3,7 +3,7 @@ import { GameGlyph } from '../components/GameGlyph';
 import { SHELF } from '../../games/catalog';
 import { READY_IDS } from '../../games/ready';
 import { SETTLED_AFTER } from '../../teach/rating';
-import { gameName, t, tCount, tDynamic } from '../../text';
+import { gameName, practiceText, t, tCount } from '../../text';
 import { Icon } from '../components/Icon';
 import { Segmented } from '../components/Segmented';
 import type { GameProgress } from '../progress-data';
@@ -84,7 +84,7 @@ function Detail({ p }: { p: GameProgress }) {
                 <span>{t(`ready.${item.id}`)}</span>
                 <span className="faint ready-how">
                   {item.lessons.length > 0 ? t('ready.how.lessons', { list: item.lessons.map((l) => l.title).join(', ') }) : null}
-                  {item.drill ? t('ready.how.drill', { drill: tDynamic(`practice.set.${item.drill.id}`), n: item.drill.times, passed: Math.min(item.drill.passed, item.drill.times) }) : null}
+                  {item.drill ? t('ready.how.drill', { drill: practiceText(p.gameId, item.drill.id), n: item.drill.times, passed: Math.min(item.drill.passed, item.drill.times) }) : null}
                   {item.beatLevel !== null ? t('ready.how.beat', { n: item.beatLevel }) : null}
                 </span>
               </span>

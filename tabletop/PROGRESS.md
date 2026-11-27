@@ -1,6 +1,6 @@
 # Kibitz progress
 
-Last updated 2026-11-27, at the end of milestone 2. The plan is `PLAN.md`; this file says what
+Last updated 2026-11-27, at the end of milestone 3. The plan is `PLAN.md`; this file says what
 has been built, what was decided along the way, and what is still open.
 
 **Swag's instruction after M0 (2026-11-27): "I trust you, build it all."** So the build carries
@@ -12,7 +12,7 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [x] **M0. Foundation** (2026-11-27)
 - [x] **M1. Chess: play** (2026-11-27)
 - [x] **M2. The learning loop, on Chess** (2026-11-27). The feedback stop is skipped, as Swag asked; feedback is still welcome.
-- [ ] M3. Cards and Brisca (2 players)
+- [x] **M3. Cards and Brisca (2 players)** (2026-11-27)
 - [ ] M4. Dominoes
 - [ ] M5. Texas Hold'em
 - [ ] M6. Go
@@ -27,7 +27,105 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [ ] M15. Stronger engines
 - [ ] M16. Table tools, polish, release
 
-Next up: **M3, cards and Brisca (2 players).**
+Next up: **M4, dominoes.** Go (M6) and Shogi (M8) are being built at the same time in separate checkouts, to be merged when they pass their gates.
+
+## M3. Cards and Brisca (2 players)
+
+- [x] **Rules first**: `docs/rules/brisca.md`, written from Spanish and English Wikipedia and pagat.com
+      (those hosts were allowed through the environment's approval card, as the plan says). Every
+      disputed rule is an option: which swaps exist (the 7, the 2), when (any turn, or only after
+      winning a trick), 60–60 (tie or most cards), a turned As or Tres (stays or goes back), wins
+      over 100 counting double, hands to a game (1, 2, 3, 5, 7), rotating trumps, "arrastro", and
+      the second brisca (Tres, or Siete as in Portuguese bisca). Presets: **Puerto Rico** (the
+      default), **Spain**, **Italy (briscola)** and Puerto Rico to three hands; the "ask before you
+      sit" card is on the reference page.
+- [x] **Rules engine** (`src/games/brisca/rules.ts`): hidden information (a view holds your hand,
+      the public history and counts; never the other hand, the stock order or the seed that deals
+      later hands), `sample()` for search, matches of several hands with the deal alternating,
+      "play on from here" from any position.
+- [x] **CardKit** (`src/kits/cards/`): an original Spanish deck drawn as vectors (each suit its own
+      shape and colour, the traditional broken frame, large corner indices, simple original
+      figures), card backs, and a card layer where every card keeps its identity and slides
+      between hand, trick, stock and piles. What is drawn lags the rules by the events still
+      queued, so a trick stays on the table until its event plays.
+- [x] **Table**: the CPU's hand, the stock with the turned trump card across its foot and a trumps
+      badge, the trick, both piles, your hand (tap to lift, tap again to play), the swap button,
+      "arrastro" when it is played, a hand-over card. The shell gained a wide layout for card and
+      tile tables, perspective-aware log lines, card sounds, and **"Rules at this table"** in the
+      New game dialog (presets, plus every option), remembered per game.
+- [x] **CPU, six levels**: counting heuristics (1, 2), perfect last three tricks (3), and
+      determinized search (4 to 6: deal the unseen cards at random 40, 80 or 160 times, play each
+      card out, solve the end exactly in each deal). The exact endgame solver agrees with brute
+      force on 200 random endgames and 20 real ones.
+- [x] **Coach**, each a switch that marks the game as training: what beats this, points and trumps
+      left (and the briscas not yet seen), the cards seen, cards up (open-hand rounds), and a
+      three-step hint.
+- [x] **Learn**: 20 lessons, every one linted: stage 0 (2), the rules (8: the pack, order and
+      points, trumps, who wins a trick, no duty to follow, drawing, the swap, counting at the end),
+      first strategy (6: take points cheaply, keep trumps for points, lead a blank, count the
+      trumps, the last three tricks, and a free-play finish against the solver), Table-ready (4:
+      dealing and the turned card, counting a pile by hand, asking before you sit, table manners).
+      Strategy claims are made in endgames only, where the solver proves them; the linter rejected
+      four first drafts whose alternatives scored the same.
+- [x] **Practice**: 160 endgame problems proved by the solver (`npm run generate:brisca`), and four
+      generated drills: win the trick, card values, count the pile, count the trumps.
+- [x] **Review**: every decision you made, rated "with what you knew" by its loss in expected
+      points (the coach samples the unseen cards from your view and plays the end exactly), key
+      moments with reasons (gave away points, wasted a trump, missed the points on the table, led
+      points into a trump, the swap was there), "play on from here", "add to my practice", and a
+      **cards up** lens that turns every hand face up.
+
+### Gate: the definition of done for Brisca (PLAN.md 2.10)
+
+| Item | Result |
+| --- | --- |
+| 1. `docs/rules/brisca.md` | Rules, nine options, four presets, golden cases, sources |
+| 2. Golden, property and replay tests under every preset | 15 golden cases; random games under all seven test configs keep the contract, conserve the 40 cards, total 120 points a hand, never leak the other hand, the stock or the seed, and replay |
+| 3. At least four CPU levels pass the ladder | See below |
+| 4. Learn stages 0 to 2 and Table-ready | 2 + 8 + 6 + 4 lessons, all passing the linter |
+| 5. Three kinds of practice | Endgames (160, solver-proved) and four generated drills |
+| 6. Coach helps and a counter a player keeps in their head | Points so far, trumps and briscas not yet seen, cards seen |
+| 7. Review with key moments, reasons, play on | Yes, with both lenses |
+| 8. Save, resume, replay, reference card | Yes (the shared table) |
+| 9. End to end at phone landscape, screenshots looked at | `tests/e2e/brisca.spec.ts` at all three sizes: a whole hand to the end and its review, the swap, a rules lesson, a solver problem, a drill; twelve M3 screenshots looked at |
+| Point total always 120 | Checked after every hand of every random game |
+| Endgame solver agrees with brute force | Yes, 220 positions |
+
+**Ladder** (`npm run ladder -- brisca 60`: matches to three hands, each deal played twice with the
+seats swapped): L1 beats random 0.900, L2 beats L1 0.817, L3 beats L2 0.617. L4 to L6 (the
+determinized levels) were still running at the time of writing; their results follow below when
+they finish. During tuning, sampled search with 16 deals was no better than the level-3 heuristic
+(0.483) while 40 deals beat it clearly (0.670), which set the sample counts.
+
+Fixed after looking at the screenshots and play-throughs: in card endgames the other side can move
+twice running (it wins a trick and leads the next), which the problem runner did not allow; a
+free-play goal reached on the computer's reply was missed; lessons and problems fanned both piles
+face up, which cluttered the table (now only the counting drills do); the stock looked heavy; the
+move list said "The CPU" where "CPU" reads better.
+
+### Decisions in M3
+
+1. **A game is one hand by default**, as a quick sitting; "to three hands" is a preset and every
+   length is an option. Ladders play matches to three hands, as tables usually do, with every
+   deal played twice with the seats swapped so the luck of the deal cancels out.
+2. **Card names stay Spanish** (As, Tres, Rey, Caballo, Sota; oros, copas, espadas, bastos) with an
+   English gloss where they first appear, as players say them.
+3. **Swaps are offered on your own turn only**; in a two-player game that is always before you play
+   to the trick, so no swap a player could make is lost.
+4. **Claiming the rest** (showing the top trumps to end the hand) is not implemented: the result
+   is the same as playing the cards out, which the app does quickly.
+5. **Counting is a help, not a default**: points, trumps left and cards seen are coach switches and
+   mark the game as training, because keeping count is the skill a real table needs.
+6. **Hidden-card review** judges each decision "with what you knew" (sampling the unseen cards from
+   your view); "cards up" shows what was really there.
+
+### Not done in M3, or open
+
+- Four players in pairs with señas, and Tute, are milestone 12.
+- Pass-and-play arrives with milestone 7 and is then switched on for Brisca.
+- The Puerto Rican rules page pagat links to (on an archive site) and Fournier's page could not be
+  reached; the Puerto Rico preset follows the plan's description. Corrections from a real
+  Puerto Rican table are welcome and are one option change each.
 
 ## M2. The learning loop, on Chess
 

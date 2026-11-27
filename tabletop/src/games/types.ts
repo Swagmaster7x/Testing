@@ -100,6 +100,25 @@ export interface ClockChoice {
   readonly incrementMs: number;
 }
 
+export interface OptionChoice {
+  readonly value: string | number;
+  readonly label: string;
+}
+
+export interface OptionField {
+  readonly key: string;
+  readonly label: string;
+  readonly choices: readonly OptionChoice[];
+}
+
+export interface GameOptions<C> {
+  readonly presets: readonly { readonly id: string; readonly label: string; readonly config: C }[];
+  readonly fields: readonly OptionField[];
+  /** The value of a field in a config, and a config with one field changed. */
+  get(config: C, key: string): string | number;
+  set(config: C, key: string, value: string | number): C;
+}
+
 /** Game review support: engine analysis of a finished game and "play on from here". */
 export interface GameReviewSupport<S, C> {
   analyse(record: GameRecord, ask: AskCoach, onProgress: (done: number, total: number) => void, cancelled: () => boolean): Promise<GameAnalysis | null>;
@@ -120,10 +139,10 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly sides: readonly SideChoice[];
   sideName(seat: Seat): string;
   /** What the move list puts before each move; the side name when absent (chess uses none). */
-  readonly movePrefix?: (seat: Seat) => string;
+  readonly movePrefix?: (seat: Seat, mySeats?: readonly Seat[]) => string;
   eventDuration(event: E): number;
-  /** A line for the log, or null to leave the event out. */
-  describeEvent(event: E): string | null;
+  /** A line for the log, or null to leave the event out. `mySeats` are the people at this device. */
+  describeEvent(event: E, mySeats?: readonly Seat[]): string | null;
   counters(state: S, mySeats: readonly Seat[]): readonly CounterRow[];
   sound(event: E): SoundName | null;
   reference(): readonly ReferenceSection[];
@@ -137,6 +156,8 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   /** Export a record in the game's own file format (PGN for chess). */
   readonly exportRecord?: { readonly extension: string; readonly mime: string; write(record: GameRecord, names: readonly string[]): string };
   readonly review?: GameReviewSupport<S, C>;
+  /** The rules at this table: named presets and every option (PLAN.md 2.3). */
+  readonly options?: GameOptions<C>;
   /** The squares a move goes from and to, for arrows on a board. */
   moveSquares?(action: A): { from: string; to: string } | null;
   /** Import a game from its own file format into a record's config and actions. */

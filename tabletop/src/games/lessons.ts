@@ -12,6 +12,10 @@ export interface LessonPack {
 }
 
 const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
+  brisca: async () => {
+    const m = await import('./brisca/learn');
+    return { lessons: m.BRISCA_LESSONS, game: m.briscaLessonGame };
+  },
   chess: async () => {
     const m = await import('./chess/learn');
     return { lessons: m.CHESS_LESSONS, game: m.chessLessonGame };

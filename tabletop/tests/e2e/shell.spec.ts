@@ -1,4 +1,8 @@
 import { expect, noHorizontalScroll, test } from './fixtures';
+import { SHELF } from '../../src/games/catalog';
+
+const NAMES: Record<string, string> = { brisca: 'Brisca', poker: 'Poker', chess: 'Chess', go: 'Go', 'chinese-checkers': 'Chinese Checkers', shogi: 'Shogi', dominoes: 'Dominoes', mahjong: 'Mahjong' };
+const gameName = (id: string) => NAMES[id] ?? id;
 
 test.describe('the shell', () => {
   test('every top-level screen opens from the navigation and fits without sideways scrolling', async ({ page }) => {
@@ -28,15 +32,19 @@ test.describe('the shell', () => {
       await expect(page.getByRole('link', { name: `Open ${name}` })).toBeVisible();
     }
     await expect(page.getByText('Noughts and crosses')).toHaveCount(0);
-    // Chess is built (milestone 1); the other seven are still coming.
-    await expect(page.getByText(/Coming · M\d|Next up · M\d/)).toHaveCount(7);
-    await expect(page.getByRole('link', { name: 'Open Chess' })).not.toContainText(/Coming|Next up/);
+    // Built games open; the rest say when they arrive.
+    const coming = SHELF.filter((g) => !g.playable);
+    await expect(page.getByText(/Coming · M\d|Next up · M\d/)).toHaveCount(coming.length);
+    for (const g of SHELF.filter((x) => x.playable)) await expect(page.getByRole('link', { name: `Open ${gameName(g.id)}` })).not.toContainText(/Coming|Next up/);
   });
 
   test('a coming game has a hub with four closed doors and a reference card', async ({ page }) => {
+    const coming = SHELF.filter((g) => !g.playable).sort((a, b) => b.milestone - a.milestone)[0];
+    test.skip(!coming, 'every game is built');
+    const name = gameName(coming?.id ?? '');
     await page.goto('/#/games');
-    await page.getByRole('link', { name: 'Open Brisca' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Brisca' })).toBeVisible();
+    await page.getByRole('link', { name: `Open ${name}` }).click();
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
     const doors = page.locator('.door');
     await expect(doors).toHaveCount(4);
     for (let i = 0; i < 4; i++) await expect(doors.nth(i)).toHaveAttribute('aria-disabled', 'true');

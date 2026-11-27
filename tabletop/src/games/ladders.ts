@@ -6,6 +6,9 @@ import type { Contender, LadderSpec } from '../ai/ladder';
 import { randomChoice } from '../ai/random-bot';
 import type { Engine } from '../ai/uci';
 import type { GameEvent } from '../core/contract';
+import { briscaBots } from './brisca/bots';
+import type { BriscaAction, BriscaConfig, BriscaEvent, BriscaState, BriscaView } from './brisca/rules';
+import { brisca, PUERTO_RICO } from './brisca/rules';
 import { chessBots } from './chess/bots';
 import type { ChessAction, ChessConfig, ChessEvent, ChessState, ChessView } from './chess/rules';
 import { chess } from './chess/rules';
@@ -68,9 +71,32 @@ function chessLadder(deps: LadderDeps): Ladder<ChessState, ChessAction, ChessCon
   };
 }
 
+/**
+ * Brisca rungs are games to three hands, as tables play them, with every deal played twice with
+ * the seats swapped, so the luck of the deal cancels out.
+ */
+function briscaLadder(): Ladder<BriscaState, BriscaAction, BriscaConfig, BriscaView, BriscaEvent> {
+  return {
+    spec: {
+      def: brisca,
+      config: { ...PUERTO_RICO, matchTo: 3 },
+      levels: briscaBots.levels.map((l) => l.level),
+      bot: (level) => ({
+        name: `L${level}`,
+        choose: async (view, seat, rng) => (await briscaBots.choose({ view, seat, level, rng })).action,
+      }),
+      margin: 0.6,
+      paired: true,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(brisca, view, seat, rng) },
+    games: 100,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
     chess: chessLadder(deps) as unknown as Ladder<never, never, never, never, never>,
+    brisca: briscaLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }

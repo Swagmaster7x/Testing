@@ -626,3 +626,26 @@ button.progress-game[aria-pressed='true'] {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Rules at this table, in the New game dialog */
+.rule-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.rule-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.rule-label {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.rule-field .segmented {
+  flex-wrap: wrap;
+}

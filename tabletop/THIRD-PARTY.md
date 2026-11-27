@@ -58,7 +58,8 @@ All chess lesson text and positions are original to this app.
 
 All art is original and drawn as vectors for this app: the app icon (`assets/icon.svg`), the game
 glyphs on the shelf, the interface icons, the noughts-and-crosses board and the chess set
-(`src/kits/board/chess-pieces.tsx`). Sounds are synthesised
+(`src/kits/board/chess-pieces.tsx`), and the Spanish deck and card backs (`src/kits/cards/spanish.tsx`).
+Sounds are synthesised
 in the app with the Web Audio API; there are no sound files.
 
 ## Coming later

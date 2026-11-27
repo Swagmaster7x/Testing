@@ -14,6 +14,13 @@ export interface ReadyItem {
 }
 
 const READY: Readonly<Record<string, readonly ReadyItem[]>> = {
+  brisca: [
+    { id: 'setup', lessons: ['brisca.table.deal'] },
+    { id: 'terms', lessons: ['brisca.1.pack', 'brisca.1.trumps', 'brisca.1.swap'] },
+    { id: 'score', drill: { id: 'drill-pile', times: 5 } },
+    { id: 'etiquette', lessons: ['brisca.table.manners', 'brisca.table.ask'] },
+    { id: 'beat', beatLevel: 3 },
+  ],
   chess: [
     { id: 'setup', lessons: ['chess.table.setup'] },
     { id: 'terms', lessons: ['chess.table.notation', 'chess.table.touch'] },

@@ -22,10 +22,12 @@ export interface TableShellProps {
   readonly surface: ReactNode;
   readonly rail: ReactNode;
   readonly label: string;
+  /** Card and tile tables use the whole width instead of a square board. */
+  readonly wide?: boolean;
 }
 
 export function TableShell(props: TableShellProps) {
-  const { title, meta, turn, backTo, railSide, railOpen, onToggleRail, menu, side, surface, rail, label } = props;
+  const { title, meta, turn, backTo, railSide, railOpen, onToggleRail, menu, side, surface, rail, label, wide = false } = props;
   return (
     <div className="table" role="main" aria-label={label}>
       <header className="table-status">
@@ -52,8 +54,8 @@ export function TableShell(props: TableShellProps) {
       </header>
       <div className="table-body" data-rail={railSide} data-rail-open={railOpen}>
         <section className="table-side">{side}</section>
-        <section className="table-surface">
-          <div className="board-frame">{surface}</div>
+        <section className="table-surface" data-wide={wide}>
+          <div className={wide ? 'table-frame' : 'board-frame'}>{surface}</div>
         </section>
         {railOpen ? (
           <aside className="rail" aria-label={t('rail.label')}>

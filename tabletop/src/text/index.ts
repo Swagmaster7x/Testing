@@ -34,3 +34,9 @@ export function tCount(base: string, n: number, params?: Params): string {
 export function gameName(gameId: string): string {
   return tDynamic(`game.${gameId}.name`);
 }
+
+/** A practice set's name or blurb: the game's own text when it has one, else the shared text. */
+export function practiceText(gameId: string, setId: string, part: '' | '.blurb' = ''): string {
+  const own = `practice.set.${gameId}.${setId}${part}`;
+  return hasText(own) ? tDynamic(own) : tDynamic(`practice.set.${setId}${part}`);
+}
