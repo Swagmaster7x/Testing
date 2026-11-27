@@ -29,6 +29,7 @@ export const enGo = {
   'go.strip.place': 'Place handicap stone {n} of {total}.',
   'go.strip.mark': 'Tap stones you think are dead, then Done.',
   'go.strip.wait': 'The other side is checking the count.',
+  'go.strip.counting': 'Counting: faded stones are dead.',
   'go.strip.score': 'Black {black} · White {white}',
   'go.strip.confirm': 'Tap {point} again, or Play, to place it.',
   'go.strip.atari': 'Atari: some of your stones have one liberty left.',

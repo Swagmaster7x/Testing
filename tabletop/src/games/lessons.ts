@@ -16,6 +16,10 @@ const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
     const m = await import('./chess/learn');
     return { lessons: m.CHESS_LESSONS, game: m.chessLessonGame };
   },
+  go: async () => {
+    const m = await import('./go/learn');
+    return { lessons: m.GO_LESSONS, game: m.goLessonGame };
+  },
 };
 
 export function hasLessons(gameId: string): boolean {

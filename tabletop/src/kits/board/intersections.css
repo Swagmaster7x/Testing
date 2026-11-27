@@ -18,7 +18,7 @@
   fill: #3d2b18;
 }
 
-.ib-coord text {
+.ib-coord {
   fill: #5a4126;
   font-family: var(--font-sans);
   font-weight: 650;
@@ -60,7 +60,7 @@
 }
 
 .ib-dead {
-  opacity: 0.45;
+  opacity: 0.6;
 }
 
 .ib-ghost {

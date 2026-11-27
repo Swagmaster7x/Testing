@@ -42,7 +42,6 @@
     "@capacitor/cli": "8.6.3",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.65.1",
-    "@sabaki/deadstones": "2.2.0",
     "@sabaki/go-board": "1.4.3",
     "@sabaki/sgf": "3.5.0",
     "@types/node": "22.20.7",

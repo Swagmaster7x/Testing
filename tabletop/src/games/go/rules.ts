@@ -74,6 +74,9 @@ export const PRESETS: Readonly<Record<GoPresetId, GoRules>> = {
   capture: { ...BASE, komi: 0, handicapPlacement: 'fixed', compensation: 'none', marking: false, captureTarget: 1 },
 };
 
+/** Passes in a row that end play. */
+export const PASSES_TO_END = 2;
+
 /** Komi in a handicap game: half a point, so White wins a tie. */
 export const HANDICAP_KOMI = 0.5;
 export const BOARD_SIZES: readonly number[] = [9, 13, 19];
@@ -403,7 +406,7 @@ function applyPass(state: GoState, events: GoEvent[]): GoState {
     moveNumber: state.moveNumber + 1,
     last: -1,
   };
-  const ends = passes >= 2 && (!state.rules.whitePassesLast || mover === 1);
+  const ends = passes >= PASSES_TO_END && (!state.rules.whitePassesLast || mover === 1);
   if (!ends) return after;
   if (state.rules.captureTarget > 0) return finish(after, { kind: 'captures', black: prisoners[0], white: prisoners[1] }, events);
   if (!state.rules.marking) return finish(after, scoreResult(after, []), events);

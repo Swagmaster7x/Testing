@@ -41,7 +41,7 @@ export const LEVEL_PARAMS: Readonly<Record<number, LevelParams>> = {
   2: { playouts: 200, habit: 0.35 },
   3: { playouts: 600, habit: 0.15 },
   4: { playouts: 1_500, habit: 0 },
-  5: { playouts: 4_000, habit: 0 },
+  5: { playouts: 3_000, habit: 0 },
   6: { playouts: 9_000, habit: 0 },
 };
 

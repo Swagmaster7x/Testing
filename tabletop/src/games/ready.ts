@@ -21,6 +21,13 @@ const READY: Readonly<Record<string, readonly ReadyItem[]>> = {
     { id: 'etiquette', lessons: ['chess.table.draws', 'chess.table.clock'] },
     { id: 'beat', beatLevel: 3 },
   ],
+  go: [
+    { id: 'setup', lessons: ['go.table.nigiri', 'go.table.handicap'] },
+    { id: 'terms', lessons: ['go.1.atari', 'go.1.ko', 'go.table.etiquette'] },
+    { id: 'score', drill: { id: 'drill-go-count', times: 5 } },
+    { id: 'etiquette', lessons: ['go.table.etiquette', 'go.table.clock'] },
+    { id: 'beat', beatLevel: 3 },
+  ],
 };
 
 export function readyItems(gameId: string): readonly ReadyItem[] {

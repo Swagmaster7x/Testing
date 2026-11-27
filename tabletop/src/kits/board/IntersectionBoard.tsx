@@ -63,7 +63,19 @@ export interface IntersectionBoardProps {
 }
 
 const U = 100;
-const M = 62;
+/** Margins above and to the right; the coordinates sit left and below, clear of the edge stones (radius 47). */
+const MT = 54;
+const MR = 54;
+
+/**
+ * The coordinates' font and the left and bottom margins that hold them. Bigger boards get bigger
+ * letters (in board units), so that on a phone they stay about the same size on the screen.
+ */
+function coordinateLayout(size: number): { readonly font: number; readonly margin: number } {
+  if (size >= 17) return { font: 64, margin: 150 };
+  if (size >= 12) return { font: 44, margin: 118 };
+  return { font: 32, margin: 108 };
+}
 const TONE: Record<PointTone, string> = { hint: '#e8c77f', threat: '#e07a5c', info: '#9fc3e8', good: '#9cba84' };
 
 function Stone({ color, cx, cy, className, style }: { color: StoneColor; cx: number; cy: number; className?: string; style?: CSSProperties }) {
@@ -80,6 +92,9 @@ export function IntersectionBoard(props: IntersectionBoardProps) {
   const span = (size - 1) * U;
   const at = (p: number) => ({ x: (p % size) * U, y: Math.floor(p / size) * U });
   const font = size >= 17 ? 30 : size >= 12 ? 34 : 38;
+  const coords = coordinateLayout(size);
+  const ML = coords.margin;
+  const MB = coords.margin;
   const onKey = (event: KeyboardEvent, p: number) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -95,7 +110,7 @@ export function IntersectionBoard(props: IntersectionBoardProps) {
   const removingSet = new Set(removing?.points ?? []);
 
   return (
-    <svg className="ib" viewBox={`${-M} ${-M} ${span + 2 * M} ${span + 2 * M}`} role="group" aria-label={label} data-position={dataPosition} data-size={size} onPointerDown={onTouch}>
+    <svg className="ib" viewBox={`${-ML} ${-MT} ${span + ML + MR} ${span + MT + MB}`} role="group" aria-label={label} data-position={dataPosition} data-size={size} onPointerDown={onTouch}>
       <defs>
         <radialGradient id="ib-black" cx="0.36" cy="0.32" r="0.75">
           <stop offset="0" stopColor="#5d5a55" />
@@ -113,31 +128,23 @@ export function IntersectionBoard(props: IntersectionBoardProps) {
           <stop offset="1" stopColor="#c99a55" />
         </linearGradient>
       </defs>
-      <rect x={-M} y={-M} width={span + 2 * M} height={span + 2 * M} rx={18} fill="url(#ib-wood)" />
+      <rect x={-ML} y={-MT} width={span + ML + MR} height={span + MT + MB} rx={18} fill="url(#ib-wood)" />
       <g className="ib-lines">{lines}</g>
       {stars.map((p) => {
+        // Under a territory square the star point would show through as a smudge.
+        if (owners?.[p]) return null;
         const c = at(p);
         return <circle key={`s${p}`} cx={c.x} cy={c.y} r={size >= 17 ? 9 : 11} className="ib-star" />;
       })}
       {columns.map((name, x) => (
-        <g key={`c${name}`} className="ib-coord" aria-hidden="true">
-          <text x={x * U} y={-M / 2 + 4} fontSize={font * 0.8} textAnchor="middle" dominantBaseline="middle">
-            {name}
-          </text>
-          <text x={x * U} y={span + M / 2 + 2} fontSize={font * 0.8} textAnchor="middle" dominantBaseline="middle">
-            {name}
-          </text>
-        </g>
+        <text key={`c${name}`} className="ib-coord" aria-hidden="true" x={x * U} y={span + MB - Math.round(coords.font * 0.75)} fontSize={coords.font} textAnchor="middle" dominantBaseline="middle">
+          {name}
+        </text>
       ))}
       {rows.map((name, y) => (
-        <g key={`r${name}`} className="ib-coord" aria-hidden="true">
-          <text x={-M / 2} y={y * U + 2} fontSize={font * 0.8} textAnchor="middle" dominantBaseline="middle">
-            {name}
-          </text>
-          <text x={span + M / 2} y={y * U + 2} fontSize={font * 0.8} textAnchor="middle" dominantBaseline="middle">
-            {name}
-          </text>
-        </g>
+        <text key={`r${name}`} className="ib-coord" aria-hidden="true" x={-ML + Math.round(coords.font * 0.75) + 10} y={y * U + 2} fontSize={coords.font} textAnchor="middle" dominantBaseline="middle">
+          {name}
+        </text>
       ))}
       {marks
         .filter((m) => m.shape === 'area')
@@ -166,11 +173,14 @@ export function IntersectionBoard(props: IntersectionBoardProps) {
             if (pt?.stone && !dead.has(p)) return null;
             const c = at(p);
             const s = Math.max(0.25, Math.min(1, strength?.[p] ?? 1));
-            const half = 17 * s + 6;
+            // On a dead stone the square is smaller, so the stone underneath still shows.
+            const half = dead.has(p) ? 15 : 17 * s + 6;
             return <rect key={`own${p}`} x={c.x - half} y={c.y - half} width={half * 2} height={half * 2} rx={4} className={o === 1 ? 'ib-own-black' : 'ib-own-white'} opacity={0.35 + 0.6 * s} />;
           })
         : null}
       {[...dead].map((p) => {
+        // With the count shown, the owner's square marks a dead stone; without it, a cross does.
+        if (owners) return null;
         const c = at(p);
         const black = points[p]?.stone === 'black';
         return <path key={`x${p}`} d={`M ${c.x - 20} ${c.y - 20} L ${c.x + 20} ${c.y + 20} M ${c.x + 20} ${c.y - 20} L ${c.x - 20} ${c.y + 20}`} className={black ? 'ib-cross-on-black' : 'ib-cross-on-white'} />;

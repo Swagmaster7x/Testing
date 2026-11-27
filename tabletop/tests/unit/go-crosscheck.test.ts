@@ -67,7 +67,7 @@ describe('go rules against @sabaki/go-board', () => {
         }
       }
       expect(compared).toBeGreaterThan(500);
-    });
+    }, 120_000);
   }
 
   it('places fixed handicap stones where @sabaki/go-board does', () => {

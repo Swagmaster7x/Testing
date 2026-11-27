@@ -91,7 +91,7 @@ export function GoRulesPicker({ value, onChange }: { value: GoConfig; onChange: 
       )}
       <details>
         <summary className="eyebrow">{t('go.rules.all')}</summary>
-        <div className="go-rules" style={{ marginTop: 'var(--sp-2)' }}>
+        <div className="go-rules go-rules-all" style={{ marginTop: 'var(--sp-2)' }}>
           <Select<GoRules['scoring']> label={t('go.rules.scoring')} value={value.rules.scoring} options={(['area', 'territory'] as const).map((v) => ({ value: v, label: tDynamic(`go.rules.scoring.${v}`) }))} onChange={(scoring) => set({ scoring })} />
           <Select<GoRules['ko']> label={t('go.rules.ko')} value={value.rules.ko} options={(['positional', 'situational', 'simple'] as const).map((v) => ({ value: v, label: tDynamic(`go.rules.ko.${v}`) }))} onChange={(ko) => set({ ko })} />
           <Select<boolean> label={t('go.rules.suicide')} value={value.rules.suicide} options={yesNo} onChange={(suicide) => set({ suicide })} />

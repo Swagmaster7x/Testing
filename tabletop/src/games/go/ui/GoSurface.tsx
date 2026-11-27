@@ -150,8 +150,9 @@ export function GoSurface({ state, mySeats, canAct, legal, lastAction, anim, onA
   let text: string;
   if (state.phase === 'handicap') text = t('go.strip.place', { n: state.handicap - state.placeLeft + 1, total: state.handicap });
   else if (scoring && count) {
-    const tally = helps.count === false ? '' : ` ${t('go.strip.score', { black: count.black, white: count.white })}`;
-    text = `${canAct ? t('go.strip.mark') : t('go.strip.wait')}${tally}`;
+    // The running count shows only with "Count for me" on; lessons and drills ask you to count.
+    const tally = helps.count === true ? ` ${t('go.strip.score', { black: count.black, white: count.white })}` : '';
+    text = `${canAct ? t('go.strip.mark') : mySeats.length > 0 ? t('go.strip.wait') : t('go.strip.counting')}${tally}`;
   } else if (state.phase === 'over' && state.result) {
     const r = state.result;
     text =
