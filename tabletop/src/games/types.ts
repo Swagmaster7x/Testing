@@ -208,6 +208,8 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
    * table covers itself between two people's turns. Worked out from the views when absent.
    */
   readonly hiddenInfo?: boolean;
+  /** A CPU move's reason (a bot's tag) in the log; the shared `tag.<tag>` text when absent. */
+  tagText?(tag: string): string;
   /**
    * Games where some choices are secret until several seats have made them (mahjong calls on a
    * discard): whether a move shows in the move list (`mySeats` are the people at this device; in

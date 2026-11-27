@@ -40,6 +40,8 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
   movePrefix: (seat, mySeats, _seats, names) => seatName(seat, me(mySeats), names),
   playerName: (seat, mySeats, _seats, names) => seatName(seat, me(mySeats), names),
   moveText: (action) => actionWords(holdem.codec.action.toText(action)),
+  // Poker's own reasons: its tags ("check", "value") would otherwise read as another game's.
+  tagText: (tag) => tDynamic(`poker.tag.${tag}`),
   eventDuration(event) {
     switch (event.type) {
       case 'deal':

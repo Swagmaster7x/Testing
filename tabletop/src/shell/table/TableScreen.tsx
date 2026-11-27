@@ -96,7 +96,7 @@ function LogLines({ log, ui, record, viewSeats, names }: { log: readonly LogEntr
             {first && who ? (
               <>
                 <span className="who">{who}</span> · {text}
-                {entry.tags.length > 0 ? <span className="why"> · {entry.tags.map((tag) => tDynamic(`tag.${tag}`)).join(', ')}</span> : null}
+                {entry.tags.length > 0 ? <span className="why"> · {entry.tags.map((tag) => (ui.tagText ? ui.tagText(tag) : tDynamic(`tag.${tag}`))).join(', ')}</span> : null}
               </>
             ) : (
               <span className="end">{text}</span>
