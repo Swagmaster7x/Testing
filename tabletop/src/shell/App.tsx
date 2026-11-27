@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { catalogGame } from '../games/catalog';
 import { currentLanguage, setLanguage, t } from '../text';
 import { Toast } from './components/Toast';
@@ -36,6 +36,9 @@ function NotFound() {
     </Screen>
   );
 }
+
+/** The Mahjong calculator brings the Mahjong rules with it, so it loads only when opened. */
+const MahjongCalculator = lazy(() => import('../games/mahjong/ui/Calculator').then((m) => ({ default: m.MahjongCalculator })));
 
 export function App() {
   const status = useApp((s) => s.status);
@@ -129,6 +132,7 @@ export function App() {
     case 'tools':
       if (second === 'pad' && third) screen = <PadScreen key={third} padId={third} />;
       else if (second === 'timer') screen = <BlindTimerScreen />;
+      else if (second === 'mahjong') screen = <Suspense fallback={<CenterMessage>{t('common.loading')}</CenterMessage>}><MahjongCalculator /></Suspense>;
       else if (!second) screen = <ToolsScreen />;
       else screen = <NotFound />;
       break;

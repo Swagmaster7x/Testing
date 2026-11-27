@@ -35,6 +35,17 @@ test('milestone 16 screens: tools, tour, daylight', async ({ page }) => {
   await page.getByRole('button', { name: 'Start' }).click();
   await page.waitForTimeout(1500);
   await shot(page, '05-blind-timer');
+  await page.goto('/#/tools/mahjong');
+  const picker = page.getByRole('group', { name: 'Tiles to add' });
+  for (const tile of ['1 characters', '1 characters', '1 characters', '2 characters', '3 characters', '4 characters', '6 characters', '7 characters', '8 characters', 'East wind', 'East wind']) {
+    await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+  }
+  await page.getByRole('radiogroup', { name: 'Add' }).getByRole('radio', { name: 'Pung' }).click();
+  await picker.getByRole('button', { name: /^Add the Red dragon/ }).click();
+  await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On South’s discard' }).click();
+  await page.locator('.calc-result').scrollIntoViewIfNeeded();
+  await page.evaluate(() => document.querySelector('.screen')?.scrollTo(0, 0));
+  await shot(page, '13-mahjong-calculator');
   await page.goto('/#/settings');
   await page.getByRole('radio', { name: /Daylight/ }).click();
   await shot(page, '06-settings-daylight');

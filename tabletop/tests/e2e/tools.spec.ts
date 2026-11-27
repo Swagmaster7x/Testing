@@ -81,4 +81,25 @@ test.describe('tools', () => {
     await page.getByRole('button', { name: 'Show the tour again' }).click();
     await expect(page.locator('.tour-card')).toBeVisible();
   });
+
+  test('the Mahjong calculator scores a hand written down tile by tile', async ({ page }) => {
+    await page.goto('/#/tools');
+    await page.getByRole('link', { name: 'Open the Mahjong calculator' }).click();
+    await expect(page.getByRole('heading', { name: 'Mahjong calculator' })).toBeVisible();
+    const picker = page.getByRole('group', { name: 'Tiles to add' });
+    for (const tile of ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '7 dots', '8 dots', '9 dots', '2 bamboo', '3 bamboo', '4 bamboo', '5 bamboo']) {
+      await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+    }
+    await expect(page.locator('.calc-status')).toHaveText('Add 1 more tiles.');
+    await picker.getByRole('button', { name: 'Add the 5 bamboo', exact: true }).click();
+    await expect(page.locator('.calc-lines')).toContainText('All chows');
+    await expect(page.locator('.calc-total')).toHaveText('4 faan');
+    await expect(page.locator('.calc-result')).toContainText('Base 16');
+    await expect(page.locator('.calc-result')).toContainText('East (winner) +96');
+    // On South's discard instead: three faan, South pays double.
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On South’s discard' }).click();
+    await expect(page.locator('.calc-total')).toHaveText('3 faan');
+    await expect(page.locator('.calc-result')).toContainText('South -16');
+  });
 });
+

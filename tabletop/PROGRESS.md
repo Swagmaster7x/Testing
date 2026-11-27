@@ -88,8 +88,16 @@ Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in th
       phone): Today opens in about 0.6 s from cold, a game's hub in 0.35 s, chess practice with its
       800 KB of puzzles in 0.8 s, a Mahjong table starts in 0.25 s. The startup script is 714 KB
       (React, Dexie and the interface text); nothing needed splitting further now.
-- [ ] Still to come in M16: the games' Spanish text (in progress), the Mahjong score calculators
-      (after M14), the release APK, optional web hosting.
+- [x] **The Mahjong score calculator** (`src/games/mahjong/calculator.ts`, `ui/Calculator.tsx`,
+      Tools → Mahjong calculator): tap in a winning hand (tiles in hand, chows, pungs and kongs
+      laid down or concealed, flowers), the winner's seat and the round wind, how it was won and
+      the special cases; it shows each pattern, the total, the base points and what every seat pays,
+      or says the hand is below the table's minimum or no hand at all. It scores with the style's own
+      rules file and settles with its own payments, so it can never disagree with the table; every
+      style in the registry gets it (Hong Kong now, Riichi as it merges, with its own extra
+      inputs to add then). Loaded only when opened.
+- [ ] Still to come in M16: the games' Spanish text (in progress), calculator inputs for later
+      styles, the release APK, optional web hosting.
 
 ### Decisions in M16 so far
 

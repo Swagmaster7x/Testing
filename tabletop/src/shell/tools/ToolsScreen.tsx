@@ -72,9 +72,10 @@ export function ToolsScreen() {
         </section>
         <section className="card">
           <h2>{t('tools.list.calculators')}</h2>
-          <p className="muted">
-            <span className="status status-quiet">{t('status.coming')}</span> {t('tools.calculators.body')}
-          </p>
+          <p className="muted">{t('tools.calculators.body')}</p>
+          <a className="btn btn-small btn-primary" href={href('/tools/mahjong')}>
+            {t('tools.calc.open')}
+          </a>
         </section>
       </div>
     </Screen>
