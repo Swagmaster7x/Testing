@@ -19,11 +19,23 @@ import type { Rng } from '../../core/rng';
 import { createRng } from '../../core/rng';
 import type { Card } from './cards';
 import { cardIndex, DECK, isCard } from './cards';
-import { evaluate } from './evaluate';
+import { highValue, lowValue, showingValue } from './showdown';
 
 export type Format = 'cash' | 'heads-up' | 'sit-and-go';
-export type Street = 'preflop' | 'flop' | 'turn' | 'river';
-export const STREETS: readonly Street[] = ['preflop', 'flop', 'turn', 'river'];
+/** The game on this engine (docs/rules/poker-variants.md for all but Hold'em). */
+export type PokerGame = 'holdem' | 'omaha' | 'draw' | 'stud';
+export type Betting = 'no-limit' | 'pot-limit' | 'fixed-limit';
+export type Street = 'preflop' | 'flop' | 'turn' | 'river' | 'predraw' | 'draw' | 'postdraw' | 'third' | 'fourth' | 'fifth' | 'sixth' | 'seventh';
+/** The streets of each game, in order. The draw is not a betting round: every player still in draws in turn. */
+export const STREETS_OF: Readonly<Record<PokerGame, readonly Street[]>> = {
+  holdem: ['preflop', 'flop', 'turn', 'river'],
+  omaha: ['preflop', 'flop', 'turn', 'river'],
+  draw: ['predraw', 'draw', 'postdraw'],
+  stud: ['third', 'fourth', 'fifth', 'sixth', 'seventh'],
+};
+export const STREETS: readonly Street[] = ['preflop', 'flop', 'turn', 'river', 'predraw', 'draw', 'postdraw', 'third', 'fourth', 'fifth', 'sixth', 'seventh'];
+/** Hole cards dealt at the start of a hand (stud: two down; its first up card is dealt with them). */
+export const HOLE_CARDS: Readonly<Record<PokerGame, number>> = { holdem: 2, omaha: 4, draw: 5, stud: 2 };
 
 export interface HoldemConfig {
   readonly format: Format;
@@ -43,6 +55,12 @@ export interface HoldemConfig {
   readonly showdown: 'show-all' | 'muck';
   /** Prizes in a sit-and-go, in percent of the prize pool, by place. */
   readonly payouts: '65-35' | '50-30-20' | 'winner-takes-all';
+  readonly game: PokerGame;
+  readonly betting: Betting;
+  /** Omaha and Stud: high only, or high-low eight or better. */
+  readonly split: 'high' | 'high-low';
+  /** Five-Card Draw: the most cards a player may draw. */
+  readonly maxDraw: number;
   /** A position to start from instead of a deal ("play on from here"), in state notation. */
   readonly start?: string;
 }
@@ -58,6 +76,10 @@ export const SIX_MAX_CASH: HoldemConfig = {
   oddChip: 'left-of-button',
   showdown: 'show-all',
   payouts: '65-35',
+  game: 'holdem',
+  betting: 'no-limit',
+  split: 'high',
+  maxDraw: 3,
 };
 
 export const PRESETS: Readonly<Record<string, HoldemConfig>> = {
@@ -65,6 +87,10 @@ export const PRESETS: Readonly<Record<string, HoldemConfig>> = {
   'heads-up': { ...SIX_MAX_CASH, format: 'heads-up', stack: 75 },
   'sit-and-go': { ...SIX_MAX_CASH, format: 'sit-and-go', stack: 75, ante: 'big-blind-ante' },
   'home-game': { ...SIX_MAX_CASH, ante: 'ante', straddle: 'live', shortAllIn: 'half-raise' },
+  'pot-limit-omaha': { ...SIX_MAX_CASH, game: 'omaha', betting: 'pot-limit' },
+  'omaha-high-low': { ...SIX_MAX_CASH, game: 'omaha', betting: 'fixed-limit', split: 'high-low' },
+  'five-card-draw': { ...SIX_MAX_CASH, game: 'draw', betting: 'fixed-limit' },
+  'seven-card-stud': { ...SIX_MAX_CASH, game: 'stud', betting: 'fixed-limit' },
 };
 
 /** Freezeout blinds by level; after the last, they double every level. */
@@ -99,14 +125,20 @@ export interface Blinds {
   readonly ante: number;
   /** A live straddle; 0 when there is none. */
   readonly straddle: number;
+  /** Stud: the bring-in; 0 in the other games. */
+  readonly bringIn: number;
   /** The smallest chip. */
   readonly unit: number;
 }
 
 export interface Player {
   readonly stack: number;
-  /** Two cards while dealt in this hand; none when out. */
+  /** Face-down cards while dealt in this hand (two in Hold'em, four in Omaha, five in Draw); none when out. */
   readonly hole: readonly Card[];
+  /** Stud: the cards dealt face up, in order. Empty in the other games. */
+  readonly up: readonly Card[];
+  /** Draw: how many cards this player drew this hand, or null before drawing. */
+  readonly drew: number | null;
   /** Chips put in on this street. */
   readonly bet: number;
   /** Chips put in this hand, antes included. */
@@ -126,7 +158,7 @@ export interface Player {
   readonly startStack: number;
 }
 
-export type LogKind = 'ante' | 'small-blind' | 'big-blind' | 'straddle' | 'fold' | 'check' | 'call' | 'bet' | 'raise';
+export type LogKind = 'ante' | 'small-blind' | 'big-blind' | 'straddle' | 'bring-in' | 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'complete' | 'draw';
 
 /** One entry in the hand's public log. */
 export interface LogEntry {
@@ -138,6 +170,8 @@ export interface LogEntry {
   /** The seat's bet on this street afterwards. */
   readonly to: number;
   readonly allIn: boolean;
+  /** Draw: how many cards were drawn. */
+  readonly drew?: number;
 }
 
 export interface PotResult {
@@ -147,6 +181,8 @@ export interface PotResult {
   readonly winners: readonly Seat[];
   /** Chips each winner took, in the order of `winners` (odd chips first). */
   readonly shares: readonly number[];
+  /** High-low games: the seats that won the low half (empty when nobody qualified for low). */
+  readonly lowWinners?: readonly Seat[];
 }
 
 export interface HandResult {
@@ -162,6 +198,8 @@ export interface HandResult {
   readonly shown: readonly (readonly Card[] | null)[];
   /** The value of each shown hand (see evaluate.ts), per seat. */
   readonly values: readonly (number | null)[];
+  /** High-low games: each shown hand's low value (lower is better), or null when it has no low. */
+  readonly lows?: readonly (number | null)[];
   /** Chips won less chips put in, per seat. */
   readonly net: readonly number[];
   /** The order hands were shown in. */
@@ -201,6 +239,8 @@ export interface HoldemState {
   /** The undealt cards, top first. */
   readonly deck: readonly Card[];
   readonly burned: readonly Card[];
+  /** Draw: the cards thrown away in the draw so far (they make a new deck if it runs out). */
+  readonly discards: readonly Card[];
   readonly board: readonly Card[];
   readonly street: Street;
   readonly toAct: Seat | null;
@@ -210,6 +250,10 @@ export interface HoldemState {
   readonly minRaise: number;
   /** The last seat to bet or raise on the last street with betting. */
   readonly aggressor: Seat | null;
+  /** Fixed-limit: bets and raises made on this street (a bring-in is not one). */
+  readonly raises: number;
+  /** Fixed-limit: players with chips when this street's betting began (the cap is lifted heads-up). */
+  readonly startedWith: number;
   /** This hand, in order. */
   readonly log: readonly LogEntry[];
   readonly lastHand: HandResult | null;
@@ -219,7 +263,13 @@ export interface HoldemState {
   readonly over: boolean;
 }
 
-export type HoldemAction = { readonly type: 'fold' } | { readonly type: 'check' } | { readonly type: 'call' } | { readonly type: 'raise'; readonly to: number };
+export type HoldemAction =
+  | { readonly type: 'fold' }
+  | { readonly type: 'check' }
+  | { readonly type: 'call' }
+  | { readonly type: 'raise'; readonly to: number }
+  /** Draw: throw these cards away and be dealt as many (none: stand pat). */
+  | { readonly type: 'draw'; readonly discard: readonly Card[] };
 
 export type HoldemEvent =
   | {
@@ -237,6 +287,12 @@ export type HoldemEvent =
     }
   | { readonly type: 'post'; readonly seat: Seat; readonly kind: 'ante' | 'small-blind' | 'big-blind' | 'straddle'; readonly amount: number; readonly allIn: boolean }
   | { readonly type: 'hole'; readonly seats: readonly Seat[] }
+  /** Stud: a card dealt face up to each seat still in. */
+  | { readonly type: 'up'; readonly street: Street; readonly cards: readonly { readonly seat: Seat; readonly card: Card }[] }
+  /** Stud seventh street: a card dealt face down to each seat still in. */
+  | { readonly type: 'down'; readonly seats: readonly Seat[] }
+  /** Draw: a seat throws `count` cards away and is dealt as many. */
+  | { readonly type: 'drew'; readonly seat: Seat; readonly count: number }
   | { readonly type: 'act'; readonly seat: Seat; readonly kind: LogKind; readonly amount: number; readonly to: number; readonly allIn: boolean }
   /** The bets go into the middle: `bets` per seat, `pot` everything in the middle afterwards. */
   | { readonly type: 'collect'; readonly pot: number; readonly bets: readonly number[] }
@@ -244,7 +300,8 @@ export type HoldemEvent =
   | { readonly type: 'show'; readonly seat: Seat; readonly cards: readonly Card[]; readonly value: number }
   | { readonly type: 'muck'; readonly seat: Seat }
   | { readonly type: 'return'; readonly seat: Seat; readonly amount: number }
-  | { readonly type: 'win'; readonly seat: Seat; readonly amount: number; readonly pot: number; readonly value: number | null }
+  /** Chips won from a pot; `low` is set (the low hand's value) for the low half of a high-low pot. */
+  | { readonly type: 'win'; readonly seat: Seat; readonly amount: number; readonly pot: number; readonly value: number | null; readonly low?: number | null }
   | { readonly type: 'hand-end'; readonly result: HandResult }
   | { readonly type: 'bust'; readonly seat: Seat; readonly place: number }
   | { readonly type: 'rebuy'; readonly seat: Seat; readonly amount: number }
@@ -277,6 +334,10 @@ export interface HoldemView {
   readonly places: readonly (number | null)[];
   readonly stats: readonly SeatStats[];
   readonly over: boolean;
+  readonly raises: number;
+  readonly startedWith: number;
+  /** Draw: how many cards have been thrown away (the cards themselves are hidden). */
+  readonly discardCount: number;
 }
 
 // Small helpers
@@ -307,12 +368,19 @@ function levelBlinds(level: number): readonly [number, number] {
 
 /** The blinds, ante and straddle at a level (always level 1 in a cash game). */
 export function blindsAt(config: HoldemConfig, level: number): Blinds {
-  if (!isFreezeout(config)) {
-    return { sb: 1, bb: 2, ante: config.ante === 'ante' ? 1 : config.ante === 'big-blind-ante' ? 2 : 0, straddle: config.straddle === 'live' ? 4 : 0, unit: 1 };
+  const cash = !isFreezeout(config);
+  const [sb, bb] = cash ? [1, 2] : levelBlinds(level);
+  const unit = cash ? 1 : 5;
+  if (config.game === 'stud') {
+    // Stud has no blinds: everyone antes a quarter of a big blind and the low card brings it in for half of one.
+    const toUnit = (x: number) => Math.max(unit, Math.round(x / unit) * unit);
+    return { sb, bb, ante: toUnit(bb / 4), straddle: 0, bringIn: toUnit(bb / 2), unit };
   }
-  const [sb, bb] = levelBlinds(level);
+  // A straddle is a no-limit Hold'em custom.
+  const straddle = cash && config.straddle === 'live' && config.game === 'holdem' && config.betting === 'no-limit' ? 2 * bb : 0;
+  if (cash) return { sb, bb, ante: config.ante === 'ante' ? 1 : config.ante === 'big-blind-ante' ? bb : 0, straddle, bringIn: 0, unit };
   const ante = level < ANTE_LEVEL ? 0 : config.ante === 'ante' ? bb / 10 : config.ante === 'big-blind-ante' ? bb : 0;
-  return { sb, bb, ante, straddle: 0, unit: 5 };
+  return { sb, bb, ante, straddle: 0, bringIn: 0, unit };
 }
 
 /** The level a hand is played at. */
@@ -385,9 +453,10 @@ export function positionName(s: Pick<HoldemState, 'players' | 'button'>, seat: S
   return names[i - 2] ?? 'UTG';
 }
 
-/** Whether a seat must still act on this street. */
-function needsToAct(s: Pick<HoldemState, 'players' | 'currentBet'>, seat: Seat): boolean {
+/** Whether a seat must still act on this street (in the draw: whether it has still to draw). */
+function needsToAct(s: Pick<HoldemState, 'players' | 'currentBet' | 'street'>, seat: Seat): boolean {
   const p = at(s.players, seat);
+  if (s.street === 'draw') return inHand(p) && p.drew === null;
   if (!inHand(p) || p.stack === 0) return false;
   if (p.bet < s.currentBet) return true;
   if (p.actedAt !== null) return false;
@@ -395,7 +464,7 @@ function needsToAct(s: Pick<HoldemState, 'players' | 'currentBet'>, seat: Seat):
   return withChips(s) >= 2;
 }
 
-function nextToAct(s: Pick<HoldemState, 'players' | 'currentBet'>, from: Seat): Seat | null {
+function nextToAct(s: Pick<HoldemState, 'players' | 'currentBet' | 'street'>, from: Seat): Seat | null {
   const n = s.players.length;
   for (let k = 1; k <= n; k++) {
     const seat = (from + k) % n;
@@ -404,36 +473,110 @@ function nextToAct(s: Pick<HoldemState, 'players' | 'currentBet'>, from: Seat): 
   return null;
 }
 
+/** What a seat needs to know about the betting: works on states and on views. */
+export type BettingView = Pick<HoldemState, 'players' | 'currentBet' | 'minRaise' | 'config' | 'street' | 'raises' | 'startedWith' | 'blinds'>;
+
+/** Fixed-limit: the small bet (a big blind) or the big bet (two) for a street. */
+export function betSize(s: Pick<HoldemState, 'config' | 'blinds'>, street: Street): number {
+  const big = street === 'turn' || street === 'river' || street === 'postdraw' || street === 'fifth' || street === 'sixth' || street === 'seventh';
+  return big ? 2 * s.blinds.bb : s.blinds.bb;
+}
+
+/** Stud's fourth street: any player still in showing a pair allows the big bet. */
+function openPair(s: Pick<HoldemState, 'players'>): boolean {
+  return s.players.some((p) => inHand(p) && new Set(p.up.map((c) => c[0])).size < p.up.length);
+}
+
+/** Stud's third street before anyone has acted: the bring-in is still to be made. */
+function bringInDue(s: Pick<HoldemState, 'config' | 'street' | 'currentBet' | 'players'>): boolean {
+  return s.config.game === 'stud' && s.street === 'third' && s.currentBet === 0 && s.players.every((p) => p.actedAt === null);
+}
+
 /** Whether a seat that is to act may raise: it has not acted since the betting was opened, or a full raise has been made since. */
-export function mayRaise(s: Pick<HoldemState, 'players' | 'currentBet' | 'minRaise'>, seat: Seat): boolean {
+export function mayRaise(s: BettingView, seat: Seat): boolean {
   const p = at(s.players, seat);
   if (p.bet + p.stack <= s.currentBet) return false;
   // A raise needs someone left to call it.
   if (!s.players.some((q, i) => i !== seat && inHand(q) && q.stack > 0)) return false;
+  if (s.config.betting === 'fixed-limit' && s.startedWith > 2 && s.raises >= 4) return false;
   return p.actedAt === null || s.currentBet - p.actedAt >= s.minRaise;
 }
 
-/** The least and most a seat may raise to, or null when it may not raise. A raise below `min` is only allowed all-in (`max`). */
-export function raiseRange(s: Pick<HoldemState, 'players' | 'currentBet' | 'minRaise'>, seat: Seat): { min: number; max: number } | null {
+/**
+ * The bets a seat may make, as totals for this street. No-limit and pot-limit: every amount from
+ * the least raise to the most (all-in, or the pot), on the chip grid; fixed-limit: one amount (two
+ * on Stud's fourth street with a pair showing: the small or the big bet). An amount short of the
+ * least is allowed only all-in.
+ */
+export function raiseTargets(s: BettingView, seat: Seat): { min: number; max: number; fixed: readonly number[] | null } | null {
   if (!mayRaise(s, seat)) return null;
   const p = at(s.players, seat);
-  const max = p.bet + p.stack;
-  return { min: Math.min(max, s.currentBet + s.minRaise), max };
+  const allIn = p.bet + p.stack;
+  if (s.config.betting === 'fixed-limit') {
+    const size = s.minRaise;
+    const targets: number[] = [];
+    if (s.currentBet < size) targets.push(size);
+    else targets.push(s.currentBet + size);
+    if (s.config.game === 'stud' && s.street === 'fourth' && s.currentBet === 0 && openPair(s)) targets.push(2 * s.blinds.bb);
+    const fixed = [...new Set(targets.map((t) => Math.min(t, allIn)))];
+    return { min: Math.min(...fixed), max: Math.max(...fixed), fixed };
+  }
+  let max = allIn;
+  if (s.config.betting === 'pot-limit') {
+    const pot = s.players.reduce((sum, q) => sum + q.total, 0);
+    max = Math.min(allIn, s.currentBet + pot + Math.max(0, s.currentBet - p.bet));
+  }
+  return { min: Math.min(max, s.currentBet + s.minRaise), max, fixed: null };
+}
+
+/** The least and most a seat may raise to, or null when it may not raise. A raise below `min` is only allowed all-in (`max`). */
+export function raiseRange(s: BettingView, seat: Seat): { min: number; max: number } | null {
+  const t = raiseTargets(s, seat);
+  return t ? { min: t.min, max: t.max } : null;
+}
+
+/** Every way to draw: throw away none to `maxDraw` of the five cards. */
+export function drawChoices(hole: readonly Card[], maxDraw: number): Card[][] {
+  const out: Card[][] = [];
+  const pick = (from: number, chosen: Card[]) => {
+    out.push([...chosen]);
+    if (chosen.length === maxDraw) return;
+    for (let i = from; i < hole.length; i++) {
+      chosen.push(hole[i] as Card);
+      pick(i + 1, chosen);
+      chosen.pop();
+    }
+  };
+  pick(0, []);
+  return out;
 }
 
 function legalActions(s: HoldemState, seat: Seat): HoldemAction[] {
   if (s.over || s.toAct !== seat) return [];
+  if (s.street === 'draw') return drawChoices(at(s.players, seat).hole, s.config.maxDraw).map((discard) => ({ type: 'draw', discard }));
+  if (bringInDue(s)) {
+    const p = at(s.players, seat);
+    const most = p.bet + p.stack;
+    return [...new Set([Math.min(s.blinds.bringIn, most), Math.min(s.blinds.bb, most)])].map((to) => ({ type: 'raise', to }));
+  }
   const out: HoldemAction[] = toCallOf(s, seat) > 0 ? [{ type: 'fold' }, { type: 'call' }] : [{ type: 'check' }];
-  const range = raiseRange(s, seat);
-  if (range) {
-    for (let to = range.min; to < range.max; to += s.blinds.unit) out.push({ type: 'raise', to });
-    out.push({ type: 'raise', to: range.max });
+  const t = raiseTargets(s, seat);
+  if (t?.fixed) for (const to of t.fixed) out.push({ type: 'raise', to });
+  else if (t) {
+    for (let to = t.min; to < t.max; to += s.blinds.unit) out.push({ type: 'raise', to });
+    out.push({ type: 'raise', to: t.max });
   }
   return out;
 }
 
 function isLegal(s: HoldemState, seat: Seat, a: HoldemAction): boolean {
   if (s.over || s.toAct !== seat) return false;
+  if (s.street === 'draw') {
+    if (a.type !== 'draw') return false;
+    const hole = at(s.players, seat).hole;
+    return a.discard.length <= s.config.maxDraw && new Set(a.discard).size === a.discard.length && a.discard.every((c) => hole.includes(c));
+  }
+  if (bringInDue(s)) return a.type === 'raise' && legalActions(s, seat).some((b) => b.type === 'raise' && b.to === a.to);
   const owe = toCallOf(s, seat);
   switch (a.type) {
     case 'fold':
@@ -441,11 +584,14 @@ function isLegal(s: HoldemState, seat: Seat, a: HoldemAction): boolean {
       return owe > 0;
     case 'check':
       return owe === 0;
+    case 'draw':
+      return false;
     case 'raise': {
-      const range = raiseRange(s, seat);
-      if (!range || !Number.isInteger(a.to)) return false;
-      if (a.to === range.max) return true;
-      return a.to >= range.min && a.to < range.max && (a.to - range.min) % s.blinds.unit === 0;
+      const t = raiseTargets(s, seat);
+      if (!t || !Number.isInteger(a.to)) return false;
+      if (t.fixed) return t.fixed.includes(a.to);
+      if (a.to === t.max) return true;
+      return a.to >= t.min && a.to < t.max && (a.to - t.min) % s.blinds.unit === 0;
     }
   }
 }
@@ -453,12 +599,13 @@ function isLegal(s: HoldemState, seat: Seat, a: HoldemAction): boolean {
 // The table, while an action is applied
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
-type MPlayer = Mutable<Omit<Player, 'hole'>> & { hole: Card[] };
-type Work = Mutable<Omit<HoldemState, 'players' | 'deck' | 'burned' | 'board' | 'log' | 'places' | 'stats'>> & {
+type MPlayer = Mutable<Omit<Player, 'hole' | 'up'>> & { hole: Card[]; up: Card[] };
+type Work = Mutable<Omit<HoldemState, 'players' | 'deck' | 'burned' | 'board' | 'discards' | 'log' | 'places' | 'stats'>> & {
   players: MPlayer[];
   deck: Card[];
   burned: Card[];
   board: Card[];
+  discards: Card[];
   log: LogEntry[];
   places: (number | null)[];
   stats: SeatStats[];
@@ -467,10 +614,11 @@ type Work = Mutable<Omit<HoldemState, 'players' | 'deck' | 'burned' | 'board' | 
 function work(s: HoldemState): Work {
   return {
     ...s,
-    players: s.players.map((p) => ({ ...p, hole: [...p.hole] })),
+    players: s.players.map((p) => ({ ...p, hole: [...p.hole], up: [...p.up] })),
     deck: [...s.deck],
     burned: [...s.burned],
     board: [...s.board],
+    discards: [...s.discards],
     log: [...s.log],
     places: [...s.places],
     stats: [...s.stats],
@@ -483,19 +631,60 @@ function put(p: MPlayer, amount: number, intoBet: boolean): void {
   if (intoBet) p.bet += amount;
 }
 
+/** The first street of a game: where the forced bets go and what "before the flop" means in statistics. */
+export const firstStreet = (game: PokerGame): Street => STREETS_OF[game][0] ?? 'preflop';
+
 function post(w: Work, events: HoldemEvent[], seat: Seat, amount: number, kind: 'ante' | 'small-blind' | 'big-blind' | 'straddle'): void {
   const p = at(w.players, seat);
   const chips = Math.min(amount, p.stack);
   put(p, chips, kind !== 'ante');
-  w.log.push({ seat, street: 'preflop', kind, amount: chips, to: p.bet, allIn: p.stack === 0 });
+  w.log.push({ seat, street: firstStreet(w.config.game), kind, amount: chips, to: p.bet, allIn: p.stack === 0 });
   events.push({ type: 'post', seat, kind, amount: chips, allIn: p.stack === 0 });
 }
 
 const EMPTY_STATS: SeatStats = { hands: 0, vpip: 0, pfr: 0, threeBet: 0, threeBetChances: 0, aggressive: 0, passive: 0, sawFlop: 0, showdowns: 0, wonShowdown: 0 };
 
+function draw(w: Work): Card {
+  if (w.deck.length === 0) {
+    // Draw poker: the cards already thrown away are shuffled to make a new deck.
+    w.deck = createRng(`${w.seed}/hand/${w.handNo}/again/${w.discards.length}`).shuffle(w.discards);
+    w.discards = [];
+  }
+  const card = w.deck.shift();
+  if (!card) throw new Error("Hold'em: the deck ran out");
+  return card;
+}
+
+/** Stud: the seat that must bring it in, the one showing the lowest up card (clubs lowest on a tie). */
+export function bringInSeat(s: Pick<HoldemState, 'players'>): Seat | null {
+  let best: Seat | null = null;
+  s.players.forEach((p, seat) => {
+    if (!inHand(p) || p.up.length === 0) return;
+    const card = p.up[0] as Card;
+    if (best === null || cardIndex(card) < cardIndex(at(s.players, best).up[0] as Card)) best = seat;
+  });
+  return best;
+}
+
+/** Stud: the seat whose up cards make the best hand, which acts first from fourth street on. */
+export function bestShowingSeat(s: Pick<HoldemState, 'players'>): Seat | null {
+  let best: Seat | null = null;
+  let value = -1;
+  s.players.forEach((p, seat) => {
+    if (!inHand(p) || p.stack === 0) return;
+    const v = showingValue(p.up);
+    if (v > value) {
+      value = v;
+      best = seat;
+    }
+  });
+  return best;
+}
+
 /** Deals the next hand: rebuys, the level, the button, antes and blinds, hole cards. Leaves `toAct` null if nobody can bet. */
 function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: readonly Card[]): void {
   const config = w.config;
+  const game = config.game;
   if (!isFreezeout(config)) {
     w.players.forEach((p, seat) => {
       if (p.stack > 0) return;
@@ -516,9 +705,11 @@ function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: r
     const next = activeFrom(w, w.button, false)[0];
     if (next !== undefined) w.button = next;
   }
-  const previousHoles = w.players.map((p) => [...p.hole]);
+  const previousHoles = w.players.map((p) => [...p.hole, ...p.up]);
   for (const p of w.players) {
     p.hole = [];
+    p.up = [];
+    p.drew = null;
     p.bet = 0;
     p.total = 0;
     p.folded = false;
@@ -527,21 +718,40 @@ function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: r
   }
   w.board = [];
   w.burned = [];
+  w.discards = [];
   w.log = [];
-  w.street = 'preflop';
+  w.street = firstStreet(game);
   w.aggressor = null;
   w.toAct = null;
+  w.raises = 0;
 
   // The seats dealt in, from the left of the button; the button is last.
   const order = activeFrom(w, w.button, false);
   const button = w.button;
+  const blinds = w.blinds;
+  events.push({ type: 'deal', handNo: w.handNo, button, level: w.level, blinds, seats: order, previous: w.lastHand, holes: previousHoles });
+  w.deck = deck ? [...deck] : createRng(`${w.seed}/hand/${w.handNo}`).shuffle(DECK);
+
+  if (game === 'stud') {
+    // Antes, two cards down and one up; the lowest up card brings it in.
+    for (const seat of order) post(w, events, seat, blinds.ante, 'ante');
+    for (let round = 0; round < 2; round++) for (const seat of order) at(w.players, seat).hole.push(draw(w));
+    events.push({ type: 'hole', seats: order });
+    const ups = order.map((seat) => ({ seat, card: draw(w) }));
+    for (const { seat, card } of ups) at(w.players, seat).up.push(card);
+    events.push({ type: 'up', street: 'third', cards: ups });
+    w.currentBet = 0;
+    w.minRaise = blinds.bb;
+    w.startedWith = withChips(w);
+    const first = bringInSeat(w);
+    w.toAct = first !== null && at(w.players, first).stack > 0 && withChips(w) >= 2 ? first : null;
+    return;
+  }
+
   const headsUp = order.length === 2;
   const sb = headsUp ? button : at(order, 0);
   const bb = headsUp ? at(order, 0) : at(order, 1);
-  const blinds = w.blinds;
   const straddler = blinds.straddle > 0 && order.length >= 3 && at(w.players, at(order, 2)).stack > blinds.straddle ? at(order, 2) : null;
-  events.push({ type: 'deal', handNo: w.handNo, button, level: w.level, blinds, seats: order, previous: w.lastHand, holes: previousHoles });
-
   if (blinds.ante > 0 && config.ante === 'ante') for (const seat of order) post(w, events, seat, blinds.ante, 'ante');
   post(w, events, sb, blinds.sb, 'small-blind');
   post(w, events, bb, blinds.bb, 'big-blind');
@@ -549,46 +759,75 @@ function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: r
   if (straddler !== null) post(w, events, straddler, blinds.straddle, 'straddle');
   w.currentBet = straddler !== null ? blinds.straddle : blinds.bb;
   w.minRaise = w.currentBet;
+  // Fixed-limit: the big blind is the first bet of the round.
+  w.raises = 1;
+  w.startedWith = withChips(w);
 
-  const cards = deck ? [...deck] : createRng(`${w.seed}/hand/${w.handNo}`).shuffle(DECK);
-  for (let round = 0; round < 2; round++) {
-    for (const seat of order) {
-      const card = cards.shift();
-      if (!card) throw new Error("Hold'em: the deck ran out");
-      at(w.players, seat).hole.push(card);
-    }
-  }
-  w.deck = cards;
+  for (let round = 0; round < HOLE_CARDS[game]; round++) for (const seat of order) at(w.players, seat).hole.push(draw(w));
   events.push({ type: 'hole', seats: order });
   w.toAct = nextToAct(w, straddler ?? bb);
 }
 
+/** The first seat to act on a street after the first: left of the button, or in Stud the best hand showing. */
+function firstToAct(w: Work): Seat | null {
+  if (w.config.game === 'stud') {
+    const best = bestShowingSeat(w);
+    if (best === null) return null;
+    return nextToAct(w, (best - 1 + w.players.length) % w.players.length);
+  }
+  return nextToAct(w, w.button);
+}
+
 /**
- * Ends the betting on a street: gathers the bets and deals the next street, or runs the board out
- * when nobody can bet. Returns 'showdown' after the river, 'betting' when a seat is to act.
+ * Ends the betting on a street: gathers the bets and deals the next street (or begins the draw),
+ * or runs the cards out when nobody can bet. Returns 'showdown' after the last street, 'betting'
+ * when a seat is to act (to bet, or to draw).
  */
 function closeStreet(w: Work, events: HoldemEvent[]): 'betting' | 'showdown' {
+  const streets = STREETS_OF[w.config.game];
   for (;;) {
-    events.push({ type: 'collect', pot: potOf(w), bets: w.players.map((p) => p.bet) });
+    if (w.street !== 'draw') events.push({ type: 'collect', pot: potOf(w), bets: w.players.map((p) => p.bet) });
     for (const p of w.players) {
       p.bet = 0;
       p.actedAt = null;
     }
     w.currentBet = 0;
-    w.minRaise = w.blinds.bb;
     w.toAct = null;
-    if (w.street === 'river') return 'showdown';
-    const street = at(STREETS, STREETS.indexOf(w.street) + 1);
+    const i = streets.indexOf(w.street);
+    if (i < 0 || i === streets.length - 1) return 'showdown';
+    const street = at(streets, i + 1);
     w.street = street;
-    const burn = w.deck.shift();
-    if (burn) w.burned.push(burn);
-    const cards = w.deck.splice(0, street === 'flop' ? 3 : 1);
-    if (cards.length < (street === 'flop' ? 3 : 1)) throw new Error("Hold'em: the deck ran out");
-    w.board.push(...cards);
-    events.push({ type: 'board', street, cards });
+    w.minRaise = w.config.betting === 'fixed-limit' ? betSize(w, street) : w.blinds.bb;
+    w.raises = 0;
+    if (street === 'draw') {
+      // Everyone still in draws in turn, all-in or not, from the left of the button.
+      w.toAct = nextToAct(w, w.button);
+      if (w.toAct !== null) return 'betting';
+      continue;
+    }
+    if (street === 'postdraw') {
+      // No cards are dealt after the draw.
+    } else if (w.config.game === 'stud') {
+      w.burned.push(draw(w));
+      const live = dealtOrder(w).filter((seat) => inHand(at(w.players, seat)));
+      if (street === 'seventh') {
+        for (const seat of live) at(w.players, seat).hole.push(draw(w));
+        events.push({ type: 'down', seats: live });
+      } else {
+        const ups = live.map((seat) => ({ seat, card: draw(w) }));
+        for (const { seat, card } of ups) at(w.players, seat).up.push(card);
+        events.push({ type: 'up', street, cards: ups });
+      }
+    } else {
+      w.burned.push(draw(w));
+      const cards = Array.from({ length: street === 'flop' ? 3 : 1 }, () => draw(w));
+      w.board.push(...cards);
+      events.push({ type: 'board', street, cards });
+    }
+    w.startedWith = withChips(w);
     if (withChips(w) >= 2) {
       w.aggressor = null;
-      const first = nextToAct(w, w.button);
+      const first = firstToAct(w);
       if (first !== null) {
         w.toAct = first;
         return 'betting';
@@ -669,15 +908,16 @@ function countStats(w: Work, result: HandResult): SeatStats[] {
   return w.stats.map((st, seat) => {
     if (!dealt.has(seat)) return st;
     const mine = w.log.filter((e) => e.seat === seat);
-    const pre = mine.filter((e) => e.street === 'preflop');
+    const opening = firstStreet(w.config.game);
+    const pre = mine.filter((e) => e.street === opening);
     // A re-raise chance: acting before the flop when exactly one other player has raised.
     let raises = 0;
     let acted = false;
     let chance = false;
     let threeBet = false;
     for (const e of w.log) {
-      if (e.street !== 'preflop') break;
-      const voluntary = e.kind === 'fold' || e.kind === 'check' || e.kind === 'call' || e.kind === 'raise';
+      if (e.street !== opening) break;
+      const voluntary = e.kind === 'fold' || e.kind === 'check' || e.kind === 'call' || e.kind === 'raise' || e.kind === 'complete';
       if (e.seat === seat && voluntary && !acted) {
         acted = true;
         chance = raises === 1;
@@ -685,47 +925,62 @@ function countStats(w: Work, result: HandResult): SeatStats[] {
       }
       if (e.kind === 'raise') raises += 1;
     }
-    const post = mine.filter((e) => e.street !== 'preflop');
+    const post = mine.filter((e) => e.street !== opening);
     const foldedPre = pre.some((e) => e.kind === 'fold');
+    // "Saw the flop": in Draw, reached the draw; in Stud, reached fourth street.
+    const sawNext = w.config.game === 'draw' ? w.log.some((e) => e.street === 'postdraw') || at(w.players, seat).drew !== null : w.config.game === 'stud' ? at(w.players, seat).up.length >= 2 : w.board.length >= 3;
     const atShowdown = result.reason === 'showdown' && !at(w.players, seat).folded;
     return {
       hands: st.hands + 1,
-      vpip: st.vpip + (pre.some((e) => e.kind === 'call' || e.kind === 'raise') ? 1 : 0),
-      pfr: st.pfr + (pre.some((e) => e.kind === 'raise') ? 1 : 0),
+      vpip: st.vpip + (pre.some((e) => e.kind === 'call' || e.kind === 'raise' || e.kind === 'complete') ? 1 : 0),
+      pfr: st.pfr + (pre.some((e) => e.kind === 'raise' || e.kind === 'complete') ? 1 : 0),
       threeBet: st.threeBet + (threeBet ? 1 : 0),
       threeBetChances: st.threeBetChances + (chance ? 1 : 0),
       aggressive: st.aggressive + post.filter((e) => e.kind === 'bet' || e.kind === 'raise').length,
       passive: st.passive + post.filter((e) => e.kind === 'call').length,
-      sawFlop: st.sawFlop + (!foldedPre && w.board.length >= 3 ? 1 : 0),
+      sawFlop: st.sawFlop + (!foldedPre && sawNext ? 1 : 0),
       showdowns: st.showdowns + (atShowdown ? 1 : 0),
       wonShowdown: st.wonShowdown + (atShowdown && result.pots.some((p) => p.winners.includes(seat)) ? 1 : 0),
     };
   });
 }
 
-/** Pays the pots out and records the hand. */
+/** Every card a seat plays with: its hole cards and, in Stud, its up cards. */
+const allCards = (p: Pick<Player, 'hole' | 'up'>): Card[] => [...p.hole, ...p.up];
+
+/** Pays the pots out and records the hand. High-low pots are split in halves, the odd chip to the high half. */
 function payOut(w: Work, events: HoldemEvent[], reason: 'fold' | 'showdown'): void {
   const live = seatsInHand(w);
   const { returned, pots } = settle(w.players);
   const n = w.players.length;
+  const game = w.config.game;
+  const hiLo = w.config.split === 'high-low' && (game === 'omaha' || game === 'stud');
   const values: (number | null)[] = Array.from({ length: n }, () => null);
+  const lows: (number | null)[] = Array.from({ length: n }, () => null);
   const shown: (Card[] | null)[] = Array.from({ length: n }, () => null);
   let order: Seat[] = [];
   const strength = new Map<Seat, number>();
+  const low = new Map<Seat, number | null>();
   if (reason === 'showdown') {
-    for (const seat of live) strength.set(seat, evaluate([...at(w.players, seat).hole, ...w.board]));
+    for (const seat of live) {
+      const p = at(w.players, seat);
+      strength.set(seat, highValue(game, p.hole, p.up, w.board));
+      if (hiLo) low.set(seat, lowValue(game, p.hole, p.up, w.board));
+    }
     order = showOrder(w, live);
-    // When anyone is all-in, every hand is turned up; otherwise a beaten hand may be mucked.
-    const everyone = w.config.showdown === 'show-all' || live.some((seat) => at(w.players, seat).stack === 0);
+    // When anyone is all-in, or in a high-low game, every hand is turned up; otherwise a beaten hand may be mucked.
+    const everyone = hiLo || w.config.showdown === 'show-all' || live.some((seat) => at(w.players, seat).stack === 0);
     const best = pots.map(() => -1);
     for (const seat of order) {
       const v = strength.get(seat) ?? 0;
       const contests = pots.flatMap((pot, k) => (pot.eligible.includes(seat) ? [k] : []));
+      const cards = allCards(at(w.players, seat));
       if (everyone || contests.some((k) => v >= at(best, k))) {
         for (const k of contests) best[k] = Math.max(at(best, k), v);
-        shown[seat] = [...at(w.players, seat).hole];
+        shown[seat] = cards;
         values[seat] = v;
-        events.push({ type: 'show', seat, cards: [...at(w.players, seat).hole], value: v });
+        lows[seat] = low.get(seat) ?? null;
+        events.push({ type: 'show', seat, cards, value: v });
       } else {
         events.push({ type: 'muck', seat });
       }
@@ -738,18 +993,33 @@ function payOut(w: Work, events: HoldemEvent[], reason: 'fold' | 'showdown'): vo
   });
   const won = Array.from({ length: n }, () => 0);
   const results: PotResult[] = pots.map((pot, k) => {
-    let winners = pot.eligible;
+    let highWinners = pot.eligible;
+    let lowWinners: Seat[] = [];
     if (pot.eligible.length > 1) {
       const top = Math.max(...pot.eligible.map((seat) => strength.get(seat) ?? -1));
-      winners = pot.eligible.filter((seat) => strength.get(seat) === top);
+      highWinners = pot.eligible.filter((seat) => strength.get(seat) === top);
+      if (hiLo) {
+        const qualified = pot.eligible.filter((seat) => (low.get(seat) ?? null) !== null);
+        if (qualified.length > 0) {
+          const bestLow = Math.min(...qualified.map((seat) => low.get(seat) as number));
+          lowWinners = qualified.filter((seat) => low.get(seat) === bestLow);
+        }
+      }
     }
-    const shares = split(w, pot.amount, winners);
-    for (const { seat, share } of shares) {
-      at(w.players, seat).stack += share;
-      won[seat] = at(won, seat) + share;
-      events.push({ type: 'win', seat, amount: share, pot: k, value: values[seat] ?? null });
-    }
-    return { amount: pot.amount, eligible: pot.eligible, winners: shares.map((x) => x.seat), shares: shares.map((x) => x.share) };
+    const unit = w.blinds.unit;
+    const lowHalf = lowWinners.length > 0 ? Math.floor(pot.amount / unit / 2) * unit : 0;
+    const shares = new Map<Seat, number>();
+    const pay = (amount: number, winners: readonly Seat[], isLow: boolean) => {
+      for (const { seat, share } of split(w, amount, winners)) {
+        at(w.players, seat).stack += share;
+        won[seat] = at(won, seat) + share;
+        shares.set(seat, (shares.get(seat) ?? 0) + share);
+        events.push({ type: 'win', seat, amount: share, pot: k, value: isLow ? null : (values[seat] ?? null), ...(isLow ? { low: lows[seat] ?? null } : {}) });
+      }
+    };
+    pay(pot.amount - lowHalf, highWinners, false);
+    if (lowHalf > 0) pay(lowHalf, lowWinners, true);
+    return { amount: pot.amount, eligible: pot.eligible, winners: [...shares.keys()], shares: [...shares.values()], ...(hiLo ? { lowWinners } : {}) };
   });
   const result: HandResult = {
     handNo: w.handNo,
@@ -760,6 +1030,7 @@ function payOut(w: Work, events: HoldemEvent[], reason: 'fold' | 'showdown'): vo
     returned,
     shown,
     values,
+    ...(hiLo ? { lows } : {}),
     net: w.players.map((p, seat) => at(won, seat) + at(returned, seat) - p.total),
     order,
   };
@@ -857,14 +1128,38 @@ function applyAction(s: HoldemState, action: HoldemAction): { state: HoldemState
       p.actedAt = w.currentBet;
       kind = 'call';
       break;
+    case 'draw': {
+      // Throw the cards away and be dealt as many; the count is public, the cards are not.
+      for (const card of action.discard) {
+        p.hole.splice(p.hole.indexOf(card), 1);
+        w.discards.push(card);
+      }
+      for (let i = 0; i < action.discard.length; i++) p.hole.push(draw(w));
+      p.drew = action.discard.length;
+      kind = 'draw';
+      events.push({ type: 'drew', seat, count: action.discard.length });
+      break;
+    }
     case 'raise': {
       amount = action.to - p.bet;
       const increase = action.to - w.currentBet;
-      kind = w.currentBet === 0 ? 'bet' : 'raise';
+      const fixed = w.config.betting === 'fixed-limit';
+      if (bringInDue(s) && action.to < w.minRaise) {
+        // Stud: the low card brings it in for less than a bet; it is not a bet for the cap.
+        put(p, amount, true);
+        w.currentBet = action.to;
+        p.actedAt = action.to;
+        kind = 'bring-in';
+        break;
+      }
+      // Completing a bring-in (or a short bet) to a full small bet counts as the round's bet.
+      const completes = fixed && w.currentBet > 0 && w.currentBet < w.minRaise && action.to === w.minRaise;
+      kind = completes ? 'complete' : w.currentBet === 0 ? 'bet' : 'raise';
       put(p, amount, true);
-      const full = increase >= w.minRaise;
+      const full = completes || increase >= w.minRaise;
       const reopens = full || (w.config.shortAllIn === 'half-raise' && 2 * increase >= w.minRaise);
-      if (full) w.minRaise = increase;
+      if (full && !completes) w.minRaise = increase;
+      if (full) w.raises += 1;
       if (reopens) {
         w.players.forEach((q, i) => {
           if (i !== seat) q.actedAt = null;
@@ -876,9 +1171,9 @@ function applyAction(s: HoldemState, action: HoldemAction): { state: HoldemState
       break;
     }
   }
-  const entry: LogEntry = { seat, street: w.street, kind, amount, to: p.bet, allIn: p.stack === 0 && kind !== 'fold' && kind !== 'check' };
+  const entry: LogEntry = { seat, street: w.street, kind, amount, to: p.bet, allIn: p.stack === 0 && kind !== 'fold' && kind !== 'check' && kind !== 'draw', ...(action.type === 'draw' ? { drew: action.discard.length } : {}) };
   w.log.push(entry);
-  events.push({ type: 'act', seat, kind, amount, to: p.bet, allIn: entry.allIn });
+  if (action.type !== 'draw') events.push({ type: 'act', seat, kind, amount, to: p.bet, allIn: entry.allIn });
 
   if (seatsInHand(w).length === 1) {
     events.push({ type: 'collect', pot: potOf(w), bets: w.players.map((q) => q.bet) });
@@ -894,18 +1189,27 @@ function applyAction(s: HoldemState, action: HoldemAction): { state: HoldemState
 // Codecs
 
 export function actionText(a: HoldemAction): string {
+  if (a.type === 'draw') return `d${[...a.discard].sort((x, y) => cardIndex(y) - cardIndex(x)).join('')}`;
   return a.type === 'raise' ? `r${a.to}` : a.type;
 }
 
 function parseAction(text: string): HoldemAction {
-  const t = text.trim().toLowerCase();
+  const raw = text.trim();
+  const t = raw.toLowerCase();
   if (t === 'fold' || t === 'check' || t === 'call') return { type: t };
+  const d = /^d((?:[2-9TJQKA][cdhs])*)$/i.exec(raw);
+  if (d) {
+    const cards = (d[1] ?? '').match(/../g) ?? [];
+    const discard = cards.map((c) => `${(c[0] ?? '').toUpperCase()}${(c[1] ?? '').toLowerCase()}`);
+    if (!discard.every(isCard)) throw new Error(`"${text}" is not a draw, such as d (stand pat) or dKs7h`);
+    return { type: 'draw', discard };
+  }
   const m = /^r(\d+)$/.exec(t);
-  if (!m) throw new Error(`"${text}" is not a poker action, such as fold, check, call or r60 (raise to 60)`);
+  if (!m) throw new Error(`"${text}" is not a poker action, such as fold, check, call, r60 (raise to 60) or dKs7h (draw two)`);
   return { type: 'raise', to: Number(m[1]) };
 }
 
-const CONFIG_KEYS = ['format', 'stack', 'hands', 'levelHands', 'ante', 'straddle', 'shortAllIn', 'oddChip', 'showdown', 'payouts'] as const;
+const CONFIG_KEYS = ['format', 'stack', 'hands', 'levelHands', 'ante', 'straddle', 'shortAllIn', 'oddChip', 'showdown', 'payouts', 'game', 'betting', 'split', 'maxDraw'] as const;
 
 export const CONFIG_CHOICES: { readonly [K in (typeof CONFIG_KEYS)[number]]: readonly HoldemConfig[K][] } = {
   format: ['cash', 'heads-up', 'sit-and-go'],
@@ -918,6 +1222,10 @@ export const CONFIG_CHOICES: { readonly [K in (typeof CONFIG_KEYS)[number]]: rea
   oddChip: ['left-of-button', 'high-card'],
   showdown: ['show-all', 'muck'],
   payouts: ['65-35', '50-30-20', 'winner-takes-all'],
+  game: ['holdem', 'omaha', 'draw', 'stud'],
+  betting: ['no-limit', 'pot-limit', 'fixed-limit'],
+  split: ['high', 'high-low'],
+  maxDraw: [3, 5],
 };
 
 function readConfig(json: Json): HoldemConfig {
@@ -948,11 +1256,11 @@ const cardsFrom = (v: Json | undefined, what: string): Card[] => {
   return v.map((c) => (typeof c === 'string' && isCard(c) ? c : fail(what)));
 };
 const STREET_SET = new Set<string>(STREETS);
-const KINDS = new Set<string>(['ante', 'small-blind', 'big-blind', 'straddle', 'fold', 'check', 'call', 'bet', 'raise']);
+const KINDS = new Set<string>(['ante', 'small-blind', 'big-blind', 'straddle', 'bring-in', 'fold', 'check', 'call', 'bet', 'raise', 'complete', 'draw']);
 
 function blindsFrom(v: Json | undefined): Blinds {
   if (!isJsonObject(v)) return fail('the blinds');
-  return { sb: num(v.sb, 'sb'), bb: num(v.bb, 'bb'), ante: num(v.ante, 'ante'), straddle: num(v.straddle, 'straddle'), unit: num(v.unit, 'unit') };
+  return { sb: num(v.sb, 'sb'), bb: num(v.bb, 'bb'), ante: num(v.ante, 'ante'), straddle: num(v.straddle, 'straddle'), bringIn: num(v.bringIn ?? 0, 'the bring-in'), unit: num(v.unit, 'unit') };
 }
 
 function playerFrom(v: Json): Player {
@@ -960,6 +1268,8 @@ function playerFrom(v: Json): Player {
   return {
     stack: num(v.stack, 'a stack'),
     hole: cardsFrom(v.hole, 'hole cards'),
+    up: cardsFrom(v.up ?? [], 'up cards'),
+    drew: v.drew === null || v.drew === undefined ? null : num(v.drew, 'a draw'),
     bet: num(v.bet ?? 0, 'a bet'),
     total: num(v.total ?? 0, 'a total'),
     folded: v.folded === true,
@@ -972,7 +1282,7 @@ function playerFrom(v: Json): Player {
 
 function logFrom(v: Json): LogEntry {
   if (!isJsonObject(v) || typeof v.street !== 'string' || !STREET_SET.has(v.street) || typeof v.kind !== 'string' || !KINDS.has(v.kind)) return fail('the hand log');
-  return { seat: num(v.seat, 'a seat'), street: v.street as Street, kind: v.kind as LogKind, amount: num(v.amount, 'an amount'), to: num(v.to, 'a bet'), allIn: v.allIn === true };
+  return { seat: num(v.seat, 'a seat'), street: v.street as Street, kind: v.kind as LogKind, amount: num(v.amount, 'an amount'), to: num(v.to, 'a bet'), allIn: v.allIn === true, ...(typeof v.drew === 'number' ? { drew: v.drew } : {}) };
 }
 
 function resultFrom(v: Json | undefined): HandResult | null {
@@ -985,11 +1295,12 @@ function resultFrom(v: Json | undefined): HandResult | null {
     reason: v.reason === 'fold' ? 'fold' : 'showdown',
     pots: v.pots.map((p) => {
       if (!isJsonObject(p) || !Array.isArray(p.eligible) || !Array.isArray(p.winners) || !Array.isArray(p.shares)) return fail('a pot');
-      return { amount: num(p.amount, 'a pot'), eligible: p.eligible.map((x) => num(x, 'a seat')), winners: p.winners.map((x) => num(x, 'a seat')), shares: p.shares.map((x) => num(x, 'a share')) };
+      return { amount: num(p.amount, 'a pot'), eligible: p.eligible.map((x) => num(x, 'a seat')), winners: p.winners.map((x) => num(x, 'a seat')), shares: p.shares.map((x) => num(x, 'a share')), ...(Array.isArray(p.lowWinners) ? { lowWinners: p.lowWinners.map((x) => num(x, 'a seat')) } : {}) };
     }),
     returned: v.returned.map((x) => num(x, 'a return')),
     shown: v.shown.map((x) => (x === null ? null : cardsFrom(x, 'shown cards'))),
     values: v.values.map((x) => (x === null ? null : num(x, 'a hand value'))),
+    ...(Array.isArray(v.lows) ? { lows: v.lows.map((x) => (x === null ? null : num(x, 'a low value'))) } : {}),
     net: v.net.map((x) => num(x, 'a result')),
     order: v.order.map((x) => num(x, 'a seat')),
   };
@@ -1024,12 +1335,15 @@ function stateFromJson(json: Json): HoldemState {
     players,
     deck: cardsFrom(json.deck ?? [], 'the deck'),
     burned: cardsFrom(json.burned ?? [], 'the burned cards'),
+    discards: cardsFrom(json.discards ?? [], 'the discards'),
     board: cardsFrom(json.board ?? [], 'the board'),
     street,
     toAct: seatOrNull(json.toAct, 'the seat to act'),
     currentBet: num(json.currentBet ?? 0, 'the bet'),
     minRaise: num(json.minRaise ?? 0, 'the minimum raise'),
     aggressor: seatOrNull(json.aggressor, 'the aggressor'),
+    raises: num(json.raises ?? 0, 'the raises'),
+    startedWith: num(json.startedWith ?? 0, 'the players at the start of the round'),
     log: Array.isArray(json.log) ? json.log.map(logFrom) : [],
     lastHand: resultFrom(json.lastHand),
     places: Array.isArray(json.places) ? json.places.map((p) => seatOrNull(p, 'a place')) : players.map(() => null),
@@ -1051,16 +1365,19 @@ function stateToJson(s: HoldemState): Json {
     level: s.level,
     blinds: { ...s.blinds },
     button: s.button,
-    players: s.players.map((p) => ({ ...p, hole: [...p.hole] })),
+    players: s.players.map((p) => ({ ...p, hole: [...p.hole], up: [...p.up] })),
     deck: [...s.deck],
     burned: [...s.burned],
+    discards: [...s.discards],
     board: [...s.board],
     street: s.street,
     toAct: s.toAct,
     currentBet: s.currentBet,
     minRaise: s.minRaise,
     aggressor: s.aggressor,
-    log: s.log.map((e) => ({ ...e })),
+    raises: s.raises,
+    startedWith: s.startedWith,
+    log: s.log.map((e) => JSON.parse(JSON.stringify(e)) as Json),
     lastHand: s.lastHand ? (JSON.parse(JSON.stringify(s.lastHand)) as Json) : null,
     places: [...s.places],
     stats: s.stats.map((x) => ({ ...x })),
@@ -1069,8 +1386,8 @@ function stateToJson(s: HoldemState): Json {
 }
 
 /** No card is in two places, and while a hand is dealt every card is somewhere. */
-export function checkCards(s: Pick<HoldemState, 'players' | 'deck' | 'burned' | 'board'>): void {
-  const all = [...s.players.flatMap((p) => p.hole), ...s.deck, ...s.burned, ...s.board];
+export function checkCards(s: Pick<HoldemState, 'players' | 'deck' | 'burned' | 'board'> & { readonly discards?: readonly Card[] }): void {
+  const all = [...s.players.flatMap((p) => [...p.hole, ...(p.up ?? [])]), ...s.deck, ...s.burned, ...s.board, ...(s.discards ?? [])];
   if (new Set(all).size !== all.length) throw new Error("Hold'em: a card is in two places");
   if (all.length !== 0 && all.length !== DECK.length) throw new Error(`Hold'em: ${all.length} cards, not ${DECK.length}`);
 }
@@ -1143,12 +1460,15 @@ export function viewOf(s: HoldemState, seat: Seat): HoldemView {
     places: s.places,
     stats: s.stats,
     over: s.over,
+    raises: s.raises,
+    startedWith: s.startedWith,
+    discardCount: s.discards.length,
   };
 }
 
-/** The cards a seat cannot see: everything but its hole cards and the board. */
+/** The cards a seat cannot see: everything but its hole cards, the board and every up card. */
 export function unseenCards(v: Pick<HoldemView, 'players' | 'board' | 'seat'>): Card[] {
-  const seen = new Set<Card>([...at(v.players, v.seat).hole, ...v.board]);
+  const seen = new Set<Card>([...at(v.players, v.seat).hole, ...v.board, ...v.players.flatMap((p) => p.up)]);
   return DECK.filter((c) => !seen.has(c));
 }
 
@@ -1159,8 +1479,11 @@ export function sampleState(v: HoldemView, rng: Rng): HoldemState {
     const { cards, ...rest } = p;
     return { ...rest, hole: i === v.seat ? p.hole : unseen.splice(0, cards) };
   });
-  const burnedCount = v.board.length === 0 ? 0 : v.board.length - 2;
+  // A burn before each street dealt after the first: the flop, turn and river, or Stud's later streets.
+  const streets = STREETS_OF[v.config.game];
+  const burnedCount = v.config.game === 'draw' ? 0 : Math.max(0, streets.indexOf(v.street));
   const burned = unseen.splice(0, burnedCount);
+  const discards = unseen.splice(0, v.discardCount);
   const dealt = players.some((p) => p.hole.length > 0);
   return {
     config: v.config,
@@ -1173,6 +1496,7 @@ export function sampleState(v: HoldemView, rng: Rng): HoldemState {
     players,
     deck: dealt ? unseen : [],
     burned: dealt ? burned : [],
+    discards: dealt ? discards : [],
     board: v.board,
     street: v.street,
     toAct: v.toAct,
@@ -1184,6 +1508,8 @@ export function sampleState(v: HoldemView, rng: Rng): HoldemState {
     places: v.places,
     stats: v.stats,
     over: v.over,
+    raises: v.raises,
+    startedWith: v.startedWith,
   };
 }
 
@@ -1198,11 +1524,14 @@ function freshTable(config: HoldemConfig, seed: string, button: Seat, table: num
     level: 1,
     blinds: blindsAt(config, 1),
     button,
-    players: Array.from({ length: n }, () => ({ stack: chips, hole: [], bet: 0, total: 0, folded: false, actedAt: null, out: false, buyIns: 1, startStack: chips })),
+    players: Array.from({ length: n }, () => ({ stack: chips, hole: [], up: [], drew: null, bet: 0, total: 0, folded: false, actedAt: null, out: false, buyIns: 1, startStack: chips })),
     deck: [],
     burned: [],
+    discards: [],
     board: [],
-    street: 'preflop',
+    street: firstStreet(config.game),
+    raises: 0,
+    startedWith: 0,
     toAct: null,
     currentBet: 0,
     minRaise: 0,
@@ -1270,8 +1599,15 @@ export function position(p: {
   readonly button?: Seat;
   /** Chips per seat at the start of the hand; the format's starting stack by default. */
   readonly stacks?: readonly number[];
+  /** Face-down cards per seat (Hold'em two, Omaha four, Draw five, Stud the first two). */
   readonly holes: readonly (readonly Card[] | null)[];
   readonly board?: readonly Card[];
+  /** Stud: up cards per seat, third street first (unnamed ones dealt from what is left). */
+  readonly ups?: readonly (readonly Card[] | null)[];
+  /** Stud: each seat's seventh-street card. */
+  readonly downs?: readonly (Card | null)[];
+  /** Draw: the cards the draw deals, in order. */
+  readonly next?: readonly Card[];
   readonly actions?: readonly string[];
   readonly handNo?: number;
   readonly seed?: string;
@@ -1297,22 +1633,38 @@ export function position(p: {
   w.players.forEach((player, seat) => {
     if (player.out) w.places[seat] = last--;
   });
-  // Stack the deck: hole cards dealt from the left of the button, two rounds, then burn and board.
-  const named = new Set<Card>([...p.holes.flatMap((h) => h ?? []), ...(p.board ?? [])]);
+  // Stack the deck: hole cards dealt from the left of the button, one round per card, then what follows.
+  const game = config.game;
+  const named = new Set<Card>([...p.holes.flatMap((h) => h ?? []), ...(p.board ?? []), ...(p.ups ?? []).flatMap((u) => u ?? []), ...(p.downs ?? []).flatMap((d) => (d ? [d] : [])), ...(p.next ?? [])]);
   const rest = createRng(`${w.seed}/position`).shuffle(DECK.filter((c) => !named.has(c)));
+  const fresh = () => rest.shift() as Card;
   const order = activeFrom(w, w.button, false);
   const holes = new Map<Seat, Card[]>(order.map((seat) => [seat, [...(p.holes[seat] ?? [])]]));
   for (const seat of order) {
     const h = holes.get(seat) ?? [];
-    while (h.length < 2) h.push(rest.shift() as Card);
+    while (h.length < HOLE_CARDS[game]) h.push(fresh());
     holes.set(seat, h);
   }
   const deck: Card[] = [];
-  for (let round = 0; round < 2; round++) for (const seat of order) deck.push(at(holes.get(seat) ?? [], round));
-  const board = [...(p.board ?? [])];
-  while (board.length < 5) board.push(rest.shift() as Card);
-  const burn = () => rest.shift() as Card;
-  deck.push(burn(), ...board.slice(0, 3), burn(), at(board, 3), burn(), at(board, 4), ...rest);
+  for (let round = 0; round < HOLE_CARDS[game]; round++) for (const seat of order) deck.push(at(holes.get(seat) ?? [], round));
+  if (game === 'stud') {
+    // Third street's up card, then a burn and an up card for fourth to sixth, then a burn and the last card down.
+    const upOf = (seat: Seat, k: number) => p.ups?.[seat]?.[k] ?? fresh();
+    for (const seat of order) deck.push(upOf(seat, 0));
+    for (let k = 1; k <= 3; k++) {
+      deck.push(fresh());
+      for (const seat of order) deck.push(upOf(seat, k));
+    }
+    deck.push(fresh());
+    for (const seat of order) deck.push(p.downs?.[seat] ?? fresh());
+    deck.push(...rest);
+  } else if (game === 'draw') {
+    deck.push(...(p.next ?? []), ...rest);
+  } else {
+    const board = [...(p.board ?? [])];
+    while (board.length < 5) board.push(fresh());
+    deck.push(fresh(), ...board.slice(0, 3), fresh(), at(board, 3), fresh(), at(board, 4), ...rest);
+  }
   firstHand(w, deck);
   let state: HoldemState = w;
   for (const text of p.actions ?? []) state = applyAction(state, parseAction(text)).state;
