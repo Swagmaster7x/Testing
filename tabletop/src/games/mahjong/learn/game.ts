@@ -185,7 +185,8 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
   if (given && options.flowers === 'on') {
     const named = given.flatMap((b) => (b ? parseKinds(b) : []));
     const rest = Array.from({ length: 8 }, (_, i) => FLOWER_1 + i).filter((k) => !named.includes(k));
-    const open = [1, 2, 3].filter((seat) => given[seat] === undefined);
+    const left = [1, 2, 3].filter((seat) => given[seat] === undefined);
+    const open = left.length > 0 ? left : [1, 2, 3];
     const out = [0, 1, 2, 3].map((seat) => given[seat] ?? '');
     rest.forEach((k, i) => {
       const seat = open[i % Math.max(1, open.length)] ?? 0;

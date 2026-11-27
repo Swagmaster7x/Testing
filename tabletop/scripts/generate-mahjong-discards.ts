@@ -21,6 +21,7 @@ import { codeOf, isHonour, kindOf, rankOf, suitOf } from '../src/games/mahjong/c
 import { acceptance } from '../src/games/mahjong/core/shanten';
 import type { LessonSpec } from '../src/games/mahjong/learn/game';
 import { HK, lessonState } from '../src/games/mahjong/learn/game';
+import { HK_DEFAULTS } from '../src/games/mahjong/styles/hong-kong';
 import { provedDiscards } from '../src/games/mahjong/practice';
 import { evaluateDiscards, picture } from '../src/games/mahjong/strategy';
 
@@ -121,7 +122,7 @@ let hand = 0;
 const started = Date.now();
 while (out.length < WANT) {
   const rng = createRng(`mahjong-discards/${hand++}`);
-  let s: MahjongState = mahjong.setup({ style: 'hong-kong', options: HK }, rng.fork('deal'));
+  let s: MahjongState = mahjong.setup({ style: 'hong-kong', options: { ...HK_DEFAULTS, ...HK } }, rng.fork('deal'));
   let turns = 0;
   let taken = 0;
   for (let guard = 0; guard < 400 && !s.over && s.phase !== 'scored'; guard++) {
