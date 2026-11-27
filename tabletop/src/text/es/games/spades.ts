@@ -75,7 +75,7 @@ export const esSpades: Partial<Record<MessageKey, string>> = {
   'spades.log.game-end': 'Se acabó la partida.',
   'spades.counter.hand': 'Mano',
   'spades.counter.score': 'Puntos',
-  'spades.counter.ours': 'Nuestras bazas / apuesta',
+  'spades.counter.ours': 'Bazas / apuesta',
   'spades.counter.bags': 'Nuestros sacos',
   'spades.counter.broken': 'Picas rotas',
   'reason.spades-score': 'Gana la puntuación más alta.',

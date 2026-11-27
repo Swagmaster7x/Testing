@@ -40,7 +40,7 @@ export const esClassic: Partial<Record<MessageKey, string>> = {
   'classic.rating': 'unos {n}',
   'classic.help.played': 'Cartas jugadas',
   'classic.help.voids': 'Palos que les faltan',
-  'classic.help.openHand': 'Cartas arriba: ver todas las manos',
+  'classic.help.openHand': 'Todas las manos a la vista',
   'classic.coach.played': 'Cartas jugadas',
   'classic.coach.voids': 'Palos que faltan',
   'classic.coach.card.played': 'jugada',

@@ -66,7 +66,7 @@ export const esBlackjack: Partial<Record<MessageKey, string>> = {
   'blackjack.help.count': 'Conteo corrido',
   'blackjack.help.ev': 'Valor esperado de cada jugada',
   'blackjack.help.chartTone': 'Marcar la jugada de la tabla',
-  'blackjack.help.warn': 'Avisar antes de salirte de la tabla',
+  'blackjack.help.warn': 'Avisar si dejas la tabla',
   'blackjack.chart.hard': 'Manos duras',
   'blackjack.chart.soft': 'Manos blandas',
   'blackjack.chart.pair': 'Parejas',
