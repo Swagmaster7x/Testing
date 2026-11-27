@@ -56,6 +56,13 @@ const READY: Readonly<Record<string, readonly ReadyItem[]>> = {
     { id: 'etiquette', lessons: ['poker.table.in-turn', 'poker.table.showdown', 'poker.table.ask'] },
     { id: 'beat', beatLevel: 3 },
   ],
+  mahjong: [
+    { id: 'setup', lessons: ['mahjong.table.wall', 'mahjong.table.deal'] },
+    { id: 'terms', lessons: ['mahjong.1.sets', 'mahjong.table.calls', 'mahjong.3.hk-patterns'] },
+    { id: 'score', drill: { id: 'drill-mahjong-score', times: 5 } },
+    { id: 'etiquette', lessons: ['mahjong.table.manners', 'mahjong.table.ask'] },
+    { id: 'beat', beatLevel: 3 },
+  ],
   go: [
     { id: 'setup', lessons: ['go.table.nigiri', 'go.table.handicap'] },
     { id: 'terms', lessons: ['go.1.atari', 'go.1.ko', 'go.table.etiquette'] },

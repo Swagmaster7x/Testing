@@ -25,6 +25,8 @@ import { goVerifier } from '../src/games/go/learn/verify';
 import { POKER_LESSONS, pokerLessonGame } from '../src/games/holdem/learn';
 import { pokerVerifier } from '../src/games/holdem/learn/verify';
 import { lessonGames } from '../src/games/lessons';
+import { MAHJONG_LESSONS, mahjongLessonGame } from '../src/games/mahjong/learn';
+import { mahjongVerifier } from '../src/games/mahjong/learn/verify';
 import { SHOGI_LESSONS, shogiLessonGame } from '../src/games/shogi/learn';
 import type { ClaimCache } from '../src/games/shogi/learn/verify';
 import { shogiVerifier } from '../src/games/shogi/learn/verify';
@@ -114,6 +116,7 @@ const SUITES: Record<string, Suite> = {
   go: { lessons: GO_LESSONS, game: goLessonGame, verifier: () => goVerifier() },
   'chinese-checkers': { lessons: CC_LESSONS, game: ccLessonGame, verifier: () => ccVerifier() },
   poker: { lessons: POKER_LESSONS, game: pokerLessonGame, verifier: () => pokerVerifier },
+  mahjong: { lessons: MAHJONG_LESSONS, game: mahjongLessonGame, verifier: () => mahjongVerifier },
 };
 
 /** Game folders whose name is not the game's id. */
