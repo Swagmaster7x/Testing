@@ -5,6 +5,7 @@
  */
 import brand from '../../brand.json';
 import { enLearn } from './en-learn';
+import { enGames } from './games';
 
 const base = {
   'app.name': brand.name,
@@ -457,6 +458,6 @@ const base = {
   'ref.noughts.term.block': 'Block: marking the square your opponent needs to finish a line.',
 } as const;
 
-export const en = { ...base, ...enLearn } as const;
+export const en = { ...base, ...enLearn, ...enGames } as const;
 
 export type MessageKey = keyof typeof en;

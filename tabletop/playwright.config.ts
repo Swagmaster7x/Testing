@@ -6,7 +6,8 @@ import { existsSync } from 'node:fs';
 const localChromium = '/opt/pw-browsers/chromium';
 const launchOptions = existsSync(localChromium) ? { executablePath: localChromium } : {};
 
-const PORT = 4173;
+// E2E_PORT lets several checkouts run their suites at the same time without sharing a server.
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: 'tests/e2e',
