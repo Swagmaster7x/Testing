@@ -9,16 +9,20 @@ import { describe, expect, it } from 'vitest';
 import type { Rng } from '../../src/core/rng';
 import { createRng } from '../../src/core/rng';
 import type { MahjongAction, MahjongConfig, MahjongState, MahjongView } from '../../src/games/mahjong/rules';
-import { actionText, checkConservation, mahjong, sampleState, viewOf } from '../../src/games/mahjong/rules';
+import { actionText, checkConservation, engine, mahjong, sampleState, viewOf } from '../../src/games/mahjong/rules';
 import { discardChoices, shanten } from '../../src/games/mahjong/core/shanten';
 import { countsOf, kindOf } from '../../src/games/mahjong/core/tiles';
 import { HK_DEFAULTS, HK_PRESETS } from '../../src/games/mahjong/styles/hong-kong';
+import { RIICHI_DEFAULTS, RIICHI_PRESETS } from '../../src/games/mahjong/styles/riichi';
 import { checkReplay, playRandomGame } from '../harness/contract';
 
 /** Everything a seat may not see: other hands (until they are laid down at the end), the wall and the seed. */
 function hidden(s: MahjongState, seat: number): string[] {
   const others = s.phase === 'scored' ? [] : s.hands.flatMap((h, i) => (i === seat ? [] : h));
-  return [...others, ...s.wall].map((t) => `"${t}"`).concat(s.seed);
+  // Indicators not yet turned up, and the tiles under them (until a hand ends).
+  const st = s.indicators;
+  const unturned = st && s.phase !== 'scored' ? [...st.tiles.slice(st.shown, st.tiles.length / 2), ...st.tiles.slice(st.tiles.length / 2)] : [];
+  return [...others, ...s.wall, ...unturned].map((t) => `"${t}"`).concat(s.seed);
 }
 
 /** Leaves out the hands shown at the end of earlier hands (the same tiles are dealt again). */
@@ -29,11 +33,20 @@ function leakScope(view: unknown): unknown {
 
 function invariant(s: MahjongState): void {
   checkConservation(s);
-  const total = s.scores.reduce((a, b) => a + b, 0);
-  if (total !== 0) throw new Error(`scores add up to ${total}`);
-  for (const r of s.results) if (r.deltas.reduce((a, b) => a + b, 0) !== 0) throw new Error('a hand paid more than it took');
-  const fromResults = [0, 1, 2, 3].map((seat) => s.results.reduce((sum, r) => sum + (r.deltas[seat] ?? 0), 0));
-  if (fromResults.join() !== s.scores.join()) throw new Error('scores do not match the hands');
+  const rules = engine.rules(s.config);
+  const start = rules.startScore ?? 0;
+  const stake = rules.ready?.stake ?? 0;
+  // Points are only moved: the scores and the stakes on the table always add up to the start.
+  const total = s.scores.reduce((a, b) => a + b, 0) + s.stakes * stake;
+  if (total !== 4 * start) throw new Error(`scores and stakes add up to ${total}`);
+  if (!rules.ready) {
+    for (const r of s.results) if (r.deltas.reduce((a, b) => a + b, 0) !== 0) throw new Error('a hand paid more than it took');
+    const fromResults = [0, 1, 2, 3].map((seat) => s.results.reduce((sum, r) => sum + (r.deltas[seat] ?? 0), 0));
+    if (fromResults.join() !== s.scores.join()) throw new Error('scores do not match the hands');
+  } else {
+    // A hand's payments add up to the stakes its winner collected (none at a draw).
+    for (const r of s.results) if (r.deltas.reduce((a, b) => a + b, 0) !== (r.wins.length > 0 ? (r.stakes ?? 0) * stake : 0)) throw new Error('a hand paid more than it took');
+  }
   // A choice made in an open claim window is never shown to another seat.
   for (let seat = 0; seat < 4; seat++) {
     const text = JSON.stringify(viewOf(s, seat).claim);
@@ -85,7 +98,7 @@ function efficient(legal: readonly MahjongAction[], rng: Rng, state: MahjongStat
   return discards.find((a) => a.type === 'discard' && a.tile === best?.kind) ?? rng.pick(discards);
 }
 
-const one = (options: Record<string, string | number>): MahjongConfig => ({ style: 'hong-kong', options: { ...options, length: 'hand' } });
+const one = (options: Record<string, string | number>, style = 'hong-kong'): MahjongConfig => ({ style, options: { ...options, length: 'hand' } });
 
 const configs: MahjongConfig[] = [
   ...HK_PRESETS.map((p) => one(p.options)),
@@ -94,6 +107,9 @@ const configs: MahjongConfig[] = [
   one({ ...HK_DEFAULTS, minFaan: 0, discardPays: 'full-gun', table: 'full-spicy', limit: 13, namedHands: 'stack', concealedSelfDrawn: 3, dealerKeeps: 'win' }),
   one({ ...HK_DEFAULTS, minFaan: 1, flowers: 'off', robKong: 'off', greatDragons: 'limit', smallWinds: 'limit', limit: 8, flowerSet: 3 }),
   { style: 'hong-kong', options: { ...HK_DEFAULTS, minFaan: 0, dealerKeeps: 'never', length: 'east-south' } },
+  ...RIICHI_PRESETS.map((p): MahjongConfig => ({ style: 'riichi', options: { ...p.options, length: 'hand' } })),
+  { style: 'riichi', options: { ...RIICHI_DEFAULTS, length: 'east' } },
+  { style: 'riichi', options: { ...RIICHI_DEFAULTS, length: 'hand', multipleRon: 'triple', kuikae: 'allowed', kanDora: 'immediate', aborts: 'off', nagashi: 'off' } },
 ];
 
 describe('mahjong over random games', () => {
@@ -112,7 +128,7 @@ describe('mahjong over random games', () => {
   it('samples states that agree with the view, and the seat may do the same things in them', () => {
     fc.assert(
       fc.property(fc.string({ minLength: 1, maxLength: 8 }), fc.integer({ min: 0, max: configs.length - 1 }), (seed, i) => {
-        const config = one((configs[i] as MahjongConfig).options);
+        const config = one((configs[i] as MahjongConfig).options, (configs[i] as MahjongConfig).style);
         const game = playRandomGame(mahjong, config, `sample-${seed}`, { choose, maxPlies: 5000 });
         const rng = createRng(`s-${seed}`);
         for (const state of game.states.filter((_, k) => k % 4 === 0)) {
@@ -154,5 +170,25 @@ describe('mahjong over random games', () => {
     expect(wins).toBeGreaterThan(0);
     expect(drawn).toBeGreaterThanOrEqual(0);
     for (const kind of ['discard', 'pung', 'chow', 'pass', 'win']) expect(seen).toContain(kind);
+  }, 120_000);
+
+  it('Riichi games played toward winning declare riichi, win with yaku, and keep the contract', () => {
+    let wins = 0;
+    const seen = new Set<string>();
+    for (let i = 0; i < 16; i++) {
+      const config = one({ ...RIICHI_DEFAULTS, ...(i % 2 === 0 ? {} : { multipleRon: 'triple' }) }, 'riichi');
+      // Toward winning, declaring riichi whenever it may.
+      const game = playRandomGame(mahjong, config, `riichi-${i}`, { hidden, invariant, leakScope, choose: (legal, rng, state) => legal.find((a) => a.type === 'ready') ?? efficient(legal, rng, state), maxPlies: 5000 });
+      checkReplay(mahjong, game);
+      for (const a of game.actions) seen.add(a.type);
+      for (const r of game.final.results) {
+        if (r.wins.length > 0) {
+          wins++;
+          for (const w of r.wins) expect(w.score.lines.some((l) => l.id !== 'dora' && l.id !== 'aka-dora' && l.id !== 'ura-dora')).toBe(true);
+        }
+      }
+    }
+    expect(wins).toBeGreaterThan(0);
+    for (const kind of ['discard', 'ready', 'pass', 'win']) expect(seen).toContain(kind);
   }, 120_000);
 });
