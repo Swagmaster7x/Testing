@@ -80,9 +80,14 @@ export function prove(state: HoldemState, openHand: boolean): Proof {
 
 /** Problems with a "best" claim for the accepted moves, or none. */
 export function claimProblems(state: HoldemState, accept: readonly string[], openHand: boolean): string[] {
+  const canonical = accept.map((m) => pokerLessonGame.canonical(state, m));
+  const seat = state.toAct;
+  const range = seat === null ? null : raiseRange(state, seat);
+  const shape = canonical.length !== 1 ? null : canonical[0] === 'fold' ? 'fold' : canonical[0] === 'call' ? 'call' : range && canonical[0] === `r${range.max}` ? 'all-in' : null;
+  if (!shape) return ['claim "best": only a call, a fold or an all-in can be proved by equity, one at a time'];
+  if (shape === 'call' && (seat === null || !othersAllIn(state, seat))) return ['claim "best": equity decides a call only when calling ends the betting (everyone else is all-in)'];
   const proof = prove(state, openHand);
   if (proof.kind === 'none') return [`claim "best": ${proof.why}`];
-  const canonical = accept.map((m) => pokerLessonGame.canonical(state, m));
   if (canonical.length !== 1 || canonical[0] !== proof.best) {
     const what = proof.kind === 'call' ? `equity ${(100 * proof.equity).toFixed(1)}%, calling gains ${proof.gain.toFixed(1)} chips` : `equity when called ${(100 * proof.equity).toFixed(1)}%, called ${(100 * proof.pCall).toFixed(1)}% of the time, the all-in gains ${proof.gain.toFixed(1)} chips`;
     return [`claim "best": the best play is ${proof.best} (${what}), not ${accept.join(' or ')}`];

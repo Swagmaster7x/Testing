@@ -24,7 +24,8 @@
     "import:puzzles": "tsx scripts/import-lichess-puzzles.ts",
     "generate:brisca": "tsx scripts/generate-brisca-endgames.ts",
     "generate:dominoes": "tsx scripts/generate-dominoes-endgames.ts",
-    "generate:holdem": "tsx scripts/generate-holdem-preflop.ts"
+    "generate:holdem": "tsx scripts/generate-holdem-preflop.ts",
+    "generate:holdem-spots": "tsx scripts/generate-holdem-spots.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.6.3",

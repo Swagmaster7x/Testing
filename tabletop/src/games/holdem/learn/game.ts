@@ -265,6 +265,7 @@ function computeAll(state: HoldemState): Record<string, number | string> {
     out.top = pct(rankOf(cls) + combosOf(cls).length / ALL_COMBOS.length);
     const pos = positionName(state, STUDENT);
     out.pos = positionWords(pos);
+    out['pos:at'] = tDynamic(`poker.position.at.${pos}`);
     out.open = pct(openFraction(pos, dealtOrder(state).length));
     // First in, every player still dealt in is behind you.
     out.push = pct(pushFraction(me.stack / bb, Math.max(1, seatsInHand(state).length - 1)));
