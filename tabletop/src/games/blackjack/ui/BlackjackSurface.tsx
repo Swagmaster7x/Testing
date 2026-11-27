@@ -80,12 +80,10 @@ export function BlackjackSurface({ state, mySeats, canAct, legal, anim, onAction
   const placed: PlacedCard[] = [];
   const order = Array.from({ length: n }, (_, i) => i);
   // Your box in the middle of three, on the right of two.
-  const slots = n === 3 ? [me === 0 ? 1 : me === 1 ? 0 : 2, me === 0 ? 0 : 1, 2] : order;
   const slotOf = (box: number): number => (n === 3 ? (box === me ? 1 : order.filter((b) => b !== me).indexOf(box) === 0 ? 0 : 2) : n === 2 ? (box === me ? 1 : 0) : 0);
-  void slots;
   const boxW = W / n;
-  const dealerY = gap + cardH / 2 + 14;
-  const handY = H * 0.6;
+  const dealerY = gap + cardH / 2 + 22;
+  const handY = H * 0.62;
 
   if (shown) {
     shown.dealer.forEach((card, i) => {
@@ -142,7 +140,7 @@ export function BlackjackSurface({ state, mySeats, canAct, legal, anim, onAction
       <div className="bj-shoe" style={{ left: `${gap}px`, top: `${gap}px` }}>
         {t('blackjack.shoe', { decks: state.config.decks, n: state.shoe.length })}
         <br />
-        {t('blackjack.round', { n: Math.min(state.round + (state.phase === 'bet' || state.phase === 'done' ? 1 : 1), state.config.rounds), total: state.config.rounds })}
+        {t('blackjack.round', { n: Math.min(state.round + 1, state.config.rounds), total: state.config.rounds })}
       </div>
       {shown
         ? shown.boxes.map((b, i) => {

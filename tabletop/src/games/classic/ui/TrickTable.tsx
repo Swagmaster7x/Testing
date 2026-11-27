@@ -95,7 +95,8 @@ export function TrickTable(p: TrickTableProps) {
     const cards = sortHand(p.hands[seat] ?? []);
     const n = cards.length;
     const open = p.open;
-    const along = open ? small * 0.42 : Math.min(small * 0.22, 9);
+    // Face up, the side hands fan down the edge as far as the space allows; face down they stack close.
+    const along = open ? Math.min(small * 0.42, where === 2 ? W * 0.4 / Math.max(1, n) : (H * 0.5) / Math.max(1, n)) : Math.min(small * 0.22, 9);
     cards.forEach((card, i) => {
       const off = (i - (n - 1) / 2) * along;
       let x: number;
@@ -106,7 +107,7 @@ export function TrickTable(p: TrickTableProps) {
         y = gap + (small * 1.5) / 2;
       } else {
         x = where === 1 ? gap + small * 0.75 : W - gap - small * 0.75;
-        y = cy - cardH * 0.1 + off;
+        y = cy + off;
         rotate = open ? 0 : 90;
       }
       placed.push({ key: open ? card : `back-${seat}-${i}`, face: open ? face(card) : null, back: BACK, x, y, rotate, z: 20 + i, scale: small / cardW, label: open ? cardName(card) : undefined });
@@ -115,8 +116,8 @@ export function TrickTable(p: TrickTableProps) {
 
   // The trick, each card in front of its player.
   const tw = cardW * 0.9;
-  const dx = Math.min(tw * 0.95, W * 0.11);
-  const dy = Math.min(tw * 0.62, H * 0.12);
+  const dx = Math.min(tw * 1.25, W * 0.14);
+  const dy = Math.min(tw * 0.78, H * 0.15);
   p.trick.forEach((play, i) => {
     const where = placeOf(play.seat, p.me);
     const [ox, oy] = where === 0 ? [0, dy] : where === 1 ? [-dx, 0] : where === 2 ? [0, -dy] : [dx, 0];
@@ -138,8 +139,9 @@ export function TrickTable(p: TrickTableProps) {
   const tagStyle = (where: number): CSSProperties => {
     if (where === 0) return { left: '50%', bottom: `${cardH + gap * 2}px`, transform: 'translateX(-50%)' };
     if (where === 2) return { left: `${cx + small * 3.2}px`, top: `${gap}px` };
-    if (where === 1) return { left: `${gap}px`, top: `${cy + small * 1.2}px` };
-    return { right: `${gap}px`, top: `${cy + small * 1.2}px` };
+    // The side players' tags sit above their cards, in the corners the top hand leaves free.
+    if (where === 1) return { left: `${gap}px`, top: `${gap}px` };
+    return { right: `${gap}px`, top: `${gap}px` };
   };
 
   return (

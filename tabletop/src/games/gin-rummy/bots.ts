@@ -2,16 +2,16 @@
  * Gin Rummy CPU players (PLAN.md 2.4). The levels differ the way players do, measured head to head
  * over hundreds of games:
  *
- * 1. Throws the card that leaves the least deadwood, takes a discard only for a meld, knocks the
- *    moment it can.
+ * 1. Throws the card that leaves the least deadwood, never takes from the pile (it only draws
+ *    blind, the beginner's habit), knocks the moment it can.
  * 2. Also keeps pairs and near-runs, and does not feed you cards next to the ones you picked up;
  *    still knocks the moment it can.
  * 3. Plays as level 2 but holds out for gin until the stock runs low (knocking early against a
  *    player who keeps their hand together gets undercut, and gin scores far more).
  * 4. The generic determinized bot (src/ai/determinized.ts) on top: for each discard it deals the
  *    stock and the other hand with `sample` many times, draws its next two stock cards in each deal,
- *    and keeps the discard that gets it to a knock (or gin) soonest; it holds out for gin a little
- *    longer still.
+ *    and keeps the discard that gets it to a knock (or gin) soonest; it holds out for gin until the
+ *    stock is nearly gone.
  *
  * Bots see only their view. Strength comes from the number of sampled deals, never from time.
  */
@@ -44,7 +44,7 @@ export const LEVEL_PARAMS: Readonly<Record<number, LevelParams>> = {
   1: { samples: 0, policy: 1, knock: 'asap' },
   2: { samples: 0, policy: 2, knock: 'asap' },
   3: { samples: 0, policy: 2, knock: 'gin' },
-  4: { samples: 30, policy: 2, knock: 'gin8' },
+  4: { samples: 30, policy: 2, knock: 'gin5' },
 };
 
 /** What a player knows: their hand, the pile, the cards the other took from it, the stock size. */
@@ -115,7 +115,8 @@ function wantsPile(seen: Seen, policy: 1 | 2): boolean {
   const now = deadwood(seen.hand);
   const withIt = heuristicDiscard({ ...seen, hand: [...seen.hand, top], taken: top }, policy).left;
   // Level 1 takes a card only when it melds at once; level 2 also when it cuts deadwood a lot.
-  if (policy === 1) return withIt + cardValue(top) <= now - 1 && meldsWith(top, seen.hand);
+  // Level 1 never takes from the pile: it only ever draws blind, the beginner’s habit.
+  if (policy === 1) return false;
   return withIt < now - 3 || (meldsWith(top, seen.hand) && withIt < now);
 }
 
@@ -129,12 +130,13 @@ function meldsWith(card: Card, hand: readonly Card[]): boolean {
  * When to knock. "asap": whenever allowed; "patient": waits for a lower count while the stock is
  * still full; "gin": holds out for gin until the stock runs low.
  */
-export type KnockStyle = 'asap' | 'patient' | 'gin' | 'low' | 'gin8';
+export type KnockStyle = 'asap' | 'patient' | 'gin' | 'low' | 'gin8' | 'gin5';
 
 function wantsKnock(left: number, seen: Seen, style: KnockStyle): boolean {
   if (left === 0 || style === 'asap') return true;
   if (style === 'gin') return left <= Math.min(seen.limit, seen.stockCount > 12 ? 0 : 10);
   if (style === 'gin8') return left <= Math.min(seen.limit, seen.stockCount > 8 ? 0 : 10);
+  if (style === 'gin5') return left <= Math.min(seen.limit, seen.stockCount > 5 ? 0 : 10);
   if (style === 'low') return left <= Math.min(seen.limit, seen.stockCount > 12 ? 3 : 10);
   return left <= Math.min(seen.limit, seen.stockCount > 20 ? 6 : seen.stockCount > 12 ? 8 : 10);
 }

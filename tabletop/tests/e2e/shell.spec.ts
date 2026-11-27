@@ -1,7 +1,7 @@
 import { SHELF } from '../../src/games/catalog';
 import { expect, noHorizontalScroll, test } from './fixtures';
 
-const NAMES: Record<string, string> = { brisca: 'Brisca', poker: 'Poker', chess: 'Chess', go: 'Go', 'chinese-checkers': 'Chinese Checkers', shogi: 'Shogi', dominoes: 'Dominoes', mahjong: 'Mahjong' };
+const NAMES: Record<string, string> = { brisca: 'Brisca', poker: 'Poker', chess: 'Chess', go: 'Go', 'chinese-checkers': 'Chinese Checkers', shogi: 'Shogi', dominoes: 'Dominoes', mahjong: 'Mahjong', blackjack: 'Blackjack', hearts: 'Hearts', spades: 'Spades', 'gin-rummy': 'Gin Rummy' };
 const gameName = (id: string) => NAMES[id] ?? id;
 
 test.describe('the shell', () => {
@@ -23,14 +23,12 @@ test.describe('the shell', () => {
     }
   });
 
-  test('the shelf shows the eight launch games, grouped, built ones playable, without the test game', async ({ page }) => {
+  test('the shelf shows every shelf game, grouped, built ones playable, without the test game', async ({ page }) => {
     await page.goto('/#/games');
     for (const group of ['Cards', 'Boards', 'Tiles']) await expect(page.getByRole('heading', { name: group })).toBeVisible();
     const tiles = page.locator('.tile');
-    await expect(tiles).toHaveCount(8);
-    for (const name of ['Brisca', 'Poker', 'Chess', 'Go', 'Chinese Checkers', 'Shogi', 'Dominoes', 'Mahjong']) {
-      await expect(page.getByRole('link', { name: `Open ${name}` })).toBeVisible();
-    }
+    await expect(tiles).toHaveCount(SHELF.length);
+    for (const g of SHELF) await expect(page.getByRole('link', { name: `Open ${gameName(g.id)}` })).toBeVisible();
     await expect(page.getByText('Noughts and crosses')).toHaveCount(0);
     // Built games open; the rest say when they arrive.
     const coming = SHELF.filter((g) => !g.playable);

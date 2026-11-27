@@ -18,6 +18,10 @@ import { handTotal, isBlackjackCards, rankIndex } from './strategy';
 
 export const BANKROLL = 1000;
 export const BET_STEP = 10;
+/** The total to reach without going over, the total the dealer draws to, and what insurance pays (to 1). */
+export const TWENTY_ONE = 21;
+export const DEALER_DRAWS_TO = 17;
+export const INSURANCE_PAYS = 2;
 
 export interface BlackjackConfig extends StrategyRules {
   readonly insurance: 'offered' | 'none';
@@ -811,8 +815,9 @@ export function presetOf(config: BlackjackConfig): string | null {
  * A position for lessons and drills: one box (the student) with a hand against a dealer up-card,
  * in the play phase. The rest of the shoe follows in a fixed order after `next` (the next cards).
  */
-export function position(p: { hand: readonly Card[]; up: Card; hole?: Card; next?: readonly Card[]; bet?: number; config?: Partial<BlackjackConfig>; chips?: number; seen?: readonly Card[] }): string {
-  const config: BlackjackConfig = { ...STANDARD, boxes: 1, ...p.config };
+export function position(p: { hand: readonly Card[]; up: Card; hole?: Card; next?: readonly Card[]; bet?: number; config?: Partial<BlackjackConfig>; chips?: number; seen?: readonly Card[]; others?: readonly (readonly Card[])[] }): string {
+  const others = p.others ?? [];
+  const config: BlackjackConfig = { ...STANDARD, ...p.config, boxes: 1 + others.length };
   const hole = p.hole ?? ('9c');
   const pool = shoeOf(config.decks);
   const take = (c: Card) => {
@@ -820,7 +825,7 @@ export function position(p: { hand: readonly Card[]; up: Card; hole?: Card; next
     if (i < 0) throw new Error(`Blackjack position: no ${c} left in the shoe`);
     pool.splice(i, 1);
   };
-  for (const c of [...p.hand, p.up, hole, ...(p.next ?? []), ...(p.seen ?? [])]) take(c);
+  for (const c of [...p.hand, ...others.flat(), p.up, hole, ...(p.next ?? []), ...(p.seen ?? [])]) take(c);
   const bet = p.bet ?? 10;
   const state: BlackjackState = {
     config,
@@ -828,11 +833,11 @@ export function position(p: { hand: readonly Card[]; up: Card; hole?: Card; next
     round: 0,
     shuffles: 0,
     shoe: [...(p.next ?? []), ...pool],
-    seen: [...(p.seen ?? []), ...p.hand, p.up],
+    seen: [...(p.seen ?? []), ...p.hand, ...others.flat(), p.up],
     dealer: config.holeCard === 'peek' ? [p.up, hole] : [p.up],
     holeShown: false,
     phase: 'play',
-    boxes: [{ chips: (p.chips ?? BANKROLL) - bet, bet, hands: [newHand(p.hand, bet)], insurance: 0, out: false, roundNet: 0 }],
+    boxes: [p.hand, ...others].map((hand) => ({ chips: (p.chips ?? BANKROLL) - bet, bet, hands: [newHand(hand, bet)], insurance: 0, out: false, roundNet: 0 })),
     at: { box: 0, hand: 0 },
     last: null,
     history: [],
