@@ -75,15 +75,20 @@ export function chessOpenings(): readonly Opening[] {
   built = OPENINGS.map((o) => {
     const board = chessAt(START_FEN);
     const san = o.san.split(' ');
+    // chess.js gives the positions on the way, the same FEN the rules module keeps.
+    const positions = [board.fen()];
+    const movers: number[] = [];
     const moves = san.map((m, i) => {
       try {
+        movers.push(board.turn() === 'w' ? 0 : 1);
         const move = board.move(m);
+        positions.push(board.fen());
         return `${move.from}${move.to}${move.promotion ?? ''}`;
       } catch {
         throw new Error(`Opening ${o.id}: move ${i + 1} (${m}) is not legal`);
       }
     });
-    return { id: o.id, eco: o.eco, name: o.name, idea: o.idea, start: START_FEN, moves, san, side: o.side === 'w' ? 0 : 1, group: o.group };
+    return { id: o.id, eco: o.eco, name: o.name, idea: o.idea, start: START_FEN, moves, san, side: o.side === 'w' ? 0 : 1, group: o.group, replayed: { positions, movers } };
   });
   return built;
 }

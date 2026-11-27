@@ -31,6 +31,12 @@ export interface StudyLine {
   readonly side: number;
   /** A family for grouping in lessons and as a practice theme ("e4", "ranging", "4-4"). */
   readonly group: string;
+  /**
+   * The positions and movers along the line, when the game's data module has them already (chess
+   * replays its openings through chess.js once); otherwise the line is replayed on first use. The
+   * tests check that they match a replay on the rules.
+   */
+  readonly replayed?: { readonly positions: readonly string[]; readonly movers: readonly number[] };
 }
 
 /** How a game names its sides in line text ("White", "Black"). */
@@ -38,28 +44,42 @@ export interface LineWords {
   side(seat: number): string;
 }
 
-/** Positions along a line: `positions[i]` is before move i (and the last one after every move). */
-export function linePositions<S>(game: LessonGame<S>, line: StudyLine): string[] {
+interface Replay {
+  readonly positions: readonly string[];
+  readonly movers: readonly number[];
+}
+
+/** One replay per line, shared by its lessons, drill and problem (replaying is the slow part). */
+const replays = new WeakMap<StudyLine, Replay>();
+
+function replay<S>(game: LessonGame<S>, line: StudyLine): Replay {
+  const known = replays.get(line) ?? line.replayed;
+  if (known) return known;
   let state = game.position(line.start);
-  const out = [game.notation(state)];
+  const positions = [game.notation(state)];
+  const movers: number[] = [];
   for (const [i, move] of line.moves.entries()) {
+    const seat = game.toMove(state);
+    if (seat === null) throw new Error(`Line ${line.id}: the game is over before move ${i + 1}`);
     const next = game.play(state, move);
     if (!next) throw new Error(`Line ${line.id}: move ${i + 1} (${move}) is not legal`);
+    movers.push(seat);
     state = next;
-    out.push(game.notation(state));
+    positions.push(game.notation(state));
   }
+  const out = { positions, movers };
+  replays.set(line, out);
   return out;
+}
+
+/** Positions along a line: `positions[i]` is before move i (and the last one after every move). */
+export function linePositions<S>(game: LessonGame<S>, line: StudyLine): string[] {
+  return [...replay(game, line).positions];
 }
 
 /** Who moves at each ply of a line. */
 export function lineMovers<S>(game: LessonGame<S>, line: StudyLine): number[] {
-  return linePositions(game, line)
-    .slice(0, -1)
-    .map((p, i) => {
-      const seat = game.toMove(game.position(p));
-      if (seat === null) throw new Error(`Line ${line.id}: the game is over before move ${i + 1}`);
-      return seat;
-    });
+  return [...replay(game, line).movers];
 }
 
 /** The plies where the student (the line's side) moves. */

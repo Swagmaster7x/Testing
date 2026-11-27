@@ -35,19 +35,21 @@ test.describe('accessibility', () => {
   });
 
   test('the main screens', async ({ page }) => {
-    for (const [where, url] of [
+    for (const [where, url, ready] of [
       ['today', '/#/today'],
       ['games', '/#/games'],
       ['hub', '/#/games/brisca'],
       ['learn', '/#/games/go/learn'],
       ['practice', '/#/games/dominoes/practice'],
-      ['progress', '/#/progress'],
+      // Progress loads every game's lessons first; scan it once its rows are buttons.
+      ['progress', '/#/progress', 'main button'],
       ['tools', '/#/tools'],
       ['timer', '/#/tools/timer'],
       ['settings', '/#/settings'],
       ['reference', '/#/games/poker/reference'],
-    ] as const) {
+    ] as [string, string, string?][]) {
       await page.goto(url);
+      if (ready) await page.locator(ready).first().waitFor();
       await page.waitForTimeout(400);
       await scan(page, where);
     }

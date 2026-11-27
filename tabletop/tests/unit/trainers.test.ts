@@ -80,6 +80,9 @@ describe('the chess opening trainer', () => {
       expect(o.moves).toHaveLength(o.san.length);
       // The opening ends with the move of the side whose choice it is.
       expect(studentPlies(chessLessonGame, o).at(-1), o.id).toBe(o.moves.length - 1);
+      // The positions chess.js gave on the way are the rules module's own.
+      const { replayed: _given, ...plain } = o;
+      expect(o.replayed?.positions, o.id).toEqual(linePositions(chessLessonGame, plain));
     }
   });
 
