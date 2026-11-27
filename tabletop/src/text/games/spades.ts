@@ -74,6 +74,9 @@ export const enSpades = {
   'spades.counter.bags': 'Our bags',
   'spades.counter.broken': 'Spades broken',
   'reason.spades-score': 'Highest score wins.',
+  'spades.result.win': 'Your side wins, {us} to {them}',
+  'spades.result.lose': 'Your side loses, {us} to {them}',
+  'spades.result.tie': 'A tie at {us}',
 
   'spades.level.1': 'Just learning: bids by counting aces and kings, and plays loosely.',
   'spades.level.2': 'Knows partnership play: second hand low, covers a partner’s nil, ducks once the bid is made.',

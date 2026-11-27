@@ -20,7 +20,11 @@ function reasonFor(before: BlackjackState, played: BlackjackAction, best: string
   const hand = before.at ? before.boxes[before.at.box]?.hands[before.at.hand] : undefined;
   const up = before.dealer[0];
   const total = hand ? handTotal(hand.cards) : null;
-  const params = { move: nameOf(best), n: Math.max(1, Math.round(loss * 100)), hand: total ? String(total.total) : '', up: up ? up[0] === 'T' ? '10' : (up[0] ?? '') : '' };
+  // The up-card as a player says it: an ace, or its value (every picture counts ten).
+  const rank = up?.[0] ?? '';
+  const upWord = rank === 'A' ? tDynamic('blackjack.ace') : 'TJQK'.includes(rank) && rank ? '10' : rank;
+  const handWord = total ? (total.soft ? tDynamic('blackjack.soft', { n: total.total }) : String(total.total)) : '';
+  const params = { move: nameOf(best).toLowerCase(), n: Math.max(1, Math.round(loss * 100)), hand: handWord, up: upWord };
   if (best === 'split' || played.type === 'split') return { key: 'why.blackjack-split', params };
   if (best === 'double') return { key: 'why.blackjack-double', params };
   if (best === 'surrender') return { key: 'why.blackjack-surrender', params };

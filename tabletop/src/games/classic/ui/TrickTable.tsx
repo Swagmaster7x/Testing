@@ -88,7 +88,9 @@ export function TrickTable(p: TrickTableProps) {
     });
   });
 
-  // The other three hands: face down (or up in an open round), small, along their edge.
+  // The other three hands: face down (or up in an open round), small, along their edge. How far
+  // each side hand reaches up from the middle, so its player's tag can sit just above it.
+  const sideTop: Record<number, number> = {};
   for (const seat of [0, 1, 2, 3]) {
     if (seat === p.me) continue;
     const where = placeOf(seat, p.me);
@@ -97,6 +99,7 @@ export function TrickTable(p: TrickTableProps) {
     const open = p.open;
     // Face up, the side hands fan down the edge as far as the space allows; face down they stack close.
     const along = open ? Math.min(small * 0.42, where === 2 ? W * 0.4 / Math.max(1, n) : (H * 0.5) / Math.max(1, n)) : Math.min(small * 0.22, 9);
+    if (where !== 2) sideTop[where] = cy - ((n - 1) / 2) * along - (open ? small * 0.75 : small / 2);
     cards.forEach((card, i) => {
       const off = (i - (n - 1) / 2) * along;
       let x: number;
@@ -136,12 +139,16 @@ export function TrickTable(p: TrickTableProps) {
     } else setLifted(card);
   };
 
+  const TAG_HEIGHT = 40;
   const tagStyle = (where: number): CSSProperties => {
     if (where === 0) return { left: '50%', bottom: `${cardH + gap * 2}px`, transform: 'translateX(-50%)' };
-    if (where === 2) return { left: `${cx + small * 3.2}px`, top: `${gap}px` };
-    // The side players' tags sit above their cards, in the corners the top hand leaves free.
-    if (where === 1) return { left: `${gap}px`, top: `${gap}px` };
-    return { right: `${gap}px`, top: `${gap}px` };
+    // Across: just right of the top hand (a fan when face up, a close stack when face down).
+    if (where === 2) return { left: `${cx + (p.open ? small * 3.2 : 6 * Math.min(small * 0.22, 9) + small * 0.5 + gap)}px`, top: `${gap}px` };
+    // The side players' tags sit just above their cards (a tag is about two lines tall), and never
+    // above the table's top edge.
+    const top = `${Math.max(gap, (sideTop[where] ?? cy) - gap - TAG_HEIGHT)}px`;
+    if (where === 1) return { left: `${gap}px`, top };
+    return { right: `${gap}px`, top };
   };
 
   return (

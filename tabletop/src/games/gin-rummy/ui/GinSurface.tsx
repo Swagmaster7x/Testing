@@ -4,7 +4,6 @@
  * Tap the stock or the pile to draw; tap a card to lift it, again to discard it; Knock appears when
  * the lifted card leaves you able to knock. At the end of a hand both hands are laid down in melds.
  */
-import type { RefObject } from 'react';
 import { useState } from 'react';
 import type { Seat } from '../../../core/contract';
 import type { PlacedCard } from '../../../kits/cards/CardLayer';
@@ -111,7 +110,12 @@ export function GinSurface({ state, mySeats, canAct, legal, anim, onAction, onSk
   const pickups = new Set(helps.pickups ? (state.known[them] ?? []) : []);
 
   if (d.result && d.result.kind !== 'dead') {
-    return <ResultLayout result={d.result} me={me} names={names} cardW={cardW} innerRef={ref} W={W} H={H} onSkip={onSkip} />;
+    // The same root element as the table, so its measured size carries over to the result.
+    return (
+      <div ref={ref} className="card-table gin-table gin-result" onPointerDown={(e) => e.target === e.currentTarget && onSkip()}>
+        <ResultLayout result={d.result} me={me} names={names} cardW={cardW} W={W} H={H} />
+      </div>
+    );
   }
 
   // Your hand: melds first, a small gap between groups, then the deadwood.
@@ -234,7 +238,7 @@ export function GinSurface({ state, mySeats, canAct, legal, anim, onAction, onSk
 }
 
 /** A finished hand: both players' melds and deadwood, the layoffs, and the score. */
-function ResultLayout({ result, me, names, cardW, innerRef, W, H, onSkip }: { result: HandResult; me: Seat; names?: SeatNames; cardW: number; innerRef: RefObject<HTMLDivElement | null>; W: number; H: number; onSkip: () => void }) {
+function ResultLayout({ result, me, names, cardW, W, H }: { result: HandResult; me: Seat; names?: SeatNames; cardW: number; W: number; H: number }) {
   const knocker = result.knocker ?? 0;
   const defender = knocker === 0 ? 1 : 0;
   const w = Math.min(cardW * 0.82, W / 15);
@@ -262,18 +266,18 @@ function ResultLayout({ result, me, names, cardW, innerRef, W, H, onSkip }: { re
   const name = (seat: Seat) => (seat === me ? t('gin.who.you') : (names?.(seat) ?? t('gin.who.cpu')));
   const title = tDynamic(`gin.result.${result.kind}`, { who: name(result.winner ?? knocker), n: result.points });
   return (
-    <div ref={innerRef} className="card-table gin-table gin-result" onPointerDown={(e) => e.target === e.currentTarget && onSkip()}>
+    <>
       {W > 0 ? <CardLayer cards={placed} cardWidth={cardW} duration={0} /> : null}
       <p className="gin-result-title" role="status">
         {title}
         {result.doubled ? ` ${t('gin.result.doubled')}` : ''}
       </p>
-      <p className="gin-result-line" style={{ top: `${knockerY - w * 1.05}px` }}>
+      <p className="gin-result-line" style={{ top: `${knockerY - w * 0.75 - 6}px` }}>
         {t(result.kind === 'gin' || result.kind === 'big-gin' ? 'gin.result.ginner' : 'gin.result.knocker', { who: name(knocker), n: result.knockerCount })}
       </p>
-      <p className="gin-result-line" style={{ top: `${defenderY - w * 1.05}px` }}>
+      <p className="gin-result-line" style={{ top: `${defenderY - w * 0.75 - 6}px` }}>
         {t(result.laid.length > 0 ? 'gin.result.defender.laid' : 'gin.result.defender', { who: name(defender), n: result.defenderCount, k: result.laid.length })}
       </p>
-    </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import type { Seat } from '../../../core/contract';
+import type { GameRecord } from '../../../core/record';
 import { t, tDynamic } from '../../../text';
 import type { GameOptions, GameUi, OptionField, ReferenceSection } from '../../types';
 import { cardName, cardShort } from '../../classic/names';
@@ -141,4 +142,16 @@ export const spadesUi: GameUi<SpadesState, SpadesAction, SpadesConfig, SpadesVie
   },
   options: spadesOptions,
   replayConfig: (config) => ({ ...config, start: undefined }),
+  resultText(record: GameRecord): string | null {
+    // Partners: say which side won and the score, when the people at the table share a side.
+    const o = record.outcome;
+    const people = record.players.flatMap((p, seat) => (p.kind === 'human' ? [seat] : []));
+    const me = people[0];
+    if (!o?.teams || me === undefined || people.some((seat) => seat % 2 !== me % 2)) return null;
+    const ours = o.results.find((r) => r.seat === me);
+    const theirs = o.results.find((r) => r.seat === (me + 1) % 4);
+    if (!ours || !theirs) return null;
+    const key = ours.place < theirs.place ? 'spades.result.win' : ours.place > theirs.place ? 'spades.result.lose' : 'spades.result.tie';
+    return tDynamic(key, { us: ours.score, them: theirs.score });
+  },
 };

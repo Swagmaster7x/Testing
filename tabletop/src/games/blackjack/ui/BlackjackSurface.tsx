@@ -18,8 +18,10 @@ import { cardName } from '../../classic/names';
 import '../../classic/ui/classic.css';
 import { basicFor } from '../bots';
 import type { BlackjackAction, BlackjackEvent, BlackjackState, Box, PlayerHand } from '../rules';
-import { betChoices, blackjack, isNatural, limitsOf, whatCan } from '../rules';
+import { BANKROLL, betChoices, blackjack, isNatural, limitsOf, whatCan } from '../rules';
 import { handTotal } from '../strategy';
+
+const signed = (n: number): string => (n > 0 ? `+${n}` : String(n));
 
 interface Shown {
   readonly round: number;
@@ -60,7 +62,7 @@ export function boxName(seat: Seat, me: Seat, names?: SeatNames): string {
 }
 
 function outcomeText(h: PlayerHand): string {
-  const net = h.net > 0 ? `+${h.net}` : String(h.net);
+  const net = signed(h.net);
   return tDynamic(`blackjack.outcome.${h.outcome ?? 'none'}`, { net });
 }
 
@@ -128,7 +130,7 @@ export function BlackjackSurface({ state, mySeats, canAct, legal, anim, onAction
 
   return (
     <div ref={ref} className="card-table bj-table" onPointerDown={(e) => e.target === e.currentTarget && onSkip()} data-busy={anim.playing !== null} data-boxes={n}>
-      <div className="bj-arc" aria-hidden="true">
+      <div className="bj-arc" aria-hidden="true" style={{ top: `${(dealerY + handY) / 2}px` }}>
         <span>{state.config.payout === '3:2' ? t('blackjack.felt.32') : t('blackjack.felt.65')}</span>
         <span>{state.config.soft17 === 'stand' ? t('blackjack.felt.s17') : t('blackjack.felt.h17')}</span>
       </div>
@@ -228,7 +230,7 @@ export function BlackjackSurface({ state, mySeats, canAct, legal, anim, onAction
       ) : null}
       {state.phase === 'done' && settledAnim ? (
         <div className="hand-over" role="status">
-          {t('blackjack.session-over', { n: (box?.chips ?? 0) - 1000 })}
+          {t('blackjack.session-over', { n: signed((box?.chips ?? BANKROLL) - BANKROLL) })}
         </div>
       ) : null}
     </div>

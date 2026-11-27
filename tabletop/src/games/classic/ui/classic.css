@@ -8,7 +8,8 @@
 }
 
 .trick-seat[data-where='left'],
-.trick-seat[data-where='right'] {
+.trick-seat[data-where='right'],
+.trick-seat[data-where='top'] {
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
@@ -32,7 +33,7 @@
 .trick-action {
   position: absolute;
   left: 50%;
-  top: 44%;
+  top: 41%;
   transform: translate(-50%, -50%);
   z-index: 420;
   display: flex;
@@ -203,7 +204,7 @@
 .gin-result-line {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   margin: 0;
   padding: 1px 8px;
   border-radius: var(--r-sm);
@@ -222,8 +223,7 @@
 .bj-arc {
   position: absolute;
   left: 50%;
-  top: 29%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;

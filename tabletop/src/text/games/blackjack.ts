@@ -232,7 +232,9 @@ export const enBlackjack = {
   'ref.blackjack.levels': 'The other players',
 
   'blackjack.review.round': 'Round {n}',
-  'why.blackjack-chart': 'With {hand} against a {up} the chart says {move}: about {n} chips better per 100 bet.',
+  'why.blackjack-chart': 'With {hand} against the dealer’s {up}, the chart says {move}: about {n} chips better per 100 bet.',
+  'blackjack.ace': 'ace',
+  'blackjack.soft': 'soft {n}',
   'why.blackjack-double': 'This was a hand to double: about {n} chips better per 100 bet.',
   'why.blackjack-split': 'The chart splits differently here ({move}): about {n} chips per 100 bet.',
   'why.blackjack-surrender': 'Surrendering saved more: about {n} chips per 100 bet.',

@@ -105,7 +105,7 @@ export function HeartsSurface({ state, mySeats, canAct, legal, anim, onAction, o
     >
       {passing ? (
         <div className="trick-action">
-          <p className="trick-action-note">{t('hearts.pass.note', { n: PASS_COUNT - chosen.length, dir })}</p>
+          <p className="trick-action-note">{chosen.length === PASS_COUNT ? t('hearts.pass.ready', { n: PASS_COUNT, dir }) : t('hearts.pass.note', { n: PASS_COUNT - chosen.length, dir })}</p>
           <button type="button" className="btn btn-primary btn-small" disabled={chosen.length !== PASS_COUNT} onClick={() => onAction({ type: 'pass', cards: chosen })}>
             {t('hearts.pass.button', { dir })}
           </button>
