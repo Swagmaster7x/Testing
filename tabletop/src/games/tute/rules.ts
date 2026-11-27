@@ -963,6 +963,12 @@ function dealWithin(cards: readonly Card[], sizes: readonly number[], barred: re
   return null;
 }
 
+/** Deals `cards` into slots of the given sizes at random, with no constraints. */
+function plainDeal(cards: readonly Card[], sizes: readonly number[], rng: Rng): Card[][] {
+  const deck = rng.shuffle(cards);
+  return sizes.map((n) => deck.splice(0, n));
+}
+
 /**
  * A full state consistent with a view: the unseen cards dealt at random to the other hands and the
  * stock, around the cards known to be held. With `infer` (the default) each seat is kept clear of
@@ -978,7 +984,7 @@ export function sampleState(v: TuteView, rng: Rng, infer = true): TuteState {
   const sizes = [...others.map((seat) => Math.max(0, (v.handCounts[seat] ?? 0) - held(seat).length)), stockSize];
   const bars = infer ? cannotHold(v) : null;
   const barred = [...others.map((seat) => bars?.[seat] ?? null), null];
-  const dealt = dealWithin(unseen, sizes, barred, rng) ?? (dealWithin(unseen, sizes, sizes.map(() => null), rng));
+  const dealt = dealWithin(unseen, sizes, barred, rng) ?? plainDeal(unseen, sizes, rng);
   const hands: Card[][] = Array.from({ length: players }, () => []);
   hands[v.seat] = [...v.hand];
   others.forEach((seat, i) => (hands[seat] = [...held(seat), ...(dealt[i] ?? [])]));

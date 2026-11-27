@@ -21,6 +21,7 @@ const loaders: Record<string, Loader> = {
   shogi: () => import('./shogi/bots').then((m) => m.shogiBots as BotSet<unknown, unknown>),
   'chinese-checkers': () => import('./chinese-checkers/bots').then((m) => m.ccBots as unknown as BotSet<unknown, unknown>),
   mahjong: () => import('./mahjong/bots').then((m) => m.mahjongBots as unknown as BotSet<unknown, unknown>),
+  tute: () => import('./tute/bots').then((m) => m.tuteBots as unknown as BotSet<unknown, unknown>),
 };
 
 const cache = new Map<string, Promise<BotSet<unknown, unknown>>>();

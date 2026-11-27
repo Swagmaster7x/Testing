@@ -79,6 +79,16 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M16 8.6v1.4M16 22v1.4M8.6 16h1.4M22 16h1.4" stroke={CUT} strokeWidth={1.2} strokeLinecap="round" />
     </>
   ),
+  tute: (
+    <>
+      <path d="M6.5 22.5L7.8 10.2l4.6 5.2L16 7.4l3.6 8 4.6-5.2 1.3 12.3z" fill="currentColor" />
+      <rect x="6.5" y="23.6" width="19" height="3.2" rx="1.1" fill="currentColor" />
+      <circle cx="16" cy="6.6" r="1.6" fill={BRASS} />
+      <circle cx="7.7" cy="9.3" r="1.3" fill={BRASS} />
+      <circle cx="24.3" cy="9.3" r="1.3" fill={BRASS} />
+      <path d="M10 19.6h12" stroke={CUT} strokeWidth={1.3} strokeLinecap="round" />
+    </>
+  ),
   noughts: (
     <>
       <path d="M12.3 5v22M19.7 5v22M5 12.3h22M5 19.7h22" stroke="currentColor" strokeOpacity={0.5} strokeWidth={1.4} strokeLinecap="round" />

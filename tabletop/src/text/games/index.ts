@@ -10,5 +10,6 @@ import { enGo } from './go';
 import { enMahjong } from './mahjong';
 import { enPoker } from './poker';
 import { enShogi } from './shogi';
+import { enTute } from './tute';
 
-export const enGames = { ...enBrisca, ...enChineseCheckers, ...enDominoes, ...enGo, ...enShogi, ...enPoker, ...enMahjong } as const;
+export const enGames = { ...enBrisca, ...enChineseCheckers, ...enDominoes, ...enGo, ...enShogi, ...enPoker, ...enMahjong, ...enTute } as const;

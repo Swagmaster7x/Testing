@@ -30,6 +30,9 @@ import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
+import { tuteBots } from './tute/bots';
+import type { TuteAction, TuteConfig, TuteEvent, TuteState, TuteView } from './tute/rules';
+import { SPAIN_PAIRS, tute } from './tute/rules';
 import { LADDER_MOVE_LIMIT } from './shogi/presets';
 import type { ShogiAction, ShogiConfig, ShogiEvent, ShogiState, ShogiView } from './shogi/rules';
 import { shogi } from './shogi/rules';
@@ -255,6 +258,29 @@ function mahjongLadder(): Ladder<MahjongState, MahjongAction, MahjongConfig, Mah
   };
 }
 
+/**
+ * Tute rungs are matches to three games under the default rules (Spain, in pairs): the level under
+ * test sits in seats 0 and 2 against the other level in 1 and 3, and every deal is played twice
+ * with the sides swapped, so the luck of the cards cancels out.
+ */
+function tuteLadder(): Ladder<TuteState, TuteAction, TuteConfig, TuteView, TuteEvent> {
+  return {
+    spec: {
+      def: tute,
+      config: SPAIN_PAIRS,
+      levels: tuteBots.levels.map((l) => l.level),
+      bot: (level) => ({
+        name: `L${level}`,
+        choose: async (view, seat, rng) => (await tuteBots.choose({ view, seat, level, rng })).action,
+      }),
+      margin: 0.6,
+      paired: true,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(tute, view, seat, rng) },
+    games: 100,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
@@ -266,5 +292,6 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,
     'chinese-checkers': chineseCheckersLadder() as unknown as Ladder<never, never, never, never, never>,
     mahjong: mahjongLadder() as unknown as Ladder<never, never, never, never, never>,
+    tute: tuteLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }
