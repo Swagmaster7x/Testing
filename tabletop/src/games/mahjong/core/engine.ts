@@ -103,6 +103,8 @@ export interface MahjongState {
   readonly claim: ClaimWindow | null;
   /** Calls and kongs made this hand. */
   readonly calls: number;
+  /** The tile discarded last this hand (it may have been called since). */
+  readonly lastDiscard: TileId | null;
   readonly over: boolean;
 }
 
@@ -179,6 +181,7 @@ export class MahjongEngine {
       claimed: false,
       claim: null,
       calls: 0,
+      lastDiscard: null,
       over: false,
     };
     this.deal(blank, []);
@@ -349,6 +352,7 @@ export class MahjongEngine {
     const tile = hand[i] as TileId;
     hand.splice(i, 1);
     (d.discards[seat] as Discard[]).push({ tile, claimed: false });
+    d.lastDiscard = tile;
     events.push({ type: 'discard', seat, tile });
     const r = this.rules(d.config);
     d.drawn = null;
@@ -639,6 +643,7 @@ export class MahjongEngine {
     d.claimed = false;
     d.kongs = 0;
     d.calls = 0;
+    d.lastDiscard = null;
     d.source = 'deal';
     events.push({ type: 'deal', handNo: d.handNo, round: d.round, dealer: d.dealer, wall: d.wall.length });
     if (r.replaceBonus && r.tiles.bonus) {
@@ -725,6 +730,7 @@ interface Draft {
   claimed: boolean;
   claim: ClaimWindow | null;
   calls: number;
+  lastDiscard: TileId | null;
   over: boolean;
 }
 

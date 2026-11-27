@@ -319,7 +319,7 @@ function PlayableDoors({ game, seed, setup }: { game: CatalogGame; seed: string 
             onOpen={() => navigate(`/games/${game.id}/learn`)}
           />
         ) : (
-          <Door icon="learn" title={t('door.learn')} blurb={t('door.none')} />
+          <Door icon="learn" title={t('door.learn')} blurb={t(game.onShelf ? 'door.none.soon' : 'door.none')} foot={game.onShelf ? t('door.coming') : undefined} />
         )}
         {hasPractice(game.id) ? (
           <Door
@@ -331,7 +331,7 @@ function PlayableDoors({ game, seed, setup }: { game: CatalogGame; seed: string 
             onOpen={() => navigate(`/games/${game.id}/practice`)}
           />
         ) : (
-          <Door icon="practice" title={t('door.practice')} blurb={t('door.none')} />
+          <Door icon="practice" title={t('door.practice')} blurb={t(game.onShelf ? 'door.none.soon' : 'door.none')} foot={game.onShelf ? t('door.coming') : undefined} />
         )}
         <Door
           icon="play"

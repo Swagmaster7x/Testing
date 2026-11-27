@@ -83,8 +83,12 @@ function LogLines({ log, ui, record }: { log: readonly LogEntry<GameEvent>[]; ui
       {log.map((entry, i) => {
         const text = ui.describeEvent(entry.event, humanSeats(record), record.players.length);
         if (!text) return null;
-        const first = i === 0 || log[i - 1]?.ply !== entry.ply;
-        const who = entry.seat === null ? null : playerName(ui, record, entry.seat);
+        // A game may say whose an event is (a call made in another seat's move); else the mover's.
+        const owner = (e: LogEntry<GameEvent>) => (ui.eventSeat ? ui.eventSeat(e.event) : e.seat);
+        const prev = log[i - 1];
+        const first = i === 0 || prev?.ply !== entry.ply || (ui.eventSeat !== undefined && prev !== undefined && owner(prev) !== owner(entry));
+        const seat = owner(entry);
+        const who = seat === null ? null : playerName(ui, record, seat);
         return (
           <li key={entry.id}>
             {first && who ? (
@@ -229,7 +233,9 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const SeatMark = ui.SeatMark;
   const SeatExtra = ui.SeatExtra;
   const Surface = ui.Surface;
-  const moves = snap.history.map((h) => ({ ply: h.ply, seat: h.seat, text: ui.moveText ? ui.moveText(h.action) : ui.def.codec.action.toText(h.action) }));
+  // A fresh list of the people's seats for the game's own hooks, so they never share `mySeats`.
+  const people = humanSeats(record);
+  const moves = snap.history.filter((h) => ui.moveVisible?.(h.action, h.seat, people) ?? true).map((h) => ({ ply: h.ply, seat: h.seat, text: ui.moveText ? ui.moveText(h.action) : ui.def.codec.action.toText(h.action) }));
   const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record), record.players.length) : ui.sideName(s)));
   const score = results.status === 'done' ? results.value : null;
   const flipped = (ui.flipForSeat?.(mySeat) ?? false) !== flipOverride;
@@ -339,7 +345,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
             <ul className="players" aria-label={t('play.side')}>
               {(flipped ? [...ui.def.seats(state)] : [...ui.def.seats(state)].reverse()).map((seat) => {
                 const player = record.players[seat];
-                const isTurn = snap.turn === seat;
+                const isTurn = (ui.shownTurn ? (snap.turn === null ? null : ui.shownTurn(state, people)) : snap.turn) === seat;
                 const time = clock?.[seat];
                 return (
                   <li key={seat} className={isTurn && snap.thinking ? 'player thinking' : 'player'} data-turn={isTurn}>

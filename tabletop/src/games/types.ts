@@ -190,6 +190,15 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   resultText?(record: GameRecord): string | null;
   /** After a game, what a CPU seat turned out to be (poker: its playing style), from the opening position; null shows nothing. */
   revealSeat?(start: S, record: GameRecord, seat: Seat): string | null;
+  /**
+   * Games where some choices are secret until several seats have made them (mahjong calls on a
+   * discard): whether a move shows in the move list (`mySeats` are the people at this device; in
+   * a review every seat counts as theirs), and which seat the table shows as acting (null hides it).
+   */
+  moveVisible?(action: A, seat: Seat, mySeats: readonly Seat[]): boolean;
+  shownTurn?(state: S, mySeats: readonly Seat[]): Seat | null;
+  /** The seat an event belongs to in the log, when it is not the seat that moved (null: the table's). */
+  eventSeat?(event: E): Seat | null;
 }
 
 export type AnyGameUi = GameUi<unknown, unknown, unknown, unknown, GameEvent>;

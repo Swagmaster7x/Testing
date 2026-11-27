@@ -141,7 +141,8 @@ function shareOf(n: number, place: number, tied: number): number {
   for (let position = place; position < place + tied; position++) {
     total += (n - position) / (n - 1);
   }
-  return total / tied;
+  // Rounded, so a four-way tie is exactly a half (the sum of thirds is not, in floating point).
+  return Math.round((total / tied) * 1e9) / 1e9;
 }
 
 /**

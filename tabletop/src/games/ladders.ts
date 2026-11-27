@@ -21,6 +21,10 @@ import type { HoldemAction, HoldemConfig, HoldemEvent, HoldemState, HoldemView }
 import { holdem, SIX_MAX_CASH } from './holdem/rules';
 import type { GoAction, GoConfig, GoEvent, GoState, GoView } from './go/rules';
 import { go, makeConfig } from './go/rules';
+import { decide as mahjongDecide, mahjongBots } from './mahjong/bots';
+import type { MahjongAction, MahjongConfig, MahjongEvent, MahjongState, MahjongView } from './mahjong/rules';
+import { mahjong } from './mahjong/rules';
+import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
 import { LADDER_MOVE_LIMIT } from './shogi/presets';
@@ -202,6 +206,34 @@ function pokerLadder(): Ladder<HoldemState, HoldemAction, HoldemConfig, HoldemVi
   };
 }
 
+/** Mahjong: a side's score is whether its two seats together won more points than the other two. */
+export function mahjongSideScore(outcome: Outcome, seats: readonly Seat[]): number {
+  const net = outcome.results.filter((r) => seats.includes(r.seat)).reduce((sum, r) => sum + r.score, 0);
+  return net > 0 ? 1 : net < 0 ? 0 : 0.5;
+}
+
+/**
+ * Mahjong rungs are East-round games under the default Hong Kong rules: the level under test sits
+ * in seats 0 and 2 against the other level in 1 and 3, and every deal is played twice with the
+ * seats swapped, so the luck of the tiles cancels out.
+ */
+function mahjongLadder(): Ladder<MahjongState, MahjongAction, MahjongConfig, MahjongView, MahjongEvent> {
+  return {
+    spec: {
+      def: mahjong,
+      config: { style: 'hong-kong', options: { ...HK_DEFAULTS, length: 'east' } },
+      levels: mahjongBots.levels.map((l) => l.level),
+      bot: (level) => ({ name: `L${level}`, choose: (view, _seat, rng) => mahjongDecide(view, level, rng).action }),
+      margin: 0.6,
+      paired: true,
+      score: mahjongSideScore,
+    },
+    // Random play picks any of the things it may do: a discard, a call, a pass, a win.
+    random: { name: 'random', choose: (view, _seat, rng) => rng.pick(view.options) },
+    games: 200,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
@@ -211,5 +243,6 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     shogi: shogiLadder() as unknown as Ladder<never, never, never, never, never>,
     go: goLadder() as unknown as Ladder<never, never, never, never, never>,
     poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,
+    mahjong: mahjongLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }

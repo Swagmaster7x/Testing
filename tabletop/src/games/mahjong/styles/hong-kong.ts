@@ -7,7 +7,7 @@
 import type { Seat } from '../../../core/contract';
 import type { HandSet, WinShape } from '../core/arrange';
 import { allKinds, winShapes } from '../core/arrange';
-import type { HandScore, OptionSpec, ScoreLine, SettleInput, Style, StyleOptions, StyleRules, WinContext } from '../core/style';
+import type { HandScore, OptionSpec, ScoreLine, SettleInput, Style, StyleOptions, StyleRules, ValueHints, WinContext } from '../core/style';
 import type { Kind } from '../core/tiles';
 import { FLOWER_1, isDragon, isHonour, isSuited, isTerminal, isTerminalOrHonour, isWind, SEASON_1, suitOf, WIND_EAST } from '../core/tiles';
 
@@ -288,8 +288,39 @@ function settle(hand: SettleInput, o: StyleOptions): number[] {
   return deltas;
 }
 
+function hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[] }, o: StyleOptions): ValueHints {
+  const pung = new Array<number>(34).fill(0);
+  for (let k = 31; k <= 33; k++) pung[k] = 1;
+  pung[WIND_EAST + seat.seatWind] = (pung[WIND_EAST + seat.seatWind] ?? 0) + 1;
+  pung[WIND_EAST + seat.prevailingWind] = (pung[WIND_EAST + seat.prevailingWind] ?? 0) + 1;
+  let bonus = 0;
+  if (o.flowers === 'on') {
+    for (const first of [FLOWER_1, SEASON_1]) {
+      const held = [0, 1, 2, 3].filter((i) => seat.bonus.includes(first + i));
+      if (held.length === 4) bonus += num(o, 'flowerSet');
+      else if (held.includes(seat.seatWind)) bonus += 1;
+    }
+    if (seat.bonus.length === 0) bonus += num(o, 'noFlowers');
+  }
+  return {
+    minimum: num(o, 'minFaan'),
+    pung,
+    mixedSuit: 3,
+    pureSuit: num(o, 'fullFlush'),
+    allPungs: 3,
+    allChows: 1,
+    concealed: 1,
+    selfDrawn: 1,
+    bonus,
+    limit: num(o, 'limit'),
+    points: Array.from({ length: num(o, 'limit') + 1 }, (_, f) => basePoints(f, String(o.table))),
+    pay: o.discardPays === 'full-gun' ? { selfDrawn: 2, discarder: 4, others: 0 } : { selfDrawn: 2, discarder: 2, others: 1 },
+  };
+}
+
 export const hongKong: Style = {
   id: 'hong-kong',
+  hints,
   options: HK_OPTIONS,
   defaults: HK_DEFAULTS,
   presets: HK_PRESETS,

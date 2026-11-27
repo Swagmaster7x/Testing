@@ -54,6 +54,7 @@ export interface MahjongView {
   readonly kongs: number;
   readonly claimed: boolean;
   readonly calls: number;
+  readonly lastDiscard: TileId | null;
   /** What you may do now (empty when it is not your turn). */
   readonly options: readonly MahjongAction[];
   readonly over: boolean;
@@ -87,6 +88,7 @@ export function viewOf(s: MahjongState, seat: Seat): MahjongView {
     kongs: s.kongs,
     claimed: s.claimed,
     calls: s.calls,
+    lastDiscard: s.lastDiscard,
     options: mine ? engine.legal(s, seat) : [],
     over: s.over,
   };
@@ -145,6 +147,7 @@ export function sampleState(v: MahjongView, rng: Rng): MahjongState {
     claimed: v.claimed,
     claim,
     calls: v.calls,
+    lastDiscard: v.lastDiscard,
     over: v.over,
   };
 }
@@ -307,6 +310,7 @@ function stateFromJson(json: Json): MahjongState {
     claimed: json.claimed === true,
     claim: claimFrom(json.claim),
     calls: numberIn(json.calls ?? 0, 'the call count', 0),
+    lastDiscard: typeof json.lastDiscard === 'string' && isTileId(json.lastDiscard) ? json.lastDiscard : null,
     over: json.over === true,
   };
   checkConservation(state);
@@ -483,6 +487,7 @@ export function position(p: PositionSpec): MahjongState {
     claimed: false,
     claim: null,
     calls: p.calls ?? 1,
+    lastDiscard: null,
     over: false,
   };
   checkConservation(state);

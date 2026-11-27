@@ -24,7 +24,7 @@ export const CATALOG: readonly CatalogGame[] = [
   { id: 'chinese-checkers', group: 'boards', milestone: 7, playable: false, onShelf: true },
   { id: 'shogi', group: 'boards', milestone: 8, playable: true, onShelf: true },
   { id: 'dominoes', group: 'tiles', milestone: 4, playable: true, onShelf: true },
-  { id: 'mahjong', group: 'tiles', milestone: 9, playable: false, onShelf: true },
+  { id: 'mahjong', group: 'tiles', milestone: 9, playable: true, onShelf: true },
   { id: 'noughts', group: 'boards', milestone: 0, playable: true, onShelf: false },
 ];
 

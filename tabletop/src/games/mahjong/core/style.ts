@@ -132,8 +132,37 @@ export interface OptionSpec {
 
 export type StyleOptions = Readonly<Record<string, string | number>>;
 
+/**
+ * What a style's scoring rewards, roughly, so one bot family can steer toward value in every
+ * style: the bots read these numbers, never the patterns' names.
+ */
+export interface ValueHints {
+  /** The value a hand needs to win. */
+  readonly minimum: number;
+  /** The value of a pung or kong of each of the 34 kinds (dragons, your winds). */
+  readonly pung: readonly number[];
+  /** One suit with honours, and one suit alone. */
+  readonly mixedSuit: number;
+  readonly pureSuit: number;
+  readonly allPungs: number;
+  readonly allChows: number;
+  /** A concealed hand, on any win; and a self-drawn win. */
+  readonly concealed: number;
+  readonly selfDrawn: number;
+  /** Value from the bonus tiles the seat already holds (seat flowers, a full set, none at all). */
+  readonly bonus: number;
+  /** The most a hand can score. */
+  readonly limit: number;
+  /** Base points for each value from 0 to the limit. */
+  readonly points: readonly number[];
+  /** What each loser pays, in base points: on a self-draw, the discarder, and the others on a discard win. */
+  readonly pay: { readonly selfDrawn: number; readonly discarder: number; readonly others: number };
+}
+
 export interface Style {
   readonly id: string;
+  /** Rough values of a seat's prospects, for bots and the coach. */
+  hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[] }, options: StyleOptions): ValueHints;
   readonly options: readonly OptionSpec[];
   readonly defaults: StyleOptions;
   readonly presets: readonly { readonly id: string; readonly options: StyleOptions }[];
