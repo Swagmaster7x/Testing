@@ -58,6 +58,7 @@
     "fast-check": "4.11.0",
     "globals": "17.14.0",
     "pokersolver": "2.1.4",
+    "syanten": "1.6.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.74.0",
