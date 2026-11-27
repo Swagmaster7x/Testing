@@ -73,6 +73,7 @@ export const enPoker = {
   'poker.draw.overcards': 'two overcards',
 
   'poker.seat.you': 'You',
+  'poker.seat.n': 'Seat {n}',
   'poker.seat.label': '{name}, {stack} chips',
   'poker.your-card': 'Your card: {card}',
   'poker.button': 'Dealer button',

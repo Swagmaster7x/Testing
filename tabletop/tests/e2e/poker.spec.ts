@@ -67,6 +67,37 @@ test.describe('poker', () => {
     expect(Number(amount)).toBeGreaterThan(0);
   });
 
+  test('pass and play: two people heads-up, the table covered between them', async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto('/#/games/poker?seed=e2e-pnp');
+    await page.getByRole('button', { name: /^Play/ }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('radiogroup', { name: 'Rules at this table' }).getByRole('radio', { name: 'Heads-up', exact: true }).click();
+    await dialog.getByRole('radiogroup', { name: 'Who plays' }).getByRole('radio', { name: 'Pass and play', exact: true }).click();
+    await dialog.getByRole('textbox', { name: 'Name for Seat 1' }).fill('Ana');
+    await dialog.getByRole('textbox', { name: 'Name for Seat 2' }).fill('Ben');
+    await dialog.getByRole('button', { name: /^(Start|New game)$/ }).click();
+    await expect(page).toHaveURL(/#\/play\/g_/);
+    const covers = new Set<string>();
+    for (let acted = 0; acted < 4; ) {
+      const cover = page.locator('.pass-cover h1');
+      if (await cover.isVisible()) {
+        const title = (await cover.textContent()) ?? '';
+        covers.add(title);
+        // Under the cover no card face shows.
+        await expect(page.locator('.poker-table .table-card[aria-label^="Your card"]')).toHaveCount(0);
+        await page.getByRole('button', { name: `I am ${title.replace('Pass the device to ', '')}: show my hand` }).click();
+        continue;
+      }
+      await expect(page.locator('.bet-call')).toBeVisible({ timeout: 30_000 });
+      // The other person's plate carries their name.
+      await expect(page.locator('.poker-seat')).toContainText([/You|Ana|Ben/, /You|Ana|Ben/]);
+      await page.locator('.bet-call').click();
+      acted++;
+    }
+    expect([...covers].sort()).toEqual(['Pass the device to Ana', 'Pass the device to Ben']);
+  });
+
   test('a heads-up table seats two', async ({ page }) => {
     await start(page, 'e2e-hu', { level: '2', preset: 'Heads-up' });
     await expect(page.locator('.poker-seat')).toHaveCount(2);
