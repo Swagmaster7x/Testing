@@ -4,5 +4,6 @@
  * Add a game by importing its file here and spreading it into `enGames`.
  */
 import { enBrisca } from './brisca';
+import { enDominoes } from './dominoes';
 
-export const enGames = { ...enBrisca } as const;
+export const enGames = { ...enBrisca, ...enDominoes } as const;

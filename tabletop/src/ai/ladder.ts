@@ -46,7 +46,10 @@ export async function playGame<S, A, C, V, E extends GameEvent>(
   return outcome;
 }
 
-/** Two-seat match. The contenders swap seats every game. */
+/**
+ * A match between two contenders. They swap seats every game; at a table of four they sit as
+ * partners (seats 0 and 2 against 1 and 3).
+ */
 export async function runMatch<S, A, C, V, E extends GameEvent>(
   def: GameDef<S, A, C, V, E>,
   config: C,
@@ -62,7 +65,8 @@ export async function runMatch<S, A, C, V, E extends GameEvent>(
   let losses = 0;
   for (let i = 0; i < games; i++) {
     const aSeat: Seat = i % 2;
-    const bySeat = aSeat === 0 ? [a, b] : [b, a];
+    const seats = def.seats(def.setup(config, createRng(`${seedPrefix}:seats`)));
+    const bySeat = seats.map((seat) => (seat % 2 === aSeat ? a : b));
     // Paired games deal the same cards twice with the seats swapped, so luck cancels out.
     const outcome = await playGame(def, config, bySeat, `${seedPrefix}:${paired ? Math.floor(i / 2) : i}`);
     const points = outcomePoints(outcome, aSeat);

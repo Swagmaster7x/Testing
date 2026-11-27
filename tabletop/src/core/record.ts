@@ -103,9 +103,9 @@ export function withOutcome(record: GameRecord, outcome: Outcome, now: number): 
   return { ...record, status: 'finished', outcome, updatedAt: now };
 }
 
-export function withResignation(record: GameRecord, seat: Seat, seats: readonly Seat[], now: number): GameRecord {
+export function withResignation(record: GameRecord, seat: Seat, seats: readonly Seat[], now: number, teams?: readonly (readonly Seat[])[]): GameRecord {
   if (record.status !== 'active') throw new Error('Cannot resign a finished game');
-  return { ...record, status: 'finished', ending: { kind: 'resigned', seat }, outcome: resignationOutcome(seats, seat), updatedAt: now };
+  return { ...record, status: 'finished', ending: { kind: 'resigned', seat }, outcome: resignationOutcome(seats, seat, teams), updatedAt: now };
 }
 
 /** A loss on time. `outcome` lets a game turn it into a draw when the other side cannot win. */

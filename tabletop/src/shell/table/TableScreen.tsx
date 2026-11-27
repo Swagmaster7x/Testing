@@ -31,6 +31,7 @@ import { TableController } from './controller';
 import { CoachSection, useHelps } from './coach';
 import { startGame } from './start';
 import { Counters, MoveList, RailSection, TableShell } from './TableShell';
+import { playerName } from './names';
 
 type Session = { queue: EventQueue<GameEvent>; controller: TableController<unknown, unknown, unknown, unknown, GameEvent> };
 
@@ -79,10 +80,10 @@ function LogLines({ log, ui, record }: { log: readonly LogEntry<GameEvent>[]; ui
   return (
     <ul className="log" ref={list}>
       {log.map((entry, i) => {
-        const text = ui.describeEvent(entry.event, humanSeats(record));
+        const text = ui.describeEvent(entry.event, humanSeats(record), record.players.length);
         if (!text) return null;
         const first = i === 0 || log[i - 1]?.ply !== entry.ply;
-        const who = entry.seat === null ? null : record.players[entry.seat]?.kind === 'bot' ? t('common.cpu') : t('common.you');
+        const who = entry.seat === null ? null : playerName(ui, record, entry.seat);
         return (
           <li key={entry.id}>
             {first && who ? (
@@ -221,8 +222,8 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const SeatMark = ui.SeatMark;
   const SeatExtra = ui.SeatExtra;
   const Surface = ui.Surface;
-  const moves = snap.history.map((h) => ({ ply: h.ply, seat: h.seat, text: ui.def.codec.action.toText(h.action) }));
-  const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record)) : ui.sideName(s)));
+  const moves = snap.history.map((h) => ({ ply: h.ply, seat: h.seat, text: ui.moveText ? ui.moveText(h.action) : ui.def.codec.action.toText(h.action) }));
+  const seatNames = ui.def.seats(state).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record), record.players.length) : ui.sideName(s)));
   const score = results.status === 'done' ? results.value : null;
   const flipped = (ui.flipForSeat?.(mySeat) ?? false) !== flipOverride;
   const clock = controller.clock();
@@ -323,7 +324,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
                       <SeatMark seat={seat} />
                     </span>
                     <span className="player-text">
-                      <span className="player-name">{player?.kind === 'bot' ? t('common.cpu') : t('common.you')}</span>
+                      <span className="player-name">{playerName(ui, record, seat)}</span>
                       <span className="player-detail">{player?.kind === 'bot' ? t('common.level', { n: player.level ?? 1 }) : ui.sideName(seat)}</span>
                       {SeatExtra ? <SeatExtra state={state} start={start} seat={seat} /> : null}
                     </span>

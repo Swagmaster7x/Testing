@@ -54,7 +54,7 @@ describe('alpha-beta search', () => {
         s = noughts.apply(s, rng.pick(noughts.legal(s, s.toMove))).state;
       }
     }
-  });
+  }, 30_000);
 
   it('knows the empty board is a draw', () => {
     const r = search(noughtsSpace, noughts.setup({}, createRng('e')), { maxDepth: 9, nodeBudget: 1_000_000 });

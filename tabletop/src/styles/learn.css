@@ -96,6 +96,17 @@
   grid-template-areas: 'panel surface';
 }
 
+/* Card and tile tables on a phone held sideways: a narrower panel, so the table has room. */
+@media (max-height: 560px) and (orientation: landscape) and (min-width: 600px) {
+  .study-body[data-wide='true'] {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 350px);
+  }
+
+  .study-body[data-wide='true'][data-side='left'] {
+    grid-template-columns: minmax(260px, 350px) minmax(0, 1fr);
+  }
+}
+
 .study-panel {
   grid-area: panel;
   min-height: 0;

@@ -18,6 +18,8 @@ export interface ContractOptions<S> {
   /** Game-specific invariants, such as piece conservation. Throw to fail. */
   readonly invariant?: (state: S) => void;
   readonly maxPlies?: number;
+  /** The part of a view to search for leaks, leaving out history already shown to everyone (hands shown at the end of a deal). */
+  readonly leakScope?: (view: unknown) => unknown;
 }
 
 export interface RandomGame<S, A> {
@@ -87,8 +89,9 @@ function checkState<S, A, C, V, E extends GameEvent>(def: GameDef<S, A, C, V, E>
     // Views cross to the worker by structured clone and must survive JSON.
     const serialised = JSON.stringify(view);
     if (serialised === undefined) throw new Error(`${def.id}: a view must be plain data`);
+    const scope = options.leakScope ? JSON.stringify(options.leakScope(JSON.parse(serialised))) : serialised;
     for (const secret of options.hidden?.(state, seat) ?? []) {
-      if (serialised.includes(secret)) throw new Error(`${def.id}: seat ${seat}'s view leaks ${secret}`);
+      if (scope.includes(secret)) throw new Error(`${def.id}: seat ${seat}'s view leaks ${secret}`);
     }
   }
 }

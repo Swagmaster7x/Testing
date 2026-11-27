@@ -1,6 +1,6 @@
 # Kibitz progress
 
-Last updated 2026-11-27, at the end of milestone 3. The plan is `PLAN.md`; this file says what
+Last updated 2026-11-27, at the end of milestone 4. The plan is `PLAN.md`; this file says what
 has been built, what was decided along the way, and what is still open.
 
 **Swag's instruction after M0 (2026-11-27): "I trust you, build it all."** So the build carries
@@ -13,7 +13,7 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [x] **M1. Chess: play** (2026-11-27)
 - [x] **M2. The learning loop, on Chess** (2026-11-27). The feedback stop is skipped, as Swag asked; feedback is still welcome.
 - [x] **M3. Cards and Brisca (2 players)** (2026-11-27)
-- [ ] M4. Dominoes
+- [x] **M4. Dominoes** (2026-11-27)
 - [ ] M5. Texas Hold'em
 - [ ] M6. Go
 - [ ] M7. Chinese Checkers
@@ -27,7 +27,134 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [ ] M15. Stronger engines
 - [ ] M16. Table tools, polish, release
 
-Next up: **M4, dominoes.** Go (M6) and Shogi (M8) are being built at the same time in separate checkouts, to be merged when they pass their gates.
+Next up: **M5, Texas Hold'em.** Go (M6) and Shogi (M8) are being built at the same time in separate checkouts, to be merged when they pass their gates.
+
+## M4. Dominoes
+
+- [x] **Rules first**: `docs/rules/dominoes.md`, from pagat.com (partnership, Draw and Block, with
+      the dominaxo.com table of national differences, *Doscientos* and *Quinientos*) and the Puerto
+      Rico rules page of Caribbean Trading. Three games: **partnership** for four (fixed partners,
+      seven tiles each, no boneyard), **Draw** and **Block** for two. Fifteen options: the target
+      (one hand, 100, 150, 200, 500), what the winners score (every tile left, or the losers'
+      only), how a blocked hand scores (pips, or the difference), who wins it (the side with fewer
+      pips, or the fewer of the blocker and the next player), five rules for a tie, the first and
+      later leads, the early-hand bonuses (100, 75, 50, 25), capicú and chuchazo (0, 50, 100) and
+      when a chuchazo counts, the pass bonus (20, then 10), redealing five doubles, and how far
+      the boneyard is drawn. Eight presets: **Puerto Rico 500** (the default), **Puerto Rico 200**,
+      International, Mexico, Colombia, Venezuela, Draw and Block; the "ask before you sit" card is
+      on the reference page.
+- [x] **Rules engine** (`src/games/dominoes/rules.ts`): hidden information (a view holds your
+      tiles, the line, every play and pass and the counts; never another hand, the boneyard, a
+      tile someone else drew, or the seed), `sample()` that keeps every pass and draw true (in the
+      Draw game it traces which tiles were drawn after which pass), matches over many hands, a
+      blocked hand detected the moment nobody can play, "play on from here".
+- [x] **The core learned about sides**: an outcome can name its teams, so a partnership win is a
+      whole win for both partners in ratings, results and ladders, and resigning loses for your
+      side. Ladders seat the two levels as partners at a table of four.
+- [x] **TileKit** (`src/kits/tiles/`): original domino art (pips coloured by number, as on many
+      sets, always readable without the colour), a tile layer where every tile keeps its identity
+      and slides and turns between hand and line, and a line layout that **bends to fit the
+      table**: the right arm turns down at the edge and runs back, the left arm turns up, doubles
+      lie across, and at every corner the matching halves touch. The open ends are marked with
+      their number; a tile that fits both ends waits for you to tap the end.
+- [x] **Table**: you at the bottom, your partner facing you, the player after you on your right
+      (play is counter-clockwise), the boneyard on the left in the Draw game; a Pass (knock) or
+      Draw button when that is all you can do; "Paso" bubbles; every hand shown at the end with its
+      pips and the result. On a phone held sideways, card and tile tables now take the whole width
+      beside one column (players above the coach).
+- [x] **CPU, six levels**: lays its heaviest tile (1), keeps its options and gets doubles out (2),
+      reads the passes and plays the partner conventions (3), then determinized Monte Carlo over
+      deals that agree with every pass (16, 120 and 400 deals) with exact search for the last 6, 9
+      or 12 tiles (4 to 6). A fast bitmask model of a hand drives the search; a test plays more
+      than a hundred hands both ways and the two always score the same.
+- [x] **Partner conventions** (taught, and followed by the CPU partner at level 3 and up): lead
+      your strongest number with its double; your partner's lead is their number, so play to it
+      and do not cover it; leave ends the next player has passed on; block only when your side
+      surely holds fewer pips. Levels 4 to 6 keep the conventional play whenever their search
+      rates it within a point of the best, so a CPU partner stays readable. Tests check each one.
+- [x] **Coach**, each a switch that marks the game as training: the **tiles-out triangle** (all
+      28, played ones dimmed, yours ringed) with how many of each number are still unseen; **what
+      each player cannot have**, from their passes, also marked by their seat; **pip totals**
+      (yours, the line's, the ones you cannot see); tiles up (open-hand rounds); a three-step hint.
+- [x] **Learn**: 21 lessons, every one linted: stage 0 (2), the rules (8: tiles, suits and pips;
+      play or pass; a tile that fits both ends; who leads; going out and the blocked hand; scoring;
+      the Quinientos bonuses; a free-play finish), partner play and counting (7: lead your
+      strength, count a suit, what a pass tells you, play to your partner, doubles get hanged,
+      when to block, and a solver-proved endgame), Table-ready (4: the shuffle and the draw,
+      passing and table talk, asking before you sit, keeping score). Lesson positions are built by
+      playing scripted moves through the rules from fixed deals.
+- [x] **Practice**: 150 endgames proved by exact search with every hand face up
+      (`npm run generate:dominoes`), and three generated drills: what a pass tells you, the pips
+      you cannot see, and how many of a number are still out.
+- [x] **Review**: every decision you made, rated "with what you knew" by the points it cost your
+      side in that hand, key moments with reasons (covered your partner's number, missed a pass,
+      a bad block or a missed one, led away from your strength, a double left to hang), "play on
+      from here", "add to my practice".
+
+### Gate: the definition of done for Dominoes (PLAN.md 2.10)
+
+| Item | Result |
+| --- | --- |
+| 1. `docs/rules/dominoes.md` | Rules, fifteen options, eight presets, golden cases, sources |
+| 2. Golden, property and replay tests under every preset | 32 golden cases (blocked hands and every tie rule among them); random games under all eight presets and five odd mixes keep the contract, conserve 28 tiles and 168 pips, add the scores up, never leak a hidden tile, the boneyard or the seed, keep every "cannot have" true, sample consistent states, and replay |
+| 3. At least four CPU levels pass the ladder | Yes: see below |
+| 4. Learn stages 0 to 2 and Table-ready | 2 + 8 + 7 + 4 lessons, all passing the linter |
+| 5. Three kinds of practice | Endgames (150, proved) and three generated drills |
+| 6. Coach helps and a counter a player keeps in their head | The tiles-out triangle and numbers left, what each player cannot have, pip totals |
+| 7. Review with key moments, reasons, play on | Yes |
+| 8. Save, resume, replay, reference card | Yes (the shared table) |
+| 9. End to end at phone landscape, screenshots looked at | `tests/e2e/dominoes.spec.ts` at all three sizes: a whole hand to the end and its review, a rules lesson, a proved endgame, a drill; fourteen M4 screenshots looked at |
+| Pips always sum to 168 | Checked at every step of every random game |
+| Partner follows the taught conventions | Unit tests: the conventional lead, not covering the partner's number, leaving ends a player passed on |
+
+**Ladder** (`npm run ladder -- dominoes 200`: partnership matches to 200, Puerto Rico rules, the
+two levels sitting as partners, every deal played twice with the sides swapped). First run: L1
+beats random 0.700, L2 beats L1 0.785, L3 beats L2 0.715, L4 beats L3 0.685; L5 (80 deals) and L6
+(200 deals) fell just short, 0.570 and 0.585. Tuned (fewer deals at L4, more and deeper exact play
+at L5 and L6) and run again for the top rungs: L4 beats L3 0.605, **L5 beats L4 0.680**; L6
+against L5 was still running at the time of writing and its result follows in the next update.
+Tuning on the way: level 3's partner weights were chosen over thousands of paired matches (the
+opponents'-number weights hurt and are off; "control", ends in numbers you hold, helped most:
+0.580 to 0.697 against level 2), and a control term in the search's playouts lifted level 4 over
+level 3 from 0.625 to 0.675 at the same deal count. Decision times stay small: at level 6 the
+median is under 10 ms and the slowest seen 1.4 s (a two-player Block hand, on a machine running
+four other jobs).
+
+Fixed after looking at the screenshots and play-throughs: the table was squeezed between two side
+columns on a phone (now one column); your own tiles were too small; the Pass button sat on the
+line; seat labels overlapped the end of the line; at the end of a hand your old tiles looked
+playable against the next hand's moves; the move list paired moves in twos, which breaks with four
+players (now one move a line, with arrows for the end played: "← 3-5", "5-6 →"); the log printed
+raw reason codes. Two older bugs surfaced too: free-play lessons waited for a chess-style answer
+from the CPU, so a Brisca free-play opponent never moved (fixed for every game), and the lesson
+runner assumed one reply per move (now any number of players answer in turn).
+
+### Decisions in M4
+
+1. **Partnership is the default game**, to 500 with every Puerto Rican bonus, as the plan says;
+   a single hand is a target option ("One hand") for quick games, lessons and tests.
+2. **A blocked hand ends the moment nobody can play**, rather than after everyone knocks in turn;
+   the result is the same and play is quicker. The blocker is the player of the last tile.
+3. **Capicú** counts whenever the winning tile, not a double, could go on either end (so also on
+   two equal ends), as the sources word it; a double never makes capicú.
+4. **Five doubles are always dealt again** with that option on (the rule says a player *may*
+   ask; nobody wants to keep them).
+5. **The CPU partner plays by the conventions the lessons teach**; the search levels may leave them
+   only for a clearly better play (more than a point on average).
+6. **Endgame problems show every hand**, as printed domino problems do, so the answer can be
+   proved; the "cannot have" skill has its own drill with the hands hidden.
+7. **Tile names are allowed in lesson text** ("the 3-5"), like chess squares; counts and points
+   are still always computed.
+
+### Not done in M4, or open
+
+- All Fives and Cuban double-nine are milestone 14; pass-and-play arrives with milestone 7.
+- Scores divided by ten, each side scoring its own tiles in a blocked hand, passing the lead to a
+  partner, *Chiva* and Milo are not options (see the rules document); each is small to add.
+- Jose Carillo's Puerto Rico page (an archive copy pagat links to) was not read; the Puerto Rican
+  rules follow pagat's summary of it and Caribbean Trading. Corrections from a real table are one
+  option change each.
+
 
 ## M3. Cards and Brisca (2 players)
 
@@ -81,7 +208,7 @@ Next up: **M4, dominoes.** Go (M6) and Shogi (M8) are being built at the same ti
 | --- | --- |
 | 1. `docs/rules/brisca.md` | Rules, nine options, four presets, golden cases, sources |
 | 2. Golden, property and replay tests under every preset | 15 golden cases; random games under all seven test configs keep the contract, conserve the 40 cards, total 120 points a hand, never leak the other hand, the stock or the seed, and replay |
-| 3. At least four CPU levels pass the ladder | See below |
+| 3. At least four CPU levels pass the ladder | Yes, L1 to L4 (see below) |
 | 4. Learn stages 0 to 2 and Table-ready | 2 + 8 + 6 + 4 lessons, all passing the linter |
 | 5. Three kinds of practice | Endgames (160, solver-proved) and four generated drills |
 | 6. Coach helps and a counter a player keeps in their head | Points so far, trumps and briscas not yet seen, cards seen |
@@ -92,10 +219,12 @@ Next up: **M4, dominoes.** Go (M6) and Shogi (M8) are being built at the same ti
 | Endgame solver agrees with brute force | Yes, 220 positions |
 
 **Ladder** (`npm run ladder -- brisca 60`: matches to three hands, each deal played twice with the
-seats swapped): L1 beats random 0.900, L2 beats L1 0.817, L3 beats L2 0.617. L4 to L6 (the
-determinized levels) were still running at the time of writing; their results follow below when
-they finish. During tuning, sampled search with 16 deals was no better than the level-3 heuristic
-(0.483) while 40 deals beat it clearly (0.670), which set the sample counts.
+seats swapped): L1 beats random 0.900, L2 beats L1 0.817, L3 beats L2 0.617, **L4 beats L3 0.633**:
+four levels pass, which is the gate. L5 against L4 scored 0.533 (short of 0.6), and the L6 rung
+did not finish inside the two-hour limit on a machine shared with three other jobs. During tuning,
+sampled search with 16 deals was no better than the level-3 heuristic (0.483) while 40 deals beat
+it clearly (0.670), which set the sample counts. Separating levels 5 and 6 is open (milestone 15,
+stronger engines, is the natural home).
 
 Fixed after looking at the screenshots and play-throughs: in card endgames the other side can move
 twice running (it wins a trick and leads the next), which the problem runner did not allow; a

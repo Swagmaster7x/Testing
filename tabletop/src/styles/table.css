@@ -287,6 +287,10 @@
   overflow-y: auto;
 }
 
+.moves.single {
+  grid-template-columns: 2.4em 1fr;
+}
+
 .moves .n {
   color: var(--text-3);
 }
@@ -468,5 +472,77 @@
 @media (max-width: 760px) and (orientation: landscape) {
   .status-meta.score {
     display: none;
+  }
+}
+
+/*
+ * Card and tile tables on a phone held sideways: the table takes the whole width beside one
+ * column, with the players (compact) above the coach rail.
+ */
+@media (max-height: 560px) and (orientation: landscape) and (min-width: 600px) {
+  .table-body[data-wide='true'] {
+    grid-template-columns: minmax(0, 1fr) var(--rail-w);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'surface side'
+      'surface rail';
+  }
+
+  .table-body[data-wide='true'][data-rail='left'] {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    grid-template-areas:
+      'side surface'
+      'rail surface';
+  }
+
+  .table-body[data-wide='true'][data-rail-open='false'] {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 190px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: 'surface side';
+  }
+
+  .table-body[data-wide='true'][data-rail-open='false'][data-rail='left'] {
+    grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+    grid-template-areas: 'side surface';
+  }
+
+  .table-body[data-wide='true'] .table-side {
+    gap: var(--sp-2);
+    padding: var(--sp-2);
+    border-right: 0;
+    border-left: 1px solid rgb(0 0 0 / 0.25);
+    border-bottom: 1px solid rgb(0 0 0 / 0.3);
+    max-height: 52vh;
+  }
+
+  .table-body[data-wide='true'][data-rail-open='true'] .players {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .table-body[data-wide='true'][data-rail-open='true'] .player {
+    flex: 1 1 45%;
+    min-height: 30px;
+    padding: 3px 6px;
+    gap: 4px;
+  }
+
+  .table-body[data-wide='true'][data-rail-open='true'] .player-mark {
+    width: 20px;
+    height: 20px;
+  }
+
+  .table-body[data-wide='true'][data-rail-open='true'] .player-mark svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .table-body[data-wide='true'][data-rail-open='true'] .player-detail {
+    display: none;
+  }
+
+  .table-body[data-wide='true'] .table-surface {
+    padding: var(--sp-1);
   }
 }

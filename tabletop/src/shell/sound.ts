@@ -1,7 +1,7 @@
 /**
  * A handful of short sounds, synthesised on the spot (no audio files), with a switch in Settings.
  */
-export type SoundName = 'place' | 'capture' | 'line' | 'end' | 'card' | 'shuffle';
+export type SoundName = 'place' | 'capture' | 'line' | 'end' | 'card' | 'shuffle' | 'tile';
 
 let context: AudioContext | null = null;
 
@@ -54,6 +54,12 @@ export function playSound(name: SoundName): void {
       break;
     case 'shuffle':
       for (let i = 0; i < 5; i++) tone(ctx, now + i * 0.035, 900 + i * 60, 0.03, 0.03, 'square');
+      break;
+    case 'tile':
+      // A tile set down on a table: a dull click with a little ring.
+      tone(ctx, now, 1150, 0.02, 0.06, 'square');
+      tone(ctx, now, 320, 0.07, 0.16, 'triangle');
+      tone(ctx, now + 0.012, 2100, 0.04, 0.02, 'sine');
       break;
   }
 }

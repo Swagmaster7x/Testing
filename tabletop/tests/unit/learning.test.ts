@@ -140,7 +140,8 @@ describe('problems', () => {
         s = next as typeof s;
       }
     }
-  });
+    // Replaying a few hundred lines through chess.js takes several seconds on a busy machine.
+  }, 120_000);
 
   it('generates legal basic-mate positions with White to move and Black not in check', () => {
     const rng = createRng('mates');

@@ -34,6 +34,11 @@ export interface Outcome {
   readonly results: readonly SeatResult[];
   /** A short code such as "line" or "board-full"; the text catalogue turns it into words. */
   readonly reason: string;
+  /**
+   * Seats that play as one side (partners), when the game has sides. Each side counts as one
+   * player when the result is turned into a share: a partnership win is a win for both partners.
+   */
+  readonly teams?: readonly (readonly Seat[])[];
 }
 
 /** JSON plus human notation for one kind of value. */
@@ -73,6 +78,8 @@ export interface GameDef<State, Action, Config, View, Event extends GameEvent = 
   view(state: State, seat: Seat): View;
   /** A full state consistent with a view (for hidden-information search). */
   sample?(view: View, seat: Seat, rng: Rng): State;
+  /** Partners who share a result, for games played in sides; absent when every seat plays alone. */
+  teams?(state: State): Seat[][];
   readonly codec: {
     readonly state: Codec<State>;
     readonly action: Codec<Action>;
@@ -108,20 +115,50 @@ export function findLegal<S, A, C, V, E extends GameEvent>(
  * so a two-player draw is 0.5 each.
  */
 export function outcomePoints(outcome: Outcome, seat: Seat): number {
-  const n = outcome.results.length;
-  if (n < 2) return 1;
   const mine = outcome.results.find((r) => r.seat === seat);
   if (!mine) throw new RangeError(`Seat ${seat} is not in this outcome`);
+  if (outcome.teams && outcome.teams.length > 1) {
+    // Each side is one entrant, placed by its best seat.
+    const placeOf = (team: readonly Seat[]) => Math.min(...team.map((s) => outcome.results.find((r) => r.seat === s)?.place ?? Infinity));
+    const sides = outcome.teams.map((team) => ({ team, place: placeOf(team) }));
+    const own = sides.find((side) => side.team.includes(seat));
+    if (own) {
+      const ranked = sides.map((side) => side.place).sort((a, b) => a - b);
+      const position = ranked.indexOf(own.place) + 1;
+      return shareOf(ranked.length, position, ranked.filter((p) => p === own.place).length);
+    }
+  }
+  const n = outcome.results.length;
+  if (n < 2) return 1;
   const tied = outcome.results.filter((r) => r.place === mine.place).length;
+  return shareOf(n, mine.place, tied);
+}
+
+/** The share of `n` entrants for one at `place` (1 is first) tied with `tied` others in all. */
+function shareOf(n: number, place: number, tied: number): number {
+  if (n < 2) return 1;
   let total = 0;
-  for (let position = mine.place; position < mine.place + tied; position++) {
+  for (let position = place; position < place + tied; position++) {
     total += (n - position) / (n - 1);
   }
   return total / tied;
 }
 
-/** The outcome when one seat resigns: everyone else shares first place. */
-export function resignationOutcome(seats: readonly Seat[], resigned: Seat): Outcome {
+/**
+ * The outcome when one seat resigns: everyone else shares first place. With sides (partners), the
+ * resigning seat's whole side loses.
+ */
+export function resignationOutcome(seats: readonly Seat[], resigned: Seat, teams?: readonly (readonly Seat[])[]): Outcome {
+  const own = teams?.find((team) => team.includes(resigned));
+  if (teams && own) {
+    const losers = seats.filter((s) => own.includes(s));
+    const winners = seats.filter((s) => !own.includes(s));
+    return {
+      reason: 'resigned',
+      teams,
+      results: [...winners.map((seat) => ({ seat, place: 1, score: 1 })), ...losers.map((seat) => ({ seat, place: winners.length + 1, score: 0 }))],
+    };
+  }
   const others = seats.filter((s) => s !== resigned);
   return {
     reason: 'resigned',

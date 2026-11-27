@@ -169,3 +169,235 @@ button.table-card:focus-visible {
   padding-right: 4px;
   color: var(--text-2);
 }
+
+/* Dominoes (milestone 4): tiles slide and turn between places, as cards do. */
+.domino-table {
+  --domino-face: #f7f1e3;
+  --domino-edge: #b8a98b;
+}
+
+.table-tile {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  background: none;
+  border-radius: 13% / 26%;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  transition-property: transform, box-shadow, opacity;
+  transition-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+button.table-tile {
+  cursor: pointer;
+}
+
+button.table-tile:focus-visible {
+  outline: 2px solid var(--brass-1);
+  outline-offset: 1px;
+}
+
+.table-tile[data-selected='true'] {
+  box-shadow:
+    0 0 0 1.5px var(--brass-1),
+    0 5px 10px rgb(0 0 0 / 0.45);
+}
+
+.table-tile[data-tone='hint'] {
+  box-shadow:
+    0 0 0 1.5px var(--brass-1),
+    0 0 10px var(--brass-1);
+}
+
+.table-tile[data-tone='last'] {
+  box-shadow:
+    0 0 0 1px var(--brass-2, #c9a25a),
+    0 1px 3px rgb(0 0 0 / 0.4);
+}
+
+.table-tile[data-dim='true'] {
+  opacity: 0.55;
+}
+
+.domino-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[data-motion='reduced'] .table-tile {
+  transition-duration: 0ms !important;
+}
+
+.line-end {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 1.5px dashed rgb(240 226 190 / 0.45);
+  border-radius: 4px;
+  background: rgb(240 226 190 / 0.05);
+  color: rgb(240 226 190 / 0.55);
+  font-size: var(--fs-2xs);
+  pointer-events: none;
+  z-index: 2;
+}
+
+button.line-end[data-usable='true'] {
+  pointer-events: auto;
+  cursor: pointer;
+  border: 2px solid var(--brass-1);
+  background: rgb(201 162 90 / 0.25);
+  color: var(--text-1);
+  z-index: 260;
+  animation: line-end-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes line-end-pulse {
+  50% {
+    background: rgb(201 162 90 / 0.45);
+  }
+}
+
+[data-motion='reduced'] button.line-end[data-usable='true'] {
+  animation: none;
+}
+
+.seat-tag {
+  position: absolute;
+  z-index: 280;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgb(14 12 9 / 0.5);
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.seat-tag[data-side='true'] {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.seat-tag[data-where='right'] {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.seat-tag[data-turn='true'] {
+  background: var(--brass-1);
+  color: var(--ivory-ink, #1d1a14);
+  font-weight: 600;
+}
+
+.seat-tag .seat-lacks {
+  color: var(--text-1);
+  opacity: 0.85;
+}
+
+.seat-tag[data-turn='true'] .seat-lacks {
+  color: inherit;
+}
+
+.seat-tag .seat-pass {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ivory-1, #f7f1e3);
+  color: var(--ivory-ink, #1d1a14);
+  font-weight: 700;
+}
+
+.yard-tag {
+  position: absolute;
+  z-index: 280;
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  white-space: nowrap;
+}
+
+.knock-btn {
+  position: absolute;
+  z-index: 400;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.domino-hand-over {
+  font-size: var(--fs-lg);
+  max-width: 90%;
+  text-align: center;
+}
+
+.domino-mark {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* The tiles-out triangle in the coach rail. */
+.tiles-out {
+  display: grid;
+  gap: 2px;
+}
+
+.tiles-out-row {
+  display: flex;
+  gap: 2px;
+}
+
+.tiles-out-cell {
+  display: block;
+  width: 24px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.tiles-out-cell[data-state='played'] {
+  opacity: 0.22;
+}
+
+.tiles-out-cell[data-state='mine'] {
+  box-shadow: 0 0 0 1.5px var(--brass-1);
+}
+
+.number-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.number-counts b {
+  color: var(--text-1);
+}
+
+.number-counts span[data-zero='true'] {
+  opacity: 0.45;
+}
+
+.lacks-list {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.coach-last {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}

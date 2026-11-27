@@ -1,7 +1,7 @@
 {
   "name": "tabletop",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Kibitz: learn and practise card, board and tile games. Offline web app packaged as an Android APK.",
   "type": "module",
   "engines": {
@@ -22,7 +22,8 @@
     "icons": "node scripts/icons.mjs",
     "apk": "node scripts/apk.mjs",
     "import:puzzles": "tsx scripts/import-lichess-puzzles.ts",
-    "generate:brisca": "tsx scripts/generate-brisca-endgames.ts"
+    "generate:brisca": "tsx scripts/generate-brisca-endgames.ts",
+    "generate:dominoes": "tsx scripts/generate-dominoes-endgames.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.6.3",

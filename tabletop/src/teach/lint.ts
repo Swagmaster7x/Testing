@@ -14,7 +14,8 @@ export interface LessonVerifier<S> {
   /** Problems with a position that parsing does not catch (chess: the side not to move is in check). */
   positionProblems(state: S): string[];
   /** Checks a "best" claim: the accepted moves are clearly better than every other move. */
-  checkBest(state: S, accept: readonly string[]): Promise<string[]>;
+  /** `openHand`: the step shows every hand, so the claim may use them (card and tile games). */
+  checkBest(state: S, accept: readonly string[], context?: { readonly openHand: boolean }): Promise<string[]>;
   /** A move for free play: the student's best try for the goal, or the opponent's best defence. */
   freePlayMove(state: S, role: 'student' | 'opponent', step: FreePlayStep): Promise<string>;
 }
@@ -125,7 +126,7 @@ export async function lintLesson<S>(lesson: Lesson, game: LessonGame<S>, verifie
         }
         break;
       case 'best':
-        for (const p of await verifier.checkBest(state, q.accept)) at(where, p);
+        for (const p of await verifier.checkBest(state, q.accept, { openHand: q.openHand === true })) at(where, p);
         break;
     }
   };
@@ -262,15 +263,21 @@ function wrongAnswer<S>(game: LessonGame<S>, s: RunnerState, q: QuizStep | Lesso
 
 async function freePlay<S>(game: LessonGame<S>, verifier: LessonVerifier<S>, start: RunnerState, step: FreePlayStep): Promise<RunnerState | string> {
   let s = start;
+  const student = game.toMove(game.position(step.position));
   for (let i = 0; i < step.maxMoves * 2 + 2; i++) {
     const mine = await verifier.freePlayMove(game.position(s.position), 'student', step);
     s = submitMove(game, s, mine);
     if (s.phase === 'correct') return s;
     if (s.phase === 'failed') return `the goal "${step.goal}" was not reached in ${step.maxMoves} moves against the engine's defence`;
-    const theirs = await verifier.freePlayMove(game.position(s.position), 'opponent', step);
-    s = opponentMove(game, s, theirs);
-    if (s.phase === 'correct') return s;
-    if (s.phase === 'failed') return `the goal "${step.goal}" was not reached within ${step.maxMoves} moves against the engine's defence`;
+    // Every other player answers before the student moves again (one in two-player games).
+    for (let guard = 0; guard < 16; guard++) {
+      const theirs = await verifier.freePlayMove(game.position(s.position), 'opponent', step);
+      s = opponentMove(game, s, theirs);
+      if (s.phase === 'correct') return s;
+      if (s.phase === 'failed') return `the goal "${step.goal}" was not reached within ${step.maxMoves} moves against the engine's defence`;
+      const next = game.toMove(game.position(s.position));
+      if (next === null || next === student) break;
+    }
   }
   return 'free play did not finish';
 }

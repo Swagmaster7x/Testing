@@ -29,6 +29,7 @@ import { resultFor } from '../results';
 import { useApp } from '../state';
 import { useAsync } from '../useAsync';
 import { Counters, MoveList, RailSection, TableShell } from './TableShell';
+import { playerName } from './names';
 
 const MARK: Record<string, string> = { inaccuracy: '?!', mistake: '?', blunder: '??' };
 
@@ -115,7 +116,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
   const SeatExtra = ui.SeatExtra;
   const verdicts = analysis?.moves ?? [];
   const verdictAt = new Map(verdicts.map((v) => [v.ply, v]));
-  const moves = steps.map((s, i) => ({ ply: s.ply, seat: s.seat, text: `${ui.def.codec.action.toText(s.action)}${MARK[verdictAt.get(i)?.verdict ?? ''] ?? ''}` }));
+  const moves = steps.map((s, i) => ({ ply: s.ply, seat: s.seat, text: `${ui.moveText ? ui.moveText(s.action) : ui.def.codec.action.toText(s.action)}${MARK[verdictAt.get(i)?.verdict ?? ''] ?? ''}` }));
   const here = verdictAt.get(current);
   const flagged = here && (here.verdict === 'inaccuracy' || here.verdict === 'mistake' || here.verdict === 'blunder') ? here : null;
   const overlay: SurfaceOverlay = flagged
@@ -140,7 +141,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
     const added = await addCard(appDb(), profileId, ui.def.id, { kind: 'position', position: ui.def.codec.state.toText(before), accept: m.accept, played: m.played, recordId: record.id, ply: m.ply }, Date.now());
     notify(added ? t('practice.added') : t('practice.added.already'));
   };
-  const seatNames = ui.def.seats(start).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record)) : ui.sideName(s)));
+  const seatNames = ui.def.seats(start).map((s) => (ui.movePrefix ? ui.movePrefix(s, humanSeats(record), record.players.length) : ui.sideName(s)));
   const positionText = current === 0 ? t('review.start') : t('review.of', { n: current, total });
 
   return (
@@ -224,7 +225,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
                     <SeatMark seat={seat} />
                   </span>
                   <span className="player-text">
-                    <span className="player-name">{player?.kind === 'bot' ? t('common.cpu') : t('common.you')}</span>
+                    <span className="player-name">{playerName(ui, record, seat)}</span>
                     <span className="player-detail">{player?.kind === 'bot' ? t('common.level', { n: player.level ?? 1 }) : ui.sideName(seat)}</span>
                     {SeatExtra ? <SeatExtra state={state} start={start} seat={seat} /> : null}
                   </span>
@@ -323,6 +324,7 @@ function sideResult(ui: AnyGameUi, record: StoredRecord): string {
 
 /** "You" and "CPU" against the computer; the side's name when people played both sides. */
 function whoPlayed(ui: AnyGameUi, record: StoredRecord, seat: number): string {
+  if (ui.playerName) return playerName(ui, record, seat);
   const hasBot = record.players.some((p) => p.kind === 'bot');
   if (!hasBot) return ui.sideName(seat);
   return record.players[seat]?.kind === 'bot' ? t('common.cpu') : t('common.you');
@@ -347,7 +349,11 @@ function KeyMoments({ analysis, progress, error, ui, record, supported }: { anal
   return (
     <div className="moments">
       <p className="accuracy num">
-        {seats.map((seat) => t('review.accuracy.seat', { who: whoPlayed(ui, record, seat), n: analysis.accuracy[String(seat)] ?? 0 })).join(' · ')}
+        {/* Card and tile games rate only your own decisions; chess rates both sides. */}
+        {seats
+          .filter((seat) => String(seat) in analysis.accuracy)
+          .map((seat) => t('review.accuracy.seat', { who: whoPlayed(ui, record, seat), n: analysis.accuracy[String(seat)] ?? 0 }))
+          .join(' · ')}
       </p>
       {moments.length === 0 ? <p className="empty-note">{t('review.moments.none')}</p> : null}
       <ul className="moment-list">

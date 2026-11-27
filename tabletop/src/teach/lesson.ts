@@ -117,11 +117,13 @@ export function fillText(text: string, computed: Readonly<Record<string, number 
 
 /**
  * Digits in lesson text are only allowed inside notation (squares like e4, moves like Nf3 or
- * O-O-O) and {placeholders}. Returns the offending fragments, if any.
+ * O-O-O, domino tiles like 3-5) and {placeholders}. Returns the offending fragments, if any.
  */
 export function typedNumbers(text: string): string[] {
   const stripped = text
     .replace(/\{[\w:.-]+\}/g, ' ')
+    // Domino tiles (3-5, 6-6) are names, like squares.
+    .replace(/\b[0-6]-[0-6]\b/g, ' ')
     .replace(/\bO-O(-O)?\b/g, ' ')
     .replace(/\b[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?/g, ' ')
     .replace(/\b[a-h][1-8]\b/g, ' ');

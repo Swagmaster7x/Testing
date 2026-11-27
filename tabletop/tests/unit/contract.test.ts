@@ -29,6 +29,25 @@ describe('outcome points', () => {
     expect(outcomePoints(o, 3)).toBe(0);
   });
 
+  it('counts partners as one side: a partnership win is a whole win for both', () => {
+    const teams = [
+      [0, 2],
+      [1, 3],
+    ];
+    const win: Outcome = { reason: 'match', teams, results: [0, 1, 2, 3].map((seat) => ({ seat, place: seat % 2 === 0 ? 1 : 2, score: 0 })) };
+    expect([0, 1, 2, 3].map((seat) => outcomePoints(win, seat))).toEqual([1, 0, 1, 0]);
+    const tie: Outcome = { reason: 'tie', teams, results: [0, 1, 2, 3].map((seat) => ({ seat, place: 1, score: 0 })) };
+    expect([0, 1, 2, 3].map((seat) => outcomePoints(tie, seat))).toEqual([0.5, 0.5, 0.5, 0.5]);
+  });
+
+  it('a resignation loses for the resigning seat\'s whole side', () => {
+    const o = resignationOutcome([0, 1, 2, 3], 2, [
+      [0, 2],
+      [1, 3],
+    ]);
+    expect([0, 1, 2, 3].map((seat) => outcomePoints(o, seat))).toEqual([0, 1, 0, 1]);
+  });
+
   it('refuses a seat that is not in the outcome', () => {
     expect(() => outcomePoints({ reason: 'x', results: [{ seat: 0, place: 1, score: 1 }, { seat: 1, place: 2, score: 0 }] }, 5)).toThrow();
   });

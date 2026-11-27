@@ -189,7 +189,9 @@ export function opponentMove<S>(game: LessonGame<S>, s: RunnerState, move: strin
   const step = currentStep(s);
   if (step?.kind !== 'freePlay' || s.phase === 'correct') return base;
   if (game.goalMet(step.goal, game.position(step.position), after, move)) return { ...base, phase: 'correct', feedback: fillText(step.success, computed) };
-  if (game.over(after) || s.freeMoves >= step.maxMoves) return { ...base, phase: 'failed', feedback: 'out-of-moves', mistakes: s.mistakes + 1 };
+  // With several other players, out of moves only counts once it is the student's turn again.
+  const studentAgain = game.toMove(after) === game.toMove(game.position(step.position));
+  if (game.over(after) || (s.freeMoves >= step.maxMoves && studentAgain)) return { ...base, phase: 'failed', feedback: 'out-of-moves', mistakes: s.mistakes + 1 };
   return base;
 }
 

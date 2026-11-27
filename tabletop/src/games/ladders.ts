@@ -10,6 +10,9 @@ import { briscaBots } from './brisca/bots';
 import type { BriscaAction, BriscaConfig, BriscaEvent, BriscaState, BriscaView } from './brisca/rules';
 import { brisca, PUERTO_RICO } from './brisca/rules';
 import { chessBots } from './chess/bots';
+import { dominoesBots } from './dominoes/bots';
+import type { DominoesAction, DominoesConfig, DominoesEvent, DominoesState, DominoesView } from './dominoes/rules';
+import { dominoes, PRESETS as DOMINOES_PRESETS } from './dominoes/rules';
 import type { ChessAction, ChessConfig, ChessEvent, ChessState, ChessView } from './chess/rules';
 import { chess } from './chess/rules';
 import { noughtsBots } from './noughts/bots';
@@ -93,10 +96,34 @@ function briscaLadder(): Ladder<BriscaState, BriscaAction, BriscaConfig, BriscaV
   };
 }
 
+/**
+ * Dominoes rungs are partnership matches to 200 (Puerto Rico 200): the level under test sits in
+ * seats 0 and 2 against the other level in 1 and 3, and every deal is played twice with the sides
+ * swapped, so the luck of the deal cancels out.
+ */
+function dominoesLadder(): Ladder<DominoesState, DominoesAction, DominoesConfig, DominoesView, DominoesEvent> {
+  return {
+    spec: {
+      def: dominoes,
+      config: DOMINOES_PRESETS['puerto-rico-200'] as DominoesConfig,
+      levels: dominoesBots.levels.map((l) => l.level),
+      bot: (level) => ({
+        name: `L${level}`,
+        choose: async (view, seat, rng) => (await dominoesBots.choose({ view, seat, level, rng })).action,
+      }),
+      margin: 0.6,
+      paired: true,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(dominoes, view, seat, rng) },
+    games: 100,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
     chess: chessLadder(deps) as unknown as Ladder<never, never, never, never, never>,
     brisca: briscaLadder() as unknown as Ladder<never, never, never, never, never>,
+    dominoes: dominoesLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }

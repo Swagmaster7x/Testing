@@ -194,7 +194,7 @@ export class TableController<S, A, C, V, E extends GameEvent> {
     this.commitClock();
     this.deps.bots.cancelAll();
     this.botRequest++;
-    const next = withResignation(this.snap.record, seat, this.deps.def.seats(state), this.deps.now());
+    const next = withResignation(this.snap.record, seat, this.deps.def.seats(state), this.deps.now(), this.deps.def.teams?.(state));
     this.update(this.derive(next, this.snap.history, state, this.snap.lastAction, this.snap.log));
     this.persist(next);
   }
@@ -212,7 +212,7 @@ export class TableController<S, A, C, V, E extends GameEvent> {
     if (!remaining || (remaining[turn] ?? 1) > 0) return;
     this.botRequest++;
     this.deps.bots.cancelAll();
-    const outcome = this.deps.timeoutOutcome?.(state, turn) ?? { ...resignationOutcome(this.deps.def.seats(state), turn), reason: 'timeout' };
+    const outcome = this.deps.timeoutOutcome?.(state, turn) ?? { ...resignationOutcome(this.deps.def.seats(state), turn, this.deps.def.teams?.(state)), reason: 'timeout' };
     const next = withTimeout(withClock(record, remaining.map((ms) => Math.max(0, ms))), turn, outcome, this.deps.now());
     this.turnStartedAt = null;
     this.update(this.derive(next, this.snap.history, state, this.snap.lastAction, this.snap.log));

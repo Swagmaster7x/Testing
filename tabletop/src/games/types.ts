@@ -138,11 +138,15 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly SeatExtra?: ComponentType<{ state: S; start: S; seat: Seat }>;
   readonly sides: readonly SideChoice[];
   sideName(seat: Seat): string;
-  /** What the move list puts before each move; the side name when absent (chess uses none). */
-  readonly movePrefix?: (seat: Seat, mySeats?: readonly Seat[]) => string;
+  /** What the move list puts before each move; the side name when absent (chess uses none). `seats` is how many sit at the table. */
+  readonly movePrefix?: (seat: Seat, mySeats?: readonly Seat[], seats?: number) => string;
+  /** How a move reads in the move list; its notation when absent. */
+  readonly moveText?: (action: A) => string;
+  /** A player's name in the player list and the log ("Partner", "Right"); "You" or "CPU" when absent. */
+  readonly playerName?: (seat: Seat, mySeats: readonly Seat[], seats: number) => string;
   eventDuration(event: E): number;
-  /** A line for the log, or null to leave the event out. `mySeats` are the people at this device. */
-  describeEvent(event: E, mySeats?: readonly Seat[]): string | null;
+  /** A line for the log, or null to leave the event out. `mySeats` are the people at this device; `seats` how many sit at the table. */
+  describeEvent(event: E, mySeats?: readonly Seat[], seats?: number): string | null;
   counters(state: S, mySeats: readonly Seat[]): readonly CounterRow[];
   sound(event: E): SoundName | null;
   reference(): readonly ReferenceSection[];

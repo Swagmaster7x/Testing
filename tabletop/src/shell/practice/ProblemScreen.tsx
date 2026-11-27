@@ -181,6 +181,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
 
   return (
     <StudyShell
+      wide={ui.layout === 'table'}
       label={title}
       title={title}
       meta={meta}

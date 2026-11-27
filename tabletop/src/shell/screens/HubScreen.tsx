@@ -142,10 +142,12 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
               ) : null}
             </p>
           </div>
-          <div className="setup-row">
-            <span className="eyebrow">{t('play.side')}</span>
-            <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />
-          </div>
+          {ui.sides.length > 1 ? (
+            <div className="setup-row">
+              <span className="eyebrow">{t('play.side')}</span>
+              <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />
+            </div>
+          ) : null}
           {options ? (
             <div className="setup-row wide">
               <span className="eyebrow">{t('rules.title')}</span>

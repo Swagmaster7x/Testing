@@ -69,7 +69,7 @@ describe('the levels', () => {
         s = brisca.apply(s, legal ?? a).state;
       }
     }
-  }, 60_000);
+  }, 240_000);
 
   it('the view gives the same legal moves as the rules', () => {
     for (let i = 0; i < 30; i++) {

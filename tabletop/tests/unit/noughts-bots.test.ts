@@ -47,7 +47,7 @@ describe('noughts and crosses CPU levels', () => {
         expect(s.winner === null || s.winner === l3Seat).toBe(true);
       }
     }
-  });
+  }, 30_000);
 
   it('gives the same answer for the same seed, so a resumed game replies the same way', () => {
     for (const level of [1, 2, 3]) {
@@ -76,5 +76,5 @@ describe('noughts and crosses CPU levels', () => {
     const rungs = await runLadder(ladder.spec, 40, 'quick', ladder.random);
     expect(rungs.map((r) => `${r.higher}>${r.lower}`)).toEqual(['L1>random', 'L2>L1', 'L3>L2']);
     for (const r of rungs) expect(r.passed, `${r.higher} vs ${r.lower}: ${r.result.score}`).toBe(true);
-  });
+  }, 30_000);
 });

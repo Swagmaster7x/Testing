@@ -52,7 +52,7 @@ export function TableShell(props: TableShellProps) {
         </button>
         <MenuButton label={t('table.menu')}>{menu}</MenuButton>
       </header>
-      <div className="table-body" data-rail={railSide} data-rail-open={railOpen}>
+      <div className="table-body" data-rail={railSide} data-rail-open={railOpen} data-wide={wide}>
         <section className="table-side">{side}</section>
         <section className="table-surface" data-wide={wide}>
           <div className={wide ? 'table-frame' : 'board-frame'}>{surface}</div>
@@ -73,9 +73,33 @@ export interface MoveItem {
   readonly text: string;
 }
 
-/** Moves in numbered rows, one column per seat (two-seat games). */
+/** Moves in numbered rows, one column per seat (two-seat games), or one move a line for more seats. */
 export function MoveList({ moves, seatNames, current, linkFor }: { moves: readonly MoveItem[]; seatNames: readonly string[]; current?: number; linkFor?: (ply: number) => string }) {
   if (moves.length === 0) return <p className="empty-note">{t('rail.moves.none')}</p>;
+  if (seatNames.length > 2) {
+    // More than two players, or several moves by one player in a row: one move a line.
+    return (
+      <div className="moves single num" role="list">
+        {moves.map((m) => {
+          const text = `${seatNames[m.seat] ?? ''} ${m.text}`.trim();
+          return (
+            <div key={m.ply} role="listitem" style={{ display: 'contents' }}>
+              <span className="n">{m.ply}.</span>
+              {linkFor ? (
+                <a className="mv" href={href(linkFor(m.ply))} data-current={current === m.ply} aria-current={current === m.ply ? 'step' : undefined}>
+                  {text}
+                </a>
+              ) : (
+                <span className="mv" data-current={current === m.ply}>
+                  {text}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
   const perRow = Math.max(1, seatNames.length);
   const rows: MoveItem[][] = [];
   moves.forEach((m, i) => {

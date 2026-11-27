@@ -1,6 +1,7 @@
 /**
  * The layout for lessons, problems and drills: a status bar, the board taking the full height,
- * and a study panel beside it. The panel follows the rail side, for left-handed play.
+ * and a study panel beside it. The panel follows the rail side, for left-handed play. Card and
+ * tile tables (`wide`) take the whole width beside the panel instead of a square.
  */
 import type { ReactNode } from 'react';
 import { t } from '../../text';
@@ -8,7 +9,7 @@ import { Icon } from '../components/Icon';
 import { href } from '../router';
 import { useApp } from '../state';
 
-export function StudyShell({ title, meta, backTo, board, panel, label }: { title: string; meta?: string | null; backTo: string; board: ReactNode; panel: ReactNode; label: string }) {
+export function StudyShell({ title, meta, backTo, board, panel, label, wide = false }: { title: string; meta?: string | null; backTo: string; board: ReactNode; panel: ReactNode; label: string; wide?: boolean }) {
   const side = useApp((s) => s.settings?.railSide ?? 'right');
   return (
     <div className="table study" role="main" aria-label={label}>
@@ -21,9 +22,9 @@ export function StudyShell({ title, meta, backTo, board, panel, label }: { title
           {meta ? <span className="status-meta num">{meta}</span> : null}
         </div>
       </header>
-      <div className="study-body" data-side={side}>
-        <section className="table-surface">
-          <div className="board-frame">{board}</div>
+      <div className="study-body" data-side={side} data-wide={wide}>
+        <section className="table-surface" data-wide={wide}>
+          <div className={wide ? 'table-frame' : 'board-frame'}>{board}</div>
         </section>
         <section className="study-panel">{panel}</section>
       </div>

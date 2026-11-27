@@ -21,6 +21,13 @@ const READY: Readonly<Record<string, readonly ReadyItem[]>> = {
     { id: 'etiquette', lessons: ['brisca.table.manners', 'brisca.table.ask'] },
     { id: 'beat', beatLevel: 3 },
   ],
+  dominoes: [
+    { id: 'setup', lessons: ['dominoes.table.wash'] },
+    { id: 'terms', lessons: ['dominoes.1.pass', 'dominoes.1.out', 'dominoes.1.bonus'] },
+    { id: 'score', drill: { id: 'drill-pips', times: 5 } },
+    { id: 'etiquette', lessons: ['dominoes.table.talk', 'dominoes.table.ask'] },
+    { id: 'beat', beatLevel: 3 },
+  ],
   chess: [
     { id: 'setup', lessons: ['chess.table.setup'] },
     { id: 'terms', lessons: ['chess.table.notation', 'chess.table.touch'] },

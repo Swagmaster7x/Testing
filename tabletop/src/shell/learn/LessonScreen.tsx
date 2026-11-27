@@ -113,8 +113,9 @@ export function LessonPlayer({ lesson, pack, ui, drill }: { lesson: Lesson; pack
       .advise({ gameId: ui.def.id, view: ui.def.view(state, turn), seat: turn, query: { type: 'best', nodes: FREE_PLAY_NODES }, seed: `${lesson.id}/free` })
       .then((answer: Json) => {
         if (!live) return;
-        const uci = isJsonObject(answer) && typeof answer.uci === 'string' ? answer.uci : null;
-        if (uci) setS((x) => (x.position === s.position ? opponentMove(game, x, uci) : x));
+        // Chess answers with a UCI move; card and tile games with their own notation.
+        const move = !isJsonObject(answer) ? null : typeof answer.uci === 'string' ? answer.uci : typeof answer.action === 'string' ? answer.action : null;
+        if (move) setS((x) => (x.position === s.position ? opponentMove(game, x, move) : x));
       })
       .catch((err: unknown) => live && notify(t('table.error', { message: (err as Error).message })));
     return () => {
@@ -175,6 +176,7 @@ export function LessonPlayer({ lesson, pack, ui, drill }: { lesson: Lesson; pack
 
   return (
     <StudyShell
+      wide={ui.layout === 'table'}
       label={stepTitle(lesson)}
       title={stepTitle(lesson)}
       meta={meta}
