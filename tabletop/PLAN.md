@@ -4,25 +4,26 @@
 
 **Working name:** Kibitz (a kibitzer is the person watching over your shoulder and offering advice). It is one string, so rename it whenever you like. Everything for this app lives in `tabletop/`, next to Yoked and separate from it.
 
-This is the build plan. Part 1 says what the app is. Part 2 is for the builder (the Claude Code session doing the work): architecture, quality rules and sixteen milestones, each with a gate. The prompts to start and continue the build are at the end.
+This is the build plan. Part 1 says what the app is. Part 2 is for the builder (the Claude Code session doing the work): architecture, quality rules and seventeen milestones, each with a gate. The prompts to start and continue the build are at the end.
 
 ## The short version
 
 - **What it is.** One app that teaches you Chess, Shogi, Go, Chinese Checkers, Mahjong, Dominoes, Brisca and Poker, then their subtypes and more card games. You pick a game and choose Learn, Practice, Play or Review.
 - **What it is for.** Getting good enough to sit down at a real table. So it also teaches the things apps normally do for you: scoring by hand, counting what has been played, dealing and setup, the calls and the etiquette.
 - **How it teaches.** Lessons run on the real game, not on pictures. The CPU plays at levels you can beat today. After each game the app shows your biggest mistakes, and those mistakes come back later as your own practice problems.
-- **How it is built.** A web app made for landscape that installs like an app, works offline, and is also packaged as an Android APK you sideload the same way as Yoked. The same code runs on a phone, a tablet, a laptop and an iPhone.
-- **Build order.** Foundation, then Chess as the pilot for the whole teaching loop, then a stop for your feedback, then Brisca, Dominoes, Hold'em, Go, Chinese Checkers, Shogi and Mahjong. Variants and extra card games follow. The eight launch games are milestones 0 to 10; it is a large build.
+- **Every table's rules.** You do not know yet which house rules or which Mahjong style your table will use, so the app carries all the common ones. Each game has named rule presets, a card of questions to ask before you sit down, and practice under whichever preset you choose.
+- **How it is built.** A web app made for landscape and packaged as an Android APK that you sideload the same way as Yoked. It works offline. The same code also runs on a tablet or a laptop.
+- **Build order.** Foundation, then Chess as the pilot for the whole teaching loop, then a stop for your feedback, then Brisca, Dominoes, Hold'em, Go, Chinese Checkers, Shogi and Mahjong. Mahjong launches with Hong Kong style; Riichi is the very next milestone and four more styles follow. Variants and extra card games come after. The eight launch games are milestones 0 to 10; it is a large build.
 
 ## Decisions made for you (flip any of them)
 
 | # | Decision | Why | If you want the other way |
 | --- | --- | --- | --- |
-| 1 | A web app (TypeScript) with an Android APK wrapper, not a Kotlin app like Yoked | One codebase for every screen you own, including an iPhone with no Mac. The builder can open and play it in a real browser while building, which it cannot do with an Android app (there is no emulator in the build environment). Strong open game engines already ship for the web. | Say "native Android". The game logic design below carries over; the engines and the play-testing do not. |
+| 1 | A web app (TypeScript) delivered as an Android APK, not a Kotlin app like Yoked. Your device is Android, so the APK is the main way you install it. | The builder can open and play it in a real browser while building, which it cannot do with an Android app (there is no emulator in the build environment). Strong open game engines already ship for the web. It also runs on a tablet or laptop at no extra cost. | Say "native Android". The game logic design below carries over; the engines and the play-testing do not. |
 | 2 | Landscape is the design target; portrait still works | You asked for landscape. Mahjong hands, card tables and a board with a coach panel all fit landscape best. | Nothing to do. |
 | 3 | Chess is built first even though you listed Poker and Brisca first | It has the best free engine and a free puzzle library, so it proves Learn, Practice, Play and Review fastest. Every later game copies that template. | Reorder milestones 3 to 10 freely; they do not depend on each other. |
-| 4 | Mahjong means four-player Riichi (Japanese) first, Hong Kong style second. It is not the tile-matching solitaire. | Riichi has the best-defined rules and the richest training material. The tile engine is shared, so a second style is cheap. | Tell the builder which style your group plays and it leads with that. |
-| 5 | Brisca and Dominoes default to Puerto Rican table rules | You wrote "Briscas", the Puerto Rican name. House rules vary by table, so every disputed rule is a switch. | Fill in the house-rules sheet (see Questions for Swag). |
+| 4 | Mahjong covers every major four-player style: Hong Kong first, Riichi (Japanese) next, then Chinese Official, Taiwanese, Sichuan Bloody and American-format. It is not the tile-matching solitaire. | You said to do all. One shared tile engine takes a rules file per style. Hong Kong has the simplest scoring, so it is the easiest way in, and building one simple and one complex style back to back keeps the engine general. | Tell the builder which style to lead with; the order of styles is free. |
+| 5 | Brisca and Dominoes ship with all the common house rules as named presets. The Puerto Rican presets are the default. | You wrote "Briscas", the Puerto Rican name, and you do not know your table's house rules yet. Every disputed rule is a switch, and the app teaches what to ask before you sit down. | Pick a different default preset in Settings once you know your table. |
 | 6 | Poker uses play chips only | It is a trainer. No purchases, no real-money wording. | Not offered. |
 | 7 | Offline, no accounts, no ads, no analytics, no streaks or "you missed a day" messages | Same ground rules as Yoked. Progress is shown as skills and ratings, never as guilt. | Nothing to do. |
 | 8 | English first, with each game's own terms (Spanish for Brisca and Dominoes, Japanese for Shogi, Go and Mahjong). Spanish interface later. | The table terms are what you need in person. | Ask for the Spanish interface earlier; text is kept in one catalogue from day one. |
@@ -43,23 +44,24 @@ This is the build plan. Part 1 says what the app is. Part 2 is for the builder (
 8. **Each game's own teaching ladder.** Capture-Go and 9×9 before 19×19. Mini-shogi and handicap games before even Shogi. Open-hand ("cards up") rounds for Brisca, Poker, Dominoes and Mahjong while you learn to read a table.
 9. **Learner pieces.** Shogi pieces with movement marks or international symbols as well as kanji, Mahjong tiles with small numerals and letters, a four-colour deck option.
 10. **Useful at a real table.** Pass-and-play on one device, and scorepads for live games (Dominoes to 200 or 500, Brisca, Mahjong point sticks, a poker blind timer) in a later milestone.
-11. **Focus games.** You pick up to three games you are studying now. The Today screen builds a 10 to 20 minute session from those: due reviews, a few problems, one lesson or one game. Other games stay one tap away.
+11. **Ready for any table's rules.** Each game with disputed rules has named presets (for example "Puerto Rico 500" for Dominoes or "Hong Kong, three-faan minimum" for Mahjong) and an "ask before you sit" card listing the questions to settle at a new table. The Reference page explains each variant, and you can practise under any preset.
+12. **Focus games.** You pick up to three games you are studying now. The Today screen builds a 10 to 20 minute session from those: due reviews, a few problems, one lesson or one game. Other games stay one tap away.
 
 ## 1.2 The games
 
 | Game | At launch | Added later | Practice (problems and drills) | CPU |
 | --- | --- | --- | --- | --- |
 | Chess | Standard | Chess960, opening trainer | Rated tactics by theme, basic mates, endgames | Stockfish, 8 levels |
-| Brisca | 2 players, Spanish 40-card deck | 4 players in pairs with señas, Tute | Card values, who wins the trick, count the pile, count trumps, solved endgames | Card-counting bots, 6 levels |
-| Dominoes | Draw, Block, Partnership to 200 or 500 (double-six) | All Fives | Pip counting, "what can't they have", block decisions, solved endgames | Counting bots and a CPU partner |
+| Brisca | 2 players, Spanish 40-card deck, all house-rule presets | 4 players in pairs with señas, Tute | Card values, who wins the trick, count the pile, count trumps, solved endgames | Card-counting bots, 6 levels |
+| Dominoes | Draw, Block, Partnership to 200 or 500 (double-six), all bonus presets | All Fives, Cuban double-nine | Pip counting, "what can't they have", block decisions, solved endgames | Counting bots and a CPU partner |
 | Poker | No-Limit Texas Hold'em: heads-up, 6-max, sit-and-go | Omaha, Five-Card Draw, Seven-Card Stud | Hand ranking, outs, pot odds, preflop ranges, bet-or-fold spots | Style bots |
 | Go | 9×9, 13×13, 19×19, handicaps, Capture-Go | Stronger engine, joseki basics | Capture, ladders and nets, life and death, count the board | Own engine, strongest on 9×9 |
 | Chinese Checkers | 2, 3, 4 or 6 players | Long-jump variant | Longest hop chain, race endgames | Search bots |
 | Shogi | Standard, handicaps, 5×5 mini | Stronger engine, castle trainer | Mate problems in 1, 3 and 5, drops, castles | Own engine with a handicap ladder |
-| Mahjong | Riichi, 4 players | Hong Kong style | Waits, "what would you discard", yaku, scoring, safe tiles | 3 CPU seats with styles |
+| Mahjong | Hong Kong style, 4 players | Riichi (the next milestone), then Chinese Official, Taiwanese, Sichuan Bloody, American-format | Waits, "what would you discard", scoring patterns for each style, safe tiles | 3 CPU seats with styles |
 | Classic card pack | (later) | Blackjack, Hearts, Spades, Gin Rummy | Basic-strategy drill, trick and count drills | Generic card bot |
 
-Backlog, not planned in detail: Xiangqi, Checkers, Backgammon, Cribbage, Euchre, Conquián, Truco, Mexican Train.
+Backlog, not planned in detail: Xiangqi, Checkers, Backgammon, Cribbage, Euchre, Conquián, Truco, Mexican Train, three-player Riichi, and further Mahjong styles (Singaporean, Filipino, Korean, Zung Jung).
 
 ## 1.3 The four doors
 
@@ -69,7 +71,7 @@ Every game hub has the same four doors plus a reference card.
 - **Practice.** Problems and drills with a difficulty that follows you, plus the review queue of cards that are due.
 - **Play.** Against the CPU at a chosen level or the suggested one, with the coach helps you have switched on. Also pass-and-play, and open-hand rounds where the game has hidden cards or tiles. Games save automatically and resume.
 - **Review.** The finished game with its key moments: what you did, what was better, a one-sentence reason, "play on from here" against the CPU, and "add to my practice".
-- **Reference.** One searchable page per game: rules summary, rankings and values, glossary with pronunciation, the options your table uses.
+- **Reference.** One searchable page per game: rules summary, rankings and values, glossary with pronunciation, every rule preset with what changes between them, and the "ask before you sit" card.
 
 ## 1.4 Screens
 
@@ -117,7 +119,7 @@ A quiet club room: dark warm neutrals, green felt, walnut boards, ivory cards an
 ## 2.1 Platform and stack
 
 - **App:** TypeScript, React, Vite. Installable offline web app (service worker precache). Hash routing so every lesson, problem and game position has a link, which the tests also use.
-- **APK:** the same build wrapped with Capacitor for Android, landscape, signed with a fixed debug key kept in the repo so a new build installs over the old one and keeps its data (the Yoked approach). This is proven in milestone 0; the fallback is the installable web app alone.
+- **APK:** the same build wrapped with Capacitor for Android, landscape, signed with a fixed debug key kept in the repo so a new build installs over the old one and keeps its data (the Yoked approach). Swag's device is Android, so the APK is the main deliverable of every milestone. It is proven in milestone 0; if Capacitor cannot be made to work, try a Trusted Web Activity, and only then fall back to the installable web app.
 - **Rendering:** SVG for boards, DOM elements with CSS transforms for cards and tiles. No canvas game engine. Reasons: sharp at any size, simple hit-testing, and the end-to-end tests can click a square or a card by name.
 - **State:** a small store (Zustand) for the interface; game state lives in the pure game modules.
 - **Storage:** IndexedDB through Dexie, with schema versions and migrations from the first commit.
@@ -135,7 +137,7 @@ Third-party code, and what each piece is for:
 | `@sabaki/go-board`, `@sabaki/sgf`, `@sabaki/deadstones` | MIT | Go rules, SGF files, dead-stone suggestion at scoring |
 | `ts-fsrs`, `dexie`, `zustand` | MIT, Apache-2.0, MIT | Review schedule, storage, interface state |
 | `pokersolver`, `riichi`, `syanten` | MIT | Test oracles only: our poker evaluator and Mahjong scorer are checked against them. Not shipped. |
-| `fairy-stockfish-nnue.wasm`, `onnxruntime-web`, `katago-web` | GPL-3, MIT, MIT | Optional strong engines in milestone 14 |
+| `fairy-stockfish-nnue.wasm`, `onnxruntime-web`, `katago-web` | GPL-3, MIT, MIT | Optional strong engines in milestone 15 |
 
 **Licence note.** Stockfish is GPL-3 and runs as a separate worker file behind the `Engine` interface. For a personal app that is fine. If this app is ever published, either publish its source under a GPL-compatible licence or switch Chess to a built-in engine. Keep other GPL libraries (chessground, chessops, shogiground, shogiops) out of the app so that choice stays open. Every dependency gets a line in `THIRD-PARTY.md`.
 
@@ -191,7 +193,8 @@ Rules that follow from it:
 - **`apply` is pure and returns events** (card dealt, piece captured, tile discarded). The interface animates events from a queue and never blocks the rules on an animation. Animations can be skipped with a tap and honour reduced motion.
 - **Bots receive `view`, never `state`.** They run in a worker and the worker is only ever sent a view. A test serialises every view during random games and fails if a hidden card or tile appears in it.
 - **Multi-seat decisions** (Mahjong calls on a discard) are modelled as a short claim phase in priority order, so the contract stays turn-based.
-- **Options are config.** "Rules at this table" is a screen generated from each game's option list.
+- **Options are config, and presets are named sets of options.** "Rules at this table" is a screen generated from each game's option list, with the presets at the top. Swag does not know which house rules a future table will use, so every common variant found while writing `docs/rules/<game>.md` becomes an option, each preset is tested, and bots and review respect the options in force.
+- **Mahjong is one engine with a rules file per style.** A style declares its tile set (136, 144 with flowers, or 108), hand size (13 or 16), the calls allowed, the winning shapes, the minimum to win, its scoring patterns, who pays, the round structure, and any special mechanics (riichi and furiten, dora, flower replacement, voiding a suit, playing on after a win, jokers and the Charleston). Nothing style-specific lives in the shared core.
 - Bots may use fast internal representations for search, as long as they agree with `rules.ts` under test.
 
 ## 2.4 CPU players
@@ -221,10 +224,10 @@ Per game:
 | Brisca | Counting heuristics (levels 1 to 3), determinized search (4 to 6), exact play once the stock is empty. |
 | Dominoes | Heuristics plus inference from passes, determinized Monte Carlo, exact endgames. The CPU partner uses the same conventions the lessons teach. |
 | Hold'em | Style bots built from preflop range charts, equity against an assumed range, pot odds and sizing rules, with mixed frequencies. Styles: rock, calling station, maniac, tight-aggressive, loose-aggressive, solid. Learning to spot and beat each style is the core live skill, so this beats one "perfect" bot for teaching. |
-| Go | Own tree search with pattern-guided playouts. Good on 9×9, acceptable on 13×13, weak on 19×19 until milestone 14. Handicap stones extend the ladder. |
+| Go | Own tree search with pattern-guided playouts. Good on 9×9, acceptable on 13×13, weak on 19×19 until milestone 15. Handicap stones extend the ladder. |
 | Chinese Checkers | Greedy progress, then lookahead search. |
 | Shogi | Own alpha-beta engine (material, king safety, piece-square tables, drops near the king in quiescence). The traditional handicap ladder gives many honest levels. |
-| Mahjong | Tile efficiency (shanten and tile acceptance), then yaku awareness, then defence (fold using safe-tile ranking), then push-or-fold by hand value. Styles: attacker, balanced, defender. |
+| Mahjong | Tile efficiency (tiles from ready and tile acceptance), then awareness of the style's scoring patterns and minimum, then defence (fold using safe-tile ranking), then push-or-fold by hand value. The bot reads the active rules file, so one bot family plays every style. Styles of play: attacker, balanced, defender. |
 
 ## 2.5 Teaching content is data, and it is tested
 
@@ -248,7 +251,7 @@ Writing rules: all prose is original. Short lessons, one idea each, two to four 
 | Chess | The Lichess puzzle database, published as CC0 (confirm the licence on its download page). Import about 6,000 across themes and ratings 600 to 2200. Fallback: generate from engine self-play. | Each line is replayed through the rules; fallback problems need a unique best move by an engine margin. |
 | Shogi | Generated mate problems from engine self-play positions. | Mate search proves the mate and that the first move is unique. |
 | Go | Generated capture, ladder, net and small life-and-death problems. Classical collections only if a file with a clear public-domain status is supplied. | Solver on the enclosed region. |
-| Mahjong | Generated hands. | Shanten and acceptance calculator for discards and waits; scorer for yaku and points; safe-tile ranking for defence. |
+| Mahjong | Generated hands, per style. | Tiles-from-ready and acceptance calculator for discards and waits; each style's scorer for patterns and points; safe-tile ranking for defence. |
 | Poker | Generated spots. | Exact enumeration or large-sample equity; pot-odds arithmetic. |
 | Brisca | Generated positions; last three tricks. | Exact minimax. |
 | Dominoes | Generated positions with pass history. | Exact endgame search; set arithmetic for "can't have". |
@@ -281,15 +284,15 @@ Commands: `npm run check` (types, lint, unit, property, lesson lint), `npm run e
 Tests every game must have:
 
 - **Golden cases** for each rule in `docs/rules/<game>.md`, including the awkward ones (castling through check, nifu, ko, side pots, furiten, a blocked domino game).
-- **Properties over random games:** nothing crashes; every legal action applies; pieces are conserved (40 or 52 cards, 28 dominoes, 136 tiles, chips); totals hold (Brisca points sum to 120, double-six pips to 168); views never leak.
+- **Properties over random games:** nothing crashes; every legal action applies; pieces are conserved (40 or 52 cards, 28 dominoes, the style's 108, 136 or 144 tiles, chips); totals hold (Brisca points sum to 120, double-six pips to 168); views never leak.
 - **Cross-checks** against a second implementation where one exists (perft counts for Chess and Shogi, `pokersolver`, `riichi`, `@sabaki/go-board`).
 - **Replay:** a record replays to the identical final state.
 - **End to end** at 844×390, 1180×820 and 1440×900: start a game, play scripted moves to the end, finish a lesson, solve a problem, open a review. Use fixed seeds and node budgets so runs are repeatable.
 
 **Definition of done for a game.** A game is not done until all of these are true:
 
-1. `docs/rules/<game>.md` lists the rules as implemented, every option, and sources.
-2. Rules pass golden, property and replay tests.
+1. `docs/rules/<game>.md` lists the rules as implemented, every option, every preset, and sources.
+2. Rules pass golden, property and replay tests under every preset.
 3. At least four CPU levels pass the ladder.
 4. Learn stages 0 to 2 and the Table-ready track are complete and pass lint.
 5. At least three kinds of practice exist, each generated or with 100 or more items.
@@ -305,7 +308,7 @@ Observed in the cloud environment on 2026-11-27:
 
 - Node 22, Chromium and Playwright are installed. Do not run `playwright install`. If the project pins a different Playwright version, launch with `executablePath: '/opt/pw-browsers/chromium'`. Run suites with `--trace off`.
 - The Android SDK (platform 37) is at `/opt/android-sdk`. There is no emulator and no KVM, so the APK can be built but not run there.
-- The npm registry is reachable. `database.lichess.org`, `huggingface.co` and `www.pagat.com` were refused by the environment's network policy. Milestone 2 needs `database.lichess.org` (chess problems) and milestone 14 may need a host for a Go network file. When a milestone needs a blocked host, the builder asks for it through the environment's approval card; if it stays blocked, use the fallback named in that milestone and say so in `PROGRESS.md`.
+- The npm registry is reachable. `database.lichess.org`, `huggingface.co` and `www.pagat.com` were refused by the environment's network policy. Milestone 2 needs `database.lichess.org` (chess problems) and milestone 15 may need a host for a Go network file. A rules site such as `www.pagat.com` helps when writing the house-rule presets in milestones 3 and 4. When a milestone needs a blocked host, the builder asks for it through the environment's approval card; if it stays blocked, use the fallback named in that milestone and say so in `PROGRESS.md`.
 - Nothing in `tabletop/` touches Yoked's Gradle project. Add `tabletop/node_modules`, `tabletop/dist` and Android build output to `.gitignore`.
 
 ## 2.12 Milestones
@@ -332,14 +335,16 @@ One milestone per sitting. Do not start the next until the gate passes. Mileston
 
 **M3. Cards and Brisca (2 players)**
 - CardKit: Spanish deck, hand fan, trick area, stock with the trump card showing under it, won piles, deal and trick animations.
-- Default rules, each one an option to confirm: 40 cards; three each; next card turned for trump and slid under the stock; As 11, Tres 10, Rey 4, Caballo 3, Sota 2, others 0; no duty to follow suit at any point; trick winner draws first and leads; 120 points in the deck, 61 wins, 60-60 is a tie; the 7 of trump may be swapped for a turned-up point card and the 2 for a turned-up 4 to 7 (timing is an option).
+- Default rules, each one an option: 40 cards; three each; next card turned for trump and slid under the stock; As 11, Tres 10, Rey 4, Caballo 3, Sota 2, others 0; no duty to follow suit at any point; trick winner draws first and leads; 120 points in the deck, 61 wins, 60-60 is a tie; the 7 of trump may be swapped for a turned-up point card and the 2 for a turned-up 4 to 7 (timing is an option).
+- Swag does not know the house rules of a future table, so cover them all: research the variants, make each one an option, and ship named presets (at least "Puerto Rico" as the default and "Spain") plus the "ask before you sit" card. Options to include at minimum: whether the swap exists, which cards may swap and when; match length; tie handling.
 - Coach: cards seen, trumps and point cards left, points so far, "what beats this". Open-hand rounds.
 - Learn highlights: the As, Tres, Rey, Caballo, Sota order (the 3 beating the king trips every beginner), when to spend trump, loading points onto a winning trick, counting to 61, the last three tricks.
 - Gate: definition of done; point total always 120; endgame solver agrees with brute force.
 
 **M4. Dominoes**
 - TileKit: a chain that bends to fit the table, open ends marked, boneyard, four seats.
-- Variants: Draw and Block for two; Partnership for four (fixed partners, seven tiles each, no boneyard). Options to confirm: target 100, 200 or 500; who starts the first and later hands; how a blocked hand is scored; bonuses for the first four hands, capicú and chuchazo and their values (Pagat describes 100, 75, 50, 25 for early hands in the 500 game and 100 each for capicú and chuchazo).
+- Variants: Draw and Block for two; Partnership for four (fixed partners, seven tiles each, no boneyard). Options: target 100, 200 or 500; who starts the first and later hands; how a blocked hand is scored; bonuses for the first four hands, capicú and chuchazo and their values (Pagat describes 100, 75, 50, 25 for early hands in the 500 game and 100 each for capicú and chuchazo).
+- Cover every common house rule as an option, with named presets (at least "Puerto Rico 500" as the default, "Puerto Rico 200", "Draw" and "Block") and the "ask before you sit" card.
 - Coach: the "tiles out" triangle, "can't have" marks after a pass, pip totals.
 - Gate: definition of done; pips always sum to 168; partner bot follows the taught conventions.
 
@@ -367,38 +372,51 @@ One milestone per sitting. Do not start the next until the gate passes. Mileston
 - Learn starts on 5×5 mini-shogi. Then drops, promotion, basic mating patterns, the Yagura, Mino and Anaguma castles, static and ranging rook.
 - Gate: definition of done; perft cross-check; every generated mate problem proven unique.
 
-**M9. Mahjong I: play Riichi**
-- Tiles, wall, deal, dora, draws and discards, calls (chi, pon, kan, riichi, ron, tsumo) as a claim phase, furiten, yaku detection, han and fu scoring, a full East-South game with repeats and riichi sticks. Defaults follow the common online rules (red fives, open tanyao, 25,000 start); each is an option.
-- Four-seat table in landscape: your hand along the bottom, discard rows in the centre, melds at the edges.
+**M9. Mahjong I: the shared engine, and Hong Kong style to play**
+- The shared core driven by a rules file (section 2.3): tiles, wall, deal, draws and discards, calls as a claim phase, winning-shape checks, rounds and seat winds, payments. Write it so a second style needs no change to the core.
+- Hong Kong (Old Style) rules file: 144 tiles with flowers and seasons, 13-tile hands, chow, pung and kong, the common faan table with a limit hand. Options and presets for the minimum faan (none, one, three), the limit, and who pays on a discard win.
+- Four-seat table in landscape: your hand along the bottom, discard rows in the centre, melds and flowers at the edges. Tile art with an optional learner overlay (numerals and letters).
 - Three CPU seats. Efficiency helper (tiles from ready, useful tiles) as a coach help.
-- Gate: tile conservation; scorer cross-checked against `riichi` on generated hands; furiten and multiple-ron golden cases; full game e2e.
+- Gate: tile conservation; faan golden cases for every pattern in the table; claim-priority cases; a full game in e2e.
 
-**M10. Mahjong II: teach Riichi**
-- Learn from zero: tiles, sets and the pair, the winning shape, calls, the ten most common yaku, riichi, furiten, scoring, defence. Table-ready: building and breaking the wall, dealing, the dead wall, how to call, point sticks, the payment table.
-- Practice: waits, "what would you discard", yaku recognition, score the hand, safe tile. Review: efficiency lost per discard and analysis of each deal-in. Auto-scoring switch.
+**M10. Mahjong II: teach it**
+- Learn from zero, written once for all styles: the tiles, sets and the pair, the winning shape, drawing and discarding, calling, waits, basic efficiency, basic defence. Then the Hong Kong track: flowers, the faan table, the minimum, payments.
+- Table-ready: building and breaking the wall, dealing, how to call out loud, settling up, and the "ask before you sit" card (which style, minimum to win, limit, who pays).
+- Practice: waits, "what would you discard", name the scoring patterns, score the hand, safe tile. Review: efficiency lost per discard and analysis of each deal-in. Auto-scoring switch.
 - Gate: definition of done for Mahjong. **All eight launch games are complete here.**
 
-**M11. Card variants A.** Omaha, Five-Card Draw, Seven-Card Stud on the poker engine. Brisca for four in pairs with a señas flash-card trainer and in-game signals as an option. Tute.
+**M11. Mahjong III: Riichi**
+- Riichi rules file: 136 tiles, riichi, furiten, dora and red fives, yaku detection, han and fu scoring, an East-South game with repeats and riichi sticks, drawn-hand rules. Defaults follow the common online rules (red fives, open tanyao, 25,000 start); each is an option.
+- Bots gain what Riichi needs: riichi decisions, folding against a riichi, yaku-aware calling.
+- Learn track: what changes from Hong Kong, the ten most common yaku, riichi, furiten, dora, scoring with the payment table, defence. Practice: yaku recognition, score the hand in han and fu, safe tile against a riichi.
+- Gate: scorer cross-checked against the `riichi` package on generated hands; furiten and multiple-ron golden cases; the shared core changed only where a written note in `PROGRESS.md` says why.
 
-**M12. Classic card pack.** Blackjack with a basic-strategy trainer. Hearts, Spades and Gin Rummy on a shared trick-and-meld module with the generic determinized bot.
+**M12. Card variants A.** Omaha, Five-Card Draw, Seven-Card Stud on the poker engine. Brisca for four in pairs with a señas flash-card trainer and in-game signals as an option. Tute.
 
-**M13. Tile variants.** Dominoes All Fives with scoring called as you play. Mahjong Hong Kong style on the shared tile engine.
+**M13. Classic card pack.** Blackjack with a basic-strategy trainer. Hearts, Spades and Gin Rummy on a shared trick-and-meld module with the generic determinized bot.
 
-**M14. Stronger engines.** Time-boxed trials, each with a written result: Fairy-Stockfish for Shogi (a threaded build, so it needs cross-origin isolation; check whether the APK's web view allows it); a small KataGo network for Go through `onnxruntime-web` or `katago-web`, mainly for score and ownership maps in review. Then a chess opening trainer, a shogi castle trainer and Go joseki basics. If a trial fails, the built-in engines stay.
+**M14. More tile styles.** This is several sittings; do one style per sitting. Each style gets a rules file or variant, a rules document, tests, a short "what is different" lesson track, and its own scoring drill.
+- Dominoes: All Fives with scoring called as you play; Cuban double-nine.
+- Mahjong, Chinese Official (competition rules): 81 scoring patterns, eight-point minimum.
+- Mahjong, Taiwanese: 16-tile hands.
+- Mahjong, Sichuan Bloody: 108 tiles, no chows, void one suit, play continues after the first win.
+- Mahjong, American-format: jokers and the Charleston. The yearly hands card sold by the National Mah Jongg League cannot be bundled, so ship an original practice card in the same format and let the player type in the card they own.
 
-**M15. Table tools, polish, release.** Scorepads and a blind timer, a Riichi score calculator, the light look, Spanish interface, a first-run tour, accessibility and performance passes, release APK, and optional web hosting.
+**M15. Stronger engines.** Time-boxed trials, each with a written result: Fairy-Stockfish for Shogi (a threaded build, so it needs cross-origin isolation; check whether the APK's web view allows it); a small KataGo network for Go through `onnxruntime-web` or `katago-web`, mainly for score and ownership maps in review. Then a chess opening trainer, a shogi castle trainer and Go joseki basics. If a trial fails, the built-in engines stay.
+
+**M16. Table tools, polish, release.** Scorepads and a blind timer, score calculators for the Mahjong styles, the light look, Spanish interface, a first-run tour, accessibility and performance passes, release APK, and optional web hosting.
 
 ## 2.13 Risks
 
 | Risk | What the plan does about it |
 | --- | --- |
 | The scope is very large | Shared kits and one contract; a pilot game and a feedback stop before the template is copied; each milestone ends in something playable. |
-| Regional rules are wrong for your table | Rules written down with sources before coding; every disputed rule is an option; the house-rules sheet; you play each game at its gate. |
+| Regional rules are wrong for your table | Rules written down with sources before coding; every disputed rule is an option with named presets; the "ask before you sit" card; you play each game at its gate. |
 | Strategy lessons contain mistakes | Claims are checked by an engine or solver in the linter; numbers are computed. |
-| Built-in Go and Shogi engines are too weak once you improve | Handicap ladders now; stronger engines in M14 behind the same interface. |
-| Mahjong is the most complex rules engine | Two milestones; a scorer cross-checked against a second implementation; options kept few at first. |
-| The APK wrapper misbehaves (storage, threads, headers) | Proven in M0 with a fallback; all default engines are single-threaded. |
-| Hosts blocked in the build environment | Fallbacks named in M2 and M14. |
+| Built-in Go and Shogi engines are too weak once you improve | Handicap ladders now; stronger engines in M15 behind the same interface. |
+| Mahjong is the most complex rules engine, and six styles multiply it | One shared core with a rules file per style; the simplest style first and the most complex second, so the core is proven general by M11; the Riichi scorer is cross-checked against a second implementation; later styles are one per sitting. |
+| The APK wrapper misbehaves (storage, threads, headers) | Proven in M0 with two fallbacks; all default engines are single-threaded. |
+| Hosts blocked in the build environment | Fallbacks named in M2 and M15. |
 
 ## 2.14 Later ideas (not planned)
 
@@ -406,14 +424,13 @@ Online play, cloud sync, an "ask the coach" chat that needs internet and an API 
 
 ---
 
-## Questions for Swag
+## Answers from Swag (2026-11-27)
 
-None of these block the start. Answers before the milestone named make that milestone better.
+1. **Device:** Android. The APK is the main deliverable; no iPhone work is planned.
+2. **Mahjong style:** not known yet, so do all of them. Hong Kong leads, Riichi follows, four more styles in M14.
+3. **House rules for Brisca and Dominoes:** not known yet, so do all of them. Every common variant is an option with named presets, and the app teaches what to ask at a new table.
 
-1. **Devices (before M0).** Which phone or tablet will you mostly use, and should it also run on an iPhone?
-2. **Mahjong style (before M9).** Riichi, Hong Kong, or another style your group plays?
-3. **House rules for Brisca and Dominoes (before M3 and M4).** For Brisca: the 7 and 2 swap and when it is allowed, what happens in the last hand of a four-player game, how many games make a match. For Dominoes: 200 or 500, who starts, early-hand bonuses, capicú and chuchazo values, how a blocked game is scored.
-4. **Where you are starting from.** Which of these games do you already play? The builder can tune the first lessons and suggested levels.
+Still open, and it does not block anything: which of these games Swag already plays. Until that is known, every game starts from zero and offers "I already know this" to skip ahead.
 
 ## How to run the build
 
@@ -435,7 +452,8 @@ not do.
 ```
 Read tabletop/PLAN.md and tabletop/PROGRESS.md. Build the next unfinished
 milestone and nothing beyond it. Write docs/rules/<game>.md before coding a
-game and ask me about any house rule marked "to confirm". Meet the definition
+game, covering every common house rule as an option with named presets; I do
+not know my table's rules yet, so do not ask me to choose. Meet the definition
 of done in section 2.10 and the milestone's gate. Run the checks, play it at
 844x390, look at the screenshots, then update PROGRESS.md, commit and push.
 Send me the screenshots and the APK.
