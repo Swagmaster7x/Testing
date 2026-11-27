@@ -149,6 +149,8 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       { id: 'unseen', label: 'mahjong.help.unseen', on: false, training: true },
       { id: 'safety', label: 'mahjong.help.safety', on: false, training: true },
       { id: 'openHand', label: 'mahjong.help.openHand', on: false, training: true },
+      // Off, you count each winning hand yourself before the sheet shows: harder, so not training.
+      { id: 'autoScore', label: 'mahjong.help.autoScore', on: true, training: false },
     ],
     Panel: MahjongCoachPanel,
   },

@@ -7,7 +7,8 @@
  *
  * Tap a tile to lift it, tap it again to discard it. When a discard can be called, a prompt above
  * your hand says what each call takes. At the end of a hand every hand is shown, with the
- * winner's faan line by line and the payments.
+ * winner's faan line by line and the payments (with "Score hands for me" off, you count the faan
+ * first).
  *
  * What is drawn lags the rules by the events still queued (as on every table): a discard the
  * rules have made stays in the hand until its event plays, then slides to the discards.
@@ -259,8 +260,39 @@ function OwnTurnButtons({ legal, counts, onAction }: { legal: readonly MahjongAc
 
 // The end of a hand
 
-function ResultPanel({ result, me, learner, canNext, over, onNext }: { result: HandResult; me: Seat; learner: boolean; canNext: boolean; over: boolean; onNext: () => void }) {
+/**
+ * With "Score hands for me" off, a won hand asks you for its faan before the sheet shows, as you
+ * would count it at a real table.
+ */
+function CountYourself({ faan, onDone }: { faan: number; onDone: (guess: number | null) => void }) {
+  const [entry, setEntry] = useState('');
+  const guess = entry.trim() === '' ? null : Number(entry);
+  return (
+    <form
+      className="mj-count"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (guess !== null && Number.isFinite(guess)) onDone(guess);
+      }}
+    >
+      <span className="mj-count-ask">{t('mahjong.self.ask')}</span>
+      <input className="mj-count-input num" type="number" inputMode="numeric" min={0} max={99} aria-label={t('mahjong.self.label')} value={entry} onChange={(e) => setEntry(e.target.value)} />
+      <button type="submit" className="btn btn-primary btn-small" disabled={guess === null || !Number.isFinite(guess)}>
+        {t('mahjong.self.check')}
+      </button>
+      <button type="button" className="btn btn-small btn-quiet" onClick={() => onDone(null)} data-faan={faan}>
+        {t('mahjong.self.reveal')}
+      </button>
+    </form>
+  );
+}
+
+function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore }: { result: HandResult; me: Seat; learner: boolean; canNext: boolean; over: boolean; onNext: () => void; selfScore: boolean }) {
   const wins = result.wins;
+  // Counting yourself: the guess for the first winner's faan, once given (undefined before).
+  const [counted, setCounted] = useState<number | null | undefined>(undefined);
+  const asking = selfScore && wins.length > 0 && counted === undefined;
+  const first = wins[0];
   return (
     <div className="mj-result" role="status" aria-label={t('mahjong.result.payments')}>
       {wins.length === 0 ? <h2>{t('mahjong.result.draw')}</h2> : null}
@@ -292,6 +324,13 @@ function ResultPanel({ result, me, learner, canNext, over, onNext }: { result: H
                 </span>
               ) : null}
             </div>
+            {asking && w === first ? <CountYourself faan={w.score.total} onDone={setCounted} /> : null}
+            {selfScore && w === first && counted !== undefined && counted !== null ? (
+              <p className="mj-count-verdict" data-right={counted === w.score.total}>
+                {counted === w.score.total ? t('mahjong.self.right', { n: w.score.total }) : t('mahjong.self.wrong', { guess: counted, n: w.score.total })}
+              </p>
+            ) : null}
+            {asking ? null : (
             <ul className="mj-faan">
               {w.score.lines.length === 0 ? <li>{t('mahjong.result.chicken')}</li> : null}
               {w.score.lines.map((l) => (
@@ -308,18 +347,21 @@ function ResultPanel({ result, me, learner, canNext, over, onNext }: { result: H
                 <span className="num">{t('mahjong.result.base', { n: w.score.base })}</span>
               </li>
             </ul>
+            )}
           </div>
         );
       })}
-      <div className="mj-pay">
-        <span className="mj-pay-title">{over ? t('mahjong.result.game-over') : t('mahjong.result.payments')}</span>
-        {result.deltas.map((d, seat) => (
-          <span key={seat} className="num" data-sign={d > 0 ? 'up' : d < 0 ? 'down' : 'none'}>
-            {seatName(seat, me)} {d > 0 ? `+${d}` : d}
-          </span>
-        ))}
-      </div>
-      {canNext ? (
+      {asking ? null : (
+        <div className="mj-pay">
+          <span className="mj-pay-title">{over ? t('mahjong.result.game-over') : t('mahjong.result.payments')}</span>
+          {result.deltas.map((d, seat) => (
+            <span key={seat} className="num" data-sign={d > 0 ? 'up' : d < 0 ? 'down' : 'none'}>
+              {seatName(seat, me)} {d > 0 ? `+${d}` : d}
+            </span>
+          ))}
+        </div>
+      )}
+      {canNext && !asking ? (
         <button type="button" className="btn btn-primary btn-small mj-next" onClick={onNext}>
           {t('mahjong.next')}
         </button>
@@ -356,7 +398,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const myMelds = d.melds[me] ?? [];
   const meldTiles = myMelds.reduce((n, m) => n + m.tiles.length, 0);
   const myBonus = d.bonus[me] ?? [];
-  const units = myHand.length + (myDrawn ? 1.35 : 0) + meldTiles * 0.72 + myMelds.length * 0.3 + myBonus.length * 0.5 + 1;
+  const units = myHand.length + (myDrawn ? 1.35 : 0) + meldTiles * 0.72 + myMelds.length * 0.3 + myBonus.length * 0.6 + 1;
   const hw = Math.max(20, Math.min(70, (W - 8) / Math.max(10, units), H * 0.135));
   const hh = (hw * 4) / 3;
   const bottomH = hh + hw * 0.4 + 6;
@@ -429,7 +471,6 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       bonus.forEach((tile, i) => placed.push({ key: tile, kind: kindOf(tile), x: x - mw * 0.8 * (i + 0.5), y: y + 2, w: mw * 0.78, z: 240 + i, label: tileName(tile) }));
     } else {
       const sideX = where === 'left' ? 4 + bh / 2 : W - 4 - bh / 2;
-      const innerX = where === 'left' ? 4 + bh + 4 + bw / 2 : W - 4 - bh - 4 - bw / 2;
       const span = hand.length * bw;
       // Hidden tiles stand in a column at the edge (shown lying down, as seen from your seat).
       hand.forEach((tile, i) => {
@@ -440,13 +481,16 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       const items: { tile: TileId; kind: Kind | null; gapBefore: boolean }[] = [];
       melds.forEach((m) => m.tiles.forEach((tile, i) => items.push({ tile, kind: m.concealed && (i === 0 || i === 3) ? null : kindOf(tile), gapBefore: i === 0 && items.length > 0 })));
       bonus.forEach((tile, i) => items.push({ tile, kind: kindOf(tile), gapBefore: i === 0 && items.length > 0 }));
-      // Kept between the seat tags above and below the column.
-      const step = Math.min(bw * 1.3, (area.h - 30) / Math.max(1, items.length + melds.length * 0.3));
+      // Kept between the seat tags above and below the column, and as large as that allows: a
+      // player's called sets are what the others read to judge how close they are.
+      const step = Math.min(bw * 1.6, (area.h - 30) / Math.max(1, items.length + melds.length * 0.3));
+      const iw = step * 0.72;
+      const innerX = where === 'left' ? 4 + bh + 4 + iw / 2 : W - 4 - bh - 4 - iw / 2;
       const colH = items.length * step + items.filter((x) => x.gapBefore).length * step * 0.3;
       let y = where === 'left' ? cy - colH / 2 : cy + colH / 2;
       items.forEach((item, i) => {
         if (item.gapBefore) y += (where === 'left' ? 1 : -1) * step * 0.3;
-        placed.push({ key: item.tile, kind: item.kind, x: innerX, y: y + ((where === 'left' ? 1 : -1) * step) / 2, w: step * 0.72, z: 230 + i, label: tileName(item.tile) });
+        placed.push({ key: item.tile, kind: item.kind, x: innerX, y: y + ((where === 'left' ? 1 : -1) * step) / 2, w: iw, z: 230 + i, label: tileName(item.tile) });
         y += (where === 'left' ? 1 : -1) * step;
       });
     }
@@ -456,7 +500,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const playable = new Set<Kind>(myTurn ? legal.filter((a) => a.type === 'discard').map((a) => (a as { tile: Kind }).tile) : []);
   const efficiency = helps.efficiency === true && myTurn && playable.size > 0 ? efficiencyNotes(state, me) : null;
   const hintKinds = new Set(overlay.marks.map((m) => m.square));
-  const bonusW = hw * 0.5;
+  const bonusW = hw * 0.6;
   const mmw = hw * 0.72;
   const rowW = myBonus.length * bonusW + (myBonus.length ? hw * 0.4 : 0) + myHand.length * hw + (myDrawn ? hw * 1.35 : 0) + meldTiles * mmw + myMelds.length * hw * 0.3;
   let x = Math.max(4, W / 2 - rowW / 2);
@@ -554,7 +598,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       {W > 0 ? tags : null}
       {claiming ? <ClaimPrompt state={state} me={me} legal={legal} learner={learner} onAction={onAction} /> : null}
       {myTurn ? <OwnTurnButtons legal={legal} counts={view.hand.reduce<number[]>((c, id) => { c[kindOf(id)] = (c[kindOf(id)] ?? 0) + 1; return c; }, new Array<number>(34).fill(0))} onAction={onAction} /> : null}
-      {showResult && result ? <ResultPanel result={result} me={me} learner={learner} canNext={acting && legal.some((a) => a.type === 'next')} over={state.over} onNext={() => onAction({ type: 'next' })} /> : null}
+      {showResult && result ? <ResultPanel key={state.results.length} result={result} me={me} learner={learner} canNext={acting && legal.some((a) => a.type === 'next')} over={state.over} onNext={() => onAction({ type: 'next' })} selfScore={helps.autoScore === false} /> : null}
     </div>
   );
 }

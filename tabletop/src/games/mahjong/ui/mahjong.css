@@ -405,3 +405,41 @@ button.mj-tile:focus-visible {
 .mj-safety-tile[data-level='high'] .mj-danger {
   color: var(--bad, #e08070);
 }
+
+/* Counting a won hand yourself ("Score hands for me" off). */
+.mj-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 6px;
+}
+
+.mj-count-ask {
+  font-weight: 600;
+}
+
+.mj-count-input {
+  width: 4.5em;
+  min-height: 34px;
+  padding: 2px 8px;
+  border: 1px solid rgb(29 26 20 / 0.35);
+  border-radius: var(--r-sm, 6px);
+  background: #fffdf7;
+  color: inherit;
+  font-size: var(--fs-md, 1rem);
+}
+
+.mj-count .btn-quiet {
+  color: var(--ivory-ink, #1d1a14);
+}
+
+.mj-count-verdict {
+  margin: 2px 0 4px;
+  font-weight: 600;
+  color: #7a1d16;
+}
+
+.mj-count-verdict[data-right='true'] {
+  color: #1f5d3a;
+}

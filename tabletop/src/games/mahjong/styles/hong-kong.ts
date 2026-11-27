@@ -107,6 +107,51 @@ function rules(o: StyleOptions): StyleRules {
 
 // Patterns
 
+/**
+ * What each pattern scores: a number of faan, or the option that sets it. One table for the
+ * scorer, the lessons and the drills, so they cannot disagree.
+ */
+const FAAN: Readonly<Record<string, number | string>> = {
+  'all-chows': 1,
+  'all-pungs': 3,
+  'mixed-one-suit': 3,
+  'pure-one-suit': 'fullFlush',
+  'mixed-orphans': 1,
+  'seven-pairs': 'sevenPairs',
+  'great-dragons': 'greatDragons',
+  'small-dragons': 'smallDragons',
+  'small-winds': 'smallWinds',
+  'dragon-pung': 1,
+  'seat-wind': 1,
+  'prevailing-wind': 1,
+  'concealed-self-drawn': 3,
+  'self-drawn': 1,
+  concealed: 1,
+  'robbing-kong': 1,
+  'double-kong': 8,
+  'win-by-kong': 1,
+  'last-tile': 1,
+  'last-discard': 1,
+  'flower-set': 'flowerSet',
+  'seat-flower': 1,
+  'no-flowers': 'noFlowers',
+};
+
+/** The limit hands, by id. */
+export const HK_LIMIT_HANDS: readonly string[] = ['thirteen-orphans', 'nine-gates', 'all-honours', 'all-terminals', 'four-concealed-pungs', 'all-kongs', 'great-winds', 'heavenly', 'earthly'];
+
+/** The regular patterns, by id, in the order a score sheet lists them. */
+export const HK_PATTERNS: readonly string[] = Object.keys(FAAN);
+
+/** The faan a pattern scores under these options; a limit hand (or a value set to the limit) scores the limit. */
+export function hkFaan(id: string, o: StyleOptions): number {
+  const v = FAAN[id];
+  if (v === undefined) return HK_LIMIT_HANDS.includes(id) ? num(o, 'limit') : 0;
+  if (typeof v === 'number') return v;
+  return o[v] === 'limit' ? num(o, 'limit') : num(o, v);
+}
+
+
 const isPungLike = (s: HandSet) => s.type === 'pung' || s.type === 'kong';
 
 interface Reading {
@@ -158,6 +203,7 @@ function limitHands(r: Reading, ctx: WinContext, o: StyleOptions): string[] {
 
 function regularLines(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[] {
   const lines: ScoreLine[] = [];
+  const faan = (id: string) => hkFaan(id, o);
   const add = (id: string, value: number, times = 1) => {
     if (value > 0 && times > 0) lines.push(times > 1 ? { id, value: value * times, times } : { id, value });
   };
@@ -166,12 +212,12 @@ function regularLines(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[]
   const absorb = o.namedHands !== 'stack';
 
   // How the hand is built.
-  if (standard && shape.sets.every((s) => s.type === 'chow')) add('all-chows', 1);
-  if (standard && shape.sets.every(isPungLike)) add('all-pungs', 3);
-  if (r.suits.size === 1 && r.honours) add('mixed-one-suit', 3);
-  if (r.suits.size === 1 && !r.honours) add('pure-one-suit', num(o, 'fullFlush'));
-  if (r.kinds.every(isTerminalOrHonour)) add('mixed-orphans', 1);
-  if (shape.shape === 'seven-pairs') add('seven-pairs', num(o, 'sevenPairs'));
+  if (standard && shape.sets.every((s) => s.type === 'chow')) add('all-chows', faan('all-chows'));
+  if (standard && shape.sets.every(isPungLike)) add('all-pungs', faan('all-pungs'));
+  if (r.suits.size === 1 && r.honours) add('mixed-one-suit', faan('mixed-one-suit'));
+  if (r.suits.size === 1 && !r.honours) add('pure-one-suit', faan('pure-one-suit'));
+  if (r.kinds.every(isTerminalOrHonour)) add('mixed-orphans', faan('mixed-orphans'));
+  if (shape.shape === 'seven-pairs') add('seven-pairs', faan('seven-pairs'));
 
   // Honour sets.
   const dragonPungs = r.pungs.filter((s) => isDragon(s.kind)).length;
@@ -181,39 +227,39 @@ function regularLines(r: Reading, ctx: WinContext, o: StyleOptions): ScoreLine[]
   const greatDragons = standard && dragonPungs === 3;
   const smallDragons = standard && dragonPungs === 2 && shape.pair !== null && isDragon(shape.pair);
   const smallWinds = standard && windPungs.length === 3 && shape.pair !== null && isWind(shape.pair);
-  if (greatDragons) add('great-dragons', num(o, 'greatDragons'));
-  if (smallDragons) add('small-dragons', num(o, 'smallDragons'));
-  if (smallWinds) add('small-winds', num(o, 'smallWinds'));
+  if (greatDragons) add('great-dragons', faan('great-dragons'));
+  if (smallDragons) add('small-dragons', faan('small-dragons'));
+  if (smallWinds) add('small-winds', faan('small-winds'));
   const dragonsAbsorbed = absorb && (greatDragons || smallDragons);
-  if (!dragonsAbsorbed) add('dragon-pung', 1, dragonPungs);
+  if (!dragonsAbsorbed) add('dragon-pung', faan('dragon-pung'), dragonPungs);
   const windsAbsorbed = absorb && smallWinds;
   if (!windsAbsorbed) {
-    if (windPungs.some((s) => s.kind === seatWind)) add('seat-wind', 1);
-    if (windPungs.some((s) => s.kind === prevailing)) add('prevailing-wind', 1);
+    if (windPungs.some((s) => s.kind === seatWind)) add('seat-wind', faan('seat-wind'));
+    if (windPungs.some((s) => s.kind === prevailing)) add('prevailing-wind', faan('prevailing-wind'));
   }
 
   // How the hand is won.
   const concealed = ctx.melds.every((m) => m.concealed);
-  if (concealed && ctx.selfDrawn && num(o, 'concealedSelfDrawn') === 3) add('concealed-self-drawn', 3);
+  if (concealed && ctx.selfDrawn && num(o, 'concealedSelfDrawn') === 3) add('concealed-self-drawn', faan('concealed-self-drawn'));
   else {
-    if (ctx.selfDrawn) add('self-drawn', 1);
-    if (concealed) add('concealed', 1);
+    if (ctx.selfDrawn) add('self-drawn', faan('self-drawn'));
+    if (concealed) add('concealed', faan('concealed'));
   }
-  if (ctx.robbed) add('robbing-kong', 1);
-  if (ctx.selfDrawn && ctx.kongs >= 2) add('double-kong', 8);
-  else if (ctx.selfDrawn && ctx.kongs === 1) add('win-by-kong', 1);
-  if (ctx.selfDrawn && ctx.lastTile) add('last-tile', 1);
-  if (!ctx.selfDrawn && ctx.lastDiscard) add('last-discard', 1);
+  if (ctx.robbed) add('robbing-kong', faan('robbing-kong'));
+  if (ctx.selfDrawn && ctx.kongs >= 2) add('double-kong', faan('double-kong'));
+  else if (ctx.selfDrawn && ctx.kongs === 1) add('win-by-kong', faan('win-by-kong'));
+  if (ctx.selfDrawn && ctx.lastTile) add('last-tile', faan('last-tile'));
+  if (!ctx.selfDrawn && ctx.lastDiscard) add('last-discard', faan('last-discard'));
 
   // Flowers.
   if (o.flowers === 'on') {
     const number = ctx.seatWind;
     for (const first of [FLOWER_1, SEASON_1]) {
       const held = [0, 1, 2, 3].filter((i) => ctx.bonus.includes(first + i));
-      if (held.length === 4) add('flower-set', num(o, 'flowerSet'));
-      else if (held.includes(number)) add('seat-flower', 1);
+      if (held.length === 4) add('flower-set', faan('flower-set'));
+      else if (held.includes(number)) add('seat-flower', faan('seat-flower'));
     }
-    if (ctx.bonus.length === 0) add('no-flowers', num(o, 'noFlowers'));
+    if (ctx.bonus.length === 0) add('no-flowers', faan('no-flowers'));
   }
   return collapse(lines);
 }

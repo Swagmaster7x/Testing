@@ -40,6 +40,10 @@ const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
     const m = await import('./holdem/learn');
     return { lessons: m.POKER_LESSONS, game: m.pokerLessonGame };
   },
+  mahjong: async () => {
+    const m = await import('./mahjong/learn');
+    return { lessons: m.MAHJONG_LESSONS, game: m.mahjongLessonGame };
+  },
 };
 
 export function hasLessons(gameId: string): boolean {
