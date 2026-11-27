@@ -12,7 +12,15 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Engine, SearchRequest, SearchResult } from '../src/ai/uci';
+import { BLACKJACK_LESSONS, blackjackLessonGame } from '../src/games/blackjack/learn';
+import { blackjackVerifier } from '../src/games/blackjack/learn/verify';
 import { BRISCA_LESSONS, briscaLessonGame } from '../src/games/brisca/learn';
+import { GIN_LESSONS, ginLessonGame } from '../src/games/gin-rummy/learn';
+import { ginVerifier } from '../src/games/gin-rummy/learn/verify';
+import { HEARTS_LESSONS, heartsLessonGame } from '../src/games/hearts/learn';
+import { heartsVerifier } from '../src/games/hearts/learn/verify';
+import { SPADES_LESSONS, spadesLessonGame } from '../src/games/spades/learn';
+import { spadesVerifier } from '../src/games/spades/learn/verify';
 import { CC_LESSONS, ccLessonGame } from '../src/games/chinese-checkers/learn';
 import { ccVerifier } from '../src/games/chinese-checkers/learn/verify';
 import { briscaVerifier } from '../src/games/brisca/learn/verify';
@@ -117,6 +125,10 @@ const SUITES: Record<string, Suite> = {
   'chinese-checkers': { lessons: CC_LESSONS, game: ccLessonGame, verifier: () => ccVerifier() },
   poker: { lessons: POKER_LESSONS, game: pokerLessonGame, verifier: () => pokerVerifier },
   mahjong: { lessons: MAHJONG_LESSONS, game: mahjongLessonGame, verifier: () => mahjongVerifier },
+  blackjack: { lessons: BLACKJACK_LESSONS, game: blackjackLessonGame, verifier: () => blackjackVerifier },
+  hearts: { lessons: HEARTS_LESSONS, game: heartsLessonGame, verifier: () => heartsVerifier },
+  spades: { lessons: SPADES_LESSONS, game: spadesLessonGame, verifier: () => spadesVerifier },
+  'gin-rummy': { lessons: GIN_LESSONS, game: ginLessonGame, verifier: () => ginVerifier },
 };
 
 /** Game folders whose name is not the game's id. */

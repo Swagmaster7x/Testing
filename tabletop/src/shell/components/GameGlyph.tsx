@@ -79,6 +79,34 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M16 8.6v1.4M16 22v1.4M8.6 16h1.4M22 16h1.4" stroke={CUT} strokeWidth={1.2} strokeLinecap="round" />
     </>
   ),
+  blackjack: (
+    <>
+      <rect x="5" y="5.5" width="13" height="19" rx="2" fill="currentColor" fillOpacity={0.55} transform="rotate(-10 11.5 15)" />
+      <rect x="11.5" y="6.5" width="13" height="19" rx="2" fill="currentColor" stroke={CUT} strokeWidth={1.2} transform="rotate(8 18 16)" />
+      <circle cx="23.2" cy="24.6" r="4.8" fill={BRASS} stroke={CUT} strokeWidth={1.2} />
+      <circle cx="23.2" cy="24.6" r="2.2" fill="none" stroke={CUT} strokeWidth={1} />
+    </>
+  ),
+  hearts: (
+    <>
+      <path d="M16 26.5C9 21.5 5 17.4 5 12.4 5 9 7.6 6.5 10.8 6.5c2.2 0 4 1.1 5.2 2.9 1.2-1.8 3-2.9 5.2-2.9C24.4 6.5 27 9 27 12.4c0 5-4 9.1-11 14.1z" fill="currentColor" />
+      <path d="M9 12c.2-1.8 1.4-3 3.1-3.1" stroke={BRASS} strokeWidth={1.6} strokeLinecap="round" fill="none" />
+    </>
+  ),
+  spades: (
+    <>
+      <path d="M16 4.5c-4.6 5-10 8.6-10 13.4 0 3 2.3 5.2 5.1 5.2 1.7 0 3.1-.7 4-2-.3 2.6-1.3 4.6-3.2 6.4h8.2c-1.9-1.8-2.9-3.8-3.2-6.4.9 1.3 2.3 2 4 2 2.8 0 5.1-2.2 5.1-5.2 0-4.8-5.4-8.4-10-13.4z" fill="currentColor" />
+      <circle cx="16" cy="15.6" r="2" fill={BRASS} />
+    </>
+  ),
+  'gin-rummy': (
+    <>
+      <rect x="5.5" y="8.5" width="11" height="16" rx="1.8" fill="currentColor" stroke={CUT} strokeWidth={1.2} transform="rotate(-16 11 24.5)" />
+      <rect x="10.5" y="6.5" width="11" height="16" rx="1.8" fill="currentColor" stroke={CUT} strokeWidth={1.2} />
+      <rect x="15.5" y="8.5" width="11" height="16" rx="1.8" fill="currentColor" stroke={CUT} strokeWidth={1.2} transform="rotate(16 21 24.5)" />
+      <path d="M13.5 10.5h5" stroke={BRASS} strokeWidth={1.6} strokeLinecap="round" />
+    </>
+  ),
   noughts: (
     <>
       <path d="M12.3 5v22M19.7 5v22M5 12.3h22M5 19.7h22" stroke="currentColor" strokeOpacity={0.5} strokeWidth={1.4} strokeLinecap="round" />

@@ -1,0 +1,415 @@
+/*
+ * The classic card pack tables (milestone 13): Hearts and Spades on the four-seat trick table,
+ * Gin Rummy, Blackjack. Cards come from CardKit (cards.css); this file places the tags and controls.
+ */
+
+.trick-seat {
+  max-width: 34%;
+}
+
+.trick-seat[data-where='left'],
+.trick-seat[data-where='right'],
+.trick-seat[data-where='top'] {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  border-radius: 8px;
+  padding: 2px 7px;
+}
+
+.trick-seat[data-where='right'] {
+  align-items: flex-end;
+}
+
+.trick-seat-detail {
+  color: var(--text-1);
+  opacity: 0.85;
+}
+
+.trick-seat[data-turn='true'] .trick-seat-detail {
+  color: inherit;
+}
+
+.trick-action {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  transform: translate(-50%, -50%);
+  z-index: 420;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-lg);
+  background: rgb(14 12 9 / 0.78);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.4);
+  max-width: min(92%, 420px);
+}
+
+.trick-action-note {
+  margin: 0;
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+
+.trick-wait {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.6);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  z-index: 300;
+  white-space: nowrap;
+}
+
+.bid-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.bid-btn {
+  min-width: 36px;
+  padding-inline: 4px;
+}
+
+.trick-hand-over {
+  font-size: var(--fs-md);
+  min-width: 240px;
+}
+
+.trick-hand-over p {
+  margin: 0 0 var(--sp-2);
+}
+
+.trick-hand-over ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+}
+
+.trick-hand-over li {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: var(--sp-3);
+  align-items: baseline;
+}
+
+/* The cards-played grid in the coach rail. */
+.played-grid {
+  display: grid;
+  grid-template-columns: auto repeat(13, minmax(0, 1fr));
+  gap: 2px;
+  font-size: var(--fs-2xs);
+  align-items: center;
+}
+
+.played-grid span {
+  text-align: center;
+  border-radius: 3px;
+  padding: 1px 0;
+}
+
+.played-grid span[data-state='played'] {
+  background: var(--surface-3);
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.played-grid span[data-state='out'] {
+  background: var(--brass-wash);
+  color: var(--text-1);
+}
+
+.played-grid span[data-state='mine'] {
+  box-shadow: inset 0 0 0 1.5px var(--brass-1);
+  color: var(--text-1);
+}
+
+.played-grid .played-suit {
+  background: #fbf8f1;
+  font-size: var(--fs-xs);
+  padding: 0 3px;
+}
+
+/* Gin Rummy. */
+.gin-tag {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
+.gin-deadwood {
+  color: var(--brass-1);
+  font-weight: 600;
+}
+
+.gin-tag[data-turn='true'] .gin-deadwood {
+  color: inherit;
+}
+
+.gin-actions {
+  position: absolute;
+  right: var(--sp-2);
+  top: 42%;
+  transform: translateY(-50%);
+  z-index: 420;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  max-width: 34%;
+}
+
+.gin-note {
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.6);
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  text-align: right;
+}
+
+.gin-result-title {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 4px 14px;
+  border-radius: var(--r-lg);
+  background: var(--ivory-1);
+  color: var(--ivory-ink);
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  white-space: nowrap;
+  z-index: 300;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+}
+
+.gin-result-line {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  margin: 0;
+  padding: 1px 8px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.55);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  z-index: 300;
+}
+
+/* Blackjack. */
+.bj-table {
+  background: radial-gradient(ellipse at 50% 10%, rgb(255 255 255 / 0.04), transparent 60%);
+}
+
+.bj-arc {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: rgb(240 226 190 / 0.38);
+  font-family: var(--font-serif);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.bj-dealer-tag {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(14 12 9 / 0.5);
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  z-index: 280;
+}
+
+.bj-dealer-tag .num {
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+.bj-shoe {
+  position: absolute;
+  color: var(--text-3);
+  font-size: var(--fs-2xs);
+  line-height: 1.3;
+  z-index: 280;
+}
+
+.bj-hand-tag {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  z-index: 290;
+  pointer-events: none;
+}
+
+.bj-hand-tag[data-active='true'] .bj-total {
+  background: var(--brass-1);
+  color: var(--ivory-ink, #1d1a14);
+}
+
+.bj-total {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(14 12 9 / 0.6);
+  color: var(--text-1);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bj-outcome {
+  padding: 0 7px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+
+.bj-outcome[data-tone='good'] {
+  background: var(--good);
+  color: #10140f;
+}
+
+.bj-outcome[data-tone='bad'] {
+  background: rgb(192 57 43 / 0.85);
+  color: #fff;
+}
+
+.bj-box-tag {
+  transform: translateX(-50%);
+}
+
+.bj-controls {
+  position: absolute;
+  right: var(--sp-2);
+  bottom: 30px;
+  z-index: 420;
+}
+
+.bj-moves {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--sp-1);
+  max-width: 46%;
+}
+
+.bj-moves .btn[data-chart='true'] {
+  box-shadow: 0 0 0 2px var(--brass-1);
+}
+
+.bj-note {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  background: rgb(14 12 9 / 0.6);
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  text-align: right;
+}
+
+.bj-chart {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.bj-chart th,
+.bj-chart td {
+  padding: 1px 0;
+  text-align: center;
+  border: 1px solid var(--surface-3);
+}
+
+.bj-chart thead th {
+  color: var(--text-2);
+}
+
+.bj-chart tbody th {
+  color: var(--text-2);
+  white-space: nowrap;
+  padding-right: 3px;
+}
+
+.bj-chart td[data-cell='H'] {
+  color: var(--text-2);
+}
+
+.bj-chart td[data-cell='S'] {
+  background: rgb(43 122 53 / 0.35);
+  color: var(--text-1);
+}
+
+.bj-chart td[data-cell='D'] {
+  background: rgb(201 162 90 / 0.4);
+  color: var(--text-1);
+}
+
+.bj-chart td[data-cell='P'] {
+  background: rgb(29 99 184 / 0.4);
+  color: var(--text-1);
+}
+
+.bj-chart td[data-cell='R'] {
+  background: rgb(192 57 43 / 0.45);
+  color: var(--text-1);
+}
+
+.bj-chart tr[data-mark='true'] th {
+  color: var(--brass-1);
+}
+
+.bj-chart td[data-mark='true'] {
+  outline: 2px solid var(--brass-1);
+  outline-offset: -2px;
+  font-weight: 800;
+}
+
+.bj-legend {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-2xs);
+  line-height: 1.35;
+}
+
+/* Two even columns, so a long label does not squeeze the numbers into a narrow column. */
+.classic-counts {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}

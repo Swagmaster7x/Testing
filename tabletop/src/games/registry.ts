@@ -11,6 +11,10 @@ const loaders: Record<string, () => Promise<AnyGameUi>> = {
   poker: () => import('./holdem/ui').then((m) => m.holdemUi as unknown as AnyGameUi),
   'chinese-checkers': () => import('./chinese-checkers/ui').then((m) => m.ccUi as unknown as AnyGameUi),
   mahjong: () => import('./mahjong/ui').then((m) => m.mahjongUi as unknown as AnyGameUi),
+  blackjack: () => import('./blackjack/ui').then((m) => m.blackjackUi as unknown as AnyGameUi),
+  hearts: () => import('./hearts/ui').then((m) => m.heartsUi as unknown as AnyGameUi),
+  spades: () => import('./spades/ui').then((m) => m.spadesUi as unknown as AnyGameUi),
+  'gin-rummy': () => import('./gin-rummy/ui').then((m) => m.ginUi as unknown as AnyGameUi),
 };
 
 export function isPlayable(gameId: string): boolean {

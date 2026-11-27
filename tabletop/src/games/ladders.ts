@@ -2,7 +2,21 @@
  * Ladder definitions for every game with bots. `npm run ladder` runs them; a short version runs
  * in the unit tests. Engines are passed in, so the same ladders run on Node's Stockfish.
  */
-import type { Contender, LadderSpec } from '../ai/ladder';
+import type { Contender, LadderRung, LadderSpec } from '../ai/ladder';
+import { blackjackBots, chooseAction as chooseBlackjack, randomMove } from './blackjack/bots';
+import type { BlackjackAction, BlackjackConfig, BlackjackEvent, BlackjackState, BlackjackView } from './blackjack/rules';
+import { blackjack, STANDARD as BJ_STANDARD } from './blackjack/rules';
+import type { LevelRow } from './blackjack/strength';
+import { compare, measure } from './blackjack/strength';
+import { ginBots } from './gin-rummy/bots';
+import type { GinAction, GinConfig, GinEvent, GinState, GinView } from './gin-rummy/rules';
+import { ginRummy, STANDARD as GIN_STANDARD } from './gin-rummy/rules';
+import { heartsBots } from './hearts/bots';
+import type { HeartsAction, HeartsConfig, HeartsEvent, HeartsState, HeartsView } from './hearts/rules';
+import { hearts, STANDARD as HEARTS_STANDARD } from './hearts/rules';
+import { spadesBots } from './spades/bots';
+import type { SpadesAction, SpadesConfig, SpadesEvent, SpadesState, SpadesView } from './spades/rules';
+import { spades, STANDARD as SPADES_STANDARD } from './spades/rules';
 import { randomChoice } from '../ai/random-bot';
 import type { Engine } from '../ai/uci';
 import type { GameEvent, Outcome, Seat } from '../core/contract';
@@ -43,6 +57,11 @@ export interface Ladder<S = unknown, A = unknown, C = unknown, V = unknown, E ex
   readonly games: number;
   /** Frees engines when the ladder is done. */
   readonly close?: () => void;
+  /**
+   * A game played against the house (Blackjack) measures its levels its own way and reports the
+   * rungs; `npm run ladder` then runs this instead of matches between levels.
+   */
+  readonly custom?: (games: number, onRung: (rung: LadderRung) => void) => Promise<LadderRung[]>;
 }
 
 export interface LadderDeps {
@@ -255,6 +274,107 @@ function mahjongLadder(): Ladder<MahjongState, MahjongAction, MahjongConfig, Mah
   };
 }
 
+/**
+ * Hearts: two seats a side in alternate seats (0 and 2 against 1 and 3), games to 100, every deal
+ * played twice with the sides swapped. A side wins a game when its two seats end with fewer points
+ * between them than the other two.
+ */
+export function heartsSideScore(outcome: Outcome, seats: readonly Seat[]): number {
+  const mine = outcome.results.filter((r) => seats.includes(r.seat)).reduce((a, r) => a + r.score, 0);
+  const theirs = outcome.results.filter((r) => !seats.includes(r.seat)).reduce((a, r) => a + r.score, 0);
+  return mine < theirs ? 1 : mine > theirs ? 0 : 0.5;
+}
+
+function heartsLadder(): Ladder<HeartsState, HeartsAction, HeartsConfig, HeartsView, HeartsEvent> {
+  return {
+    spec: {
+      def: hearts,
+      config: HEARTS_STANDARD,
+      levels: heartsBots.levels.map((l) => l.level),
+      bot: (level) => ({ name: `L${level}`, choose: async (view, seat, rng) => (await heartsBots.choose({ view, seat, level, rng })).action }),
+      margin: 0.6,
+      paired: true,
+      score: heartsSideScore,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(hearts, view, seat, rng) },
+    games: 100,
+  };
+}
+
+/** Spades: partnerships to 500 under the standard rules, each deal played twice with the sides swapped. */
+function spadesLadder(): Ladder<SpadesState, SpadesAction, SpadesConfig, SpadesView, SpadesEvent> {
+  return {
+    spec: {
+      def: spades,
+      config: SPADES_STANDARD,
+      levels: spadesBots.levels.map((l) => l.level),
+      bot: (level) => ({ name: `L${level}`, choose: async (view, seat, rng) => (await spadesBots.choose({ view, seat, level, rng })).action }),
+      margin: 0.6,
+      paired: true,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(spades, view, seat, rng) },
+    games: 100,
+  };
+}
+
+/** Gin Rummy: games to 100 under the standard rules, each deal played twice with the seats swapped. */
+function ginLadder(): Ladder<GinState, GinAction, GinConfig, GinView, GinEvent> {
+  return {
+    spec: {
+      def: ginRummy,
+      config: GIN_STANDARD,
+      levels: ginBots.levels.map((l) => l.level),
+      bot: (level) => ({ name: `L${level}`, choose: async (view, seat, rng) => (await ginBots.choose({ view, seat, level, rng })).action }),
+      margin: 0.6,
+      paired: true,
+    },
+    // Random play draws and discards at random and knocks when it happens to be allowed.
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(ginRummy, view, seat, rng) },
+    games: 60,
+  };
+}
+
+/**
+ * Blackjack is played against the house, so levels are not matched against each other: each level
+ * plays the same shoes alone at the table (sessions of 100 rounds) and a rung passes when the higher
+ * level wins more chips than the lower by at least two standard errors of the paired difference.
+ * `games` is the number of sessions per level.
+ */
+function blackjackLadder(): Ladder<BlackjackState, BlackjackAction, BlackjackConfig, BlackjackView, BlackjackEvent> {
+  return {
+    spec: {
+      def: blackjack,
+      config: BJ_STANDARD,
+      levels: blackjackBots.levels.map((l) => l.level),
+      bot: (level) => ({ name: `L${level}`, choose: (view) => chooseBlackjack(view, level) }),
+      margin: 2,
+    },
+    random: { name: 'random', choose: (view, _seat, rng) => randomMove(view, rng) },
+    games: 6000,
+    custom: (games, onRung) => {
+      const names = ['random', ...blackjackBots.levels.map((l) => `L${l.level}`)];
+      const rows = names.map((name) => measure(name, games, 'ladder:blackjack', Math.min(games, 60)));
+      const rungs: LadderRung[] = [];
+      for (let i = 1; i < rows.length; i++) {
+        const higher = rows[i] as LevelRow;
+        const lower = rows[i - 1] as LevelRow;
+        const { diff, se } = compare(higher, lower);
+        const wins = higher.sessions.filter((x, k) => x > (lower.sessions[k] ?? 0)).length;
+        const losses = higher.sessions.filter((x, k) => x < (lower.sessions[k] ?? 0)).length;
+        const rung: LadderRung = {
+          higher: `${higher.name} (${higher.per100.toFixed(2)} bets per 100 rounds, gives away ${higher.lossPer100.toFixed(2)}% a decision)`,
+          lower: `${lower.name} (${lower.per100.toFixed(2)})`,
+          result: { games, score: se > 0 ? diff / se : 0, wins, draws: games - wins - losses, losses },
+          passed: diff >= 2 * se,
+        };
+        rungs.push(rung);
+        onRung(rung);
+      }
+      return Promise.resolve(rungs);
+    },
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
@@ -266,5 +386,9 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,
     'chinese-checkers': chineseCheckersLadder() as unknown as Ladder<never, never, never, never, never>,
     mahjong: mahjongLadder() as unknown as Ladder<never, never, never, never, never>,
+    hearts: heartsLadder() as unknown as Ladder<never, never, never, never, never>,
+    spades: spadesLadder() as unknown as Ladder<never, never, never, never, never>,
+    'gin-rummy': ginLadder() as unknown as Ladder<never, never, never, never, never>,
+    blackjack: blackjackLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }

@@ -3,7 +3,7 @@ import { GameGlyph } from '../components/GameGlyph';
 import { SHELF } from '../../games/catalog';
 import { READY_IDS } from '../../games/ready';
 import { SETTLED_AFTER } from '../../teach/rating';
-import { gameName, practiceText, t, tCount } from '../../text';
+import { gameName, hasText, practiceText, t, tCount, tDynamic } from '../../text';
 import { Icon } from '../components/Icon';
 import { Segmented } from '../components/Segmented';
 import type { GameProgress } from '../progress-data';
@@ -81,7 +81,7 @@ function Detail({ p }: { p: GameProgress }) {
                 {item.done ? <Icon name="check" size={14} /> : null}
               </span>
               <span className="stack" style={{ gap: 0 }}>
-                <span>{t(`ready.${item.id}`)}</span>
+                <span>{hasText(`ready.${p.gameId}.${item.id}`) ? tDynamic(`ready.${p.gameId}.${item.id}`) : t(`ready.${item.id}`)}</span>
                 <span className="faint ready-how">
                   {item.lessons.length > 0 ? t('ready.how.lessons', { list: item.lessons.map((l) => l.title).join(', ') }) : null}
                   {item.drill ? t('ready.how.drill', { drill: practiceText(p.gameId, item.drill.id), n: item.drill.times, passed: Math.min(item.drill.passed, item.drill.times) }) : null}
