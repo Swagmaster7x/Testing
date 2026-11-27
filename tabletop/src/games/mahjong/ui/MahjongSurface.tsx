@@ -398,7 +398,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const myMelds = d.melds[me] ?? [];
   const meldTiles = myMelds.reduce((n, m) => n + m.tiles.length, 0);
   const myBonus = d.bonus[me] ?? [];
-  const units = myHand.length + (myDrawn ? 1.35 : 0) + meldTiles * 0.72 + myMelds.length * 0.3 + myBonus.length * 0.5 + 1;
+  const units = myHand.length + (myDrawn ? 1.35 : 0) + meldTiles * 0.72 + myMelds.length * 0.3 + myBonus.length * 0.6 + 1;
   const hw = Math.max(20, Math.min(70, (W - 8) / Math.max(10, units), H * 0.135));
   const hh = (hw * 4) / 3;
   const bottomH = hh + hw * 0.4 + 6;
@@ -471,7 +471,6 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       bonus.forEach((tile, i) => placed.push({ key: tile, kind: kindOf(tile), x: x - mw * 0.8 * (i + 0.5), y: y + 2, w: mw * 0.78, z: 240 + i, label: tileName(tile) }));
     } else {
       const sideX = where === 'left' ? 4 + bh / 2 : W - 4 - bh / 2;
-      const innerX = where === 'left' ? 4 + bh + 4 + bw / 2 : W - 4 - bh - 4 - bw / 2;
       const span = hand.length * bw;
       // Hidden tiles stand in a column at the edge (shown lying down, as seen from your seat).
       hand.forEach((tile, i) => {
@@ -482,13 +481,16 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       const items: { tile: TileId; kind: Kind | null; gapBefore: boolean }[] = [];
       melds.forEach((m) => m.tiles.forEach((tile, i) => items.push({ tile, kind: m.concealed && (i === 0 || i === 3) ? null : kindOf(tile), gapBefore: i === 0 && items.length > 0 })));
       bonus.forEach((tile, i) => items.push({ tile, kind: kindOf(tile), gapBefore: i === 0 && items.length > 0 }));
-      // Kept between the seat tags above and below the column.
-      const step = Math.min(bw * 1.3, (area.h - 30) / Math.max(1, items.length + melds.length * 0.3));
+      // Kept between the seat tags above and below the column, and as large as that allows: a
+      // player's called sets are what the others read to judge how close they are.
+      const step = Math.min(bw * 1.6, (area.h - 30) / Math.max(1, items.length + melds.length * 0.3));
+      const iw = step * 0.72;
+      const innerX = where === 'left' ? 4 + bh + 4 + iw / 2 : W - 4 - bh - 4 - iw / 2;
       const colH = items.length * step + items.filter((x) => x.gapBefore).length * step * 0.3;
       let y = where === 'left' ? cy - colH / 2 : cy + colH / 2;
       items.forEach((item, i) => {
         if (item.gapBefore) y += (where === 'left' ? 1 : -1) * step * 0.3;
-        placed.push({ key: item.tile, kind: item.kind, x: innerX, y: y + ((where === 'left' ? 1 : -1) * step) / 2, w: step * 0.72, z: 230 + i, label: tileName(item.tile) });
+        placed.push({ key: item.tile, kind: item.kind, x: innerX, y: y + ((where === 'left' ? 1 : -1) * step) / 2, w: iw, z: 230 + i, label: tileName(item.tile) });
         y += (where === 'left' ? 1 : -1) * step;
       });
     }
@@ -498,7 +500,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const playable = new Set<Kind>(myTurn ? legal.filter((a) => a.type === 'discard').map((a) => (a as { tile: Kind }).tile) : []);
   const efficiency = helps.efficiency === true && myTurn && playable.size > 0 ? efficiencyNotes(state, me) : null;
   const hintKinds = new Set(overlay.marks.map((m) => m.square));
-  const bonusW = hw * 0.5;
+  const bonusW = hw * 0.6;
   const mmw = hw * 0.72;
   const rowW = myBonus.length * bonusW + (myBonus.length ? hw * 0.4 : 0) + myHand.length * hw + (myDrawn ? hw * 1.35 : 0) + meldTiles * mmw + myMelds.length * hw * 0.3;
   let x = Math.max(4, W / 2 - rowW / 2);

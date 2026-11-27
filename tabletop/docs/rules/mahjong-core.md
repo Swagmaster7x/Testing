@@ -91,6 +91,27 @@ The engine has one place for turn order and one for the phases of a hand, so ret
 adding a phase before play are changes in one spot each; nothing in the Hong Kong file depends
 on them.
 
+## Teaching on the core (milestone 10)
+
+Lessons, drills and problems run on the real engine through `src/games/mahjong/learn/game.ts`:
+
+- `lessonPosition(spec)` builds a position from the tiles a lesson names (your hand, melds,
+  discards, bonus tiles, a tile another player throws so the lesson starts on a claim) and deals
+  the rest from a seed, every tile in one place. Other hands never hold three alike, are never
+  close to winning, and a throw on offer is yours alone to call.
+- `mahjongComputed(state)` supplies every number a lesson may quote: the set and the hand from the
+  style's rules, each pattern's value from the rules file's one faan table (`hkFaan`), points and
+  payments, and for the position the coach's own tiles-from-ready, useful tiles, waits, unseen
+  tiles and what a win on offer would score and collect.
+- `learn/verify.ts` proves "best" discards with the same calculators: fewest tiles from ready and
+  then the most useful tiles you have not seen, by a margin; or, on a position marked for it, the
+  safest tile by the safe-tile ranking.
+
+A later style adds its own track (lessons with its options), its own numbers (its scorer and
+hints already feed `winOnOffer`, the waits and the efficiency figures) and its own scoring drill;
+the stage 0 to 2 lessons are written for every style and play at a table with no flowers and no
+minimum.
+
 ## Notation
 
 Tiles: `1m`–`9m` characters, `1p`–`9p` dots, `1s`–`9s` bamboo, `E S W N` winds, `Wd Gd Rd` dragons,
