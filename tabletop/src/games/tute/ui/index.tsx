@@ -69,19 +69,24 @@ export const tuteUi: GameUi<TuteState, TuteAction, TuteConfig, TuteView, TuteEve
     const m = me(mySeats);
     const n = seats ?? 4;
     const who = (seat: Seat) => whoName(seat, m, n, names);
+    // The mover's own lines (play, sing, tute, swap) follow the mover's name in the log; the rest name their subject.
     switch (event.type) {
       case 'play':
-        return t('tute.log.play', { who: who(event.seat), card: cardName(event.card) });
+        return t('tute.log.play', { card: cardName(event.card) });
       case 'sing':
-        return t(event.points >= CANTE_TRUMPS ? 'tute.log.sing.forty' : 'tute.log.sing.twenty', { who: who(event.seat), suit: suitName(event.suit), n: event.points });
+        return t(event.points >= CANTE_TRUMPS ? 'tute.log.sing.forty' : 'tute.log.sing.twenty', { suit: suitName(event.suit) });
       case 'tute':
-        return t(event.kind === 'R' ? 'tute.log.tute.kings' : 'tute.log.tute.knights', { who: who(event.seat) });
+        return t(event.kind === 'R' ? 'tute.log.tute.kings' : 'tute.log.tute.knights');
       case 'swap':
-        return t('tute.log.swap', { who: who(event.seat), gave: cardName(event.gave), took: cardName(event.took) });
-      case 'trick':
-        return event.last ? t('tute.log.trick.last', { who: who(event.winner), n: event.points }) : event.points > 0 ? t('tute.log.trick', { who: who(event.winner), n: event.points }) : t('tute.log.trick.none', { who: who(event.winner) });
+        return t('tute.log.swap', { gave: cardName(event.gave), took: cardName(event.took) });
+      case 'trick': {
+        const mine = event.winner === m;
+        if (event.last) return mine ? t('tute.log.trick.last.you', { n: event.points }) : t('tute.log.trick.last', { who: who(event.winner), n: event.points });
+        if (event.points > 0) return mine ? t('tute.log.trick.you', { n: event.points }) : t('tute.log.trick', { who: who(event.winner), n: event.points });
+        return mine ? t('tute.log.trick.none.you') : t('tute.log.trick.none', { who: who(event.winner) });
+      }
       case 'draw':
-        if (event.turned) return t('tute.log.draw.turned', { who: who(event.seat), card: cardName(event.card) });
+        if (event.turned) return event.seat === m ? t('tute.log.draw.turned.you', { card: cardName(event.card) }) : t('tute.log.draw.turned', { who: who(event.seat), card: cardName(event.card) });
         if (event.seat === m) return t('tute.log.draw.you', { card: cardName(event.card) });
         return t('tute.log.draw.other', { who: who(event.seat) });
       case 'reach':

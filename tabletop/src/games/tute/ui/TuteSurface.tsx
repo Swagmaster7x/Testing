@@ -213,7 +213,7 @@ export function TuteSurface({ state, mySeats, canAct, legal, anim, onAction, onS
     const k = cards.length;
     const across = where === 'top';
     const unit = across ? cardW * small : cardH * small;
-    const steps = cards.slice(0, -1).map((c) => unit * (open || known.has(c) ? (across ? 0.62 : 0.42) : across ? 0.3 : 0.2));
+    const steps = cards.slice(0, -1).map((c) => unit * (open || known.has(c) ? (across ? 0.62 : 0.6) : across ? 0.3 : 0.2));
     const room = across ? W * 0.5 : H * 0.4;
     const total = steps.reduce((a, b) => a + b, 0);
     const fit = total > room ? room / total : 1;
@@ -245,21 +245,43 @@ export function TuteSurface({ state, mySeats, canAct, legal, anim, onAction, onS
     placed.push({ key: p.card, face: face(p.card), back: BACK, x: at.x, y: at.y, rotate: at.r, scale: four ? 0.86 : 1, z: 200 + i, label: t('tute.played', { who: seatName(p.seat, me, players, names), card: cardName(p.card) }) });
   });
 
-  // Won tricks, face down by side: ours below the middle on the right, theirs above.
+  // Won tricks, face down by side: ours below the middle on the right, theirs above, each with its count.
+  const pileTags: { side: number; x: number; y: number; text: string }[] = [];
   const mySide = sideOf(me, players);
   [mySide, 1 - mySide].forEach((side) => {
     const pile = d.won[side] ?? [];
     const y = side === mySide ? cy + cardH * 0.5 : cy - cardH * 0.5;
     const x = four ? W - sideW - gap - cardW * 0.55 : pileX;
     const tricks = pile.length / players;
+    const tag = t(side === mySide ? 'tute.pile.us' : 'tute.pile.them', { n: tricks });
     if (helps.openPiles && pile.length > 0) {
-      const step = Math.min(cardW * 0.4, (x - cx - cardW) / Math.max(1, pile.length - 1));
-      pile.forEach((card, i) => placed.push({ key: card, face: face(card), back: BACK, x: x - (pile.length - 1 - i) * step, y, scale: 0.7, z: 60 + i, label: cardName(card) }));
+      // Face up for counting: a grid across the middle of the table, ours below and theirs above.
+      const top = topY + (cardH * small) / 2 + 18;
+      const bottom = (d.hands[me]?.length ?? 0) > 0 ? handY - cardH / 2 - 8 : H - gap;
+      const mid = (top + bottom) / 2;
+      const left = (four ? sideW + gap : stockX + cardW) + 34;
+      const right = W - (four ? sideW + gap : gap) - 34;
+      const s = Math.min(0.62, ((bottom - top) / 2 - 16) / (cardH * 1.1));
+      const cw = cardW * s;
+      const ch = cardH * s;
+      const step = cw * 0.6;
+      const perRow = Math.max(1, Math.floor((right - left - cw) / step) + 1);
+      const rows = Math.ceil(pile.length / perRow);
+      const rowStep = Math.min(ch * 0.5, rows > 1 ? (mid - top - 16 - ch) / (rows - 1) : ch);
+      const blockTop = side === mySide ? mid + 16 : top + 14;
+      pile.forEach((card, i) => {
+        const row = Math.floor(i / perRow);
+        const inRow = Math.min(perRow, pile.length - row * perRow);
+        const col = i % perRow;
+        placed.push({ key: card, face: face(card), back: BACK, x: (left + right) / 2 + (col - (inRow - 1) / 2) * step, y: blockTop + ch / 2 + row * rowStep, scale: s, z: 60 + i, label: cardName(card) });
+      });
+      pileTags.push({ side, x: (left + right) / 2, y: blockTop - 16, text: tag });
       return;
     }
+    if (pile.length > 0) pileTags.push({ side, x, y: y + cardW * 0.3 + 2, text: tag });
     pile.forEach((card, i) => {
       const depth = Math.min(i, 5) * 0.5;
-      placed.push({ key: card, face: null, back: BACK, x: x - depth, y: y - depth, rotate: 90, scale: 0.62, z: 50 + i, label: i === pile.length - 1 ? t(side === mySide ? 'tute.pile.us' : 'tute.pile.them', { n: tricks }) : undefined });
+      placed.push({ key: card, face: null, back: BACK, x: x - depth, y: y - depth, rotate: 90, scale: 0.52, z: 50 + i, label: i === pile.length - 1 ? t(side === mySide ? 'tute.pile.us' : 'tute.pile.them', { n: tricks }) : undefined });
     });
   });
 
@@ -345,14 +367,23 @@ export function TuteSurface({ state, mySeats, canAct, legal, anim, onAction, onS
     <div ref={ref} className="card-table tute-table" onPointerDown={(e) => e.target === e.currentTarget && onSkip()} data-busy={anim.playing !== null} data-players={players}>
       {W > 0 ? <CardLayer cards={placed} cardWidth={cardW} duration={duration} onCard={onCard} /> : null}
       {W > 0 ? tags : null}
-      <div className="trump-badge tute-trumps" style={four ? { left: `${gap}px`, top: `${gap / 2}px` } : { left: `${stockX - cardW * 0.5}px`, top: `${cy - cardH * 0.5 - 30}px` }} aria-label={t('tute.trumps', { suit: suitName(trumpSuit) })}>
-        <svg viewBox="-12 -12 24 24" width="18" height="18" aria-hidden="true">
-          <SuitSign suit={trumpSuit} scale={0.9} />
-        </svg>
-        <span>{suitName(trumpSuit)}</span>
-      </div>
+      {W > 0
+        ? pileTags.map((p) => (
+            <span key={p.side} className="yard-tag tute-pile-tag" style={{ left: `${p.x}px`, top: `${p.y}px` }} aria-hidden="true">
+              {p.text}
+            </span>
+          ))
+        : null}
+      {d.cleared ? null : (
+        <div className="trump-badge tute-trumps" style={!four && d.stock.length > 0 ? { left: `${stockX - cardW * 0.5}px`, top: `${cy - cardH * 0.5 - 30}px` } : { left: `${gap}px`, top: `${gap / 2}px` }} aria-label={t('tute.trumps', { suit: suitName(trumpSuit) })}>
+          <svg viewBox="-12 -12 24 24" width="18" height="18" aria-hidden="true">
+            <SuitSign suit={trumpSuit} scale={0.9} />
+          </svg>
+          <span>{suitName(trumpSuit)}</span>
+        </div>
+      )}
       {helps.counts ? (
-        <div className="pile-points num tute-points" style={{ right: `${four ? sideW + gap : gap}px`, top: `${cy - 10}px` }}>
+        <div className="pile-points num tute-points" style={four ? { left: `${gap}px`, top: `${gap / 2 + 30}px` } : { right: `${gap}px`, top: `${gap / 2}px` }} aria-label={t('tute.counter.points')}>
           {t('tute.points.both', { a: sidePoints(state, us), b: sidePoints(state, 1 - us) })}
         </div>
       ) : null}

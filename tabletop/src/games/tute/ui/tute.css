@@ -78,6 +78,12 @@
   z-index: 290;
 }
 
+.tute-pile-tag {
+  transform: translateX(-50%);
+  font-size: var(--fs-2xs);
+  pointer-events: none;
+}
+
 .tute-voids {
   margin: 0;
   padding: 0;

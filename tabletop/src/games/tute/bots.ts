@@ -77,9 +77,9 @@ export const LEVEL_PARAMS: Record<number, LevelParams> = {
   1: { samples: 0, policy: 1, infer: false, exactAt: -1 },
   2: { samples: 0, policy: 2, infer: false, exactAt: -1 },
   3: { samples: 0, policy: 3, infer: true, exactAt: -1 },
-  4: { samples: 24, policy: 2, infer: false, exactAt: -1 },
-  5: { samples: 48, policy: 3, infer: true, exactAt: -1 },
-  6: { samples: 96, policy: 3, infer: true, exactAt: 3 },
+  4: { samples: 24, policy: 3, infer: true, exactAt: -1 },
+  5: { samples: 64, policy: 3, infer: true, exactAt: -1 },
+  6: { samples: 128, policy: 3, infer: true, exactAt: 2 },
 };
 
 /** What a hand won is worth in the search, in points per game it scores. */
