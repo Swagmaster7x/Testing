@@ -126,6 +126,16 @@ export interface GameReviewSupport<S, C> {
   configAt(state: S): C;
 }
 
+/** A named set of options for the New game dialog ("Rules at this table", PLAN.md 2.3). */
+export interface SetupPreset<C> {
+  readonly id: string;
+  readonly label: string;
+  readonly detail?: string;
+  readonly config: C;
+  /** Rating points this preset takes off a CPU level's nominal rating (a handicap the CPU gives). */
+  readonly ratingOffset?: number;
+}
+
 export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly def: GameDef<S, A, C, V, E>;
   readonly levels: readonly BotLevel[];
@@ -159,6 +169,8 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   timeoutOutcome?(state: S, seat: Seat): Outcome;
   /** Export a record in the game's own file format (PGN for chess). */
   readonly exportRecord?: { readonly extension: string; readonly mime: string; write(record: GameRecord, names: readonly string[]): string };
+  /** More formats offered beside `exportRecord` (shogi: CSA and SFEN); `canWrite` hides one a record cannot be written in. */
+  readonly moreExports?: readonly { readonly extension: string; readonly mime: string; write(record: GameRecord, names: readonly string[]): string; canWrite?(record: GameRecord): boolean }[];
   readonly review?: GameReviewSupport<S, C>;
   /** The rules at this table: named presets and every option (PLAN.md 2.3). */
   readonly options?: GameOptions<C>;
@@ -166,6 +178,10 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   moveSquares?(action: A): { from: string; to: string } | null;
   /** Import a game from its own file format into a record's config and actions. */
   readonly importRecord?: { readonly accept: string; read(text: string): { config: C; actions: readonly Json[]; outcome: Outcome | null; names: readonly string[] } };
+  /** Named rule presets offered when starting a game; the first is the default. */
+  readonly presets?: readonly SetupPreset<C>[];
+  /** The options "Play again" keeps from a finished game (presets, not a set-up position); the standard game when absent. */
+  replayConfig?(config: C): C;
 }
 
 export type AnyGameUi = GameUi<unknown, unknown, unknown, unknown, GameEvent>;

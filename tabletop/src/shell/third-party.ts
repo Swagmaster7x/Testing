@@ -10,4 +10,6 @@ export const SHIPPED: readonly { name: string; licence: string; use: string }[] 
   { name: 'Lichess puzzle database', licence: 'CC0 1.0', use: 'Chess problems (lichess.org)' },
   { name: 'Inter', licence: 'SIL OFL 1.1', use: 'Text font' },
   { name: 'Fraunces', licence: 'SIL OFL 1.1', use: 'Heading font' },
+  { name: 'tsshogi', licence: 'MIT', use: 'Shogi game files (KIF, CSA)' },
+  { name: 'Shippori Mincho B1 (kanji outlines)', licence: 'SIL OFL 1.1', use: 'Shogi piece lettering' },
 ];

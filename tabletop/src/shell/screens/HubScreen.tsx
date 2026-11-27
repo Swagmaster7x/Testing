@@ -78,6 +78,10 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
   const [showRules, setShowRules] = useState(false);
   const configKey = (c: unknown) => stableStringify(ui.def.codec.config.toJSON(c));
   const presetId = options?.presets.find((p) => configKey(p.config) === configKey(config))?.id ?? null;
+  // Games with fixed setups (shogi's handicaps, mini-shogi) offer them as a list instead.
+  const setupPresets = ui.presets ?? [];
+  const [setupPresetId, setSetupPresetId] = useState<string>(setupPresets[0]?.id ?? '');
+  const setupPreset = setup === undefined ? setupPresets.find((p) => p.id === setupPresetId) : undefined;
   const [level, setLevel] = useState<number>(remembered ?? suggested);
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
   const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
@@ -96,7 +100,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
       level,
       side: choice?.seat ?? 'either',
       ...(seed ? { seed } : {}),
-      ...(setup !== undefined ? { config: setup } : options ? { config } : {}),
+      ...(setup !== undefined ? { config: setup } : options ? { config } : setupPreset ? { config: setupPreset.config } : {}),
       clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
     });
     navigate(`/play/${id}`);
@@ -142,6 +146,24 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
               ) : null}
             </p>
           </div>
+          {setupPreset ? (
+            <div className="setup-row wide">
+              <label className="eyebrow" htmlFor="play-preset">
+                {t('play.rules')}
+              </label>
+              <select id="play-preset" className="preset-select" value={setupPreset.id} onChange={(e) => setSetupPresetId(e.target.value)}>
+                {setupPresets.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              {setupPreset.detail ? <p className="level-blurb">{setupPreset.detail}</p> : null}
+              {setupPreset.ratingOffset ? (
+                <p className="level-blurb faint num">{t('play.rules.strength', { n: Math.max(100, (ui.levels.find((l) => l.level === level)?.rating ?? 0) - setupPreset.ratingOffset) })}</p>
+              ) : null}
+            </div>
+          ) : null}
           {ui.sides.length > 1 ? (
             <div className="setup-row">
               <span className="eyebrow">{t('play.side')}</span>

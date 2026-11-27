@@ -45,7 +45,8 @@ export async function lintLesson<S>(lesson: Lesson, game: LessonGame<S>, verifie
   if (!ID.test(lesson.id) || !lesson.id.startsWith(`${lesson.gameId}.`)) at('id', 'ids look like "<game>.<stage>.<name>"');
   if (!STAGES.includes(lesson.stage)) at('stage', `unknown stage ${lesson.stage}`);
   if (!lesson.title.trim()) at('title', 'missing');
-  if (typedNumbers(lesson.title).length > 0) at('title', `typed number ${typedNumbers(lesson.title).join(', ')}`);
+  const strip = game.stripNotation?.bind(game);
+  if (typedNumbers(lesson.title, strip).length > 0) at('title', `typed number ${typedNumbers(lesson.title, strip).join(', ')}`);
   if (lesson.minutes < MIN_MINUTES || lesson.minutes > MAX_MINUTES) at('minutes', `${lesson.minutes} is outside ${MIN_MINUTES} to ${MAX_MINUTES}`);
   if (lesson.steps.length === 0) at('steps', 'a lesson needs steps');
   if (!lesson.steps.some((s) => s.kind !== 'say' && s.kind !== 'show')) at('steps', 'a lesson needs at least one question or exercise');
@@ -65,7 +66,7 @@ export async function lintLesson<S>(lesson: Lesson, game: LessonGame<S>, verifie
   const checkText = (where: string, step: LessonStep | QuizStep, state: S) => {
     const computed = game.computed(state);
     for (const text of texts(step)) {
-      const typed = typedNumbers(text);
+      const typed = typedNumbers(text, strip);
       if (typed.length > 0) at(where, `typed number(s) ${typed.join(', ')} in "${text}"; use a {placeholder}`);
       for (const name of placeholders(text)) if (!(name in computed)) at(where, `unknown placeholder {${name}} in "${text}"`);
       if (fillText(text, computed).includes('{')) at(where, `unfilled placeholder in "${text}"`);

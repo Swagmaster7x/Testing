@@ -19,6 +19,9 @@ import { dominoesVerifier } from '../src/games/dominoes/learn/verify';
 import { CHESS_LESSONS, chessLessonGame } from '../src/games/chess/learn';
 import { chessVerifier } from '../src/games/chess/learn/verify';
 import { lessonGames } from '../src/games/lessons';
+import { SHOGI_LESSONS, shogiLessonGame } from '../src/games/shogi/learn';
+import type { ClaimCache } from '../src/games/shogi/learn/verify';
+import { shogiVerifier } from '../src/games/shogi/learn/verify';
 import type { Lesson } from '../src/teach/lesson';
 import { STAGES } from '../src/teach/lesson';
 import type { LessonVerifier } from '../src/teach/lint';
@@ -80,10 +83,28 @@ interface Suite {
   verifier(engine: Engine): LessonVerifier<any>;
 }
 
+/** Shogi claims are checked by the built-in engine; results are kept in the same cache file. */
+const SHOGI_ENGINE = 'kibitz-shogi-1';
+const shogiCache: ClaimCache = {
+  get: (key) => {
+    const hit = cache[`${SHOGI_ENGINE}|${key}`] as unknown;
+    if (Array.isArray(hit)) {
+      hits++;
+      return hit as string[];
+    }
+    return undefined;
+  },
+  set: (key, found) => {
+    searches++;
+    (cache as Record<string, unknown>)[`${SHOGI_ENGINE}|${key}`] = [...found];
+  },
+};
+
 const SUITES: Record<string, Suite> = {
   chess: { lessons: CHESS_LESSONS, game: chessLessonGame, verifier: chessVerifier },
   brisca: { lessons: BRISCA_LESSONS, game: briscaLessonGame, verifier: () => briscaVerifier },
   dominoes: { lessons: DOMINOES_LESSONS, game: dominoesLessonGame, verifier: () => dominoesVerifier },
+  shogi: { lessons: SHOGI_LESSONS, game: shogiLessonGame, verifier: () => shogiVerifier(shogiCache) },
 };
 
 const problems: string[] = [];
@@ -94,6 +115,8 @@ for (const game of lessonGames()) if (!SUITES[game]) problems.push(`${game}: the
 const engine = cachedEngine();
 const started = Date.now();
 for (const [gameId, suite] of Object.entries(SUITES)) {
+  // LESSON_LINT_ONLY=shogi lints one game (the full run is part of npm run check).
+  if (process.env.LESSON_LINT_ONLY && process.env.LESSON_LINT_ONLY !== gameId) continue;
   const verifier = suite.verifier(engine);
   const found = await lintLessons(suite.lessons, suite.game, verifier, (lesson, p) => {
     if (process.env.LESSON_LINT_VERBOSE) console.log(`${p.length === 0 ? 'ok  ' : 'FAIL'} ${lesson.id}`);

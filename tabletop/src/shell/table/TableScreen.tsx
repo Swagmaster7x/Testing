@@ -198,12 +198,13 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const playAgain = async () => {
     await controller.flush();
     const clock = record.clock ? { initialMs: record.clock.initialMs, incrementMs: record.clock.incrementMs } : null;
-    const id = await startGame(ui, profileId, { level, side: mySeat, clock });
+    // Keep the table's rules (a preset or handicap) when the game says which ones to keep.
+    const config = ui.replayConfig ? ui.replayConfig(ui.def.codec.config.fromJSON(record.config)) : undefined;
+    const id = await startGame(ui, profileId, { level, side: mySeat, clock, ...(config !== undefined ? { config } : {}) });
     navigate(`/play/${id}`, { replace: true });
   };
 
-  const exportGame = async () => {
-    const format = ui.exportRecord;
+  const exportGame = async (format = ui.exportRecord) => {
     if (!format) return;
     await controller.flush();
     const names = ui.def.seats(state).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
@@ -287,6 +288,22 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
                 {t('table.export', { format: ui.exportRecord.extension.toUpperCase() })}
               </button>
             ) : null}
+            {ui.moreExports
+              ?.filter((format) => format.canWrite?.(record) ?? true)
+              .map((format) => (
+                <button
+                  key={format.extension}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    close();
+                    void exportGame(format);
+                  }}
+                >
+                  <Icon name="export" size={20} />
+                  {t('table.export', { format: format.extension.toUpperCase() })}
+                </button>
+              ))}
             <a role="menuitem" href={href(`/games/${ui.def.id}/reference`)} onClick={close}>
               <Icon name="reference" size={20} />
               {t('table.reference')}

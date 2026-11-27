@@ -1,5 +1,5 @@
-import { expect, noHorizontalScroll, test } from './fixtures';
 import { SHELF } from '../../src/games/catalog';
+import { expect, noHorizontalScroll, test } from './fixtures';
 
 const NAMES: Record<string, string> = { brisca: 'Brisca', poker: 'Poker', chess: 'Chess', go: 'Go', 'chinese-checkers': 'Chinese Checkers', shogi: 'Shogi', dominoes: 'Dominoes', mahjong: 'Mahjong' };
 const gameName = (id: string) => NAMES[id] ?? id;

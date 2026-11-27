@@ -1,0 +1,208 @@
+/* Shogi table (milestone 8). Loaded with the shogi interface only. */
+
+/* In landscape the surface takes the whole play area: the board stays square in the middle and the
+   pieces in hand stand in the spare width on either side. */
+@media (orientation: landscape) {
+  .board-frame:has(> .shogi-surface) {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.shogi-surface {
+  --shogi-hand: clamp(34px, calc((100cqw - 100cqh) / 2 - 6px), 84px);
+  display: grid;
+  grid-template-columns: var(--shogi-hand) minmax(0, 1fr) var(--shogi-hand);
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.shogi-board {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+
+.shogi-board .sq-light {
+  fill: #e1c088;
+  stroke: #4d3420;
+  stroke-width: 1.6;
+}
+
+.shogi-board .sq-last {
+  fill: rgb(196 140 42 / 0.32);
+}
+
+.shogi-hand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shogi-hand[data-side='top'] {
+  justify-content: flex-start;
+}
+
+.shogi-hand[data-side='bottom'] {
+  justify-content: flex-end;
+}
+
+.shogi-hand-piece {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 1 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  padding: 1px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  background: rgb(0 0 0 / 0.18);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.shogi-hand-piece svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.shogi-hand-piece[aria-disabled='true'] {
+  cursor: default;
+}
+
+.shogi-hand-piece[aria-pressed='true'] {
+  outline: 2px solid var(--brass-1);
+  outline-offset: -1px;
+  background: var(--brass-wash);
+}
+
+.shogi-hand-piece[data-marked='true'] {
+  outline: 3px solid #e8c77f;
+  outline-offset: -2px;
+}
+
+.shogi-hand-piece .count {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: rgb(20 14 8 / 0.86);
+  color: var(--text-1);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+.shogi-hand-empty {
+  display: none;
+}
+
+.shogi-look {
+  flex: 0 0 auto;
+  margin-bottom: auto;
+  height: 26px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  background: rgb(0 0 0 / 0.18);
+  color: var(--text-2);
+  /* Small enough for the narrowest hand column (34px). */
+  font-size: 10.5px;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.shogi-note {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 92%;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  border-left: 3px solid var(--brass-2);
+  background: rgb(22 16 10 / 0.94);
+  color: var(--text-1);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-tight);
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+}
+
+.shogi-note[data-tone='bad'] {
+  border-left-color: var(--bad);
+}
+
+.shogi-declare {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  box-shadow: var(--shadow-2);
+}
+
+.shogi-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--sp-2);
+}
+
+/* The rule presets in the New game dialog. */
+.preset-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-md);
+}
+
+/* Portrait: the hands sit above and below the board. */
+@media (orientation: portrait) {
+  .board-frame:has(> .shogi-surface) {
+    height: auto;
+  }
+
+  .shogi-surface {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 40px auto 40px;
+  }
+
+  .shogi-board {
+    aspect-ratio: 1 / 1;
+  }
+
+  .shogi-hand {
+    flex-direction: row;
+  }
+
+  .shogi-hand-piece {
+    width: auto;
+    height: 100%;
+  }
+
+  .shogi-look {
+    margin-bottom: 0;
+    margin-right: auto;
+    height: 100%;
+  }
+}

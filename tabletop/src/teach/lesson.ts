@@ -117,10 +117,12 @@ export function fillText(text: string, computed: Readonly<Record<string, number 
 
 /**
  * Digits in lesson text are only allowed inside notation (squares like e4, moves like Nf3 or
- * O-O-O, domino tiles like 3-5) and {placeholders}. Returns the offending fragments, if any.
+ * O-O-O, domino tiles like 3-5) and {placeholders}. Returns the offending fragments, if any. A game whose
+ * notation uses digits differently (shogi's squares are "76") passes `stripNotation` to remove its own first.
  */
-export function typedNumbers(text: string): string[] {
-  const stripped = text
+export function typedNumbers(text: string, stripNotation?: (text: string) => string): string[] {
+  const own = stripNotation ? stripNotation(text) : text;
+  const stripped = own
     .replace(/\{[\w:.-]+\}/g, ' ')
     // Domino tiles (3-5, 6-6) are names, like squares.
     .replace(/\b[0-6]-[0-6]\b/g, ' ')

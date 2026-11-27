@@ -5,5 +5,6 @@
  */
 import { enBrisca } from './brisca';
 import { enDominoes } from './dominoes';
+import { enShogi } from './shogi';
 
-export const enGames = { ...enBrisca, ...enDominoes } as const;
+export const enGames = { ...enBrisca, ...enDominoes, ...enShogi } as const;

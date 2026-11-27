@@ -93,10 +93,10 @@ const base = {
 
   'game.shogi.name': 'Shogi',
   'game.shogi.aka': 'Japanese chess',
-  'game.shogi.launch': 'Standard, handicaps, 5×5 mini-shogi.',
+  'game.shogi.launch': 'Standard, nine handicaps, 5×5 mini-shogi.',
   'game.shogi.later': 'A stronger engine and a castle trainer.',
   'game.shogi.practice': 'Mate problems in 1, 3 and 5, drops, castles.',
-  'game.shogi.cpu': 'Own engine with a handicap ladder.',
+  'game.shogi.cpu': 'Own engine, seven levels and a handicap ladder.',
 
   'game.mahjong.name': 'Mahjong',
   'game.mahjong.aka': 'Hong Kong style first, Riichi next',
@@ -409,6 +409,8 @@ const base = {
   'clock.10': '10 min',
   'clock.15-10': '15 + 10',
   'clock.of': '{seat}’s clock: {time}',
+  'play.rules': 'Rules at this table',
+  'play.rules.strength': 'With this handicap the CPU plays at a rating of about {n}.',
   'play.import': 'Open a game file',
   'play.imported': 'Opened {file}.',
   'play.import.failed': 'That file could not be opened: {message}',
