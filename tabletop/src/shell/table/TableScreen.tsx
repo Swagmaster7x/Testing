@@ -162,7 +162,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const pnp = isPassAndPlay(record);
   const hidden = useMemo(() => hasHiddenInformation(ui, startOf(ui, initial)), [ui, initial]);
   const [holder, setHolder] = useState<Seat | null>(null);
-  const viewer = viewerOf(record, snap.turn, snap.history, hidden, holder);
+  const viewer = viewerOf(record, snap.turn, snap.history, hidden, holder, snap.checking || snap.warning !== null);
   const viewSeats: readonly Seat[] = viewer.seat !== null ? [viewer.seat] : mySeats.length > 0 ? [mySeat] : [];
   const names = namesFor(record, viewer.seat);
 

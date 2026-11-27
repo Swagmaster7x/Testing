@@ -2,7 +2,7 @@
 // the opening with hop chains, three players, the rules at the table, resuming, a lesson, problems,
 // the drills and the reference card.
 import { BOTTOM, pos, TOP } from '../../src/games/chinese-checkers/learn/positions';
-import { ccProblems, hole, playCcToEnd, startCc } from './cc-helpers';
+import { ccProblems, goodMove, hole, playCcToEnd, startCc } from './cc-helpers';
 import { expect, noHorizontalScroll, test } from './fixtures';
 
 /** Red, the person, has two marbles to bring home; Blue, the CPU, has three far down the board. */
@@ -93,6 +93,30 @@ test.describe('chinese checkers', () => {
     await expect(page.getByRole('heading', { name: 'Lesson complete' })).toBeVisible();
     await page.getByRole('link', { name: 'All Chinese Checkers lessons' }).click();
     await expect(page.getByText(/^1 of \d+ lessons done$/)).toBeVisible();
+  });
+
+  test('wins the first race lesson against the computer', async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto('/#/learn/chinese-checkers.0.race');
+    await page.getByRole('button', { name: 'Next' }).click();
+    for (let i = 0; i < 30; i++) {
+      const feedback = page.locator('.lesson-feedback');
+      if ((await feedback.count()) > 0 && ((await feedback.textContent()) ?? '').includes('Home first')) break;
+      // Wait until it is our move: a marble of ours can be tapped.
+      await expect(page.locator('.lesson-panel')).not.toContainText('thinking', { timeout: 30_000 });
+      const position = (await page.locator('.cc-surface').getAttribute('data-state')) ?? '';
+      // Red (the student) to move: the side letter follows the rows.
+      if (!/^\S+ r( |$)/.test(position)) {
+        await page.waitForTimeout(200);
+        continue;
+      }
+      const move = goodMove(position);
+      if (move === 'pass') break;
+      await hole(page, move.from).click();
+      await hole(page, move.to).click();
+      await expect(page.locator('.cc-surface')).not.toHaveAttribute('data-state', position, { timeout: 15_000 });
+    }
+    await expect(page.locator('.lesson-feedback')).toContainText('Home first', { timeout: 30_000 });
   });
 
   test('solves a longest-hop problem and a race endgame', async ({ page }) => {

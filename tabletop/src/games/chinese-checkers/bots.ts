@@ -234,10 +234,14 @@ function legalAction(view: CcState, move: number): CcAction {
 // ---------------------------------------------------------------------------------------------
 // Coach
 
-/** Winning chances (0 to 100) for a search score in hundredths of a row: a lead of four rows is about three in four. */
+/**
+ * Winning chances (0 to 100) for a search score in hundredths of a row: a lead of one row is worth
+ * about four points, two rows about eight, four rows about sixteen (so in review a move that gives
+ * away two rows is an inaccuracy and four a blunder).
+ */
 export function chanceOf(score: number): number {
   if (isMateScore(score) || Math.abs(score) >= DECIDED) return score > 0 ? 100 : 0;
-  return 100 / (1 + Math.exp(-score / 350));
+  return 100 / (1 + Math.exp(-score / 600));
 }
 
 function moveJson(move: number): Record<string, Json> {

@@ -222,16 +222,17 @@ export function StarBoard(props: StarBoardProps) {
         const len = Math.hypot(dx, dy) || 1;
         const ux = dx / len;
         const uy = dy / len;
-        const tipX = to.x - ux * 30;
-        const tipY = to.y - uy * 30;
-        const head = `M ${tipX - ux * 34 - uy * 22} ${tipY - uy * 34 + ux * 22} L ${tipX} ${tipY} L ${tipX - ux * 34 + uy * 22} ${tipY - uy * 34 - ux * 22}`;
+        // Short arrows (a step) start nearer the marble, so the shaft still shows.
+        const inset = len < 150 ? 12 : 30;
+        const tipX = to.x - ux * 24;
+        const tipY = to.y - uy * 24;
+        const head = `M ${tipX - ux * 30 - uy * 20} ${tipY - uy * 30 + ux * 20} L ${tipX} ${tipY} L ${tipX - ux * 30 + uy * 20} ${tipY - uy * 30 - ux * 20}`;
         return (
           <g key={`a${i}`} className="sb-arrow" stroke={TONE[a.tone]}>
-            {a.from === a.to ? (
-              <circle cx={to.x} cy={to.y} r={54} fill="none" strokeWidth={12} />
-            ) : (
+            <circle cx={to.x} cy={to.y} r={50} fill="none" strokeWidth={8} />
+            {a.from === a.to ? null : (
               <>
-                <line x1={from.x + ux * 30} y1={from.y + uy * 30} x2={tipX} y2={tipY} strokeWidth={14} strokeLinecap="round" />
+                <line x1={from.x + ux * inset} y1={from.y + uy * inset} x2={tipX} y2={tipY} strokeWidth={14} strokeLinecap="round" />
                 <path d={head} fill="none" strokeWidth={14} strokeLinecap="round" strokeLinejoin="round" />
               </>
             )}

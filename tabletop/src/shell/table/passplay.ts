@@ -52,21 +52,21 @@ export interface Viewer {
  * Whose table this is now. Outside pass-and-play it is always the one person. With several people:
  * the person whose turn it is, or while the CPU moves, the person who moved last. With hidden cards
  * or tiles the table only changes hands when the next person says they hold the device (`holder`),
- * and until then it is covered.
+ * and until then it is covered. While the coach is still checking a person's move, or a warning
+ * about it waits (`pending`), the table stays with the person who made it.
  */
-export function viewerOf(record: Pick<GameRecord, 'players' | 'status'>, turn: Seat | null, history: readonly { readonly seat: Seat }[], hidden: boolean, holder: Seat | null): Viewer {
+export function viewerOf(record: Pick<GameRecord, 'players' | 'status'>, turn: Seat | null, history: readonly { readonly seat: Seat }[], hidden: boolean, holder: Seat | null, pending = false): Viewer {
   const people = record.players.flatMap((p, seat) => (p.kind === 'human' ? [seat] : []));
   if (people.length < 2) return { seat: people[0] ?? null, passTo: null };
+  let lastPerson: Seat | null = null;
+  for (let i = history.length - 1; i >= 0 && lastPerson === null; i--) {
+    const seat = history[i]?.seat;
+    if (seat !== undefined && people.includes(seat)) lastPerson = seat;
+  }
+  if (pending && lastPerson !== null) return { seat: lastPerson, passTo: null };
   const over = record.status !== 'active';
   const turnPerson = !over && turn !== null && people.includes(turn) ? turn : null;
-  if (!hidden) {
-    if (turnPerson !== null) return { seat: turnPerson, passTo: null };
-    for (let i = history.length - 1; i >= 0; i--) {
-      const seat = history[i]?.seat;
-      if (seat !== undefined && people.includes(seat)) return { seat, passTo: null };
-    }
-    return { seat: people[0] ?? null, passTo: null };
-  }
+  if (!hidden) return { seat: turnPerson ?? lastPerson ?? people[0] ?? null, passTo: null };
   if (over) return { seat: holder ?? people[0] ?? null, passTo: null };
   // Hidden information: the next person to act must take the device first.
   const next = turnPerson ?? (holder === null ? (people[0] ?? null) : null);

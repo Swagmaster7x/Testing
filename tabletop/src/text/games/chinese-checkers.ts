@@ -135,7 +135,7 @@ export const enChineseCheckers = {
   'why.cc-straggler': 'A marble was being left behind; {move} brought it up.',
   'why.cc-missed-chain': '{move} hopped {n} rows further.',
   'why.cc-missed-home': '{move} brought a marble home.',
-  'why.cc-better': '{move} was faster.',
+  'why.cc-better': 'That lost time in the race: a faster move was there.',
 
   'practice.set.cc-hops': 'Longest hop',
   'practice.set.cc-hops.blurb': 'Find the move that takes a marble furthest towards home: chains of hops over your marbles and theirs.',

@@ -1,4 +1,5 @@
 /** Everything Progress and Today show for one game, gathered from the device's data. */
+import { isPassAndPlay } from '../core/record';
 import { outcomePoints } from '../core/contract';
 import { stableStringify } from '../core/json';
 import { hasLessons, loadLessons } from '../games/lessons';
@@ -72,7 +73,7 @@ export async function gameProgress(gameId: string, profileId: string, now: numbe
       const record = byId.get(row.recordId);
       const analysis = analysisFromJson(row.data);
       const seat = record?.players.findIndex((p) => p.kind === 'human') ?? -1;
-      if (!record || !analysis || seat < 0 || !record.players.some((p) => p.kind === 'bot')) return [];
+      if (!record || !analysis || seat < 0 || !record.players.some((p) => p.kind === 'bot') || isPassAndPlay(record)) return [];
       const value = analysis.accuracy[String(seat)];
       return typeof value === 'number' ? [{ at: record.updatedAt, value }] : [];
     })
@@ -86,7 +87,8 @@ export async function gameProgress(gameId: string, profileId: string, now: numbe
   for (const r of records) {
     const bot = r.players.find((p) => p.kind === 'bot');
     const seat = r.players.findIndex((p) => p.kind === 'human');
-    if (!bot || seat < 0 || r.training || !r.outcome || stableStringify(r.config) !== standard) continue;
+    // Games between people (pass-and-play) never count: they move no rating either.
+    if (!bot || seat < 0 || r.training || !r.outcome || isPassAndPlay(r) || stableStringify(r.config) !== standard) continue;
     if (outcomePoints(r.outcome, seat) === 1) bestWin = Math.max(bestWin, bot.level ?? 0);
   }
   const drillsPassed = new Map<string, number>();

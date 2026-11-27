@@ -3,6 +3,7 @@
 // Checkers turns the board towards whoever is to move.
 import type { Page } from '@playwright/test';
 import { hole } from './cc-helpers';
+import { square } from './chess-helpers';
 import { expect, noHorizontalScroll, test } from './fixtures';
 
 /** Opens a game's New game dialog and seats people by name (a name of '' leaves "Player N"; null puts the CPU there). */
@@ -99,6 +100,25 @@ test.describe('pass and play', () => {
     await noHorizontalScroll(page);
     await resign(page);
     await expect(page.locator('.result-card h2')).toHaveText('Ben wins');
+  });
+
+  test('flips the chess board for whoever is to move', async ({ page }) => {
+    await startPassAndPlay(page, 'chess', 'e2e-pnp-chess', [
+      { side: 'White', name: 'Ana' },
+      { side: 'Black', name: 'Ben' },
+    ]);
+    const y = async (name: string) => (await square(page, name).boundingBox())?.y ?? 0;
+    await expect(page.locator('.status-turn')).toHaveText('Ana to move');
+    expect(await y('e2')).toBeGreaterThan(await y('e7'));
+    await square(page, 'e2').click();
+    await square(page, 'e4').click();
+    await expect(page.locator('.status-turn')).toHaveText('Ben to move');
+    // Black at the bottom now.
+    await expect.poll(async () => (await y('e7')) > (await y('e2'))).toBe(true);
+    await square(page, 'e7').click();
+    await square(page, 'e5').click();
+    await expect(page.locator('.status-turn')).toHaveText('Ana to move');
+    await expect(page.locator('.moves')).toContainText('e5');
   });
 
   test('seats a CPU among the people, three at the star', async ({ page }) => {

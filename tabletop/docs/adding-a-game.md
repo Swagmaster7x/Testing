@@ -44,6 +44,17 @@ takes off the CPU's level), and `GameUi.replayConfig` says which options "Play a
 beside `exportRecord` in the game and review menus (shogi saves KIF, CSA and SFEN). All three are
 optional; shogi (milestone 8) is the first game to use them.
 
+**Pass-and-play** (several people at one device, milestone 7) comes from the shell, so a new game
+has it with no work: in the New game dialog each seat can be a person (with a name) or the CPU.
+The shell passes the person holding the device as `mySeats` (one seat) to the surface, counters
+and log, so show that seat's hand and turn the board towards it (`flipForSeat`, or the surface
+itself as Chinese Checkers does). Games whose views differ between seats (hidden cards or tiles)
+get a "pass the device" cover between two people's turns; the shell finds this by comparing the
+views at the start, or set `GameUi.hiddenInfo`. If your log lines or move list call the other side
+"the CPU", use the optional `names` argument of `describeEvent`, `movePrefix` and `playerName`: it
+names the other people at the device (Brisca and Dominoes do). Games between people never move a
+rating or tick the "beat a level" checklist item.
+
 Interface text goes in `src/text/games/<game>.ts` (keys prefixed with the game id), spread into
 `src/text/games/index.ts`. The `game.<id>.*` lines in `src/text/en.ts` describe the game on the
 shelf; update them when the game arrives.

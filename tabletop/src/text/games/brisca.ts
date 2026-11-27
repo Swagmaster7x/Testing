@@ -63,7 +63,7 @@ export const enBrisca = {
   'coach.help.whatBeats': 'What beats this',
   'coach.help.counts': 'Points and trumps left',
   'coach.help.seen': 'Cards seen',
-  'coach.help.openHand': 'Cards up: see the CPU’s hand',
+  'coach.help.openHand': 'Cards up: see the other hand',
   'brisca.coach.hint': 'Hint',
   'brisca.coach.more': 'Tell me more',
   'brisca.coach.idea': 'The idea: {idea}',

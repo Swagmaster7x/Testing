@@ -103,12 +103,11 @@ export const ccUi: GameUi<CcState, CcAction, CcConfig, CcView, CcEvent> = {
     const board = boardArray(state.board);
     const layout = layoutOf(state);
     const me: Seat = mySeats[0] ?? 0;
-    const order = [me, ...Array.from({ length: state.players }, (_, s) => s).filter((s) => s !== me)];
-    const rows = [
-      { label: t('cc.counter.round'), value: t('cc.counter.round.value', { n: Math.min(state.round, state.rules.limit), limit: state.rules.limit }) },
-      { label: t('cc.counter.home'), value: order.map((s) => (state.players > 2 ? `${seatColour(s).slice(0, 1)} ${marblesHome(board, s, layout)}` : String(marblesHome(board, s, layout)))).join(' · ') },
-    ];
-    if (state.done.length > 0) rows.push({ label: t('cc.counter.finished'), value: state.done.map(seatColour).join(', ') });
+    const rows = [{ label: t('cc.counter.round'), value: t('cc.counter.round.value', { n: Math.min(state.round, state.rules.limit), limit: state.rules.limit }) }];
+    // With more players each one's marbles home are in the player list instead.
+    if (state.players === 2) rows.push({ label: t('cc.counter.home'), value: [me, 1 - me].map((s) => String(marblesHome(board, s, layout))).join(' · ') });
+    // The finishing order, by colour initial so a long one still fits beside its label.
+    if (state.done.length > 0) rows.push({ label: t('cc.counter.finished'), value: state.done.map((s) => (state.done.length > 2 ? seatColour(s).slice(0, 1) : seatColour(s))).join(', ') });
     return rows;
   },
   sound: (event) => (event.type === 'move' ? 'place' : event.type === 'end' ? 'end' : event.type === 'finish' ? 'line' : null),

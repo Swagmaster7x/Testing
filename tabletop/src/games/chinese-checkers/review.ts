@@ -48,7 +48,7 @@ export function reasonFor(before: CcState, played: CcAction, best: CcAction, bes
   const layout = layoutOf(before);
   const further = rowsGained(layout, before.toMove, packAction(best)) - rowsGained(layout, before.toMove, packAction(played));
   if (further >= 3) return { key: 'why.cc-missed-chain', params: { move: bestName, n: further } };
-  return { key: 'why.cc-better', params: { move: bestName } };
+  return { key: 'why.cc-better', params: {} };
 }
 
 /** Analyses a finished game. `ask` sends a coach question about a position to the bot worker. */
@@ -75,7 +75,7 @@ export async function analyseCcGame(record: GameRecord, ask: AskCoach, onProgres
     const { lines, played } = readAnswer(await ask({ type: 'analyse', nodes: REVIEW_NODES, move: code }, before));
     onProgress(++done, total);
     const best = lines[0];
-    const text = def.codec.action.toText(step.action);
+    const text = def.codec.action.toText(step.action).replace('-', '–');
     const label = tDynamic('cc.review.move', { n: before.round, colour: tDynamic(`cc.seat.${step.seat}`), move: text });
     if (!best) {
       moves.push({ label, ply: i, seat: step.seat, played: text, best: null, bestMove: null, winBefore: 50, winAfter: 50, loss: 0, accuracy: 100, verdict: 'best', reason: null, accept: [] });
@@ -92,14 +92,14 @@ export async function analyseCcGame(record: GameRecord, ask: AskCoach, onProgres
       ply: i,
       seat: step.seat,
       played: text,
-      best: best.name,
+      best: best.name.replace('-', '–'),
       bestMove: best.move,
       winBefore: Math.round(winBefore * 10) / 10,
       winAfter: Math.round(winAfter * 10) / 10,
       loss: Math.round(loss * 10) / 10,
       accuracy: Math.round(moveAccuracy(loss)),
       verdict,
-      reason: verdict === 'inaccuracy' || verdict === 'mistake' || verdict === 'blunder' ? reasonFor(before, step.action, bestAction, best.name) : null,
+      reason: verdict === 'inaccuracy' || verdict === 'mistake' || verdict === 'blunder' ? reasonFor(before, step.action, bestAction, best.name.replace('-', '–')) : null,
       accept: lines.filter((l) => l.value >= winBefore - ALSO_RIGHT).map((l) => l.move),
     });
   }

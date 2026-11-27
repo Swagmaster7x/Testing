@@ -81,6 +81,9 @@ describe('whose table it is', () => {
     expect(viewerOf(active, 1, [{ seat: 0 }], true, 1)).toEqual({ seat: 1, passTo: null });
     // The game is over: no cover.
     expect(viewerOf({ ...active, status: 'finished' }, null, [{ seat: 1 }], true, 1)).toEqual({ seat: 1, passTo: null });
+    // A warning about Ana's move waits: Ana still has the table, uncovered, in either kind of game.
+    expect(viewerOf(active, 1, [{ seat: 0 }], true, 0, true)).toEqual({ seat: 0, passTo: null });
+    expect(viewerOf(active, 1, [{ seat: 0 }], false, null, true)).toEqual({ seat: 0, passTo: null });
   });
 });
 
