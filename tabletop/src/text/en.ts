@@ -147,6 +147,7 @@ const base = {
   'door.review.blurb': 'Your finished games, with the key moments and a better move for each.',
   'door.coming': 'Coming',
   'door.none': 'None for the test table',
+  'door.none.soon': 'On the way: the game is playable first.',
   'door.open': 'Open',
 
   'play.title': 'New game',

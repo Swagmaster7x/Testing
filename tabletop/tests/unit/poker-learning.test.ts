@@ -18,6 +18,7 @@ import type { HoldemState } from '../../src/games/holdem/rules';
 import { holdem, positionName } from '../../src/games/holdem/rules';
 import { inSet } from '../../src/games/practice';
 import { readyItems } from '../../src/games/ready';
+import { STAGES } from '../../src/teach/lesson';
 import type { LessonStep } from '../../src/teach/lesson';
 import { fillText, typedNumbers } from '../../src/teach/lesson';
 import { currentStep, next, startLesson, submitMove, submitNumber, valuesAt } from '../../src/teach/runner';
@@ -173,7 +174,7 @@ describe('lessons', () => {
     for (const stage of ['stage-1', 'stage-2', 'stage-3', 'table']) expect(count(stage), stage).toBeGreaterThanOrEqual(6);
     // In order: the Learn screen suggests the first lesson not yet done.
     const stages = POKER_LESSONS.map((l) => l.stage);
-    expect(stages).toEqual([...stages].sort((a, b) => ['stage-0', 'stage-1', 'stage-2', 'stage-3', 'table'].indexOf(a) - ['stage-0', 'stage-1', 'stage-2', 'stage-3', 'table'].indexOf(b)));
+    expect(stages).toEqual([...stages].sort((a, b) => STAGES.indexOf(a) - STAGES.indexOf(b)));
     const ids = new Set(POKER_LESSONS.map((l) => l.id));
     expect(ids.size).toBe(POKER_LESSONS.length);
     for (const item of readyItems('poker')) for (const id of item.lessons ?? []) expect(ids.has(id), id).toBe(true);
@@ -190,7 +191,7 @@ describe('lessons', () => {
           const seat = Number(m[1]);
           const p = s.players[seat];
           // In the hand, or the player whose fold was the last thing that happened.
-          const ok = (p !== undefined && p.hole.length === 2 && !p.folded) || (last?.seat === seat && last.kind === 'fold');
+          const ok = (p !== undefined && p.hole.length > 0 && !p.folded) || (last?.seat === seat && last.kind === 'fold');
           expect(ok, `${lesson.id} ${where}: ${m[0]} is not in the hand`).toBe(true);
         }
       };

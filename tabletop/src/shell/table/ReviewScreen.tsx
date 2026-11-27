@@ -117,7 +117,12 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
   const SeatExtra = ui.SeatExtra;
   const verdicts = analysis?.moves ?? [];
   const verdictAt = new Map(verdicts.map((v) => [v.ply, v]));
-  const moves = steps.map((s, i) => ({ ply: s.ply, seat: s.seat, text: `${ui.moveText ? ui.moveText(s.action) : ui.def.codec.action.toText(s.action)}${MARK[verdictAt.get(i)?.verdict ?? ''] ?? ''}` }));
+  // After the game every seat's choices are shown (a game may still leave out moves that are noise).
+  const everyone = ui.def.seats(start);
+  const moves = steps
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => ui.moveVisible?.(s.action, s.seat, everyone) ?? true)
+    .map(({ s, i }) => ({ ply: s.ply, seat: s.seat, text: `${ui.moveText ? ui.moveText(s.action) : ui.def.codec.action.toText(s.action)}${MARK[verdictAt.get(i)?.verdict ?? ''] ?? ''}` }));
   const here = verdictAt.get(current);
   const flagged = here && (here.verdict === 'inaccuracy' || here.verdict === 'mistake' || here.verdict === 'blunder') ? here : null;
   const overlay: SurfaceOverlay = flagged

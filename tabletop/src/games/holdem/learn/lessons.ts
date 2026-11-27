@@ -892,6 +892,77 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
 
+  // Advanced: the other games on the poker engine, what is different from Hold'em.
+  {
+    id: 'poker.4.omaha',
+    gameId: 'poker',
+    stage: 'stage-4',
+    title: 'Omaha: four cards, exactly two',
+    minutes: 3,
+    start: OMAHA,
+    steps: [
+      { kind: 'say', text: 'Omaha plays like Hold’em, with the same blinds, flop, turn and river, but each player gets four hole cards instead of two.' },
+      { kind: 'say', text: 'The big difference: your hand is made of exactly two of your four hole cards and exactly three of the five board cards. Never one or three of yours, never four or five from the board.' },
+      {
+        kind: 'askChoice',
+        text: 'You hold four hearts, ace, king, queen and jack. The board will be the ten of hearts, two of clubs, three of diamonds, four of spades and nine of hearts. Is that a flush?',
+        options: [
+          { text: 'No: with two hearts on the board, two of mine make only four hearts', correct: true, why: 'Right. A flush needs three hearts on the board when only two of your cards may play. Here you have ace high.' },
+          { text: 'Yes: six hearts in all', why: 'In Hold’em it would be. In Omaha exactly two of your cards play, with exactly three from the board: only four hearts.' },
+        ],
+      },
+      { kind: 'say', text: 'Most Omaha is pot-limit: the most you may raise to is what would be in the pot after you call, on top of the call. Pairs and draws run close, so pots grow fast even so.' },
+      { kind: 'askMove', text: 'Raise the most pot-limit allows: tap Raise, choose Pot, and confirm.', accept: [allIn(OMAHA)], claim: 'legal', success: 'A pot-sized raise. In no-limit you could have gone all-in; in pot-limit this is the most.' },
+    ],
+  },
+  {
+    id: 'poker.4.draw',
+    gameId: 'poker',
+    stage: 'stage-4',
+    title: 'Five-card draw',
+    minutes: 3,
+    start: DRAW,
+    steps: [
+      { kind: 'say', text: 'In five-card draw there is no board. Each player gets five cards face down, there is a round of betting, then the draw: each player throws away up to three cards and is dealt as many new ones. Then a last round of betting and the showdown.' },
+      { kind: 'say', text: 'It is usually played with fixed bets: before the draw every bet and raise is one big blind, after it two.' },
+      { kind: 'askMove', text: 'You hold a pair of kings. Call the big blind to see the draw.', accept: ['call'], claim: 'legal', success: 'You call. The small blind calls and the big blind checks, so the draw begins on the button’s left.', reply: 'call check d3h2c d8c5d' },
+      { kind: 'say', text: '{name:1} drew two and {name:2} drew two: a player drawing two often has three of a kind, one drawing one a flush or straight draw, or two pair.' },
+      { kind: 'askMove', text: 'Keep your two kings and throw the other three away: tap the seven, the four and the two, then the Draw button.', accept: ['d7c4h2s'], claim: 'legal', success: 'You draw three to your kings: the usual play with one pair.' },
+      {
+        kind: 'askChoice',
+        text: 'Which of these hands should draw just one card?',
+        options: [
+          { text: 'Four hearts and a club: keep the hearts', correct: true, why: 'Yes. Four to a flush draws one card, hoping for a fifth heart: about one time in five.' },
+          { text: 'A pair of jacks and three odd cards', why: 'With one pair you keep the pair and draw three.' },
+          { text: 'A straight', why: 'A straight is already made: stand pat and draw none.' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'poker.4.stud',
+    gameId: 'poker',
+    stage: 'stage-4',
+    title: 'Seven-card stud',
+    minutes: 3,
+    start: STUD,
+    steps: [
+      { kind: 'say', text: 'Seven-card stud has no board and no blinds. Everyone antes, then gets two cards face down and one face up. Three more come face up and a last one face down, with a round of betting after each: seven cards, and the best five make your hand.' },
+      { kind: 'say', text: 'The player showing the lowest card must start the betting with a small forced bet, the bring-in. On a tie, clubs is the lowest suit, then diamonds, hearts and spades.' },
+      { kind: 'askMove', text: 'Your two of clubs is the lowest card showing. Bring it in for the least.', accept: ['r1'], claim: 'legal', success: 'You bring it in. {name:1} and {name:2} call, and fourth street comes face up.', reply: 'call call' },
+      {
+        kind: 'askChoice',
+        text: 'Who acts first from fourth street on?',
+        options: [
+          { text: 'The player whose face-up cards make the best hand', correct: true, why: 'Yes: here {name:1}, showing a pair of kings. It can change every street.' },
+          { text: 'The player left of the dealer, as in Hold’em', why: 'Not in stud. The best hand showing acts first, and the lowest card brought it in on third street.' },
+          { text: 'Whoever brought it in', why: 'The bring-in is only on third street. From fourth street the best hand showing goes first.' },
+        ],
+      },
+      { kind: 'say', text: 'Bets are fixed: one big blind on third and fourth street, two from fifth street on. When anyone shows a pair on fourth street, a player may already bet two. Watch the cards others show: a card you need that is face up in front of someone else will not come to you.' },
+    ],
+  },
+
   // Table-ready
   {
     id: 'poker.table.in-turn',
@@ -1090,74 +1161,4 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
 
-  // The other games on the poker engine: what is different from Hold'em.
-  {
-    id: 'poker.4.omaha',
-    gameId: 'poker',
-    stage: 'stage-4',
-    title: 'Omaha: four cards, exactly two',
-    minutes: 3,
-    start: OMAHA,
-    steps: [
-      { kind: 'say', text: 'Omaha plays like Hold’em, with the same blinds, flop, turn and river, but each player gets four hole cards instead of two.' },
-      { kind: 'say', text: 'The big difference: your hand is made of exactly two of your four hole cards and exactly three of the five board cards. Never one or three of yours, never four or five from the board.' },
-      {
-        kind: 'askChoice',
-        text: 'You hold four hearts, ace, king, queen and jack. The board will be the ten of hearts, two of clubs, three of diamonds, four of spades and nine of hearts. Is that a flush?',
-        options: [
-          { text: 'No: with two hearts on the board, two of mine make only four hearts', correct: true, why: 'Right. A flush needs three hearts on the board when only two of your cards may play. Here you have ace high.' },
-          { text: 'Yes: six hearts in all', why: 'In Hold’em it would be. In Omaha exactly two of your cards play, with exactly three from the board: only four hearts.' },
-        ],
-      },
-      { kind: 'say', text: 'Most Omaha is pot-limit: the most you may raise to is what would be in the pot after you call, on top of the call. Pairs and draws run close, so pots grow fast even so.' },
-      { kind: 'askMove', text: 'Raise the most pot-limit allows: tap Raise, choose Pot, and confirm.', accept: [allIn(OMAHA)], claim: 'legal', success: 'A pot-sized raise. In no-limit you could have gone all-in; in pot-limit this is the most.' },
-    ],
-  },
-  {
-    id: 'poker.4.draw',
-    gameId: 'poker',
-    stage: 'stage-4',
-    title: 'Five-card draw',
-    minutes: 3,
-    start: DRAW,
-    steps: [
-      { kind: 'say', text: 'In five-card draw there is no board. Each player gets five cards face down, there is a round of betting, then the draw: each player throws away up to three cards and is dealt as many new ones. Then a last round of betting and the showdown.' },
-      { kind: 'say', text: 'It is usually played with fixed bets: before the draw every bet and raise is one big blind, after it two.' },
-      { kind: 'askMove', text: 'You hold a pair of kings. Call the big blind to see the draw.', accept: ['call'], claim: 'legal', success: 'You call. The small blind calls and the big blind checks, so the draw begins on the button’s left.', reply: 'call check d3h2c d8c5d' },
-      { kind: 'say', text: '{name:1} drew two and {name:2} drew two: a player drawing two often has three of a kind, one drawing one a flush or straight draw, or two pair.' },
-      { kind: 'askMove', text: 'Keep your two kings and throw the other three away: tap the seven, the four and the two, then the Draw button.', accept: ['d7c4h2s'], claim: 'legal', success: 'You draw three to your kings: the usual play with one pair.' },
-      {
-        kind: 'askChoice',
-        text: 'Which of these hands should draw just one card?',
-        options: [
-          { text: 'Four hearts and a club: keep the hearts', correct: true, why: 'Yes. Four to a flush draws one card, hoping for a fifth heart: about one time in five.' },
-          { text: 'A pair of jacks and three odd cards', why: 'With one pair you keep the pair and draw three.' },
-          { text: 'A straight', why: 'A straight is already made: stand pat and draw none.' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'poker.4.stud',
-    gameId: 'poker',
-    stage: 'stage-4',
-    title: 'Seven-card stud',
-    minutes: 3,
-    start: STUD,
-    steps: [
-      { kind: 'say', text: 'Seven-card stud has no board and no blinds. Everyone antes, then gets two cards face down and one face up. Three more come face up and a last one face down, with a round of betting after each: seven cards, and the best five make your hand.' },
-      { kind: 'say', text: 'The player showing the lowest card must start the betting with a small forced bet, the bring-in. On a tie, clubs is the lowest suit, then diamonds, hearts and spades.' },
-      { kind: 'askMove', text: 'Your two of clubs is the lowest card showing. Bring it in for the least.', accept: ['r1'], claim: 'legal', success: 'You bring it in. {name:1} and {name:2} call, and fourth street comes face up.', reply: 'call call' },
-      {
-        kind: 'askChoice',
-        text: 'Who acts first from fourth street on?',
-        options: [
-          { text: 'The player whose face-up cards make the best hand', correct: true, why: 'Yes: here {name:1}, showing a pair of kings. It can change every street.' },
-          { text: 'The player left of the dealer, as in Hold’em', why: 'Not in stud. The best hand showing acts first, and the lowest card brought it in on third street.' },
-          { text: 'Whoever brought it in', why: 'The bring-in is only on third street. From fourth street the best hand showing goes first.' },
-        ],
-      },
-      { kind: 'say', text: 'Bets are fixed: one big blind on third and fourth street, two from fifth street on. When anyone shows a pair on fourth street, a player may already bet two. Watch the cards others show: a card you need that is face up in front of someone else will not come to you.' },
-    ],
-  },
 ];

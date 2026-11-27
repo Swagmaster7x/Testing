@@ -10,6 +10,7 @@ const loaders: Record<string, () => Promise<AnyGameUi>> = {
   go: () => import('./go/ui').then((m) => m.goUi as unknown as AnyGameUi),
   poker: () => import('./holdem/ui').then((m) => m.holdemUi as unknown as AnyGameUi),
   'chinese-checkers': () => import('./chinese-checkers/ui').then((m) => m.ccUi as unknown as AnyGameUi),
+  mahjong: () => import('./mahjong/ui').then((m) => m.mahjongUi as unknown as AnyGameUi),
 };
 
 export function isPlayable(gameId: string): boolean {
