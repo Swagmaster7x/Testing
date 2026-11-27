@@ -330,6 +330,7 @@ const base = {
   'tools.calc.riichi.2': 'Double riichi',
   'tools.calc.oneShot': 'Ippatsu',
   'tools.calc.red': 'Red fives in the hand',
+  'tools.calc.red-tile': '{tile}, red',
   'tools.calc.picker': 'Tiles to add',
   'tools.calc.add': 'Add the {tile}',
   'tools.calc.how': 'How it was won',

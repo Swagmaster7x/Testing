@@ -45,9 +45,25 @@ export interface CalcInput {
 
 export const EMPTY_INPUT: CalcInput = { hand: [], winning: -1, sets: [], seatWind: 0, prevailingWind: 0, from: null, bonus: [], lastTile: false, lastDiscard: false, afterKong: false, robbed: false, ready: 0, oneShot: false, redFives: 0, indicators: [], underIndicators: [] };
 
-/** The fives in a hand and its sets (each could be a red five). */
+const isFive = (k: Kind): boolean => isSuited(k) && rankOf(k) === 5;
+
+/** How many red fives the hand could hold: one per suit with a five in the hand or its sets. */
 export function fivesIn(input: CalcInput): number {
-  return [...input.hand, ...input.sets.flatMap(setKinds)].filter((k) => isSuited(k) && rankOf(k) === 5).length;
+  return new Set([...input.hand, ...input.sets.flatMap(setKinds)].filter(isFive)).size;
+}
+
+/** Which fives are the red ones (one per suit, the sets' first, then the hand's), up to `redFives`. */
+export function redPlaces(input: CalcInput): { readonly sets: boolean[][]; readonly hand: boolean[] } {
+  let left = input.redFives;
+  const done = new Set<Kind>();
+  const mark = (k: Kind): boolean => {
+    if (left <= 0 || !isFive(k) || done.has(k)) return false;
+    done.add(k);
+    left--;
+    return true;
+  };
+  const sets = input.sets.map((set) => setKinds(set).map(mark));
+  return { sets, hand: input.hand.map(mark) };
 }
 
 /** The tiles of a set, as kinds. */
@@ -79,27 +95,26 @@ export function overused(input: CalcInput): Kind | null {
 
 /** The engine's view of the hand, seat 0 the winner. */
 export function contextOf(input: CalcInput): WinContext {
-  // Tile ids: copy 0 of a five is the red one, so red fives take copy 0 and the rest copies 1 to 3.
-  let red = input.redFives;
-  const used = new Map<Kind, number>();
-  const id = (k: Kind) => {
-    if (isSuited(k) && rankOf(k) === 5 && red > 0 && !used.has(-1 - k)) {
-      red--;
-      used.set(-1 - k, 1);
-      return tileId(k, 0);
-    }
-    const n = (used.get(k) ?? 0) + 1;
-    used.set(k, n);
-    return tileId(k, Math.min(3, n));
+  // Tile ids: copy 0 of a five is the red one, so red fives take copy 0 and other fives copies 1 to 3
+  // first; every copy is used once.
+  const reds = redPlaces(input);
+  const pools = new Map<Kind, number[]>();
+  const id = (k: Kind, red: boolean) => {
+    let pool = pools.get(k);
+    if (!pool) pools.set(k, (pool = isFive(k) ? [1, 2, 3, 0] : [0, 1, 2, 3]));
+    const copy = red ? 0 : (pool[0] ?? 3);
+    const at = pool.indexOf(copy);
+    if (at >= 0) pool.splice(at, 1);
+    return tileId(k, copy);
   };
-  const melds: Meld[] = input.sets.map((s) => {
-    const tiles = setKinds(s).map(id);
+  const melds: Meld[] = input.sets.map((s, i) => {
+    const tiles = setKinds(s).map((k, j) => id(k, reds.sets[i]?.[j] === true));
     const exposed = !(s.type === 'kong' && s.concealed);
     return { type: s.type, tiles, claimed: exposed ? (tiles[0] ?? null) : null, from: exposed ? 3 : null, concealed: !exposed, added: false };
   });
   const tile = input.hand[input.winning] ?? input.hand[input.hand.length - 1] ?? 0;
   const selfDrawn = input.from === null;
-  const tiles = [...input.hand.map(id), ...melds.flatMap((m) => m.tiles)];
+  const tiles = [...input.hand.map((k, i) => id(k, reds.hand[i] === true)), ...melds.flatMap((m) => m.tiles)];
   return {
     tiles,
     indicators: [...input.indicators],

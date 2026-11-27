@@ -1,6 +1,6 @@
 /** The Mahjong score calculator in Tools: the same scorer and payments as the table. */
 import { describe, expect, it } from 'vitest';
-import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
+import { calculate, contextOf, EMPTY_INPUT, fivesIn, overused, redPlaces, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
 import { STYLES } from '../../src/games/mahjong/rules';
 import { HK_DEFAULTS, hongKong } from '../../src/games/mahjong/styles/hong-kong';
 
@@ -74,9 +74,17 @@ describe('the Mahjong calculator', () => {
       expect(r.payments).toEqual([8000, 0, -8000, 0]);
     });
 
-    it('counts the fives in the hand and its sets for the red-five choice', () => {
-      expect(fivesIn({ ...EMPTY_INPUT, hand: ALL_CHOWS })).toBe(3);
-      expect(fivesIn({ ...EMPTY_INPUT, hand: [], sets: [{ type: 'chow', kind: p(3), concealed: false }] })).toBe(1);
+    it('offers one red five per suit present, and marks the sets’ fives first', () => {
+      // 5 characters, and two 5 bamboo: at most two red fives.
+      expect(fivesIn({ ...EMPTY_INPUT, hand: ALL_CHOWS })).toBe(2);
+      const withSet = { ...EMPTY_INPUT, hand: [s(5)], sets: [{ type: 'chow' as const, kind: p(3), concealed: false }, { type: 'pung' as const, kind: s(5), concealed: false }], redFives: 3 };
+      expect(fivesIn(withSet)).toBe(2);
+      const reds = redPlaces(withSet);
+      expect(reds.sets).toEqual([[false, false, true], [true, false, false]]);
+      expect(reds.hand).toEqual([false]);
+      // Every tile keeps its own id, and the red ones are copy 0.
+      const ids = contextOf(withSet).tiles ?? [];
+      expect(new Set(ids).size).toBe(ids.length);
     });
   });
 });

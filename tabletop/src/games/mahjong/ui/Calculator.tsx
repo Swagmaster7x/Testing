@@ -9,7 +9,7 @@ import { t, tDynamic } from '../../../text';
 import { Segmented } from '../../../shell/components/Segmented';
 import { BackLink, Screen } from '../../../shell/screens/common';
 import type { CalcInput, CalcSet } from '../calculator';
-import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, setKinds, tilesWanted } from '../calculator';
+import { calculate, EMPTY_INPUT, fivesIn, overused, redPlaces, setFits, setKinds, tilesWanted } from '../calculator';
 import type { Kind } from '../core/tiles';
 import { FLOWER_1, isBonus, PLAYING_KINDS } from '../core/tiles';
 import { STYLES } from '../rules';
@@ -30,10 +30,10 @@ function Labelled({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Tile({ kind, label, onClick, selected = false }: { kind: Kind; label: string; onClick?: () => void; selected?: boolean }) {
+function Tile({ kind, label, onClick, selected = false, red = false }: { kind: Kind; label: string; onClick?: () => void; selected?: boolean; red?: boolean }) {
   const face = (
     <span className="calc-tile-face" aria-hidden="true">
-      <TileFace kind={kind} learner />
+      <TileFace kind={kind} learner red={red} />
     </span>
   );
   if (!onClick)
@@ -65,6 +65,8 @@ export function MahjongCalculator() {
 
   // Riichi's own inputs: the declaration, ippatsu, red fives and the indicators.
   const riichi = style.id === 'riichi';
+  const reds = redPlaces(riichi ? input : { ...input, redFives: 0 });
+  const tileName = (k: Kind, red = false) => (red ? t('tools.calc.red-tile', { tile: kindName(k) }) : kindName(k));
   const add = (kind: Kind) => {
     if (mode === 'dora' || mode === 'ura') {
       const key = mode === 'dora' ? 'indicators' : 'underIndicators';
@@ -110,12 +112,12 @@ export function MahjongCalculator() {
           <h2 className="calc-head">{t('tools.calc.hand')}</h2>
           <div className="calc-row" aria-label={t('tools.calc.in-hand')}>
             {input.hand.map((k, i) => (
-              <Tile key={i} kind={k} label={i === input.winning ? t('tools.calc.winning-tile', { tile: kindName(k) }) : kindName(k)} selected={i === input.winning} onClick={() => update({ winning: i })} />
+              <Tile key={i} kind={k} red={reds.hand[i]} label={i === input.winning ? t('tools.calc.winning-tile', { tile: tileName(k, reds.hand[i]) }) : tileName(k, reds.hand[i])} selected={i === input.winning} onClick={() => update({ winning: i })} />
             ))}
             {input.sets.map((s, i) => (
               <span key={`s${i}`} className="calc-set" data-concealed={s.concealed}>
                 {setKinds(s).map((k, j) => (
-                  <Tile key={j} kind={k} label={kindName(k)} />
+                  <Tile key={j} kind={k} red={reds.sets[i]?.[j]} label={tileName(k, reds.sets[i]?.[j])} />
                 ))}
                 <button type="button" className="btn btn-small btn-quiet" aria-label={t('tools.calc.remove-set', { n: i + 1 })} onClick={() => update({ sets: input.sets.filter((_, k) => k !== i) })}>
                   ×

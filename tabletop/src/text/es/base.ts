@@ -319,6 +319,7 @@ export const esBase: Partial<Record<MessageKey, string>> = {
   'tools.calc.riichi.2': 'Doble riichi',
   'tools.calc.oneShot': 'Ippatsu',
   'tools.calc.red': 'Cincos rojos en la mano',
+  'tools.calc.red-tile': '{tile}, rojo',
   'tools.calc.picker': 'Fichas para añadir',
   'tools.calc.add': 'Añadir {tile}',
   'tools.calc.how': 'Cómo se ganó',
