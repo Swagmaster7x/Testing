@@ -54,6 +54,12 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
         return 380;
       case 'board':
         return 600;
+      case 'up':
+        return 650;
+      case 'down':
+        return 450;
+      case 'drew':
+        return 600;
       case 'show':
         return 650;
       case 'muck':
@@ -85,6 +91,12 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
         return tDynamic(`poker.log.${event.kind}`, { n: event.kind === 'call' ? event.amount : event.to });
       case 'board':
         return t(`poker.log.board.${event.street === 'flop' ? 'flop' : event.street === 'turn' ? 'turn' : 'river'}`, { cards: cards(event.cards) });
+      case 'up':
+        return t('poker.log.up', { street: tDynamic(`poker.street.${event.street}`), cards: event.cards.map((c) => `${seatName(c.seat, m, names)} ${cardName(c.card)}`).join(', ') });
+      case 'down':
+        return t('poker.log.down');
+      case 'drew':
+        return event.count === 0 ? t('poker.log.stand-pat') : t('poker.log.drew', { n: event.count });
       case 'show':
         return t('poker.log.show', { cards: cards(event.cards), hand: handName(event.value) });
       case 'muck':
@@ -122,7 +134,7 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
     }
     return rows;
   },
-  sound: (event) => (event.type === 'act' && event.amount > 0 ? 'chip' : event.type === 'post' || event.type === 'win' ? 'chip' : event.type === 'board' ? 'card' : event.type === 'deal' ? 'shuffle' : event.type === 'match-end' ? 'end' : null),
+  sound: (event) => (event.type === 'act' && event.amount > 0 ? 'chip' : event.type === 'post' || event.type === 'win' ? 'chip' : event.type === 'board' || event.type === 'up' || event.type === 'drew' ? 'card' : event.type === 'deal' ? 'shuffle' : event.type === 'match-end' ? 'end' : null),
   reference(): readonly ReferenceSection[] {
     const lines = (key: string, count: number) => Array.from({ length: count }, (_, i) => tDynamic(`${key}.${i + 1}`));
     return [

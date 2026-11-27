@@ -15,6 +15,14 @@
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 120;
+}
+
+/* Your plate stays above your cards, which sit above the other seats. */
+.poker-seat[data-me='true'] {
+  z-index: 200;
+}
+
+.poker-seat {
   display: grid;
   justify-items: center;
   min-width: 74px;
@@ -337,4 +345,14 @@
   display: block;
   color: var(--text-2);
   font-size: 0.68rem;
+}
+
+/* Draw: what to do, above the button. */
+.poker-draw-hint {
+  margin: 0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.5);
+  color: #fff;
+  font-size: 12px;
 }

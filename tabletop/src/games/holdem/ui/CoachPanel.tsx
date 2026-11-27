@@ -15,7 +15,8 @@ import { openFraction, inTop } from '../preflop';
 import { classOf, outs, readHand } from '../reading';
 import type { HoldemState } from '../rules';
 import { dealtOrder, potOf, positionName, toCallOf, viewOf } from '../rules';
-import { seatName } from './names';
+import { highValue, lowName, lowValue } from '../showdown';
+import { cardName, handName, seatName } from './names';
 
 interface Hint {
   readonly key: string;
@@ -47,21 +48,24 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
   const key = `${state.handNo}/${state.log.length}/${state.board.length}`;
   const current = hint?.key === key ? hint : null;
   const hole = mine?.hole ?? [];
-  const live = hole.length === 2 && !mine?.folded;
+  const game = state.config.game;
+  // In a hand at all; `live` adds the Hold'em helps (outs, the chart), which need two hole cards and a board.
+  const inHandNow = hole.length > 0 && !mine?.folded;
+  const live = game === 'holdem' && hole.length === 2 && !mine?.folded;
   const owe = Math.min(toCallOf(state, me), mine?.stack ?? 0);
   const pot = potOf(state);
 
   useEffect(() => {
-    if (!helps.equity || !live || seat === null || equity?.key === key) return;
+    if (!helps.equity || !inHandNow || seat === null || equity?.key === key) return;
     let stale = false;
-    void ask({ type: 'equity', samples: 1500 }).then((answer) => {
+    void ask({ type: 'equity', samples: game === 'holdem' ? 1500 : 400 }).then((answer) => {
       if (stale || !isJsonObject(answer)) return;
       if (typeof answer.equity === 'number' && typeof answer.random === 'number') setEquity({ key, equity: answer.equity, random: answer.random });
     });
     return () => {
       stale = true;
     };
-  }, [helps.equity, live, seat, key, ask, equity?.key]);
+  }, [helps.equity, inHandNow, seat, key, ask, equity?.key, game]);
 
   const askHint = async () => {
     if (current) {
@@ -88,6 +92,15 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
   const cls = live ? classOf(hole) : '';
   const open = pos ? openFraction(pos === 'BB' ? 'SB' : pos, players) : 0;
   const toCome = state.board.length === 3 ? 2 : state.board.length === 4 ? 1 : 0;
+  // The variants: the hand made so far, once there are five cards to make one (and the low, in high-low).
+  const variantHand = (() => {
+    if (game === 'holdem' || !inHandNow || !mine) return null;
+    const total = hole.length + mine.up.length + state.board.length;
+    if (game === 'omaha' ? state.board.length < 3 : total < 5) return null;
+    const high = handName(highValue(game, hole, mine.up, state.board));
+    const low = state.config.split === 'high-low' ? lowValue(game, hole, mine.up, state.board) : null;
+    return low === null ? high : `${high} · ${t('poker.low-hand', { hand: lowName(low) })}`;
+  })();
 
   return (
     <div className="coach-panel poker-coach">
@@ -113,7 +126,12 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
           {reading ? [tDynamic(`poker.detail.${reading.detail ?? reading.category}`), ...reading.draws.map((x) => tDynamic(`poker.draw.${x}`))].join(' · ') : t('poker.coach.hand.pre', { cls })}
         </p>
       ) : null}
-      {helps.potOdds && live ? (
+      {helps.handName && variantHand ? (
+        <p className="coach-line">
+          <span className="eyebrow">{t('poker.coach.hand')}</span> {variantHand}
+        </p>
+      ) : null}
+      {helps.potOdds && inHandNow ? (
         <p className="coach-line">
           <span className="eyebrow">{t('poker.help.potOdds')}</span> {owe > 0 ? t('poker.coach.odds', { call: owe, pot, need: pct(owe / (pot + owe)) }) : t('poker.coach.odds.none')}
         </p>
@@ -124,10 +142,10 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
           {o.improve.length === 0 ? t('poker.coach.outs.none') : t(toCome === 2 ? 'poker.coach.outs.two' : 'poker.coach.outs.one', { draw: o.draw.length, improve: o.improve.length, rough: Math.min(100, o.improve.length * (toCome === 2 ? 4 : 2)), exact: pct(hitChance(o.improve.length, 52 - 2 - state.board.length, toCome)) })}
         </p>
       ) : null}
-      {helps.equity && live ? (
+      {helps.equity && inHandNow ? (
         <p className="coach-line">
           <span className="eyebrow">{t('poker.help.equity')}</span>{' '}
-          {equity?.key === key ? t('poker.coach.equity', { eq: pct(equity.equity), random: pct(equity.random) }) : t('poker.coach.thinking')}
+          {equity?.key === key ? (game === 'holdem' ? t('poker.coach.equity', { eq: pct(equity.equity), random: pct(equity.random) }) : t('poker.coach.equity.any', { eq: pct(equity.equity) })) : t('poker.coach.thinking')}
         </p>
       ) : null}
       {helps.positions && pos ? (
@@ -186,6 +204,10 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
 /** "Call", "Raise to 12" for a notation such as "call" or "r12". */
 export function actionWords(text: string): string {
   if (text.startsWith('r')) return t('poker.move.raise', { n: Number(text.slice(1)) });
+  if (text.startsWith('d')) {
+    const cards = (text.slice(1).match(/../g) ?? []) as Card[];
+    return cards.length === 0 ? t('poker.move.stand-pat') : t('poker.move.draw', { n: cards.length, cards: cards.map(cardName).join(', ') });
+  }
   return tDynamic(`poker.move.${text}`);
 }
 

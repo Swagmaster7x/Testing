@@ -113,7 +113,7 @@ export const pokerVerifier: LessonVerifier<HoldemState> = {
     }
     problems.push(...chipProblems(state));
     if (!isFreezeout(state.config) && state.handNo !== state.config.hands) problems.push('a lesson hand must be the last of its session (build it with lessonPosition)');
-    if (!state.over && (state.players[0]?.hole.length ?? 0) !== 2) problems.push('you (seat 0) are not dealt in');
+    if (!state.over && (state.players[0]?.hole.length ?? 0) < (state.config.game === 'holdem' ? 2 : 1)) problems.push('you (seat 0) are not dealt in');
     return problems;
   },
 

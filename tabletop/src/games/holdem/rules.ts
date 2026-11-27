@@ -291,8 +291,8 @@ export type HoldemEvent =
   | { readonly type: 'up'; readonly street: Street; readonly cards: readonly { readonly seat: Seat; readonly card: Card }[] }
   /** Stud seventh street: a card dealt face down to each seat still in. */
   | { readonly type: 'down'; readonly seats: readonly Seat[] }
-  /** Draw: a seat throws `count` cards away and is dealt as many. */
-  | { readonly type: 'drew'; readonly seat: Seat; readonly count: number }
+  /** Draw: a seat throws `count` cards away and is dealt as many. `before` is its hand before, for the interface to show its owner only (as `deal.holes`). */
+  | { readonly type: 'drew'; readonly seat: Seat; readonly count: number; readonly before: readonly Card[] }
   | { readonly type: 'act'; readonly seat: Seat; readonly kind: LogKind; readonly amount: number; readonly to: number; readonly allIn: boolean }
   /** The bets go into the middle: `bets` per seat, `pot` everything in the middle afterwards. */
   | { readonly type: 'collect'; readonly pot: number; readonly bets: readonly number[] }
@@ -488,7 +488,7 @@ function openPair(s: Pick<HoldemState, 'players'>): boolean {
 }
 
 /** Stud's third street before anyone has acted: the bring-in is still to be made. */
-function bringInDue(s: Pick<HoldemState, 'config' | 'street' | 'currentBet' | 'players'>): boolean {
+export function bringInDue(s: Pick<HoldemState, 'config' | 'street' | 'currentBet' | 'players'>): boolean {
   return s.config.game === 'stud' && s.street === 'third' && s.currentBet === 0 && s.players.every((p) => p.actedAt === null);
 }
 
@@ -551,7 +551,15 @@ export function drawChoices(hole: readonly Card[], maxDraw: number): Card[][] {
   return out;
 }
 
-function legalActions(s: HoldemState, seat: Seat): HoldemAction[] {
+/** What the legal actions depend on: works on states and on a seat's own view. */
+export type LegalView = BettingView & Pick<HoldemState, 'over' | 'toAct'>;
+
+/** The actions a seat may take: from the rules (a state) or from its own view. */
+export function legalOf(s: LegalView, seat: Seat): HoldemAction[] {
+  return legalActions(s, seat);
+}
+
+function legalActions(s: LegalView, seat: Seat): HoldemAction[] {
   if (s.over || s.toAct !== seat) return [];
   if (s.street === 'draw') return drawChoices(at(s.players, seat).hole, s.config.maxDraw).map((discard) => ({ type: 'draw', discard }));
   if (bringInDue(s)) {
@@ -1130,6 +1138,7 @@ function applyAction(s: HoldemState, action: HoldemAction): { state: HoldemState
       break;
     case 'draw': {
       // Throw the cards away and be dealt as many; the count is public, the cards are not.
+      const before = [...p.hole];
       for (const card of action.discard) {
         p.hole.splice(p.hole.indexOf(card), 1);
         w.discards.push(card);
@@ -1137,7 +1146,7 @@ function applyAction(s: HoldemState, action: HoldemAction): { state: HoldemState
       for (let i = 0; i < action.discard.length; i++) p.hole.push(draw(w));
       p.drew = action.discard.length;
       kind = 'draw';
-      events.push({ type: 'drew', seat, count: action.discard.length });
+      events.push({ type: 'drew', seat, count: action.discard.length, before });
       break;
     }
     case 'raise': {

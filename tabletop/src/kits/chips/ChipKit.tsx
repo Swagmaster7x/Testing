@@ -87,6 +87,10 @@ export interface BetControlsProps {
   };
   /** Chips behind, to tell when a call is all-in. */
   readonly stack: number;
+  /** The bet that puts every chip in, when the most allowed may be less (pot-limit, fixed-limit). Defaults to the most allowed. */
+  readonly allInAt?: number;
+  /** Fixed-limit: the only bets allowed, each a button of its own. */
+  readonly fixed?: readonly number[];
 }
 
 /**
@@ -100,7 +104,8 @@ export function BetControls(p: BetControlsProps) {
   const min = p.raise?.min ?? 0;
   const max = p.raise?.max ?? 0;
   const snap = (x: number) => (x >= max ? max : Math.max(min, min + Math.round((x - min) / p.unit) * p.unit));
-  const sizeText = (x: number) => (x >= max ? p.text.allIn(x) : p.opening ? p.text.bet(x) : p.text.raise(x));
+  const allIn = p.allInAt ?? max;
+  const sizeText = (x: number) => (x >= allIn ? p.text.allIn(x) : p.opening ? p.text.bet(x) : p.text.raise(x));
   const callText = p.toCall === 0 ? p.text.check : p.toCall >= p.stack ? p.text.allInCall(p.stack) : p.text.call(p.toCall);
   return (
     <div className="bet-controls" data-sizing={sizing}>
@@ -133,9 +138,16 @@ export function BetControls(p: BetControlsProps) {
         <button type="button" className="btn btn-small bet-call" onClick={p.onCall}>
           {callText}
         </button>
-        {p.raise ? (
+        {p.fixed && p.fixed.length > 0
+          ? p.fixed.map((x) => (
+              <button key={x} type="button" className="btn btn-small btn-primary bet-raise" onClick={() => p.onRaise(x)}>
+                {sizeText(x)}
+              </button>
+            ))
+          : null}
+        {p.raise && !(p.fixed && p.fixed.length > 0) ? (
           <button type="button" className="btn btn-small btn-primary bet-raise" aria-expanded={sizing} onClick={() => (sizing ? p.onRaise(to) : min >= max ? p.onRaise(max) : setSizing(true))}>
-            {sizing ? sizeText(to) : min >= max ? p.text.allIn(max) : p.opening ? p.text.bet(min) + '…' : p.text.raise(min) + '…'}
+            {sizing ? sizeText(to) : min >= max ? sizeText(max) : p.opening ? p.text.bet(min) + '…' : p.text.raise(min) + '…'}
           </button>
         ) : null}
       </div>

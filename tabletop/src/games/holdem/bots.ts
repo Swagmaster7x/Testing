@@ -26,8 +26,9 @@ import { ANY_HAND, exactEquity, rangeEquity, withoutDead } from './equity';
 import { openFraction, rankOf } from './preflop';
 import type { Read } from './reading';
 import { estimateRange, outs, readFromStats, readHand, TYPICAL } from './reading';
+import { sampledEquity, variantDecide, variantOptionValues } from './variant-bots';
 import type { HoldemAction, HoldemView, PlayerView } from './rules';
-import { actionText, dealtOrder, potOf, positionName, raiseRange, seatsInHand, toCallOf } from './rules';
+import { actionText, dealtOrder, legalOf, potOf, positionName, raiseRange, seatsInHand, toCallOf } from './rules';
 
 export type Style = 'rock' | 'station' | 'maniac' | 'tag' | 'lag' | 'solid';
 export const STYLES: readonly Style[] = ['rock', 'station', 'maniac', 'tag', 'lag', 'solid'];
@@ -155,14 +156,7 @@ export function effectiveStack(v: HoldemView, seat: Seat): number {
 
 /** Every action the seat to act may take, from its view (the same list the rules give). */
 export function viewLegal(v: HoldemView, seat: Seat): HoldemAction[] {
-  if (v.over || v.toAct !== seat) return [];
-  const out: HoldemAction[] = toCallOf(v, seat) > 0 ? [{ type: 'fold' }, { type: 'call' }] : [{ type: 'check' }];
-  const range = raiseRange(v, seat);
-  if (range) {
-    for (let to = range.min; to < range.max; to += v.blinds.unit) out.push({ type: 'raise', to });
-    out.push({ type: 'raise', to: range.max });
-  }
-  return out;
+  return legalOf(v, seat);
 }
 
 const passive = (v: HoldemView, seat: Seat): HoldemAction => (toCallOf(v, seat) > 0 ? { type: 'fold' } : { type: 'check' });
@@ -607,8 +601,23 @@ function advise(input: AdviseInput<HoldemView>): Json {
   const v = input.view;
   const seat = input.seat;
   if (q.type === 'hint') {
-    const d = decide(v, seat, 6, 'solid', input.rng);
+    const d = v.config.game === 'holdem' ? decide(v, seat, 6, 'solid', input.rng) : variantDecide(v, seat, 6, 'solid', input.rng);
     return { action: actionText(d.action), tags: [...d.tags], equity: d.equity };
+  }
+  if (v.config.game !== 'holdem') {
+    // The variants: equity by playing sampled deals out, against any hands.
+    const samples = typeof q.samples === 'number' ? Math.min(q.samples, 600) : 300;
+    if (q.type === 'analyse') {
+      const values = variantOptionValues(v, seat, samples, input.rng);
+      return { knew: values, up: values };
+    }
+    if (q.type === 'equity') {
+      const eq = sampledEquity(v, seat, samples, input.rng);
+      const owe = Math.min(toCallOf(v, seat), me(v, seat).stack);
+      const pot = potOf(v);
+      return { equity: eq, random: eq, owe, pot, potOdds: owe > 0 ? owe / (pot + owe) : 0, outs: 0, improve: 0, tier: 0 };
+    }
+    return null;
   }
   if (q.type === 'analyse') {
     // The others' real hands, for the "every card face up" lens: { seat: ["Ah", "Kd"] }.
@@ -635,7 +644,8 @@ export const holdemBots: BotSet<HoldemView, HoldemAction> = {
   gameId: 'poker',
   levels: HOLDEM_LEVELS,
   choose({ view, seat, level, rng }): BotChoice<HoldemAction> {
-    const d = decide(view, seat, level, styleOf(view.table, seat, level), rng);
+    const style = styleOf(view.table, seat, level);
+    const d = view.config.game === 'holdem' ? decide(view, seat, level, style, rng) : variantDecide(view, seat, level, style, rng);
     return { action: d.action, tags: d.tags, nodes: 0 };
   },
   advise,
