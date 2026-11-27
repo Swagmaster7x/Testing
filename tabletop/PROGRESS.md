@@ -735,7 +735,9 @@ Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in th
       double riichi, ippatsu, how many of the hand's fives are red, and the dora and ura indicators
       (tapped in like tiles, tapped again to take away). Ura indicators count only after a riichi.
       Checked by unit cases (a riichi ron of 1,300; riichi, ippatsu, a dora and a red five make
-      mangan; double riichi with two ura) and an end-to-end test at three sizes.
+      mangan; double riichi with two ura) and an end-to-end test at three sizes. Red fives are one
+      per suit present (a hand with two 5 bamboo cannot hold two red ones), drawn red in the hand
+      and its sets, and the same helper picks them for the scorer and the picture.
 - [ ] Still to come in M16: calculator inputs for the later Mahjong styles, the release APK,
       optional web hosting.
 
@@ -987,12 +989,15 @@ card faces and stylesheet (`src/games/tute/ui/tute.css`).
 - **Sources**: www.pagat.com, es.wikipedia.org and en.wikipedia.org were refused by the build
   environment's network policy; every rule was taken from search-engine extracts and cross-checked
   (the rules document lists them, dated). Corrections from a real table are one option change each.
+  **Done at the merge (2026-11-27):** pagat's page, read in full later, agreed with every rule and
+  added six options (`singer: both`, `tute: none`, `bigWin`, `margin`, `target: 121`, `twoHand`)
+  and three presets (corriente with six cards, americano to 121 without a tute, ten cards each
+  with full obligations), with golden cases and an end-to-end test of corriente's deal.
+- **Shelf copy**: done; `game.brisca.later` now names Tute as a game of its own.
 - **Declared capote**, singing before the draw (two players), exchanges only until two cards are
   left, and revoke penalties are not implemented, on purpose (see the rules document).
 - **Phone speed** is not measured (no emulator); level 6's 128 deals in `bots.ts` is the number to
   change if it is slow.
-- **Shelf copy**: `game.brisca.later` in `src/text/en.ts` still says "then Tute"; left for the main
-  session, as asked.
 
 ## M10. Mahjong II: teach it
 
