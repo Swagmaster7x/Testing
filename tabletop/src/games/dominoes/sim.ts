@@ -6,9 +6,11 @@
  *
  * Hands are bit masks over the tiles of the set in play, in two 32-bit words: `lo` holds tiles 0
  * to 31 and `hi` tiles 32 to 54. The double six's 28 tiles all sit in `lo`, so its `hi` words stay
- * zero and cost one extra AND here and there; the double nine's 55 tiles use both. (Two plain
- * words measured faster than BigInt masks or a typed-array bitset, and kept the double-six
- * levels at their old speed.)
+ * zero and cost one extra AND here and there; the double nine's 55 tiles use both. Two plain
+ * numbers keep every operation in 32-bit integer arithmetic, where BigInt masks would allocate and
+ * a typed-array bitset would add an indirection per access; measured on double-six positions, the
+ * CPU levels choose exactly as before and are no slower. Legal moves walk the set bits of a hand
+ * rather than every tile index.
  *
  * The layout is kept as its open ends: the two ends of the line, whether each end tile is a
  * double (a double at an end counts both halves), and with a spinner its number, whether it is

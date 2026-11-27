@@ -300,7 +300,8 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
   const fives = state.config.fives === 'on' && helps.count === true;
   // The points a play scores, beside the tile as it lands.
   const scoredPlay = fives && playing?.type === 'play' && (playing.scored ?? 0) > 0 ? playing : null;
-  const scoredSpot = scoredPlay ? byTile.get(scoredPlay.tile) : undefined;
+  // While its event plays the tile is still drawn in hand, so the points show where it is going: its end's marker (the middle for a lead).
+  const scoredSpot = scoredPlay ? (byTile.get(scoredPlay.tile) ?? (scoredPlay.end ? spotOf.get(scoredPlay.end) : { x: 0, y: 0 })) : undefined;
   const handOverText = (): string => (handEnd ? handResultText(handEnd, me, n, state.config) : '');
   const yardLabel = drawing(state.config) ? t('dominoes.boneyard', { n: d.boneyard.length }) : d.boneyard.length > 0 ? t('dominoes.sleeping', { n: d.boneyard.length }) : null;
 
