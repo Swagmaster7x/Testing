@@ -27,7 +27,28 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [ ] M15. Stronger engines
 - [ ] M16. Table tools, polish, release
 
-Next up: **M9, Mahjong I** (the shared engine and Hong Kong style), being built in its own checkout; M10 (teaching Mahjong) follows it. Hold'em (M5) and Chinese Checkers (M7) were built at the same time and are merged.
+Now: **M9** (Mahjong I) and **M13** (classic card pack) are being built in their own checkouts;
+**M12** (card variants) on the main branch.
+
+### What is left, and how it will be built (plan of 2026-11-27)
+
+Three builders at a time at most (two parallel checkouts and the main branch): the machine has four
+cores, and more parallel test runs make the timing-based tests flaky. Each milestone is merged,
+checked (`npm run check`, the whole end-to-end suite at three sizes), screenshotted, looked at, and
+delivered with an APK before it is ticked here. Milestones may finish out of order; each delivery
+says which.
+
+| Wave | Main branch | Checkout A | Checkout B | Depends on |
+| --- | --- | --- | --- | --- |
+| 1 (now) | M12 card variants: Omaha, Five-Card Draw and Seven-Card Stud on the poker engine; Brisca for four with señas; Tute | M9 Mahjong core and Hong Kong | M13 Blackjack, Hearts, Spades, Gin Rummy | M5 poker engine (done) |
+| 2 | M16, first part: scorepads, the poker blind timer, the light look, the first-run tour | M10 teaching Mahjong (same checkout as M9) | M14a Dominoes: All Fives and Cuban double-nine | M9 for M10 |
+| 3 | M16, second part: the Spanish interface (every interface string; lessons stay English unless time allows), accessibility and performance passes | M11 Riichi (the second rules file; the core changes only with a written reason) | M15 stronger engines: time-boxed trials of Fairy-Stockfish (Shogi) and KataGo (Go), then the opening, castle and joseki trainers | M10 for M11 |
+| 4 | Merge and polish | M14b Mahjong Chinese Official, then Taiwanese | M14c Mahjong Sichuan Bloody, then American (an original practice card) | M11 for M14 Mahjong styles |
+| 5 | M16, last part: Mahjong score calculators for every style, the release APK, optional web hosting | | | M14 |
+
+Risks noted now: M15 needs engine and network downloads (a blocked host means the built-in engines
+stay, as the plan allows); the Spanish interface is large (about 2,000 strings), so it is split by
+area; each Mahjong style must not change the shared core without a note here.
 
 ## M7. Chinese Checkers, and pass-and-play for every game
 
