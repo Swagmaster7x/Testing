@@ -62,7 +62,7 @@ the Spanish 40-card deck: four players in fixed pairs, or two with a stock.
 | --- | --- |
 | 1. `docs/rules/tute.md` | Rules as implemented, 14 options, 6 presets, golden cases, sources |
 | 2. Golden, property and replay tests under every preset | 25 golden cases (`tests/unit/tute-rules.test.ts`); random games under the 6 presets and 3 more configs keep the contract, conserve the 40 cards, total 130 plus cantes in every hand played out, never leak another hand, the stock or the seed, and replay; sampled deals keep the view and every inference holds (`tests/property/tute.property.test.ts`) |
-| 3. At least four CPU levels pass the ladder | See the ladder below |
+| 3. At least four CPU levels pass the ladder | Yes, levels 1 to 4 (see the ladder below); 5 and 6 do not separate |
 | 4. Learn stages 0 to 2 and Table-ready | 2 + 10 + 6 + 5 lessons, all passing the linter |
 | 5. Three kinds of practice | Four generated drills |
 | 6. Coach helps and a counter a player keeps in their head | Points so far with cantes, trumps and big cards out, pairs still to sing, who cannot have a suit, cards seen |
@@ -71,7 +71,46 @@ the Spanish 40-card deck: four players in fixed pairs, or two with a stock.
 | 9. End to end at phone landscape, screenshots looked at | `tests/e2e/tute.spec.ts` (5 tests) passes at 844×390, 1180×820 and 1440×900; 23 screenshots in `screenshots/m12-tute/` looked at |
 | 10. Progress notes | This file |
 
-**Ladder**: see the table at the end of this file.
+**Ladder** (`npm run ladder -- tute 300`, run as `LADDER_LEVELS=1,2,3,4`: matches to five games
+under "Spain, in pairs", the two levels sitting as partners against each other, every deal played
+twice with the sides swapped; pass at 0.6). The top two rungs were run separately with the same
+spec and seeds at 100 games (scratch script, one `runMatch` per rung, so they could run in
+parallel):
+
+| Rung | Games | Won | Lost | Score | |
+| --- | --- | --- | --- | --- | --- |
+| Level 1 against random play | 300 | 198 | 102 | 0.660 | passes |
+| Level 2 against level 1 | 300 | 183 | 117 | 0.610 | passes |
+| Level 3 against level 2 | 300 | 195 | 105 | 0.650 | passes |
+| Level 4 against level 3 | 300 | 200 | 100 | 0.667 | passes |
+| Level 5 against level 4 | 100 | 48 | 52 | 0.480 | fails |
+| Level 6 against level 5 | 100 | 54 | 46 | 0.540 | fails |
+
+Four levels pass, which is the gate. At 1000 games the three lower rungs score 0.658, 0.630 and
+0.658, so they are clear of the line; at 100 games their noise (about ±0.05) once put level 2
+against level 1 at 0.58, which is why the Tute ladder plays 300 games a rung. Levels 5 and 6 are
+not measurably stronger than level 4: in paired single hands 64 deals beat 24 by only +2.8 points
+a hand (0.517 of hands), and a hand of Tute is mostly decided by the deal, because the obligations
+leave few free choices. Separating them needs knowledge, not budget (open; see below).
+
+## Tests
+
+- `npm run check`: types, lint, 606 unit tests (51 files), 52 property tests (10 files), and the
+  lesson lint (Tute: 23 lessons; 2 + 10 + 6 + 5 by stage) all pass.
+- Tute's own: `tests/unit/tute-rules.test.ts` (25 golden cases), `tests/unit/tute-bots.test.ts`
+  (solver against brute force on 60 endgames with cantes, every level legal and repeatable under
+  two presets, view-legal equals rules-legal under every preset, heuristics, coach answers, a
+  whole-hand review), `tests/unit/tute-learning.test.ts` (160 generated drills through the lesson
+  linter), `tests/property/tute.property.test.ts` (random games under 9 configs; sampling).
+- `tests/e2e/tute.spec.ts` (5 tests) at 844×390, 1180×820 and 1440×900: 15 passed. The shelf test
+  in `tests/e2e/shell.spec.ts` now counts the shelf. The whole e2e suite on the phone project:
+  99 passed, 1 skipped by design.
+- `tests/e2e/screens-m12-tute.spec.ts` writes 23 screenshots to `screenshots/m12-tute/`: the shelf,
+  the hub, the rules dialog, the four-player table at the start, with a trick and legal cards, a
+  card refused, the coach counts, a hand's summary, two players with the stock, the twenty sung in
+  a lesson (before and after), overtrumping, the free-play finish with cards up, the Learn and
+  Practice doors, three drills, a game over, the review, the reference card, and the table at the
+  tablet and laptop sizes. All looked at.
 
 ## Decisions
 
@@ -118,6 +157,11 @@ card faces and stylesheet (`src/games/tute/ui/tute.css`).
 
 ## Not done, or open
 
+- **Levels 5 and 6 do not separate from level 4** in the ladder (see above). They use more deals
+  (64 and 128 against 24) and level 6 solves the last two tricks exactly, but in Tute that buys
+  little. Ideas for milestone 15: a better playout policy (the biggest single gains measured were
+  in how the playouts lead), reading the partner's likely holdings from its plays,
+  or a learned evaluation. Their nominal ratings (1650, 1850) are not yet earned.
 - **Sources**: www.pagat.com, es.wikipedia.org and en.wikipedia.org were refused by the build
   environment's network policy; every rule was taken from search-engine extracts and cross-checked
   (the rules document lists them, dated). Corrections from a real table are one option change each.
