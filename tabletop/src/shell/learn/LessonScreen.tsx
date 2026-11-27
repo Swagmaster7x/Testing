@@ -85,7 +85,9 @@ export function LessonPlayer({ lesson, pack, ui, drill }: { lesson: Lesson; pack
   const computed = useMemo(() => game.computed(game.position(s.position)), [game, s.position]);
   const board = useStudyBoard(ui, s.position, s.lastMove);
   const isCheck = isCheckId(lesson.id);
-  const fill = useCallback((text: string) => fillText(text, computed), [computed]);
+  // Step text is filled from the position it was asked in, so its numbers stay put after a move.
+  const asked = useMemo(() => game.computed(game.position(s.asked)), [game, s.asked]);
+  const fill = useCallback((text: string) => fillText(text, asked), [asked]);
   // In free play the student plays the side to move in the step's own starting position.
   const studentSide = useMemo(() => (step?.kind === 'freePlay' ? ui.def.turn(ui.def.codec.state.fromText(step.position)) : null), [step, ui]);
 
