@@ -392,11 +392,11 @@ function advise(v: TuteView, query: Json, rng: Rng): Json {
     case 'best': {
       const legal = viewLegal(v);
       const moves = searchMoves(legal);
-      const action = moves.length === 1 ? (moves[0] as TuteAction) : bestOf(evaluateActions(v, samples, 3, true, 3, rng, moves), rng);
+      const action = moves.length === 1 ? (moves[0] as TuteAction) : bestOf(evaluateActions(v, samples, 3, true, 2, rng, moves), rng);
       return { action: actionText(action), tags: [tagFor(v, action)] };
     }
     case 'analyse': {
-      const scored = evaluateActions(v, samples, 3, true, 3, rng);
+      const scored = evaluateActions(v, samples, 3, true, 2, rng);
       return { moves: scored.map((x) => ({ action: actionText(x.action), value: Math.round(x.value * 10) / 10 })) };
     }
     default:
