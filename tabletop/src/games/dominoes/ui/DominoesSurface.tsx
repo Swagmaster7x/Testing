@@ -1,14 +1,19 @@
 /**
  * The dominoes table. You sit at the bottom; in the partnership game your partner faces you, the
  * player after you (play goes counter-clockwise) sits on your right and the one before you on
- * your left. In the two-player games the other player faces you and the boneyard lies on the
- * left. The line runs through the middle and bends at the edges; its open ends are marked.
+ * your left. With three players the other two sit on your right and your left; with two, the
+ * other player faces you and the boneyard lies on the left. The line runs through the middle and
+ * bends at the edges; with a spinner (All Fives) it grows into a cross around the spinner. Its
+ * open ends are marked.
  *
  * Tap a tile to lift it, then tap it again (or tap a marked end) to play it there. A tile that
- * fits both ends waits for you to choose the end.
+ * fits more than one end waits for you to choose the end.
+ *
+ * When the ends score as you play, the count of the open ends sits by the table, and a play that
+ * scores shows its points beside the tile as it lands (the "count" help, on by default).
  *
  * What is drawn lags the rules by the events still queued: a tile the rules have already played
- * stays in its hand until its event plays, then slides to the line. At the end of a hand every
+ * stays in its hand until its event plays, then slides to the table. At the end of a hand every
  * hand is shown until the next deal.
  */
 import { useState } from 'react';
@@ -20,22 +25,25 @@ import { fitLine } from '../../../kits/tiles/line-layout';
 import { useSize } from '../../../kits/cards/CardLayer';
 import { t } from '../../../text';
 import type { SurfaceProps } from '../../types';
-import type { DominoesAction, DominoesEvent, DominoesState, End, Placed, Tile } from '../rules';
-import { cantHave, endsOf, handPips, isTile, pipsOf, seatCount, viewOf } from '../rules';
-import { endName, seatName, tileLabel } from './names';
+import type { DominoesAction, DominoesEvent, DominoesState, End, Layout, Placed, Tile } from '../rules';
+import { cantHave, drawing, endsCount, handPips, handSize, isTile, openEnds, pipsOf, seatCount, viewOf } from '../rules';
+import { endName, handResultText, seatName, tileLabel } from './names';
+import './dominoes.css';
 
 interface Display {
   readonly hands: Tile[][];
-  readonly chain: Placed[];
+  readonly layout: Layout;
   readonly boneyard: Tile[];
   /** Showing a finished hand: every hand face up. */
   readonly ended: boolean;
 }
 
+const without = (list: readonly Placed[], tile: Tile) => list.filter((p) => p.tile !== tile);
+
 /** The table as it looks before the queued events play. */
 export function displayOf(state: DominoesState, pending: readonly DominoesEvent[]): Display {
   let hands = state.hands.map((h) => [...h]);
-  let chain = [...state.chain];
+  let layout: Layout = { chain: state.chain, spinner: state.spinner, up: state.up, down: state.down };
   let boneyard = [...state.boneyard];
   let ended = state.over;
   for (const e of [...pending].reverse()) {
@@ -43,7 +51,7 @@ export function displayOf(state: DominoesState, pending: readonly DominoesEvent[
       case 'deal':
         if (e.previous) {
           hands = e.previous.hands.map((h) => [...h]);
-          chain = [...e.previous.chain];
+          layout = e.previous.layout;
           boneyard = [...e.previous.boneyard];
           ended = true;
         }
@@ -52,7 +60,7 @@ export function displayOf(state: DominoesState, pending: readonly DominoesEvent[
         ended = false;
         break;
       case 'play': {
-        chain = chain.filter((p) => p.tile !== e.tile);
+        layout = { chain: without(layout.chain, e.tile), spinner: e.spinner ? null : layout.spinner, up: without(layout.up, e.tile), down: without(layout.down, e.tile) };
         hands[e.seat]?.push(e.tile);
         break;
       }
@@ -67,7 +75,7 @@ export function displayOf(state: DominoesState, pending: readonly DominoesEvent[
         break;
     }
   }
-  return { hands, chain, boneyard, ended };
+  return { hands, layout, boneyard, ended };
 }
 
 const sortTiles = (tiles: readonly Tile[]) => [...tiles].sort((a, b) => Number(a[0]) - Number(b[0]) || Number(a[2]) - Number(b[2]));
@@ -90,10 +98,13 @@ export function DominoesSeatMark({ seat }: { seat: Seat }) {
   );
 }
 
-/** Where each seat sits, counted from you: 0 bottom, 1 right, 2 top, 3 left (two players: 0 bottom, 1 top). */
-function placeOf(seat: Seat, me: Seat, n: number): 'bottom' | 'right' | 'top' | 'left' {
+type Where = 'bottom' | 'right' | 'top' | 'left';
+
+/** Where each seat sits, counted from you: 0 bottom, 1 right, 2 top, 3 left (three players: right and left; two: the top). */
+function placeOf(seat: Seat, me: Seat, n: number): Where {
   const rel = (seat - me + n) % n;
   if (n === 2) return rel === 0 ? 'bottom' : 'top';
+  if (n === 3) return (['bottom', 'right', 'left'] as const)[rel] ?? 'right';
   return (['bottom', 'right', 'top', 'left'] as const)[rel] ?? 'top';
 }
 
@@ -109,21 +120,32 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
   const W = size.width;
   const H = size.height;
   const gap = Math.max(4, Math.min(W, H) * 0.015);
-  // Your own tiles as big as the table allows: seven of them fit across with room to spare.
-  const handUnit = Math.max(13, Math.min(H * 0.1, W / 9.5, 32));
-  const small = Math.max(8, Math.min(handUnit * 0.56, 15));
+  // Your own tiles as big as the table allows: a full hand fits across with room to spare.
+  const most = Math.max(7, handSize(state.config), d.hands[me]?.length ?? 0);
+  const handUnit = Math.max(12, Math.min(H * 0.1, W / (most * 1.18 + 1.24), 32));
+  const sideMost = Math.max(7, ...d.hands.filter((_, s) => placeOf(s, me, n) === 'left' || placeOf(s, me, n) === 'right').map((h) => h.length));
+  // Side hands stand in a column: small enough for the longest hand to fit between the top and the bottom rows.
+  const small = Math.max(7, Math.min(handUnit * 0.56, 15, (H * 0.62) / (sideMost * 1.2)));
   const labelH = 16;
+  const sides = n >= 3;
+  // With every hand face up (a lesson, a drill, the "tiles up" help), the side hands are drawn larger so their pips can be counted.
+  const sideUnitOf = (seat: Seat): number => (helps.openHand === true ? Math.max(small, Math.min(handUnit * 0.75, 24, (H * 0.62) / (Math.max(1, d.hands[seat]?.length ?? 0) * 1.2))) : small);
+  const sideUnit = Math.max(small, ...Array.from({ length: n }, (_, s) => s).filter((s) => placeOf(s, me, n) === 'left' || placeOf(s, me, n) === 'right').map(sideUnitOf));
   // Side strips leave room for the seat labels above the tiles.
-  const sideW = n === 4 ? Math.max(small * 2 + gap * 2, 62) : 0;
-  const yardW = state.config.mode === 'partnership' ? 0 : Math.max(7, small * 0.72) * 4 + 3 + gap * 2;
-  const topH = small * 2 + gap * 2 + labelH;
+  const sideW = sides ? Math.max(sideUnit * 2 + gap * 2, 62) : 0;
+  const yardStacks = n === 2 && state.config.mode !== 'partnership';
+  const yardW = yardStacks ? Math.max(7, small * 0.72) * 4 + 3 + gap * 2 : 0;
+  const topH = n === 3 ? labelH + gap * 2 : small * 2 + gap * 2 + labelH;
   const bottomH = handUnit * 2 + gap * 2 + labelH;
   const area = { x: Math.max(sideW, yardW) + gap, y: topH, w: W - Math.max(sideW, yardW) - sideW - gap * 2, h: H - topH - bottomH };
+  const placedLine = (p: Placed) => ({ tile: p.tile, left: p.left, right: p.right, n: p.n });
   const fitted = fitLine(
-    d.chain.map((p) => ({ tile: p.tile, left: p.left, right: p.right, n: p.n })),
+    d.layout.chain.map(placedLine),
     Math.max(40, area.w),
     Math.max(30, area.h),
     Math.min(26, Math.max(9, area.h / 5)),
+    7,
+    d.layout.spinner ? { spinner: d.layout.spinner, up: d.layout.up.map(placedLine), down: d.layout.down.map(placedLine) } : null,
   );
   const cx = area.x + area.w / 2 + fitted.dx;
   const cy = area.y + area.h / 2 + fitted.dy;
@@ -136,14 +158,15 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
     if (a.type !== 'play') continue;
     playable.set(a.tile, [...(playable.get(a.tile) ?? []), ...(a.end ? [a.end] : [])]);
   }
-  const ends = endsOf(d.chain);
-  const lastN = d.chain.reduce((m, p) => Math.max(m, p.n), -1);
+  const ends = openEnds(d.layout);
+  const onTable = [...d.layout.chain, ...d.layout.up, ...d.layout.down];
+  const lastN = onTable.reduce((m, p) => Math.max(m, p.n), -1);
   const hintTile = overlay.marks.find((m) => isTile(m.square))?.square ?? null;
   const placed: PlacedTile[] = [];
 
-  // The line.
+  // The layout.
   const byTile = new Map(fitted.layout.tiles.map((lt) => [lt.tile, lt]));
-  for (const p of d.chain) {
+  for (const p of onTable) {
     const lt = byTile.get(p.tile);
     if (!lt) continue;
     placed.push({ key: p.tile, face: faceOf(p.tile), back: BACK, x: cx + lt.x * u, y: cy + lt.y * u, rotate: lt.rotate, unit: u, z: 10 + p.n, label: tileLabel(p.tile), tone: p.n === lastN && !shown.ended ? 'last' : null });
@@ -175,11 +198,11 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
           dim: acting && !can && legal.some((a) => a.type === 'play'),
         });
       } else if (where === 'top') {
-        const unit = faceUp ? Math.max(small, handUnit * 0.7) : small;
+        const unit = faceUp ? Math.max(small, Math.min(handUnit * 0.7, (W * 0.8) / (k * 1.15))) : small;
         const spacing = unit * 1.15;
         placed.push({ key: tile, face: faceUp ? faceOf(tile) : null, back: BACK, x: W / 2 + (i - (k - 1) / 2) * spacing, y: gap + labelH + unit, rotate: 90, unit, z: 100 + i, label: faceUp ? tileLabel(tile) : undefined });
       } else {
-        const unit = small;
+        const unit = sideUnitOf(seat);
         const spacing = unit * 1.2;
         const x = where === 'left' ? gap + unit : W - gap - unit;
         placed.push({ key: tile, face: faceUp ? faceOf(tile) : null, back: BACK, x, y: H / 2 - 4 + (i - (k - 1) / 2) * spacing, rotate: 0, unit, z: 100 + i, label: faceUp ? tileLabel(tile) : undefined });
@@ -187,13 +210,15 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
     });
   }
 
-  // The boneyard (Draw game) or the tiles left out (Block game), face down in two stacks on the left.
+  // The boneyard (two-player Draw game) or the tiles left out (Block game), face down in two stacks on the left.
   const yardUnit = Math.max(7, small * 0.72);
-  d.boneyard.forEach((tile, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    placed.push({ key: tile, face: helps.openHand && state.config.mode === 'block' ? faceOf(tile) : null, back: BACK, x: gap + yardUnit + col * (yardUnit * 2 + 3), y: area.y + yardUnit / 2 + row * (yardUnit + 3), rotate: 0, unit: yardUnit, z: 5 + i });
-  });
+  if (yardStacks) {
+    d.boneyard.forEach((tile, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      placed.push({ key: tile, face: helps.openHand && !drawing(state.config) ? faceOf(tile) : null, back: BACK, x: gap + yardUnit + col * (yardUnit * 2 + 3), y: area.y + yardUnit / 2 + row * (yardUnit + 3), rotate: 0, unit: yardUnit, z: 5 + i });
+    });
+  }
 
   const choose = (tile: Tile, end: End | undefined) => {
     setSelected(null);
@@ -207,8 +232,8 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
       setSelected(key);
       return;
     }
-    // A second tap plays it where it fits, unless it fits both ends.
-    if (!ends) choose(key, undefined);
+    // A second tap plays it where it fits, unless it fits more than one end.
+    if (ends.length === 0) choose(key, undefined);
     else if (fits.length === 1) choose(key, fits[0]);
   };
   const sel = selected && playable.has(selected) ? selected : null;
@@ -217,26 +242,25 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
   const duration = anim.playing ? Math.min(anim.duration, 420) : 240;
 
   // Open ends: a dashed outline where the next tile goes; a button while a lifted tile fits there.
-  const endSpots = fitted.layout.ends;
-  const endMarks = endSpots
-    ? (['left', 'right'] as const).map((end, i) => {
-        const spot = endSpots[i as 0 | 1];
-        const usable = sel !== null && selFits.includes(end) && acting;
-        const flat = spot.rotate === 0 || spot.rotate === 180;
-        const w = (flat ? 2 : 1) * u;
-        const h = (flat ? 1 : 2) * u;
-        const style = { left: `${cx + spot.x * u - w / 2}px`, top: `${cy + spot.y * u - h / 2}px`, width: `${w}px`, height: `${h}px` };
-        return usable ? (
-          <button key={end} type="button" className="line-end" data-usable="true" style={style} aria-label={t('dominoes.play-on', { tile: tileLabel(sel), end: endName(end, spot.value) })} onClick={() => choose(sel, end)}>
-            <span className="num">{spot.value}</span>
-          </button>
-        ) : (
-          <span key={end} className="line-end" style={style} aria-hidden="true">
-            <span className="num">{spot.value}</span>
-          </span>
-        );
-      })
-    : null;
+  const spotOf = new Map(fitted.layout.ends.map((spot) => [spot.end, spot]));
+  const endMarks = ends.map(({ end, value }) => {
+    const spot = spotOf.get(end);
+    if (!spot) return null;
+    const usable = sel !== null && selFits.includes(end) && acting;
+    const flat = spot.rotate === 0 || spot.rotate === 180;
+    const w = (flat ? 2 : 1) * u;
+    const h = (flat ? 1 : 2) * u;
+    const style = { left: `${cx + spot.x * u - w / 2}px`, top: `${cy + spot.y * u - h / 2}px`, width: `${w}px`, height: `${h}px` };
+    return usable ? (
+      <button key={end} type="button" className="line-end" data-usable="true" style={style} aria-label={t('dominoes.play-on', { tile: tileLabel(sel), end: endName(end, value) })} onClick={() => choose(sel, end)}>
+        <span className="num">{value}</span>
+      </button>
+    ) : (
+      <span key={end} className="line-end" style={style} aria-hidden="true">
+        <span className="num">{value}</span>
+      </span>
+    );
+  });
 
   // Seat labels, the turn, passes, and what each seat cannot have.
   const view = viewOf(state, me);
@@ -248,14 +272,15 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
     if (where === 'bottom' && tipShown) return null;
     const lacks = helps.cantHave && seat !== me ? [...cantHave(view, seat)].sort() : [];
     const pips = shown.ended ? handPips(d.hands[seat] ?? []) : null;
+    const columnTop = H / 2 - 4 - ((d.hands[seat]?.length ?? 0) / 2) * sideUnitOf(seat) * 1.2;
     const style =
       where === 'bottom'
         ? { left: '50%', bottom: `${gap / 2}px`, transform: 'translateX(-50%)' }
         : where === 'top'
           ? { left: '50%', top: `${gap / 2}px`, transform: 'translateX(-50%)' }
           : where === 'left'
-            ? { left: `${gap / 2}px`, bottom: `${H - (H / 2 - 4 - ((d.hands[seat]?.length ?? 0) / 2) * small * 1.2) + 4}px`, maxWidth: `${sideW - gap / 2}px` }
-            : { right: `${gap / 2}px`, bottom: `${H - (H / 2 - 4 - ((d.hands[seat]?.length ?? 0) / 2) * small * 1.2) + 4}px`, maxWidth: `${sideW - gap / 2}px` };
+            ? { left: `${gap / 2}px`, bottom: `${H - columnTop + 4}px`, maxWidth: `${sideW - gap / 2}px` }
+            : { right: `${gap / 2}px`, bottom: `${H - columnTop + 4}px`, maxWidth: `${sideW - gap / 2}px` };
     return (
       <div key={seat} className="seat-tag" data-where={where} data-side={where === 'left' || where === 'right'} data-turn={turnSeat === seat} style={style}>
         <span>{seatName(seat, me, n)}</span>
@@ -271,19 +296,36 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
   });
 
   const handEnd = playing?.type === 'hand-end' ? playing.result : null;
-  const side = me % 2;
+  // The count of the ends and a play's points (the "count" help, on at the table; lessons that ask for the count leave it off).
+  const fives = state.config.fives === 'on' && helps.count === true;
+  // The points a play scores, beside the tile as it lands.
+  const scoredPlay = fives && playing?.type === 'play' && (playing.scored ?? 0) > 0 ? playing : null;
+  // While its event plays the tile is still drawn in hand, so the points show where it is going: its end's marker (the middle for a lead).
+  const scoredSpot = scoredPlay ? (byTile.get(scoredPlay.tile) ?? (scoredPlay.end ? spotOf.get(scoredPlay.end) : { x: 0, y: 0 })) : undefined;
+  const handOverText = (): string => (handEnd ? handResultText(handEnd, me, n, state.config) : '');
+  const yardLabel = drawing(state.config) ? t('dominoes.boneyard', { n: d.boneyard.length }) : d.boneyard.length > 0 ? t('dominoes.sleeping', { n: d.boneyard.length }) : null;
 
   return (
     <div ref={ref} className="card-table domino-table" onPointerDown={(e) => e.target === e.currentTarget && onSkip()} data-busy={anim.playing !== null}>
       {W > 0 ? <TileLayer tiles={placed} duration={duration} onTile={onTile} /> : null}
       {W > 0 ? endMarks : null}
-      {!ends && acting && W > 0 ? (
+      {ends.length === 0 && acting && W > 0 ? (
         <span className="line-end" style={{ left: `${area.x + area.w / 2 - u}px`, top: `${area.y + area.h / 2 - u / 2}px`, width: `${2 * u}px`, height: `${u}px` }} aria-hidden="true" />
       ) : null}
       {labels}
-      {state.config.mode !== 'partnership' ? (
-        <div className="yard-tag num" style={{ left: `${gap}px`, top: `${area.y - labelH}px` }}>
-          {state.config.mode === 'draw' ? t('dominoes.boneyard', { n: d.boneyard.length }) : t('dominoes.sleeping', { n: d.boneyard.length })}
+      {yardLabel ? (
+        <div className="yard-tag num" style={yardStacks ? { left: `${gap}px`, top: `${area.y - labelH}px` } : { left: `${sideW + gap}px`, top: `${gap / 2}px` }}>
+          {yardLabel}
+        </div>
+      ) : null}
+      {fives && ends.length > 0 ? (
+        <div className="count-tag num" data-scores={endsCount(d.layout) % 5 === 0 && endsCount(d.layout) > 0} style={{ right: `${sideW + gap}px`, top: `${n === 2 ? area.y - labelH : gap / 2}px` }}>
+          {t('dominoes.count', { n: endsCount(d.layout) })}
+        </div>
+      ) : null}
+      {scoredPlay && scoredSpot && W > 0 ? (
+        <div className="score-pop num" role="status" style={{ left: `${cx + scoredSpot.x * u}px`, top: `${cy + scoredSpot.y * u - u * 1.4}px` }}>
+          {t('dominoes.scored', { n: scoredPlay.scored ?? 0 })}
         </div>
       ) : null}
       {acting && only && only.type !== 'play' ? (
@@ -298,15 +340,11 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
       ) : null}
       {acting && sel ? (
         // In the slot under your hand where your name sits, so it never covers the line.
-        <p className="table-tip">{ends && selFits.length > 1 ? t('dominoes.choose-end') : t('dominoes.tap-again')}</p>
+        <p className="table-tip">{ends.length > 0 && selFits.length > 1 ? t('dominoes.choose-end') : t('dominoes.tap-again')}</p>
       ) : null}
       {handEnd ? (
         <div className="hand-over domino-hand-over" role="status">
-          {handEnd.winner === null
-            ? t('dominoes.hand.tie')
-            : t(handEnd.winner === side ? (handEnd.reason === 'domino' ? 'dominoes.hand.we-domino' : 'dominoes.hand.we-block') : handEnd.reason === 'domino' ? 'dominoes.hand.they-domino' : 'dominoes.hand.they-block', {
-                n: handEnd.points[handEnd.winner] ?? 0,
-              })}
+          {handOverText()}
         </div>
       ) : null}
     </div>

@@ -79,7 +79,7 @@ export function MoveList({ moves, seatNames, current, linkFor }: { moves: readon
   if (seatNames.length > 2) {
     // More than two players, or several moves by one player in a row: one move a line.
     return (
-      <div className="moves single num" role="list">
+      <div className="moves single num" role="list" aria-label={t('rail.moves')} tabIndex={0}>
         {moves.map((m) => {
           const text = `${seatNames[m.seat] ?? ''} ${m.text}`.trim();
           return (
@@ -107,7 +107,7 @@ export function MoveList({ moves, seatNames, current, linkFor }: { moves: readon
     (rows[r] ??= []).push(m);
   });
   return (
-    <div className="moves num" role="list">
+    <div className="moves num" role="list" aria-label={t('rail.moves')} tabIndex={0}>
       {rows.map((row, r) => (
         <div key={r} role="listitem" style={{ display: 'contents' }}>
           <span className="n">{r + 1}.</span>

@@ -7,8 +7,8 @@
  */
 import { findLegal } from '../../../core/contract';
 import type { LessonGame } from '../../../teach/runner';
-import type { DominoesState, Tile } from '../rules';
-import { actionText, dominoes, EARLY, endsOf, HAND_SIZE, handPips, hasNumber, PIPS, PRESETS, PUERTO_RICO_500, seatCount, sideOf, TILES, TOTAL_PIPS, unseenTiles, viewOf } from '../rules';
+import type { DominoesConfig, DominoesState, Tile } from '../rules';
+import { actionText, CUBAN, dominoes, EARLY, endsCount, endsOf, fivesScore, HAND_SIZE, handPips, handSize, hasNumber, numbersOf, PIPS, PRESETS, PUERTO_RICO_500, seatCount, setPips, sideOf, sleepingCount, TILES, tilesOfSet, tilesOnTable, TOTAL_PIPS, unseenTiles, viewOf } from '../rules';
 
 const STUDENT = 0;
 
@@ -35,6 +35,8 @@ function playAll(state: DominoesState, moves: string): { state: DominoesState; c
   return { state: s, canonical };
 }
 
+const preset = (id: string): DominoesConfig => PRESETS[id] ?? PUERTO_RICO_500;
+
 /** Numbers that do not depend on the position. */
 const FIXED: Record<string, number> = {
   'set:tiles': TILES.length,
@@ -57,6 +59,21 @@ const FIXED: Record<string, number> = {
   'target:100': PRESETS.mexico?.target ?? 0,
   'pass:first': 20,
   'pass:next': 10,
+  // The double nine and Cuban dominó (milestone 14).
+  'set9:tiles': tilesOfSet('double-nine').length,
+  'set9:pips': setPips('double-nine'),
+  'set9:per-number': tilesOfSet('double-nine').filter((t) => hasNumber(t, 0)).length,
+  'set9:doubles': tilesOfSet('double-nine').filter((t) => t[0] === t[2]).length,
+  'cuban:hand': handSize(CUBAN),
+  'cuban:sleeping': sleepingCount(CUBAN),
+  'cuban:target': CUBAN.target,
+  'cuban:target-300': preset('cuban-300').target,
+  // All Fives.
+  'fives:hand-two': handSize(preset('all-fives')),
+  'fives:hand-three': handSize(preset('all-fives-three')),
+  'fives:hand-four': handSize(preset('all-fives-partners')),
+  'fives:target-two': preset('all-fives').target,
+  'fives:target-more': preset('all-fives-three').target,
 };
 
 export function dominoesComputed(state: DominoesState): Record<string, number> {
@@ -72,14 +89,18 @@ export function dominoesComputed(state: DominoesState): Record<string, number> {
   }
   out['hand:pips'] = handPips(mine);
   out['hand:tiles'] = mine.length;
-  out['line:pips'] = handPips(state.chain.map((p) => p.tile));
-  out['line:tiles'] = state.chain.length;
-  out['unseen:pips'] = TOTAL_PIPS - out['line:pips'] - out['hand:pips'];
+  out['line:pips'] = handPips(tilesOnTable(state).map((p) => p.tile));
+  out['line:tiles'] = tilesOnTable(state).length;
+  out['unseen:pips'] = setPips(state.config.set) - out['line:pips'] - out['hand:pips'];
   out['unseen:tiles'] = unseen.length;
-  for (const x of PIPS) {
+  if (ends) {
+    out['ends:count'] = endsCount(state);
+    out['ends:scores'] = fivesScore(endsCount(state));
+  }
+  for (const x of numbersOf(state.config.set)) {
     out[`unseen:${x}`] = unseen.filter((t) => hasNumber(t, x)).length;
     out[`mine:${x}`] = mine.filter((t) => hasNumber(t, x)).length;
-    out[`line:${x}`] = state.chain.filter((p) => hasNumber(p.tile, x)).length;
+    out[`line:${x}`] = tilesOnTable(state).filter((p) => hasNumber(p.tile, x)).length;
   }
   const pips = state.hands.map(handPips);
   out['pips:right'] = pips[1 % n] ?? 0;
@@ -90,6 +111,7 @@ export function dominoesComputed(state: DominoesState): Record<string, number> {
   out['pips:us'] = pips.reduce((sum, p, seat) => (sideOf(seat, n) === 0 ? sum + p : sum), 0);
   out['pips:them'] = pips.reduce((sum, p, seat) => (sideOf(seat, n) === 1 ? sum + p : sum), 0);
   out['pips:all'] = out['pips:us'] + out['pips:them'];
+  out['score:right'] = state.scores[1 % n] ?? 0;
   out['score:us'] = state.scores[0] ?? 0;
   out['score:them'] = state.scores[1] ?? 0;
   const last = state.results[state.results.length - 1];
@@ -121,6 +143,8 @@ export const dominoesLessonGame: LessonGame<DominoesState> = {
     return seat === null ? [] : dominoes.legal(state, seat).map(actionText);
   },
   computed: dominoesComputed,
+  // Tiles of the double nine (7-9) are names, like the double six's.
+  stripNotation: (text) => text.replace(/\b[0-9]-[0-9]\b/g, ' '),
 };
 
 /** The tiles in a list that hold a number. */

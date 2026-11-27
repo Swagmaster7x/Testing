@@ -6,10 +6,13 @@
  *
  * Positions are built by playing scripted moves through the rules from fixed deals, so every one is
  * a position a real hand could reach.
+ *
+ * Stage 4 (milestone 14) is "what is different" in two more styles: All Fives (the ends are counted
+ * after every play, around a spinner) and Cuban double nine.
  */
 import type { Lesson } from '../../../teach/lesson';
-import type { Tile } from '../rules';
-import { dominoes, position } from '../rules';
+import type { DominoesConfig, Tile } from '../rules';
+import { CUBAN, dominoes, position, PRESETS, PUERTO_RICO_500 } from '../rules';
 
 /** Plays moves from a position (the lesson's own notation), for building lesson positions. */
 function after(start: string, moves: string): string {
@@ -77,6 +80,33 @@ const SOLVED = position({
   line: '6-1 1-3 3-5 5-4 4-4 4-6 6-6 6-2 2-3 3-3 3-6 6-0 0-4 4-2 2-5 5-5',
   handNo: 5,
   config: { target: 0 },
+});
+
+/** All Fives for two, one hand: pagat's worked example deal (docs/rules/dominoes-styles.md). */
+const FIVES: DominoesConfig = { ...(PRESETS['all-fives'] ?? PUERTO_RICO_500), target: 0 };
+const FIVES_HANDS: Tile[][] = [
+  ['1-4', '4-4', '1-2', '5-5', '1-3', '0-0', '6-6', '2-2', '3-3'],
+  ['1-1', '3-4', '1-5', '0-5', '2-6', '0-6', '2-4', '4-6', '3-6'],
+];
+const FIVES_START = position({ hands: FIVES_HANDS, config: FIVES, handNo: 0 });
+/** The last tile: you go out on the six, and the other player keeps the 1-2 and the 2-4. */
+const FIVES_LAST = position({ hands: [['3-6'], ['1-2', '2-4']], line: '1-6', leader: 1, config: FIVES, handNo: 3 });
+
+/** Cuban double nine, one hand: your ten tiles; the others are dealt the rest, fifteen sleep. */
+const CUBAN_ONE: DominoesConfig = { ...CUBAN, target: 0 };
+const CUBAN_DEAL = position({ hands: [['9-9', '5-9', '7-9', '2-9', '0-3', '4-6', '1-8', '3-3', '2-7', '0-0'], null, null, null], counts: [10, 10, 10, 10], config: CUBAN_ONE, handNo: 2 });
+/** About to block: after the 7-9 on the seven both ends show a nine, and every other nine sleeps. */
+const CUBAN_BLOCK = position({
+  hands: [
+    ['7-9', '0-5', '0-6', '1-4', '2-3', '0-7', '1-5', '2-4', '3-3', '0-8'],
+    ['0-0', '0-1', '0-2', '0-3', '1-1', '1-2', '0-4', '1-3', '2-2'],
+    ['1-6', '1-7', '1-8', '2-5', '2-6', '2-7', '2-8', '3-4', '3-5'],
+    ['8-8', '7-7', '6-8', '6-7', '5-8', '5-7', '6-6', '4-8', '5-6'],
+  ],
+  line: '7-8 8-9 9-9',
+  leader: 1,
+  config: CUBAN_ONE,
+  handNo: 2,
 });
 
 export const DOMINOES_LESSONS: readonly Lesson[] = [
@@ -377,6 +407,154 @@ export const DOMINOES_LESSONS: readonly Lesson[] = [
     steps: [
       { kind: 'say', openHand: true, text: 'Near the end, count everything. Every hand is face up: find the play that scores most for your side. The ends show {ends:left} and {ends:right}.' },
       { kind: 'askMove', openHand: true, text: 'Your play.', accept: ['5-6R'], claim: 'best', success: 'The 5-6 on the five blocks the hand with every six out, and your side holds fewer pips: the hand is yours.' },
+    ],
+  },
+
+  // Stage 4: other styles, what is different.
+  {
+    id: 'dominoes.4.fives-count',
+    gameId: 'dominoes',
+    stage: 'stage-4',
+    title: 'All Fives: count the ends',
+    minutes: 3,
+    start: FIVES_START,
+    steps: [
+      {
+        kind: 'say',
+        text: 'All Fives is a draw game for two to four players, with a boneyard; with two, each draws {fives:hand-two} tiles. What is new: after every play, add up the numbers showing on the open ends. When the total is a multiple of five, whoever made it scores it at once.',
+      },
+      {
+        kind: 'askMove',
+        text: 'You lead. Which of your tiles scores most on its own? Lead it.',
+        accept: ['5-5'],
+        wrong: {
+          '1-4': 'One and four make five, so it scores, but a double counts both halves: the 5-5 alone makes ten.',
+          '6-6': 'A double counts both halves: twelve, which is not a multiple of five.',
+          '4-4': 'Both halves count: eight, not a multiple of five.',
+        },
+        claim: 'legal',
+        success: 'A double counts both halves, so the 5-5 alone makes ten, and it is yours.',
+        reply: '0-5R',
+      },
+      { kind: 'askNumber', text: 'The other player put the 0-5 on one side of your double. What do the open ends count now?', answer: 'ends:count', success: 'Yes, {ends:count}: your double is still an end, so it counts both halves, and the blank counts nothing. That scored for them.' },
+      {
+        kind: 'askChoice',
+        text: 'One end shows the 6-6 lying across it, the other a three. Does that score?',
+        options: [
+          { text: 'Yes: twelve and three make fifteen', correct: true, why: 'Right. Beginners look for ends of five; count them all instead.' },
+          { text: 'No: neither end is a five', why: 'The total counts, not the single ends: twelve and three make fifteen.' },
+          { text: 'No: a double counts only once', why: 'At the end of an arm a double counts both halves: twelve.' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dominoes.4.fives-spinner',
+    gameId: 'dominoes',
+    stage: 'stage-4',
+    title: 'All Fives: the spinner',
+    minutes: 3,
+    start: after(FIVES_START, '1-4 1-1L 4-4R 3-4R'),
+    steps: [
+      {
+        kind: 'say',
+        text: 'The first double played is the spinner: here the 1-1. Tiles go on its two sides first, as on any double, and it counts both halves while it is an end. Once both sides are covered, two more arms may grow from its ends, and the layout becomes a cross.',
+      },
+      {
+        kind: 'askMove',
+        text: 'Cover the spinner’s open side, and make the ends a multiple of five.',
+        accept: ['1-2L'],
+        wrong: {
+          '1-3L': 'That covers it too, but the ends would show three and three: six. The 1-2 leaves two and three: five.',
+          '1-3R': 'That leaves the spinner open, still counting two, and puts a one on the right: three.',
+          '3-3R': 'Both halves of the 3-3 count, six, and the open spinner two more: eight.',
+        },
+        claim: 'legal',
+        success: 'Both sides are covered: the spinner stops counting, the ends show a two and a three, and you score five.',
+        reply: '1-5U',
+      },
+      { kind: 'askNumber', text: 'The other player started a third arm on the spinner’s end with the 1-5. What do the open ends count now?', answer: 'ends:count', success: 'Yes, {ends:count}: the two, the three and the new five. The spinner itself adds nothing now.' },
+      { kind: 'askMove', text: 'Put your 5-5 on the new arm: a double at the end of an arm counts both halves.', accept: ['5-5U'], claim: 'legal', success: 'Two, three and ten: fifteen, and it is yours.', reply: '0-5U' },
+      {
+        kind: 'askChoice',
+        text: 'The third arm has started. Where may the next tile go?',
+        options: [
+          { text: 'On the left, the right, the third arm, or the spinner’s other end', correct: true, why: 'Yes: once the third arm has started, the fourth may start too. That end counts only once a tile is on it.' },
+          { text: 'Only on the three arms already started', why: 'The fourth arm may start as soon as the third has.' },
+          { text: 'Only on the ends of the line', why: 'The spinner’s arms are ends too.' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'dominoes.4.fives-end',
+    gameId: 'dominoes',
+    stage: 'stage-4',
+    title: 'All Fives: the end of a hand',
+    minutes: 2,
+    start: FIVES_LAST,
+    steps: [
+      {
+        kind: 'say',
+        text: 'A hand ends when someone goes out, or when nobody can play and the boneyard is spent. The winner scores the pips left in the other hands, rounded to the nearest five: a [1-2] alone counts five, a [1-1] alone nothing.',
+      },
+      { kind: 'askMove', text: 'Go out with your last tile.', accept: ['3-6R'], claim: 'only', success: 'Out! The ends count four, so the play itself scores nothing. Now count what they hold.' },
+      { kind: 'askNumber', text: 'The other player holds {pips:right} pips. Rounded to the nearest five, what do you score?', answer: 'result:us', success: 'Yes, {result:us}.' },
+      { kind: 'say', text: 'Play to {fives:target-two} with two players, or {fives:target-more} with three or four. Whoever gets there wins at once, even in the middle of a hand.' },
+    ],
+  },
+  {
+    id: 'dominoes.4.cuban-set',
+    gameId: 'dominoes',
+    stage: 'stage-4',
+    title: 'Cuban dominó: the double nine',
+    minutes: 3,
+    start: CUBAN_DEAL,
+    steps: [
+      { kind: 'say', text: 'In Cuba the usual set is the double nine: {set9:tiles} tiles, every pair of numbers from blank to nine, {set9:pips} pips in all. Each number is on {set9:per-number} tiles, and there are {set9:doubles} doubles.' },
+      {
+        kind: 'say',
+        text: 'Four play in partnerships and play goes to the right, as you know it. Each player draws {cuban:hand} tiles; the other {cuban:sleeping} stay face down, unused. So a tile you have not seen may be in nobody’s hand: it may be asleep.',
+      },
+      { kind: 'askNumber', text: 'Count your hand. How many pips?', answer: 'hand:pips', success: 'Yes, {hand:pips}. With tiles up to nine, hands are heavy and blocked hands are common.' },
+      {
+        kind: 'askChoice',
+        text: 'Which tile do Cuban players call the caja de muerto, the coffin?',
+        options: [
+          { text: 'The 9-9', correct: true, why: 'Yes: the heaviest tile, and a heavy one to be left holding.' },
+          { text: 'The 0-0', why: 'That is la chucha in Puerto Rico. In Cuba the coffin is the 9-9.' },
+          { text: 'Any double left in hand', why: 'A double left in hand is ahorcado, hanged; the coffin is one tile, the 9-9.' },
+        ],
+      },
+      { kind: 'say', text: 'Anyone dealt five or more doubles may show them, and the tiles are mixed and dealt again. The first side to {cuban:target} wins; some tables play to {cuban:target-300}.' },
+    ],
+  },
+  {
+    id: 'dominoes.4.cuban-block',
+    gameId: 'dominoes',
+    stage: 'stage-4',
+    title: 'Cuban dominó: a blocked hand',
+    minutes: 3,
+    start: CUBAN_BLOCK,
+    steps: [
+      {
+        kind: 'say',
+        openHand: true,
+        text: 'A blocked hand (trancado) is settled differently in Cuba. The sides do not add up their hands: the single player with the fewest pips wins it for their side. Every hand is face up here.',
+      },
+      { kind: 'askMove', openHand: true, text: 'Play the 7-9 on the seven. Both ends will show a nine, and every other nine is asleep.', accept: ['7-9L'], claim: 'legal', success: 'Trancado: nobody can play.' },
+      {
+        kind: 'askChoice',
+        openHand: true,
+        text: 'Your side holds fewer pips in all. Who wins the hand?',
+        options: [
+          { text: 'Their side: the player on your right holds the fewest', correct: true, why: 'Yes. One light hand wins it, whatever the partner holds.' },
+          { text: 'Your side: fewer pips in all', why: 'That is the Puerto Rican way. In Cuba the single lightest hand decides.' },
+          { text: 'Nobody: a blocked hand does not count', why: 'It counts: the player with the fewest pips wins it.' },
+        ],
+      },
+      { kind: 'askNumber', openHand: true, text: 'The winners score the pips in their opponents’ hands: yours and your partner’s. How many?', answer: 'result:them', success: 'Yes, {result:them}. Only the opponents’ tiles count, never the sleeping ones.' },
+      { kind: 'say', openHand: true, text: 'Two opponents tied for the fewest pips: nobody scores, and the side that did not lead this hand leads the next. Two partners tied simply win.' },
     ],
   },
 

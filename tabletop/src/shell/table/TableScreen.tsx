@@ -81,7 +81,7 @@ function LogLines({ log, ui, record, viewSeats, names }: { log: readonly LogEntr
   }, [log.length]);
   if (log.length === 0) return <p className="empty-note">{t('rail.log.none')}</p>;
   return (
-    <ul className="log" ref={list}>
+    <ul className="log" ref={list} aria-label={t('rail.log')} tabIndex={0}>
       {log.map((entry, i) => {
         const text = ui.describeEvent(entry.event, viewSeats, record.players.length, names);
         if (!text) return null;

@@ -4,7 +4,7 @@ import { createRng } from '../../src/core/rng';
 import { chooseAction, conventionalLead, evaluateActions, heuristic, viewLegal } from '../../src/games/dominoes/bots';
 import type { DominoesAction, DominoesConfig, DominoesState } from '../../src/games/dominoes/rules';
 import { actionText, dominoes, position, PRESETS, PUERTO_RICO_500, viewOf } from '../../src/games/dominoes/rules';
-import { DRAW, fromState, moveOf, PASS, playToEnd, solveMargin, tileIndex } from '../../src/games/dominoes/sim';
+import { DRAW, endCode, fromState, moveOf, PASS, playToEnd, solveMargin, tileIndex } from '../../src/games/dominoes/sim';
 
 const configs: DominoesConfig[] = [
   ...Object.values(PRESETS),
@@ -13,9 +13,9 @@ const configs: DominoesConfig[] = [
   { ...(PRESETS.draw as DominoesConfig), drawLimit: 'leave-two', passBonus: 'on' },
 ];
 
-const code = (a: DominoesAction) => (a.type === 'pass' ? PASS : a.type === 'draw' ? DRAW : moveOf(tileIndex(a.tile), a.end === 'right'));
+const code = (s: DominoesState, a: DominoesAction) => (a.type === 'pass' ? PASS : a.type === 'draw' ? DRAW : moveOf(tileIndex(a.tile, s.config.set), endCode(a.end)));
 /** The rules' legal action with the lowest code: the same choice the fast model makes with min(). */
-const lowest = (s: DominoesState) => [...dominoes.legal(s, s.turn)].sort((a, b) => code(a) - code(b))[0] as DominoesAction;
+const lowest = (s: DominoesState) => [...dominoes.legal(s, s.turn)].sort((a, b) => code(s, a) - code(s, b))[0] as DominoesAction;
 
 describe('the fast model agrees with the rules', () => {
   it('scores every hand the same, under every preset and odd option', () => {

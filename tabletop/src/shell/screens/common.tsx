@@ -5,7 +5,7 @@ import { href } from '../router';
 
 export function Screen({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <main className="screen" aria-label={label}>
+    <main className="screen" aria-label={label} tabIndex={0}>
       <div className="screen-inner">
         <p className="sideways-hint">
           <Icon name="rotate" size={18} />

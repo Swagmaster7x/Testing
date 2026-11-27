@@ -9,8 +9,8 @@ import { createRng } from '../../../core/rng';
 import type { LessonVerifier } from '../../../teach/lint';
 import { chooseAction } from '../bots';
 import type { DominoesState, Tile } from '../rules';
-import { actionText, cantHave, checkConservation, dominoes, hasNumber, seatCount, sideOf, unseenTiles, viewOf } from '../rules';
-import { cloneSim, fromState, simApply, solveMargin, tileIndex, moveOf, PASS, DRAW } from '../sim';
+import { actionText, cantHave, checkConservation, dominoes, drawing, handSize, hasNumber, seatCount, sideOf, unseenTiles, viewOf } from '../rules';
+import { cloneSim, DRAW, fromState, moveOf, PASS, simApply, solveMargin, tileIndex } from '../sim';
 
 /** Points the best play must win by, on average over the possible deals. */
 export const BEST_MARGIN = 2;
@@ -59,11 +59,13 @@ export function possibleDeals(state: DominoesState, seat: number): DominoesState
   return aborted ? null : out;
 }
 
-const code = (text: string): number => {
+const END_CODES: Readonly<Record<string, number>> = { L: 0, R: 1, U: 2, D: 3 };
+
+const code = (state: DominoesState, text: string): number => {
   if (text === 'pass') return PASS;
   if (text === 'draw') return DRAW;
-  const tile = text.replace(/[LR]$/, '') as Tile;
-  return moveOf(tileIndex(tile), text.endsWith('R'));
+  const tile = text.replace(/[LRUD]$/, '') as Tile;
+  return moveOf(tileIndex(tile, state.config.set), END_CODES[text.slice(-1)] ?? 0);
 };
 
 export const dominoesVerifier: LessonVerifier<DominoesState> = {
@@ -74,7 +76,7 @@ export const dominoesVerifier: LessonVerifier<DominoesState> = {
     } catch (err) {
       problems.push((err as Error).message);
     }
-    if (state.hands.some((h) => h.length > 7) && state.config.mode !== 'draw') problems.push('a hand holds more than seven tiles');
+    if (state.hands.some((h) => h.length > handSize(state.config)) && !drawing(state.config)) problems.push('a hand holds more tiles than were dealt');
     const seat = dominoes.turn(state);
     if (seat !== null && !state.over && dominoes.legal(state, seat).length === 0) problems.push('the player to move has no legal move');
     return problems;
@@ -92,7 +94,7 @@ export const dominoesVerifier: LessonVerifier<DominoesState> = {
       const sim = fromState(deal);
       for (const m of legal) {
         const child = cloneSim(sim);
-        simApply(child, code(m));
+        simApply(child, code(state, m));
         totals.set(m, (totals.get(m) ?? 0) + solveMargin(child, side));
       }
     }

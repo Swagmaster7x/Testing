@@ -2,7 +2,8 @@
 
 Milestone 4. The double-six set: 28 tiles, every pair of numbers from blank (0) to six once,
 168 pips in all. Code: `src/games/dominoes/rules.ts`; golden cases: `tests/unit/dominoes-rules.test.ts`.
-All Fives and Cuban double-nine come in milestone 14.
+All Fives (scoring the ends as you play, with a spinner) and Cuban double nine came in milestone 14:
+see `docs/rules/dominoes-styles.md`, which also lists the options added for them.
 
 ## Common to every game
 
