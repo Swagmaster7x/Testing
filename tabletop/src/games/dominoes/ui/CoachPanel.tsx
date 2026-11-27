@@ -1,8 +1,9 @@
 /**
  * The dominoes coach in the rail. A three-step hint (where to look, the idea, the tile), and, as
- * switches, what a good player keeps in their head: the tiles out (the triangle of all 28), how
- * many of each number are still unseen, what each player cannot have after passing, and the pip
- * totals. Every help marks the game as training.
+ * switches, what a good player keeps in their head: the tiles out (the triangle of the whole set,
+ * 28 tiles or 55), how many of each number are still unseen, what each player cannot have after
+ * passing, the pip totals, and when the ends score as you play, the count of the ends and which of
+ * your tiles would score now. Every help marks the game as training.
  */
 import { useState } from 'react';
 import { isJsonObject } from '../../../core/json';
@@ -10,15 +11,28 @@ import { DominoFace } from '../../../kits/tiles/domino';
 import { t, tDynamic } from '../../../text';
 import type { CoachPanelProps } from '../../types';
 import { NO_OVERLAY } from '../../types';
-import type { DominoesState, Pip, Tile } from '../rules';
-import { cantHave, endsOf, handPips, hasNumber, isTile, PIPS, seatCount, sideOf, TILES, tileOf, TOTAL_PIPS, unseenTiles, viewOf } from '../rules';
-import { endName, tileLabel, whoName } from './names';
+import { playScore } from '../bots';
+import type { DominoesState, End, HandResult, Pip, Tile } from '../rules';
+import { cantHave, drawing, endsCount, handPips, hasNumber, isTile, numbersOf, openEnds, seatCount, setPips, sideCount, sideOf, tileOf, tilesOfSet, tilesOnTable, unseenTiles, viewOf } from '../rules';
+import { endName, seatName, tileLabel, whoName } from './names';
 
 interface Hint {
   readonly key: string;
   readonly step: number;
   readonly action: string;
   readonly tags: readonly string[];
+}
+
+const LETTER_END: Readonly<Record<string, End>> = { L: 'left', R: 'right', U: 'up', D: 'down' };
+
+/** The last hand's result, as the coach says it. */
+function lastText(last: HandResult, me: number, n: number): string {
+  const side = sideOf(me, n);
+  if (last.reason === 'target') return t(last.winner === side ? 'dominoes.hand.we-target' : 'dominoes.hand.they-target', { n: last.points[last.winner ?? 0] ?? 0 });
+  if (last.winner === null) return last.split ? t('dominoes.hand.split', { n: last.points[last.split[0] ?? 0] ?? 0 }) : t('dominoes.hand.tie');
+  const points = last.points[last.winner] ?? 0;
+  if (sideCount(n) > 2 && last.winner !== side) return t(last.reason === 'domino' ? 'dominoes.hand.other-domino' : 'dominoes.hand.other-block', { who: seatName(last.winner, me, n), n: points });
+  return t(side === last.winner ? (last.reason === 'domino' ? 'dominoes.hand.we-domino' : 'dominoes.hand.we-block') : last.reason === 'domino' ? 'dominoes.hand.they-domino' : 'dominoes.hand.they-block', { n: points });
 }
 
 export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTraining }: CoachPanelProps<DominoesState>) {
@@ -32,13 +46,14 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
   const current = hint?.key === key ? hint : null;
   const unseen = new Set(unseenTiles(view));
   const mine = new Set(view.hand);
-  const linePips = handPips(state.chain.map((p) => p.tile));
+  const linePips = handPips(tilesOnTable(state).map((p) => p.tile));
+  const numbers = numbersOf(state.config.set);
 
   const askHint = async () => {
     if (current) {
       const step = Math.min(3, current.step + 1);
       setHint({ ...current, step });
-      const tile = current.action.replace(/[LR]$/, '');
+      const tile = current.action.replace(/[LRUD]$/, '');
       if (step === 3 && isTile(tile)) setOverlay({ arrows: [], marks: [{ square: tile, tone: 'hint' }] });
       return;
     }
@@ -61,15 +76,21 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
     if (current.action === 'pass') moveText = t('dominoes.coach.move.pass');
     else if (current.action === 'draw') moveText = t('dominoes.coach.move.draw');
     else {
-      const tile = current.action.replace(/[LR]$/, '');
-      const end = current.action.endsWith('L') ? 'left' : current.action.endsWith('R') ? 'right' : null;
-      const ends = endsOf(state.chain);
-      if (isTile(tile)) {
-        moveText = end && ends ? t('dominoes.coach.move.end', { tile: tileLabel(tile), end: endName(end, end === 'left' ? ends[0] : ends[1]) }) : t('dominoes.coach.move', { tile: tileLabel(tile) });
-      }
+      const tile = current.action.replace(/[LRUD]$/, '');
+      const end = LETTER_END[current.action.slice(-1)] ?? null;
+      const spot = end ? openEnds(state).find((e) => e.end === end) : undefined;
+      if (isTile(tile)) moveText = end && spot ? t('dominoes.coach.move.end', { tile: tileLabel(tile), end: endName(end, spot.value) }) : t('dominoes.coach.move', { tile: tileLabel(tile) });
     }
   }
   const last = state.results[state.results.length - 1];
+  const fives = state.config.fives === 'on';
+  // Your tiles that would score now, and how much.
+  const scoring = fives
+    ? view.hand.flatMap((tile) => {
+        const ends: (End | undefined)[] = state.chain.length === 0 ? [undefined] : openEnds(state).filter((e) => hasNumber(tile, e.value)).map((e) => e.end);
+        return ends.map((end) => ({ tile, end, points: playScore(state, tile, end) })).filter((x) => x.points > 0);
+      })
+    : [];
 
   return (
     <div className="coach-panel">
@@ -82,7 +103,7 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
           </button>
           {current ? (
             <ol className="hint-steps">
-              <li>{state.chain.length === 0 ? t('dominoes.coach.look.lead') : t('dominoes.coach.look.follow')}</li>
+              <li>{state.chain.length === 0 ? t('dominoes.coach.look.lead') : fives ? t('dominoes.coach.look.fives') : t('dominoes.coach.look.follow')}</li>
               {current.step >= 2 ? <li>{t('dominoes.coach.idea', { idea })}</li> : null}
               {current.step >= 3 ? <li>{moveText}</li> : null}
             </ol>
@@ -91,11 +112,31 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
       )}
       {last ? (
         <p className="coach-last">
-          <span className="eyebrow">{t('dominoes.coach.last')}</span>{' '}
-          {last.winner === null
-            ? t('dominoes.hand.tie')
-            : t(sideOf(me, n) === last.winner ? (last.reason === 'domino' ? 'dominoes.hand.we-domino' : 'dominoes.hand.we-block') : last.reason === 'domino' ? 'dominoes.hand.they-domino' : 'dominoes.hand.they-block', { n: last.points[last.winner] ?? 0 })}
+          <span className="eyebrow">{t('dominoes.coach.last')}</span> {lastText(last, me, n)}
         </p>
+      ) : null}
+      {helps.scoring ? (
+        <div>
+          <p className="eyebrow" style={{ margin: 'var(--sp-2) 0 var(--sp-1)' }}>
+            {t('dominoes.coach.scoring.title')}
+          </p>
+          {!fives ? (
+            <p className="empty-note">{t('dominoes.coach.scoring.off')}</p>
+          ) : (
+            <>
+              <p className="empty-note num">{t('dominoes.coach.scoring.count', { n: endsCount(state) })}</p>
+              {scoring.length === 0 ? (
+                <p className="empty-note">{t('dominoes.coach.scoring.none')}</p>
+              ) : (
+                <ul className="fives-list">
+                  {scoring.map((x) => (
+                    <li key={`${x.tile}${x.end ?? ''}`}>{t('dominoes.coach.scoring.row', { tile: tileLabel(x.tile), end: x.end ? endName(x.end, openEnds(state).find((e) => e.end === x.end)?.value ?? 0) : t('dominoes.coach.scoring.lead'), n: x.points })}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
       ) : null}
       {helps.pips ? (
         <dl className="facts coach-counts">
@@ -104,7 +145,7 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
           <dt>{t('dominoes.coach.pips.line')}</dt>
           <dd className="num">{linePips}</dd>
           <dt>{t('dominoes.coach.pips.unseen')}</dt>
-          <dd className="num">{TOTAL_PIPS - linePips - handPips(view.hand)}</dd>
+          <dd className="num">{setPips(state.config.set) - linePips - handPips(view.hand)}</dd>
         </dl>
       ) : null}
       {helps.cantHave ? (
@@ -133,29 +174,31 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
           <p className="eyebrow" style={{ margin: 'var(--sp-2) 0 var(--sp-1)' }}>
             {t('dominoes.coach.out.title')}
           </p>
-          <div className="tiles-out" role="table" aria-label={t('dominoes.coach.out.title')}>
-            {PIPS.map((a) => (
+          <div className="tiles-out" data-set={state.config.set} role="table" aria-label={t('dominoes.coach.out.title')}>
+            {numbers.map((a) => (
               <div key={a} role="row" className="tiles-out-row">
-                {PIPS.filter((b) => b >= a).map((b) => {
-                  const tile = tileOf(a, b);
-                  const state_ = mine.has(tile) ? 'mine' : unseen.has(tile) ? 'unseen' : 'played';
-                  return (
-                    <span key={tile} role="cell" className="tiles-out-cell" data-state={state_} aria-label={`${tileLabel(tile)}: ${state_}`}>
-                      <DominoFace a={a} b={b} />
-                    </span>
-                  );
-                })}
+                {numbers
+                  .filter((b) => b >= a)
+                  .map((b) => {
+                    const tile = tileOf(a, b);
+                    const state_ = mine.has(tile) ? 'mine' : unseen.has(tile) ? 'unseen' : 'played';
+                    return (
+                      <span key={tile} role="cell" className="tiles-out-cell" data-state={state_} aria-label={`${tileLabel(tile)}: ${state_}`}>
+                        <DominoFace a={a} b={b} />
+                      </span>
+                    );
+                  })}
               </div>
             ))}
           </div>
-          <p className="empty-note">{t('dominoes.coach.out.note', { yard: state.config.mode === 'partnership' ? '' : t('dominoes.coach.out.yard') })}</p>
+          <p className="empty-note">{t('dominoes.coach.out.note', { yard: drawing(state.config) ? t('dominoes.coach.out.yard') : state.boneyard.length > 0 ? t('dominoes.coach.out.sleeping') : '' })}</p>
           <p className="eyebrow" style={{ margin: 'var(--sp-2) 0 var(--sp-1)' }}>
             {t('dominoes.coach.numbers')}
           </p>
           <div className="number-counts num">
-            {PIPS.map((x: Pip) => (
-              <span key={x} data-zero={countUnseen(unseen, x) === 0}>
-                <b>{x}</b> {countUnseen(unseen, x)}
+            {numbers.map((x: Pip) => (
+              <span key={x} data-zero={countUnseen(unseen, x, state.config.set) === 0}>
+                <b>{x}</b> {countUnseen(unseen, x, state.config.set)}
               </span>
             ))}
           </div>
@@ -165,6 +208,6 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
   );
 }
 
-function countUnseen(unseen: ReadonlySet<Tile>, x: number): number {
-  return TILES.filter((tile) => hasNumber(tile, x) && unseen.has(tile)).length;
+function countUnseen(unseen: ReadonlySet<Tile>, x: number, set: DominoesState['config']['set']): number {
+  return tilesOfSet(set).filter((tile) => hasNumber(tile, x) && unseen.has(tile)).length;
 }

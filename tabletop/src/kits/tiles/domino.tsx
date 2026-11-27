@@ -1,11 +1,12 @@
 /**
  * Domino tile art, drawn here (PLAN.md 2.9: original vector art). A tile is drawn lying flat,
  * twice as wide as it is tall, low number on the left; the table turns it to lie as it must.
- * Pips follow the usual patterns, and each number has its own colour as on many double-six sets;
- * the count is always readable without the colour.
+ * Pips follow the usual patterns, and each number has its own colour as on many double-six and
+ * double-nine sets; the count is always readable without the colour. Seven to nine (the double
+ * nine) build on the six: a middle pip for seven, two middles for eight, a three-by-three for nine.
  */
 
-/** Pip centres in a unit square, for 0 to 6. */
+/** Pip centres in a unit square, for 0 to 9. */
 const SPOTS: Readonly<Record<number, readonly (readonly [number, number])[]>> = {
   0: [],
   1: [[0.5, 0.5]],
@@ -39,16 +40,49 @@ const SPOTS: Readonly<Record<number, readonly (readonly [number, number])[]>> = 
     [0.5, 0.78],
     [0.75, 0.78],
   ],
+  7: [
+    [0.2, 0.2],
+    [0.5, 0.2],
+    [0.8, 0.2],
+    [0.5, 0.5],
+    [0.2, 0.8],
+    [0.5, 0.8],
+    [0.8, 0.8],
+  ],
+  8: [
+    [0.2, 0.2],
+    [0.5, 0.2],
+    [0.8, 0.2],
+    [0.2, 0.5],
+    [0.8, 0.5],
+    [0.2, 0.8],
+    [0.5, 0.8],
+    [0.8, 0.8],
+  ],
+  9: [
+    [0.2, 0.2],
+    [0.5, 0.2],
+    [0.8, 0.2],
+    [0.2, 0.5],
+    [0.5, 0.5],
+    [0.8, 0.5],
+    [0.2, 0.8],
+    [0.5, 0.8],
+    [0.8, 0.8],
+  ],
 };
 
 /** One colour per number, all dark enough to read on the ivory face. */
-export const PIP_COLOURS: readonly string[] = ['#000', '#17667e', '#2c6e2f', '#a8261d', '#6e4219', '#23408c', '#5a2a82'];
+export const PIP_COLOURS: readonly string[] = ['#000', '#17667e', '#2c6e2f', '#a8261d', '#6e4219', '#23408c', '#5a2a82', '#7a5800', '#8a1c5c', '#333'];
+
+/** Pip size: smaller as the pips crowd. */
+const RADIUS = (n: number) => (n >= 7 ? 7.6 : n === 6 ? 8.6 : 9.4);
 
 function Half({ n, x }: { n: number; x: number }) {
   return (
     <g>
       {(SPOTS[n] ?? []).map(([px, py], i) => (
-        <circle key={i} cx={x + 8 + px * 84} cy={8 + py * 84} r={n === 6 ? 8.6 : 9.4} fill={PIP_COLOURS[n] ?? '#000'} />
+        <circle key={i} cx={x + 8 + px * 84} cy={8 + py * 84} r={RADIUS(n)} fill={PIP_COLOURS[n] ?? '#000'} />
       ))}
     </g>
   );

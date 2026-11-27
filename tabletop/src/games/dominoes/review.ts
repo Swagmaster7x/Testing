@@ -36,7 +36,7 @@ function readMoves(answer: Json): Scored[] {
 
 /** A move's name: the tile, or pass and draw. */
 export function moveName(action: string): string {
-  const tile = action.replace(/[LR]$/, '');
+  const tile = action.replace(/[LRUD]$/, '');
   if (isTile(tile)) return tileLabel(tile);
   return tDynamic(`dominoes.move.${action}`);
 }
@@ -44,6 +44,7 @@ export function moveName(action: string): string {
 function reasonFor(played: Scored | undefined, best: Scored | undefined, swing: number, leading: boolean): Reason {
   const n = Math.max(1, Math.round(swing));
   const has = (s: Scored | undefined, tag: string) => s?.tags.includes(tag) === true;
+  if (has(best, 'dom-scores') && !has(played, 'dom-scores')) return { key: 'why.dom-score', params: { move: moveName(best?.action ?? ''), n } };
   if (has(played, 'dom-covers-partner') && !has(best, 'dom-covers-partner')) return { key: 'why.dom-covered-partner', params: { move: moveName(best?.action ?? ''), n } };
   if (has(best, 'dom-makes-pass') && !has(played, 'dom-makes-pass')) return { key: 'why.dom-missed-pass', params: { move: moveName(best?.action ?? ''), n } };
   if (has(played, 'dom-blocks')) return { key: 'why.dom-bad-block', params: { n } };
@@ -78,7 +79,7 @@ export async function analyseDominoesGame(record: GameRecord, ask: AskCoach, onP
     // A margin is our side's points less theirs, so a point that changes sides moves it by two.
     const swing = Math.max(0, top - mineMargin);
     const loss = swing / 2;
-    const sameTile = best.replace(/[LR]$/, '') === played.replace(/[LR]$/, '') && Math.abs(top - mineMargin) < 1;
+    const sameTile = best.replace(/[LRUD]$/, '') === played.replace(/[LRUD]$/, '') && Math.abs(top - mineMargin) < 1;
     const playedBest = played === best || sameTile || loss < 0.5;
     const verdict = verdictFor(loss, playedBest);
     const winBefore = Math.round((50 + top / 4) * 10) / 10;
