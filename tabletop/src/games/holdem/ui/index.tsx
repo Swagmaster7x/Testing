@@ -1,7 +1,8 @@
 import type { Seat } from '../../../core/contract';
 import { t, tDynamic } from '../../../text';
 import type { GameOptions, GameUi, OptionField, ReferenceSection } from '../../types';
-import { HOLDEM_LEVELS, STYLES } from '../bots';
+import { HOLDEM_LEVELS, STYLES, styleOf } from '../bots';
+import { analyseHoldemGame } from '../review';
 import type { HoldemAction, HoldemConfig, HoldemEvent, HoldemState, HoldemView } from '../rules';
 import { CONFIG_CHOICES, holdem, isFreezeout, netChips, potOf, PRESETS } from '../rules';
 import { actionWords, PokerCoachPanel } from './CoachPanel';
@@ -147,4 +148,27 @@ export const holdemUi: GameUi<HoldemState, HoldemAction, HoldemConfig, HoldemVie
     Panel: PokerCoachPanel,
   },
   options: holdemOptions,
+  review: {
+    analyse: analyseHoldemGame,
+    configAt: (state) => ({ ...state.config, start: holdem.codec.state.toText(state) }),
+  },
+  replayConfig: (config) => {
+    const { start: _start, ...rest } = config;
+    return rest;
+  },
+  resultText(record) {
+    const outcome = record.outcome;
+    const seat = record.players.findIndex((p) => p.kind === 'human');
+    const mine = outcome?.results.find((r) => r.seat === seat);
+    if (!outcome || !mine || record.ending) return null;
+    const n = outcome.results.length;
+    const place = tDynamic(`poker.place.${mine.place}`);
+    if (outcome.reason === 'holdem-session') return t('poker.result.cash', { place, n, net: mine.score > 0 ? `+${mine.score}` : mine.score < 0 ? `−${-mine.score}` : '0' });
+    return mine.place === 1 ? t('poker.result.tournament.won') : t('poker.result.tournament', { place, n });
+  },
+  revealSeat(start, record, seat) {
+    const player = record.players[seat];
+    if (player?.kind !== 'bot') return null;
+    return tDynamic(`poker.style.name.${styleOf(start.table, seat, player.level ?? 1)}`);
+  },
 };

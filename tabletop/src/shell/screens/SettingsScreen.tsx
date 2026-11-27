@@ -170,6 +170,18 @@ function TableCard() {
           onChange={(v) => void update({ sound: v === 'on' })}
         />
       </div>
+      <div className="setting">
+        <span className="setting-label">{t('settings.deck')}</span>
+        <Segmented
+          label={t('settings.deck')}
+          options={[
+            { value: 'two', label: t('settings.deck.two') },
+            { value: 'four', label: t('settings.deck.four') },
+          ]}
+          value={settings.deck}
+          onChange={(deck) => void update({ deck })}
+        />
+      </div>
     </section>
   );
 }

@@ -32,7 +32,7 @@ import { TableController } from './controller';
 import { CoachSection, useHelps } from './coach';
 import { startGame } from './start';
 import { Counters, MoveList, RailSection, TableShell } from './TableShell';
-import { playerName } from './names';
+import { levelAndReveal, playerName } from './names';
 
 type Session = { queue: EventQueue<GameEvent>; controller: TableController<unknown, unknown, unknown, unknown, GameEvent> };
 
@@ -348,7 +348,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
                     </span>
                     <span className="player-text">
                       <span className="player-name">{playerName(ui, record, seat)}</span>
-                      <span className="player-detail">{player?.kind === 'bot' ? t('common.level', { n: player.level ?? 1 }) : ui.sideName(seat)}</span>
+                      <span className="player-detail">{player?.kind === 'bot' ? levelAndReveal(ui, start, record, seat, over) : ui.sideName(seat)}</span>
                       {SeatExtra ? <SeatExtra state={state} start={start} seat={seat} /> : null}
                     </span>
                     {time !== undefined ? (
@@ -378,7 +378,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
             ) : null}
             {resultKey && record.outcome ? (
               <div className="result-card" role="status">
-                <h2>{t(resultKey)}</h2>
+                <h2>{ui.resultText?.(record) ?? t(resultKey)}</h2>
                 <p>{tDynamic(`reason.${record.outcome.reason}`)}</p>
               </div>
             ) : null}
@@ -421,6 +421,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
             flipped={flipped}
             helps={helps}
             overlay={shownOverlay}
+            reveal={over && ui.revealSeat ? record.players.map((_, seat) => ui.revealSeat?.(start, record, seat) ?? null) : undefined}
           />
         }
         rail={

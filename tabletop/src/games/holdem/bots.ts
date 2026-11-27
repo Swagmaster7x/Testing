@@ -20,9 +20,9 @@ import { isJsonObject } from '../../core/json';
 import type { Rng } from '../../core/rng';
 import { createRng } from '../../core/rng';
 import type { Card } from './cards';
-import { cardIndex, handClass } from './cards';
+import { cardIndex, cardOf, handClass } from './cards';
 import type { Combo, Range } from './equity';
-import { ANY_HAND, rangeEquity, withoutDead } from './equity';
+import { ANY_HAND, exactEquity, rangeEquity, withoutDead } from './equity';
 import { openFraction, rankOf } from './preflop';
 import type { Read } from './reading';
 import { estimateRange, outs, readFromStats, readHand, TYPICAL } from './reading';
@@ -88,12 +88,12 @@ interface Skill {
 }
 
 export const SKILL: Readonly<Record<number, Skill>> = {
-  1: { samples: 60, ranges: false, noise: 0.14, potOdds: 0.4, stats: false, slip: 0.15, ev: false, mix: 0 },
-  2: { samples: 100, ranges: false, noise: 0.09, potOdds: 0.75, stats: false, slip: 0.08, ev: false, mix: 0 },
-  3: { samples: 160, ranges: true, noise: 0.05, potOdds: 1, stats: false, slip: 0.04, ev: false, mix: 0 },
-  4: { samples: 200, ranges: true, noise: 0.03, potOdds: 1, stats: false, slip: 0.02, ev: true, mix: 0.08 },
-  5: { samples: 300, ranges: true, noise: 0.02, potOdds: 1, stats: true, slip: 0.01, ev: true, mix: 0.05 },
-  6: { samples: 500, ranges: true, noise: 0.01, potOdds: 1, stats: true, slip: 0, ev: true, mix: 0.03 },
+  1: { samples: 60, ranges: false, noise: 0.18, potOdds: 0.3, stats: false, slip: 0.2, ev: false, mix: 0 },
+  2: { samples: 120, ranges: false, noise: 0.06, potOdds: 1, stats: false, slip: 0.05, ev: false, mix: 0 },
+  3: { samples: 140, ranges: true, noise: 0.07, potOdds: 0.9, stats: false, slip: 0.06, ev: false, mix: 0 },
+  4: { samples: 240, ranges: true, noise: 0.025, potOdds: 1, stats: false, slip: 0.01, ev: true, mix: 0.03 },
+  5: { samples: 320, ranges: true, noise: 0.02, potOdds: 1, stats: true, slip: 0.01, ev: true, mix: 0.025 },
+  6: { samples: 500, ranges: true, noise: 0.01, potOdds: 1, stats: true, slip: 0, ev: true, mix: 0.02 },
 };
 
 const DEFAULT_SKILL: Skill = { samples: 160, ranges: true, noise: 0.05, potOdds: 1, stats: false, slip: 0.04, ev: false, mix: 0 };
@@ -109,12 +109,12 @@ export const HOLDEM_LEVELS: readonly BotLevel[] = [
 
 /** The styles seated at each level, one per seat (a person's seat skips its entry). */
 export const LINEUPS: Readonly<Record<number, readonly Style[]>> = {
-  1: ['station', 'station', 'maniac', 'station', 'rock', 'station'],
-  2: ['station', 'maniac', 'rock', 'tag', 'station', 'rock'],
-  3: ['station', 'maniac', 'rock', 'tag', 'lag', 'tag'],
-  4: ['maniac', 'rock', 'tag', 'lag', 'solid', 'tag'],
-  5: ['rock', 'tag', 'lag', 'solid', 'solid', 'tag'],
-  6: ['tag', 'lag', 'solid', 'solid', 'solid', 'lag'],
+  1: ['station', 'station', 'maniac', 'station', 'maniac', 'station'],
+  2: ['station', 'rock', 'tag', 'maniac', 'tag', 'rock'],
+  3: ['tag', 'lag', 'rock', 'station', 'tag', 'maniac'],
+  4: ['tag', 'lag', 'solid', 'tag', 'rock', 'lag'],
+  5: ['tag', 'lag', 'solid', 'solid', 'tag', 'lag'],
+  6: ['solid', 'solid', 'lag', 'tag', 'solid', 'solid'],
 };
 
 /** A CPU seat's style: fixed for the session by the table's public number, the seat and the level. */
@@ -365,14 +365,24 @@ interface Reader {
   readonly read: Read;
 }
 
-function readersFor(v: HoldemView, seat: Seat, skill: Skill): Reader[] {
+/** A hand's tier before the flop, from its place in the starting-hand ranking. */
+function preflopTier(c: Combo): number {
+  const r = rankOf(handClass(cardOf(c[0]), cardOf(c[1])));
+  return r < 0.03 ? 5 : r < 0.08 ? 4 : r < 0.18 ? 3 : r < 0.35 ? 2 : r < 0.6 ? 1 : 0;
+}
+
+/** A hand's tier now: by the ranking before the flop, by what it makes after. */
+export function tierNow(c: Combo, board: readonly number[]): number {
+  return board.length === 0 ? preflopTier(c) : readHand(c, board).tier;
+}
+
+function readerOf(v: HoldemView, s: Seat, range: Range, read: Read): Reader {
   const board = v.board.map(cardIndex);
-  return rangesFor(v, seat, skill).map(({ seat: s, range }) => ({
-    seat: s,
-    range,
-    tiers: Uint8Array.from(range.combos.map((c) => readHand(c, board).tier)),
-    read: readOf(v, s, skill),
-  }));
+  return { seat: s, range, tiers: Uint8Array.from(range.combos.map((c) => tierNow(c, board))), read };
+}
+
+function readersFor(v: HoldemView, seat: Seat, skill: Skill): Reader[] {
+  return rangesFor(v, seat, skill).map(({ seat: s, range }) => readerOf(v, s, range, readOf(v, s, skill)));
 }
 
 /** Roughly the equity a hand of each tier has against a betting range. */
@@ -499,6 +509,74 @@ export function decide(v: HoldemView, seat: Seat, level: number, style: Style, r
   return { ...d, action: callOrCheck(v, seat) };
 }
 
+export interface OptionValue {
+  /** The action in notation. */
+  readonly action: string;
+  /** Expected chips, against what folding would leave: folding is 0. */
+  readonly ev: number;
+  /** Equity when the others go on (all of them for a call or check). */
+  readonly equity: number;
+  readonly tags: readonly string[];
+}
+
+/**
+ * What each option is worth, in chips, as a solid player would judge it: by equity against the
+ * others' likely hands ("with what you knew") or, given `known`, against the hands they really
+ * held ("with every card face up"), with what they would fold to each bet. The raise sizes tried
+ * are the minimum, half the pot, the pot and all-in, plus `extra` targets.
+ */
+export function optionValues(v: HoldemView, seat: Seat, samples: number, rng: Rng, known?: ReadonlyMap<Seat, Combo>, extra: readonly number[] = []): OptionValue[] {
+  const mine = me(v, seat);
+  const hole = holeOf(v, seat);
+  const board = v.board.map(cardIndex);
+  const others = seatsInHand(v).filter((s) => s !== seat);
+  const readers: Reader[] = known
+    ? others.map((s) => {
+        const c = known.get(s);
+        const range: Range = c ? { combos: [c], weights: [1] } : withoutDead(ANY_HAND, new Set([...hole, ...board]));
+        return readerOf(v, s, range, readFromStats(v, s));
+      })
+    : readersFor(v, seat, { samples, ranges: true, noise: 0, potOdds: 1, stats: true, slip: 0, ev: true, mix: 0 });
+  const exact = known !== undefined && board.length >= 3;
+  const equityAgainst = (ranges: readonly Range[]) => {
+    if (ranges.length === 0) return 1;
+    if (exact && ranges.every((r) => r.combos.length === 1)) return exactEquity([hole, ...ranges.map((r) => r.combos[0] as Combo)], board)[0] ?? 0;
+    return rangeEquity(hole, board, ranges, samples, rng);
+  };
+  const pot = potOf(v);
+  const owe = Math.min(toCallOf(v, seat), mine.stack);
+  const eq = equityAgainst(readers.map((r) => r.range));
+  const out: OptionValue[] = [];
+  if (owe > 0) out.push({ action: 'fold', ev: 0, equity: eq, tags: ['price'] });
+  out.push({ action: owe > 0 ? 'call' : 'check', ev: eq * (pot + owe) - owe, equity: eq, tags: owe > 0 ? ['pot-odds'] : ['check'] });
+  const range = raiseRange(v, seat);
+  if (range) {
+    const targets = new Set<number>([range.min, range.max, ...extra.filter((x) => x >= range.min && x <= range.max)]);
+    for (const f of [0.5, 1]) {
+      const a = raiseTo(v, seat, v.currentBet + f * (pot + owe));
+      if (a?.type === 'raise') targets.add(a.to);
+    }
+    for (const to of [...targets].sort((a, b) => a - b)) {
+      const add = to - mine.bet;
+      let allFold = 1;
+      let callChips = 0;
+      const keeps: Range[] = [];
+      for (const r of readers) {
+        const p = me(v, r.seat);
+        const call = Math.min(to - p.bet, p.stack);
+        const { fold, keep } = splitRange(r, call / Math.max(1, pot + add + call));
+        allFold *= fold;
+        callChips += (1 - fold) * call;
+        if (fold < 1) keeps.push(keep);
+      }
+      const eqCalled = keeps.length > 0 ? equityAgainst(keeps) : eq;
+      const ev = allFold * pot + (1 - allFold) * (eqCalled * (pot + add + callChips) - add);
+      out.push({ action: `r${to}`, ev, equity: eqCalled, tags: [eqCalled >= 0.5 ? 'value' : 'bluff'] });
+    }
+  }
+  return out;
+}
+
 /** What the coach and the review show about a decision: equity against the ranges a solid player would put the others on, and the price. */
 export function equityReport(v: HoldemView, seat: Seat, samples: number, rng: Rng) {
   const mine = me(v, seat);
@@ -529,6 +607,20 @@ function advise(input: AdviseInput<HoldemView>): Json {
   if (q.type === 'hint') {
     const d = decide(v, seat, 6, 'solid', input.rng);
     return { action: actionText(d.action), tags: [...d.tags], equity: d.equity };
+  }
+  if (q.type === 'analyse') {
+    // The others' real hands, for the "every card face up" lens: { seat: ["Ah", "Kd"] }.
+    const known = new Map<Seat, Combo>();
+    if (isJsonObject(q.known)) {
+      for (const [k, cards] of Object.entries(q.known)) {
+        if (Array.isArray(cards) && cards.length === 2 && cards.every((c) => typeof c === 'string')) known.set(Number(k), [cardIndex(cards[0] as Card), cardIndex(cards[1] as Card)]);
+      }
+    }
+    const extra = Array.isArray(q.extra) ? q.extra.filter((x): x is number => typeof x === 'number') : [];
+    const samples = typeof q.samples === 'number' ? q.samples : 400;
+    const knew = optionValues(v, seat, samples, input.rng, undefined, extra);
+    const up = known.size > 0 ? optionValues(v, seat, samples, input.rng, known, extra) : knew;
+    return { knew: knew.map((o) => ({ ...o, tags: [...o.tags] })), up: up.map((o) => ({ ...o, tags: [...o.tags] })) };
   }
   if (q.type === 'equity') {
     const r = equityReport(v, seat, typeof q.samples === 'number' ? q.samples : 1500, input.rng);

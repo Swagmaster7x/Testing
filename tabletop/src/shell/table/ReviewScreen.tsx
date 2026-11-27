@@ -29,7 +29,7 @@ import { resultFor } from '../results';
 import { useApp } from '../state';
 import { useAsync } from '../useAsync';
 import { Counters, MoveList, RailSection, TableShell } from './TableShell';
-import { playerName } from './names';
+import { levelAndReveal, playerName } from './names';
 
 const MARK: Record<string, string> = { inaccuracy: '?!', mistake: '?', blunder: '??' };
 
@@ -243,7 +243,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
                   </span>
                   <span className="player-text">
                     <span className="player-name">{playerName(ui, record, seat)}</span>
-                    <span className="player-detail">{player?.kind === 'bot' ? t('common.level', { n: player.level ?? 1 }) : ui.sideName(seat)}</span>
+                    <span className="player-detail">{player?.kind === 'bot' ? levelAndReveal(ui, start, record, seat, record.status === 'finished') : ui.sideName(seat)}</span>
                     {SeatExtra ? <SeatExtra state={state} start={start} seat={seat} /> : null}
                   </span>
                 </li>
@@ -252,7 +252,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
           </ul>
           {record.outcome ? (
             <div className="result-card">
-              <h2>{record.players.some((p) => p.kind === 'bot') ? t(resultFor(record)) : sideResult(ui, record)}</h2>
+              <h2>{ui.resultText?.(record) ?? (record.players.some((p) => p.kind === 'bot') ? t(resultFor(record)) : sideResult(ui, record))}</h2>
               <p>{tDynamic(`reason.${record.outcome.reason}`)}</p>
             </div>
           ) : null}
@@ -290,6 +290,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
           flipped={(ui.flipForSeat?.(mySeats[0] ?? 0) ?? false) !== flipOverride}
           helps={{ openHand: cardsUp }}
           overlay={overlay}
+          reveal={record.status === 'finished' && ui.revealSeat ? record.players.map((_, seat) => ui.revealSeat?.(start, record, seat) ?? null) : undefined}
         />
       }
       rail={

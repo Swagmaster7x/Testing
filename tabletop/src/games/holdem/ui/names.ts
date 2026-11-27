@@ -44,3 +44,9 @@ export const NAMES: readonly string[] = ['Ana', 'Beto', 'Carmen', 'Diego', 'Elis
 export function seatName(seat: Seat, me: Seat | null): string {
   return seat === me ? t('poker.seat.you') : (NAMES[seat] ?? `#${seat + 1}`);
 }
+
+/** A hand's name inside a sentence: "two pair, kings and nines". */
+export function handNameInline(value: number): string {
+  const name = handName(value);
+  return name.charAt(0).toLowerCase() + name.slice(1);
+}

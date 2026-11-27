@@ -106,10 +106,32 @@
   background: var(--brass-1);
 }
 
-.poker-hand-name {
+.poker-hand-name[data-place='above'] {
   top: auto;
   bottom: 100%;
   transform: translate(-50%, -2px);
+}
+
+.poker-style {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translate(-50%, 2px);
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #3a2f4a;
+  color: #efe6ff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.poker-hand-name {
+  width: max-content;
+  max-width: 130px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
   background: #e6f0dc;
 }
 
@@ -229,9 +251,9 @@
 }
 
 .poker-odds {
-  left: 6px;
-  bottom: 6px;
-  max-width: 40%;
+  right: 6px;
+  bottom: 50px;
+  max-width: 44%;
 }
 
 .poker-reading {
@@ -241,10 +263,11 @@
 }
 
 .poker-hand-over {
-  top: 30%;
+  transform: translate(-50%, -100%);
   display: grid;
   gap: 2px;
-  max-width: 80%;
+  max-width: 72%;
+  padding: var(--sp-2) var(--sp-3);
   font-size: var(--fs-md, 1rem);
   text-align: center;
 }

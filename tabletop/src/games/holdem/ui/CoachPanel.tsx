@@ -121,7 +121,7 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
       {helps.outs && live && toCome > 0 ? (
         <p className="coach-line">
           <span className="eyebrow">{t('poker.help.outs')}</span>{' '}
-          {o.improve.length === 0 ? t('poker.coach.outs.none') : t(toCome === 2 ? 'poker.coach.outs.two' : 'poker.coach.outs.one', { draw: o.draw.length, improve: o.improve.length, rough: Math.min(100, o.improve.length * (toCome === 2 ? 4 : 2)) })}
+          {o.improve.length === 0 ? t('poker.coach.outs.none') : t(toCome === 2 ? 'poker.coach.outs.two' : 'poker.coach.outs.one', { draw: o.draw.length, improve: o.improve.length, rough: Math.min(100, o.improve.length * (toCome === 2 ? 4 : 2)), exact: pct(hitChance(o.improve.length, 52 - 2 - state.board.length, toCome)) })}
         </p>
       ) : null}
       {helps.equity && live ? (
@@ -187,4 +187,11 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
 export function actionWords(text: string): string {
   if (text.startsWith('r')) return t('poker.move.raise', { n: Number(text.slice(1)) });
   return tDynamic(`poker.move.${text}`);
+}
+
+/** The chance that at least one of `outs` cards comes among the next `cards`, from `unseen` cards. */
+export function hitChance(outs: number, unseen: number, cards: number): number {
+  let miss = 1;
+  for (let i = 0; i < cards; i++) miss *= (unseen - outs - i) / (unseen - i);
+  return 1 - miss;
 }

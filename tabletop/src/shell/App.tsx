@@ -39,6 +39,7 @@ export function App() {
   const status = useApp((s) => s.status);
   const look = useApp((s) => s.settings?.look ?? 'club');
   const motion = useApp((s) => s.settings?.motion ?? 'system');
+  const deck = useApp((s) => s.settings?.deck ?? 'two');
   const reduced = useReducedMotion(motion);
   const route = useRoute();
 
@@ -49,7 +50,8 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.look = look;
     document.documentElement.dataset.motion = reduced ? 'reduced' : 'full';
-  }, [look, reduced]);
+    document.documentElement.dataset.deck = deck;
+  }, [look, reduced, deck]);
 
   if (status === 'loading') return <CenterMessage>{t('app.loading')}</CenterMessage>;
   if (status === 'failed') return <CenterMessage>{t('app.failed')}</CenterMessage>;

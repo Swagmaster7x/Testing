@@ -38,6 +38,8 @@ export interface SurfaceProps<S, A, E> {
   /** Coach switches in force, by id (see GameCoach.helps). */
   readonly helps: Readonly<Record<string, boolean>>;
   readonly overlay: SurfaceOverlay;
+  /** Once the game is over, what each seat turned out to be (see GameUi.revealSeat), by seat. */
+  readonly reveal?: readonly (string | null)[];
 }
 
 export interface CounterRow {
@@ -184,6 +186,10 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   replayConfig?(config: C): C;
   /** "Rules at this table" (PLAN.md 2.3): the game's own picker for a new game's options, presets first. */
   readonly rules?: { readonly Picker: ComponentType<{ value: C; onChange: (config: C) => void }> };
+  /** The result of a finished game in the game's own words ("You finished 2nd of 6, +45 chips"); the win/loss line when absent or null. */
+  resultText?(record: GameRecord): string | null;
+  /** After a game, what a CPU seat turned out to be (poker: its playing style), from the opening position; null shows nothing. */
+  revealSeat?(start: S, record: GameRecord, seat: Seat): string | null;
 }
 
 export type AnyGameUi = GameUi<unknown, unknown, unknown, unknown, GameEvent>;

@@ -20,7 +20,7 @@ import { cardIndex } from '../cards';
 import { readHand } from '../reading';
 import type { HandResult, HoldemAction, HoldemEvent, HoldemState, LogKind } from '../rules';
 import { potOf, raiseRange, toCallOf } from '../rules';
-import { cardName, handName, seatName } from './names';
+import { cardName, handName, handNameInline, seatName } from './names';
 import './poker.css';
 
 interface SeatShow {
@@ -162,11 +162,11 @@ function seatSpots(n: number): readonly (readonly [number, number])[] {
   ];
   return [
     [0.5, 0.86],
-    [0.11, 0.63],
-    [0.15, 0.17],
+    [0.13, 0.63],
+    [0.16, 0.17],
     [0.5, 0.1],
-    [0.85, 0.17],
-    [0.89, 0.63],
+    [0.84, 0.17],
+    [0.87, 0.63],
   ];
 }
 
@@ -215,7 +215,7 @@ function presetsFor(state: HoldemState, seat: Seat, min: number, max: number): B
     .sort((a, b) => a.to - b.to);
 }
 
-export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, onSkip, helps }: SurfaceProps<HoldemState, HoldemAction, HoldemEvent>) {
+export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, onSkip, helps, reveal }: SurfaceProps<HoldemState, HoldemAction, HoldemEvent>) {
   const [ref, size] = useSize<HTMLDivElement>();
   const me: Seat = mySeats[0] ?? 0;
   const open = helps.openHand === true;
@@ -256,13 +256,15 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
     });
   });
 
+  // The controls wait until every queued event has played, so they never belong to a hand still being shown.
+  const settled = anim.playing === null && pending.length === 0;
   const raise = canAct ? raiseRange(state, me) : null;
   const owe = canAct ? toCallOf(state, me) : 0;
   const myPlayer = state.players[me];
   const pick = (type: HoldemAction['type']) => legal.find((a) => a.type === type);
   const handOver = playing?.type === 'hand-end' ? playing.result : null;
   const mineNow = myPlayer && myPlayer.hole.length === 2 && !myPlayer.folded && pending.every((e) => e.type !== 'deal') ? myPlayer.hole : null;
-  const reading = helps.handName && mineNow && state.board.length >= 3 ? readHand([cardIndex(mineNow[0] as Card), cardIndex(mineNow[1] as Card)], state.board.map(cardIndex)) : null;
+  const reading = helps.handName && mineNow && !d.ended && !state.over && state.board.length >= 3 ? readHand([cardIndex(mineNow[0] as Card), cardIndex(mineNow[1] as Card)], state.board.map(cardIndex)) : null;
   const duration = anim.playing ? anim.duration : 220;
 
   return (
@@ -284,8 +286,9 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
                 {seat === d.button ? <span className="dealer-button" aria-label={t('poker.button')}>D</span> : null}
               </span>
               <span className="poker-stack num">{s.out ? t('poker.out') : s.stack}</span>
-              {s.label && !s.out ? <span className="poker-action" data-kind={s.label}>{s.stack === 0 && s.label !== 'fold' && s.label !== 'check' ? t('poker.act.all-in') : tDynamic(`poker.act.${s.label}`)}</span> : null}
-              {showdown ? <span className="poker-hand-name">{showdown}</span> : null}
+              {s.label && !s.out && !showdown && !reveal?.[seat] ? <span className="poker-action" data-kind={s.label}>{s.stack === 0 && s.label !== 'fold' && s.label !== 'check' ? t('poker.act.all-in') : tDynamic(`poker.act.${s.label}`)}</span> : null}
+              {showdown ? <span className="poker-hand-name" data-place={fy < 0.3 ? 'above' : 'below'}>{showdown}</span> : null}
+              {reveal?.[seat] && !showdown ? <span className="poker-style">{reveal[seat]}</span> : null}
               {s.won > 0 ? <span className="poker-won num">+{s.won}</span> : null}
             </div>
             {s.bet > 0 ? (
@@ -308,7 +311,7 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
           {reading.draws.map((x) => ` · ${tDynamic(`poker.draw.${x}`)}`).join('')}
         </div>
       ) : null}
-      {canAct && myPlayer ? (
+      {canAct && settled && myPlayer ? (
         <BetControls
           key={`${state.handNo}/${state.log.length}`}
           canFold={pick('fold') !== undefined}
@@ -334,12 +337,17 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
           }}
         />
       ) : null}
-      {canAct && helps.potOdds && owe > 0 ? <p className="poker-odds">{t('poker.odds', { call: Math.min(owe, myPlayer?.stack ?? owe), pot: potOf(state), need: Math.round((100 * Math.min(owe, myPlayer?.stack ?? owe)) / (potOf(state) + Math.min(owe, myPlayer?.stack ?? owe))) })}</p> : null}
+      {canAct && settled && helps.potOdds && owe > 0 ? <p className="poker-odds">{t('poker.odds', { call: Math.min(owe, myPlayer?.stack ?? owe), pot: potOf(state), need: Math.round((100 * Math.min(owe, myPlayer?.stack ?? owe)) / (potOf(state) + Math.min(owe, myPlayer?.stack ?? owe))) })}</p> : null}
       {handOver ? (
-        <div className="hand-over poker-hand-over" role="status">
-          {handOver.pots.map((pot, k) => (
-            <p key={k}>{t(pot.winners.length > 1 ? 'poker.split' : k === 0 ? 'poker.wins' : 'poker.wins.side', { name: pot.winners.map((s) => seatName(s, me)).join(' & '), n: pot.amount, hand: pot.winners[0] !== undefined && handOver.values[pot.winners[0]] !== null ? handName(handOver.values[pot.winners[0]] as number) : t('poker.no-showdown') })}</p>
-          ))}
+        <div className="hand-over poker-hand-over" role="status" style={{ top: `${Math.max(4, boardY - boardH / 2 - 6)}px` }}>
+          {handOver.pots.map((pot, k) => {
+            const first = pot.winners[0];
+            const value = first === undefined ? null : (handOver.values[first] ?? null);
+            const you = pot.winners.length === 1 && first === me;
+            const key = pot.winners.length > 1 ? (pot.winners.includes(me) ? 'poker.split.you' : 'poker.split') : k === 0 ? (you ? 'poker.wins.you' : 'poker.wins') : you ? 'poker.wins.side.you' : 'poker.wins.side';
+            const name = pot.winners.map((s) => seatName(s, me)).join(' & ');
+            return <p key={k}>{tDynamic(key, { name, n: pot.amount, hand: value === null ? t('poker.no-showdown') : handNameInline(value) })}</p>;
+          })}
         </div>
       ) : null}
     </div>

@@ -142,8 +142,8 @@ export function outs(hole: readonly Card[], board: readonly Card[]): { draw: Car
     if (seen.has(c)) continue;
     const v = evalWith(h, b, c);
     const cat = v >> 20;
-    // The improvement must be the player's own, not a card that improves the board for everyone.
-    if (cat <= now || v <= evalBoard(b, c)) continue;
+    // The improvement must be the player's own: a better kind of hand than the board alone makes.
+    if (cat <= now || cat <= evalBoard(b, c) >> 20) continue;
     improve.push(cardOf(c));
     if (cat >= 4) draw.push(cardOf(c));
   }

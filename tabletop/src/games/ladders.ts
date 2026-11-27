@@ -5,7 +5,7 @@
 import type { Contender, LadderSpec } from '../ai/ladder';
 import { randomChoice } from '../ai/random-bot';
 import type { Engine } from '../ai/uci';
-import type { GameEvent } from '../core/contract';
+import type { GameEvent, Outcome, Seat } from '../core/contract';
 import { briscaBots } from './brisca/bots';
 import type { BriscaAction, BriscaConfig, BriscaEvent, BriscaState, BriscaView } from './brisca/rules';
 import { brisca, PUERTO_RICO } from './brisca/rules';
@@ -16,6 +16,9 @@ import { dominoes, PRESETS as DOMINOES_PRESETS } from './dominoes/rules';
 import type { ChessAction, ChessConfig, ChessEvent, ChessState, ChessView } from './chess/rules';
 import { chess } from './chess/rules';
 import { goBots } from './go/bots';
+import { holdemBots, viewLegal } from './holdem/bots';
+import type { HoldemAction, HoldemConfig, HoldemEvent, HoldemState, HoldemView } from './holdem/rules';
+import { holdem, SIX_MAX_CASH } from './holdem/rules';
 import type { GoAction, GoConfig, GoEvent, GoState, GoView } from './go/rules';
 import { go, makeConfig } from './go/rules';
 import { noughtsBots } from './noughts/bots';
@@ -168,6 +171,37 @@ function goLadder(): Ladder<GoState, GoAction, GoConfig, GoView, GoEvent> {
   };
 }
 
+/** Poker: a side's score is whether its three seats won chips over the whole session. */
+export function pokerSideScore(outcome: Outcome, seats: readonly Seat[]): number {
+  const net = outcome.results.filter((r) => seats.includes(r.seat)).reduce((sum, r) => sum + r.score, 0);
+  return net > 0 ? 1 : net < 0 ? 0 : 0.5;
+}
+
+function pokerLadder(): Ladder<HoldemState, HoldemAction, HoldemConfig, HoldemView, HoldemEvent> {
+  return {
+    spec: {
+      def: holdem,
+      // Six-handed cash sessions of 100 hands, three seats each, every deal played twice with the seats swapped.
+      config: { ...SIX_MAX_CASH, hands: 100 },
+      levels: holdemBots.levels.map((l) => l.level),
+      bot: (level) => ({ name: `L${level}`, choose: async (view, seat, rng) => (await holdemBots.choose({ view, seat, level, rng })).action }),
+      margin: 0.58,
+      paired: true,
+      score: pokerSideScore,
+    },
+    // Random play picks a kind of action (fold, call or check, raise) at random, then a size.
+    random: {
+      name: 'random',
+      choose: (view, seat, rng) => {
+        const legal = viewLegal(view, seat);
+        const kind = rng.pick([...new Set(legal.map((a) => a.type))]);
+        return rng.pick(legal.filter((a) => a.type === kind));
+      },
+    },
+    games: 300,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
@@ -176,5 +210,6 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     dominoes: dominoesLadder() as unknown as Ladder<never, never, never, never, never>,
     shogi: shogiLadder() as unknown as Ladder<never, never, never, never, never>,
     go: goLadder() as unknown as Ladder<never, never, never, never, never>,
+    poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }

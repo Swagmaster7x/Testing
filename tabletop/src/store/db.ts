@@ -20,6 +20,8 @@ export interface Profile {
 export type RailSide = 'left' | 'right';
 export type MotionSetting = 'system' | 'reduced' | 'full';
 export type LookSetting = 'club';
+/** French cards in two colours, or four (spades black, hearts red, diamonds blue, clubs green). */
+export type DeckSetting = 'two' | 'four';
 
 export interface ProfileSettings {
   readonly profileId: string;
@@ -28,6 +30,7 @@ export interface ProfileSettings {
   readonly railOpen: boolean;
   readonly motion: MotionSetting;
   readonly sound: boolean;
+  readonly deck: DeckSetting;
   /** Up to three games being studied now (PLAN.md 1.1, focus games). */
   readonly focus: readonly string[];
   /** The CPU level last chosen for each game. */
