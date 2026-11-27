@@ -4,7 +4,7 @@
  * - Levels 1 to 3 search shallowly, score every move and sometimes choose a worse one that still
  *   looks reasonable, with a liking for captures; levels 1 and 2 do not see checking drops in
  *   their quiescence, so drop tactics catch them out. The choice comes from the game's seed.
- * - Levels 4 to 8 play the engine's best move at rising node budgets.
+ * - Levels 4 to 7 play the engine's best move at rising node budgets.
  * Handicap games (presets.ts) give further honest steps below the strong levels.
  *
  * Strength comes from node budgets only, so a level plays the same on a phone and in tests.

@@ -1,10 +1,11 @@
 import type { BotLevel } from '../../ai/bot';
 
 /**
- * Shogi CPU levels with nominal ratings (PLAN.md 2.7). Ratings are anchored at 400 for level 1
- * and spaced by the scores each level made against the one below in the ladder
- * (`npm run ladder -- shogi`; PROGRESS-M8.md has the measured table). Names and blurbs are in the
- * text catalogue.
+ * Shogi CPU levels with nominal ratings (PLAN.md 2.7). Ratings are anchored at 400 for level 1;
+ * each step is no wider than the gap the ladder measured against the level below
+ * (`npm run ladder -- shogi`; PROGRESS-M8.md has the table), and narrower where a level beat a
+ * near copy of itself by more than a person would notice. Names and blurbs are in the text
+ * catalogue.
  */
 export const SHOGI_LEVELS: readonly BotLevel[] = [
   { level: 1, rating: 400 },
@@ -13,8 +14,7 @@ export const SHOGI_LEVELS: readonly BotLevel[] = [
   { level: 4, rating: 1050 },
   { level: 5, rating: 1250 },
   { level: 6, rating: 1400 },
-  { level: 7, rating: 1550 },
-  { level: 8, rating: 1700 },
+  { level: 7, rating: 1600 },
 ];
 
 export interface ShogiLevelParams {
@@ -43,6 +43,7 @@ export const LEVEL_PARAMS: Readonly<Record<number, ShogiLevelParams>> = {
   4: { nodes: 40_000, maxDepth: 30, exact: false, error: 0, window: 0, captureBias: 1, checkDrops: true, quiescence: 8, noise: 12 },
   5: { nodes: 90_000, maxDepth: 30, exact: false, error: 0, window: 0, captureBias: 1, checkDrops: true, quiescence: 8, noise: 12 },
   6: { nodes: 180_000, maxDepth: 30, exact: false, error: 0, window: 0, captureBias: 1, checkDrops: true, quiescence: 8, noise: 12 },
-  7: { nodes: 320_000, maxDepth: 30, exact: false, error: 0, window: 0, captureBias: 1, checkDrops: true, quiescence: 8, noise: 12 },
-  8: { nodes: 550_000, maxDepth: 30, exact: false, error: 0, window: 0, captureBias: 1, checkDrops: true, quiescence: 8, noise: 12 },
+  // Three times level 6. Steps of 1.7 times (320,000, then 550,000 nodes) did not separate in the
+  // ladder, so the top level is the most a phone searches in about three seconds.
+  7: { nodes: 550_000, maxDepth: 30, exact: false, error: 0, window: 0, captureBias: 1, checkDrops: true, quiescence: 8, noise: 12 },
 };

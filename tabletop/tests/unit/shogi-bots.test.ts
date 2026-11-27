@@ -64,12 +64,15 @@ describe('the shogi engine', () => {
     }
   });
 
-  it('answers within a few seconds at the top level (a phone is about three times slower)', () => {
+  it('answers in seconds at the top level, not tens of seconds', () => {
+    // About two seconds on the build machine; the bound is loose because other builds share it.
+    // It catches a slowdown of several times, such as imports compiled to getters in hot code.
+    const top = SHOGI_LEVELS[SHOGI_LEVELS.length - 1]!.level;
     const started = Date.now();
-    const choice = choose(shogi.apply(shogi.setup({}, createRng('x')), shogi.codec.action.fromText('7776', shogi.setup({}, createRng('x')))).state, 8);
-    expect(choice.nodes).toBeGreaterThan(100_000);
-    expect(Date.now() - started).toBeLessThan(6_000);
-  }, 20_000);
+    const choice = choose(shogi.apply(shogi.setup({}, createRng('x')), shogi.codec.action.fromText('7776', shogi.setup({}, createRng('x')))).state, top);
+    expect(choice.nodes).toBeGreaterThan(400_000);
+    expect(Date.now() - started).toBeLessThan(15_000);
+  }, 30_000);
 });
 
 describe('mate search', () => {
@@ -115,8 +118,8 @@ describe('mate search', () => {
 });
 
 describe('levels', () => {
-  it('has eight levels with rising ratings and node budgets', () => {
-    expect(SHOGI_LEVELS.map((l) => l.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  it('has seven levels with rising ratings and node budgets', () => {
+    expect(SHOGI_LEVELS.map((l) => l.level)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     for (let i = 1; i < SHOGI_LEVELS.length; i++) {
       expect(SHOGI_LEVELS[i]!.rating).toBeGreaterThan(SHOGI_LEVELS[i - 1]!.rating);
       expect(LEVEL_PARAMS[i + 1]!.nodes).toBeGreaterThan(LEVEL_PARAMS[i]!.nodes);

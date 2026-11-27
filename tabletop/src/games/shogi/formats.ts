@@ -101,16 +101,24 @@ export function writeKif(record: GameRecord, names: readonly string[]): string {
   return writeMiniKif(record, names, start);
 }
 
+/** CSA holds the 9×9 board only. */
+export function canWriteCsa(record: GameRecord): boolean {
+  return startOf(record).rules.board === 'standard';
+}
+
 export function writeCsa(record: GameRecord, names: readonly string[]): string {
-  if (startOf(record).rules.board !== 'standard') throw new ShogiFileError('CSA files hold the 9×9 board only');
+  if (!canWriteCsa(record)) throw new ShogiFileError('CSA files hold the 9×9 board only');
   return exportCSA(tsRecord(record, names));
 }
 
-/** USI: "position sfen <start> moves 7g7f 3c3d ...", for either board. */
-export function writeUsi(record: GameRecord): string {
+/**
+ * USI: "position sfen <start> moves 7g7f 3c3d ...", for either board. The standard start is
+ * written "startpos" unless `sfen` asks for the SFEN itself (the "Save as SFEN" file).
+ */
+export function writeUsi(record: GameRecord, sfen = false): string {
   const start = startOf(record);
   const { moves } = movesOf(record);
-  const head = start.sfen === START_SFEN.standard ? 'position startpos' : `position sfen ${start.sfen}`;
+  const head = start.sfen === START_SFEN.standard && !sfen ? 'position startpos' : `position sfen ${start.sfen}`;
   return moves.length > 0 ? `${head} moves ${moves.map(canonicalToUsi).join(' ')}` : head;
 }
 
@@ -214,7 +222,8 @@ export interface ReadGame {
 export function readGameFile(text: string, messages: { encoding: string; unknown: string }): ReadGame {
   if (text.includes('�')) throw new ShogiFileError(messages.encoding);
   const trimmed = text.trim();
-  if (/^(position\s+)?(startpos|sfen)\b/.test(trimmed)) {
+  // A USI line, or a bare SFEN (which tsshogi would not know on the 5×5 board).
+  if (/^(position\s+)?(startpos|sfen)\b/.test(trimmed) || /^[1-9A-Za-z+/]+ [bw] [-0-9A-Za-z]+( \d+)?$/.test(trimmed)) {
     const read = readUsi(trimmed);
     return { ...read, outcome: null, names: [] };
   }

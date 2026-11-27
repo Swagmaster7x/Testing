@@ -305,8 +305,6 @@ describe('cross-check against tsshogi, move by move', () => {
     const squares: string[] = [];
     for (const f of files) for (const r of ranks) squares.push(`${f}${r}`);
     for (const from of squares) {
-      const rows = sfen.split(' ')[0]!.split('/');
-      void rows;
       const index = ours.geo.squares.find((sq) => `${ours.geo.fileOf[sq]}${ranks[(ours.geo.rankOf[sq] ?? 1) - 1]}` === from);
       if (index === undefined) continue;
       const code = ours.board[index]!;

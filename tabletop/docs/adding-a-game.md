@@ -40,8 +40,9 @@ can click it by name), seat marks, side extras, sides, event durations and log l
 Named rule presets go in `GameUi.presets` (the New game dialog shows them under "Rules at this
 table", the first is the default; `ratingOffset` says how many rating points a handicap preset
 takes off the CPU's level), and `GameUi.replayConfig` says which options "Play again" keeps
-(shogi keeps its preset and drops a set-up position). Both are optional; shogi (milestone 8) is
-the first game to use them.
+(shogi keeps its preset and drops a set-up position). `GameUi.moreExports` offers file formats
+beside `exportRecord` in the game and review menus (shogi saves KIF, CSA and SFEN). All three are
+optional; shogi (milestone 8) is the first game to use them.
 
 Interface text goes in `src/text/games/<game>.ts` (keys prefixed with the game id), spread into
 `src/text/games/index.ts`. The `game.<id>.*` lines in `src/text/en.ts` describe the game on the

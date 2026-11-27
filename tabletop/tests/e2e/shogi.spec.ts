@@ -119,7 +119,7 @@ test.describe('shogi', () => {
     await expect(page.locator('.lesson-feedback')).toContainText('Right');
   });
 
-  test('saves a game as KIF and opens it again', async ({ page }, testInfo) => {
+  test('saves a game as KIF, CSA and SFEN, and opens a KIF file', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'phone', 'Files do not depend on the layout');
     await startShogi(page, { seed: 'e2e-kif' });
     await play(page, '7776');
@@ -132,6 +132,17 @@ test.describe('shogi', () => {
     const kif = readFileSync(file, 'utf8');
     expect(kif).toContain('７六歩(77)');
     expect(kif).toContain('先手：You');
+    for (const [format, extension, expected] of [
+      ['CSA', 'csa', /^\+7776FU$/m],
+      ['SFEN', 'sfen', /^position sfen lnsgkgsnl\/1r5b1\/ppppppppp\/9\/9\/9\/PPPPPPPPP\/1B5R1\/LNSGKGSNL b - 1 moves 7g7f \S+$/],
+    ] as const) {
+      await page.getByRole('button', { name: 'Game menu' }).click();
+      const saved = page.waitForEvent('download');
+      await page.getByRole('menuitem', { name: `Save as ${format}` }).click();
+      const path = testInfo.outputPath(`game.${extension}`);
+      await (await saved).saveAs(path);
+      expect(readFileSync(path, 'utf8').trim()).toMatch(expected);
+    }
 
     const other = testInfo.outputPath('other.kifu');
     writeFileSync(other, ['手合割：平手', '先手：A', '後手：B', '手数----指手---------消費時間--', '   1 ７六歩(77)', '   2 ３四歩(33)', '   3 ２二角成(88)', '   4 同　銀(31)', '   5 投了'].join('\n'));

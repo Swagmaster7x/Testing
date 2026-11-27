@@ -137,6 +137,14 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
     const added = await addCard(appDb(), profileId, ui.def.id, { kind: 'position', position: ui.def.codec.state.toText(before), accept: m.accept, played: m.played, recordId: record.id, ply: m.ply }, Date.now());
     notify(added ? t('practice.added') : t('practice.added.already'));
   };
+  const exportAs = (format: NonNullable<AnyGameUi['exportRecord']>) => {
+    const names = ui.def.seats(start).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
+    const fileName = `${ui.def.id}-${new Date(record.createdAt).toISOString().slice(0, 10)}.${format.extension}`;
+    saveTextFile(fileName, format.write(record, names), name).then(
+      () => notify(t('table.exported', { file: fileName })),
+      (err: unknown) => notify(t('settings.backup.failed', { message: (err as Error).message })),
+    );
+  };
   const seatNames = ui.def.seats(start).map((s) => (ui.movePrefix ? ui.movePrefix(s) : ui.sideName(s)));
   const positionText = current === 0 ? t('review.start') : t('review.of', { n: current, total });
 
@@ -171,20 +179,29 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
               role="menuitem"
               onClick={() => {
                 close();
-                const format = ui.exportRecord;
-                if (!format) return;
-                const names = ui.def.seats(start).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
-                const fileName = `${ui.def.id}-${new Date(record.createdAt).toISOString().slice(0, 10)}.${format.extension}`;
-                saveTextFile(fileName, format.write(record, names), name).then(
-                  () => notify(t('table.exported', { file: fileName })),
-                  (err: unknown) => notify(t('settings.backup.failed', { message: (err as Error).message })),
-                );
+                if (ui.exportRecord) exportAs(ui.exportRecord);
               }}
             >
               <Icon name="export" size={20} />
               {t('table.export', { format: ui.exportRecord.extension.toUpperCase() })}
             </button>
           ) : null}
+          {ui.moreExports
+            ?.filter((format) => format.canWrite?.(record) ?? true)
+            .map((format) => (
+              <button
+                key={format.extension}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  close();
+                  exportAs(format);
+                }}
+              >
+                <Icon name="export" size={20} />
+                {t('table.export', { format: format.extension.toUpperCase() })}
+              </button>
+            ))}
           <a role="menuitem" href={href(`/games/${ui.def.id}/reference`)} onClick={close}>
             <Icon name="reference" size={20} />
             {t('table.reference')}

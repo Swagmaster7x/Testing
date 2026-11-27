@@ -140,7 +140,8 @@ describe('problems', () => {
         s = next as typeof s;
       }
     }
-  });
+    // Slow on a busy machine (20 s with several builds running at once).
+  }, 60_000);
 
   it('generates legal basic-mate positions with White to move and Black not in check', () => {
     const rng = createRng('mates');

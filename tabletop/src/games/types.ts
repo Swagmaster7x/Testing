@@ -146,6 +146,8 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   timeoutOutcome?(state: S, seat: Seat): Outcome;
   /** Export a record in the game's own file format (PGN for chess). */
   readonly exportRecord?: { readonly extension: string; readonly mime: string; write(record: GameRecord, names: readonly string[]): string };
+  /** More formats offered beside `exportRecord` (shogi: CSA and SFEN); `canWrite` hides one a record cannot be written in. */
+  readonly moreExports?: readonly { readonly extension: string; readonly mime: string; write(record: GameRecord, names: readonly string[]): string; canWrite?(record: GameRecord): boolean }[];
   readonly review?: GameReviewSupport<S, C>;
   /** The squares a move goes from and to, for arrows on a board. */
   moveSquares?(action: A): { from: string; to: string } | null;

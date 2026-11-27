@@ -6,7 +6,7 @@ import { t, tDynamic } from '../../../text';
 import type { CoachWarning, GameUi, ReferenceSection, SetupPreset } from '../../types';
 import { NO_OVERLAY } from '../../types';
 import { GEOMETRY } from '../core';
-import { readGameFile, writeKif } from '../formats';
+import { canWriteCsa, readGameFile, writeCsa, writeKif, writeUsi } from '../formats';
 import { SHOGI_LEVELS } from '../levels';
 import type { ShogiConfig } from '../presets';
 import { DECLARE_BLACK, DECLARE_PIECES, DECLARE_WHITE, HANDICAPS, IMPASSE_24, IMPASSE_BIG, IMPASSE_SMALL, POINTS_PER_RANK, PRESETS, REPETITIONS } from '../presets';
@@ -149,6 +149,10 @@ export const shogiUi: GameUi<ShogiState, ShogiAction, ShogiConfig, ShogiView, Sh
     return { reason: 'timeout', results: [{ seat: other, place: 1, score: 1 }, { seat, place: 2, score: 0 }] };
   },
   exportRecord: { extension: 'kifu', mime: 'text/plain', write: writeKif },
+  moreExports: [
+    { extension: 'csa', mime: 'text/plain', write: writeCsa, canWrite: canWriteCsa },
+    { extension: 'sfen', mime: 'text/plain', write: (record) => writeUsi(record, true) },
+  ],
   review: {
     analyse: analyseShogiGame,
     configAt: (state) => ({

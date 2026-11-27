@@ -189,9 +189,15 @@ games between programs always end.
 ## 9. Ratings and the handicap ladder
 
 CPU levels have nominal ratings (`src/games/shogi/levels.ts`). A handicap is worth about 100 rating
-points per amateur rank in the table of section 2, so "level 8 giving a rook" plays like a level about
-400 points weaker, but with no planned mistakes: the honest way down the ladder. Only even games on
-the standard board move your play rating; handicap and mini-shogi games are practice.
+points per amateur rank in the table of section 2, so "level 7 giving a rook" plays like a level about
+400 points weaker, but with no planned mistakes: the honest way down the ladder. Only games under the
+Standard preset move your play rating; the other presets, handicaps and mini-shogi are practice.
+
+Measured between two of the app's levels (`scripts/shogi-handicaps.ts`: level 6 giving each
+handicap to level 4, 8 games each), the giver scored 0.875 in even games, 1.000 giving a lance,
+0.875 a bishop, 0.625 a rook and 0.500 two pieces. A handicap counts for less between two engines
+than between people (the weaker engine converts extra material poorly), so the offsets keep the
+JSA's table, which was made for people.
 
 ## 10. Notation and files
 
@@ -207,9 +213,11 @@ the standard board move your play rating; handicap and mini-shogi games are prac
 - **USI and SFEN** (engines and positions): moves as `7g7f`, `8h2b+`, `P*5e`; positions as SFEN.
   The app stores moves as `7776`, `8822+` and `P*55` (USI with digit ranks, matching the square names).
 - **Files**: a game saves as **KIF** (UTF-8, `.kifu`; mini-shogi games use the same move format with
-  a 5五将棋 header). The Review door opens KIF, KI2, CSA, JKF and USI/SFEN files of standard games
-  (through `tsshogi`), and the app's own mini-shogi KIF and USI files. KIF files saved in Shift-JIS
-  (`.kif` from older programs) must be saved as UTF-8 first.
+  a 5五将棋 header), as **CSA** (`.csa`, standard board only) and as **SFEN** (`.sfen`: the USI line
+  `position sfen <start> moves 7g7f ...`, either board). The Review door opens KIF, KI2, CSA, JKF and
+  USI/SFEN files of standard games (through `tsshogi`), the app's own mini-shogi KIF and USI files,
+  and a bare SFEN as a position to start from. KIF files saved in Shift-JIS (`.kif` from older
+  programs) must be saved as UTF-8 first.
 
 ## 11. Golden cases (each one is a test)
 

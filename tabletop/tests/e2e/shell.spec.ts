@@ -1,3 +1,4 @@
+import { SHELF } from '../../src/games/catalog';
 import { expect, noHorizontalScroll, test } from './fixtures';
 
 test.describe('the shell', () => {
@@ -28,9 +29,9 @@ test.describe('the shell', () => {
       await expect(page.getByRole('link', { name: `Open ${name}` })).toBeVisible();
     }
     await expect(page.getByText('Noughts and crosses')).toHaveCount(0);
-    // Chess is built (milestone 1); the other seven are still coming.
-    await expect(page.getByText(/Coming · M\d|Next up · M\d/)).toHaveCount(7);
-    await expect(page.getByRole('link', { name: 'Open Chess' })).not.toContainText(/Coming|Next up/);
+    // Built games (chess from milestone 1, shogi from milestone 8) open; the others are still coming.
+    await expect(page.getByText(/Coming · M\d|Next up · M\d/)).toHaveCount(SHELF.filter((g) => !g.playable).length);
+    for (const name of ['Chess', 'Shogi']) await expect(page.getByRole('link', { name: `Open ${name}` })).not.toContainText(/Coming|Next up/);
   });
 
   test('a coming game has a hub with four closed doors and a reference card', async ({ page }) => {

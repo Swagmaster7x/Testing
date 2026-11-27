@@ -203,8 +203,7 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
     navigate(`/play/${id}`, { replace: true });
   };
 
-  const exportGame = async () => {
-    const format = ui.exportRecord;
+  const exportGame = async (format = ui.exportRecord) => {
     if (!format) return;
     await controller.flush();
     const names = ui.def.seats(state).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
@@ -287,6 +286,22 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
                 {t('table.export', { format: ui.exportRecord.extension.toUpperCase() })}
               </button>
             ) : null}
+            {ui.moreExports
+              ?.filter((format) => format.canWrite?.(record) ?? true)
+              .map((format) => (
+                <button
+                  key={format.extension}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    close();
+                    void exportGame(format);
+                  }}
+                >
+                  <Icon name="export" size={20} />
+                  {t('table.export', { format: format.extension.toUpperCase() })}
+                </button>
+              ))}
             <a role="menuitem" href={href(`/games/${ui.def.id}/reference`)} onClick={close}>
               <Icon name="reference" size={20} />
               {t('table.reference')}

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { GameRecord } from '../../src/core/record';
 import { newRecord, withAction, withOutcome, withResignation } from '../../src/core/record';
 import { replay } from '../../src/core/replay';
-import { readGameFile, ShogiFileError, writeCsa, writeKif, writeUsi } from '../../src/games/shogi/formats';
+import { START_SFEN } from '../../src/games/shogi/core';
+import { canWriteCsa, readGameFile, ShogiFileError, writeCsa, writeKif, writeUsi } from '../../src/games/shogi/formats';
 import type { ShogiConfig } from '../../src/games/shogi/presets';
 import { shogi } from '../../src/games/shogi/rules';
 
@@ -53,6 +54,18 @@ describe('shogi files', () => {
     const usi = writeUsi(r);
     expect(usi).toBe('position startpos moves 7g7f 3c3d 8h2b+ 3a2b B*4e 5a4b 4e3d 4b3b');
     expect(readGameFile(usi, MESSAGES).actions).toEqual(GAME);
+    const sfen = writeUsi(r, true);
+    expect(sfen).toBe(`position sfen ${START_SFEN.standard} moves 7g7f 3c3d 8h2b+ 3a2b B*4e 5a4b 4e3d 4b3b`);
+    expect(readGameFile(sfen, MESSAGES).actions).toEqual(GAME);
+    expect(canWriteCsa(r)).toBe(true);
+  });
+
+  it('reads a bare SFEN as a position to start from, on either board', () => {
+    const mini = readGameFile('rbsgk/4p/5/P4/KGSBR b - 1', MESSAGES);
+    expect(mini.config).toEqual({ board: 'mini' });
+    expect(mini.actions).toEqual([]);
+    const tsume = readGameFile('7nk/7bl/9/9/9/9/9/9/4K4 b N 1', MESSAGES);
+    expect(tsume.config).toEqual({ position: '7nk/7bl/9/9/9/9/9/9/4K4 b N 1' });
   });
 
   it('mini-shogi games are written as KIF with a 5五将棋 header and read back', () => {
@@ -65,6 +78,7 @@ describe('shogi files', () => {
     expect(read.actions).toEqual(moves);
     expect(writeUsi(r)).toBe('position sfen rbsgk/4p/5/P4/KGSBR b - 1 moves 5d5c 1b1c 3e4d 3a2b 5c5b');
     expect(() => writeCsa(r, [])).toThrow(ShogiFileError);
+    expect(canWriteCsa(r)).toBe(false);
   });
 
   it('reads a hand-written KIF with 同, 打 and promotions', () => {

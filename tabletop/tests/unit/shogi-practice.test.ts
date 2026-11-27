@@ -28,7 +28,7 @@ describe('shogi mate problems', () => {
     expect(new Set(pack.problems.map((p) => p.id)).size).toBe(pack.problems.length);
   });
 
-  it('every problem is proved: the mate holds, nothing shorter works, and the first move is the only one', async () => {
+  it('every problem is proved: the mate holds, nothing shorter works, and the attacker has one move at every turn', async () => {
     const pack = await loadShogiPractice();
     for (const problem of pack.problems) {
       const start = solverPosition(shogiLessonGame, problem);
@@ -38,6 +38,10 @@ describe('shogi mate problems', () => {
       expect(solver.shortest(plies), problem.id).toBe(plies);
       const firsts = solver.mateMoves(plies).map((m) => canonicalOf(p.geo, m));
       expect(firsts, problem.id).toEqual([problem.line[0]]);
+      // Against the longest defence the attacker's move is the only one that works at every turn.
+      const main = solver.mainLine(plies);
+      expect(main?.unique, problem.id).toBe(true);
+      expect(main?.line.map((m) => canonicalOf(p.geo, m)), problem.id).toEqual(problem.line);
       // The line itself is legal and ends in checkmate.
       let state = shogiLessonGame.position(start);
       for (const [i, move] of problem.line.entries()) {
