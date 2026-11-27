@@ -48,6 +48,7 @@ APK; the rest are only used to build and test it.
 | `@types/react`, `@types/react-dom`, `@types/node` | 19.3.3, 19.3.0, 22.20.7 | MIT | Type definitions |
 | `fontkit` and `@fontsource/shippori-mincho-b1` | 3.0.0, 5.3.0 | MIT, SIL OFL 1.1 | Used once by `scripts/shogi-glyphs.mjs` to turn the shogi kanji into SVG paths; installed with `--no-save` when the script is run, so not in `package.json` |
 | `@sabaki/go-board` | 1.4.3 | MIT | Go: a second implementation of the rules; the tests check our captures, legality and handicap points against it (milestone 6) |
+| `pokersolver` | 2.1.4 | MIT | Hold'em: a second hand evaluator; the tests check our seven-card evaluator against it on thousands of random showdowns (milestone 5). Not shipped |
 | `@sabaki/sgf` | 3.5.0 | MIT | Go: a second SGF parser; the tests check that it reads our SGF files the same way. Not shipped: it needs Node's `fs` and optional encoding libraries, so the app has its own small reader and writer (`src/games/go/sgf.ts`) |
 | Android Gradle Plugin, Gradle | 8.13.0, 8.14.3 | Apache-2.0 | Builds the APK (from the Capacitor template) |
 
@@ -78,14 +79,17 @@ All art is original and drawn as vectors for this app: the app icon (`assets/ico
 glyphs on the shelf, the interface icons, the noughts-and-crosses board, the chess set
 (`src/kits/board/chess-pieces.tsx`), the Go board and stones (`src/kits/board/IntersectionBoard.tsx`),
 the Spanish deck and card backs (`src/kits/cards/spanish.tsx`), the domino tiles and backs
-(`src/kits/tiles/domino.tsx`), and the shogi pieces, their symbol faces and movement marks
+(`src/kits/tiles/domino.tsx`), the French deck, card backs and chips (`src/kits/cards/french.tsx`,
+`src/kits/chips/ChipKit.tsx`), the poker starting-hand table (computed by
+`scripts/generate-holdem-preflop.ts`), and the shogi pieces, their symbol faces and movement marks
 (`src/games/shogi/ui/pieces.tsx`; only the kanji outlines come from the font above). Sounds are synthesised
 in the app with the Web Audio API; there are no sound files.
 
 ## Coming later
 
 The plan's later dependencies are added in the milestones that need them, each with a line here:
-the Sabaki Go packages arrived with milestone 6 and `tsshogi` with milestone 8 (above).
+`pokersolver` arrived with milestone 5, the Sabaki Go packages with milestone 6 and `tsshogi` with
+milestone 8 (above).
 
 **Stockfish is GPL-3.** It runs as a separate worker file behind the `Engine` interface
 (`src/ai/uci.ts`). For a personal app that is fine. If this app is ever published, either publish

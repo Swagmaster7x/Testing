@@ -46,6 +46,10 @@ describe('equity and hand reading', () => {
     expect(outs(h('9d 8c'), h('7s 6h 2c')).draw).toHaveLength(8);
     expect(outs(h('9d 8c'), h('7s 6h 2c 3d')).draw).toHaveLength(8);
     expect(outs(h('9d 8c'), h('7s 6h 2c 3d Kd'))).toEqual({ draw: [], improve: [] });
+    // A card that pairs the board improves everyone, so it is not an out: queens, eights and sixes are.
+    const qe = outs(h('Qd 8c'), h('7c 5d 9h'));
+    expect(qe.improve).toHaveLength(10);
+    expect(qe.draw).toHaveLength(4);
   });
 
   it('ranks the starting hands: aces first, the worst last; opening ranges by position', () => {

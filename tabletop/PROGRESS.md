@@ -29,6 +29,59 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 
 Next up: **M5, Texas Hold'em.** Go (M6) and Shogi (M8) were built at the same time in separate checkouts; both passed their gates and are merged. M7 (Chinese Checkers) follows M5.
 
+## M5. Texas Hold'em
+
+- [x] **Rules first**: `docs/rules/holdem.md`, from pagat.com (Texas Hold'em, betting and the
+      showdown) and Wikipedia (betting in poker, Texas hold 'em). No-limit Hold'em with ten
+      options: the format (**6-max cash**, a **heads-up** freezeout, a six-player **sit-and-go**),
+      starting chips (20 to 100 big blinds), the length of a cash session, how often freezeout
+      blinds rise, antes (none, every player, a big blind ante), a live straddle, whether an all-in
+      for less than a raise reopens the betting (full-raise or half-raise rule), the odd chip (left
+      of the button, or the highest card), showdown (show all, or muck a beaten hand) and sit-and-go
+      prizes (65/35, 50/30/20, winner takes all). Four presets: 6-max cash (the default),
+      Heads-up, Sit-and-go, Home game; the "ask before you sit" card is on the reference page.
+- [x] **Hand evaluator** (`src/games/holdem/evaluate.ts`): seven cards to one comparable number with
+      bit masks, checked against `pokersolver` on 20,000 random showdowns (a test oracle, not
+      shipped).
+- [x] **Betting engine** (`src/games/holdem/rules.ts`): antes and blinds (heads-up the button posts
+      the small blind), a live straddle, the minimum raise, all-ins for less that do not reopen the
+      betting (or do, under the half-bet rule; two short all-ins that add up to a raise do),
+      uncalled bets returned, main and side pots, split pots with the odd chip, the showdown order
+      (last aggressor, else left of the button), automatic mucking, cash sessions with rebuys,
+      freezeouts with rising blinds and places (two players out in one hand: the bigger stack at the
+      start of it finishes higher). Views hide other hands, mucked hands, the deck, the burn and the
+      seed; `sample()` deals the unseen cards.
+- [x] **French deck and chips**: original card faces made to read small (big corner rank and suit),
+      a four-colour deck as a setting (Settings, Card colours), chip stacks, bet controls with
+      presets (in big blinds before the flop, parts of the pot after it, the minimum and all-in) and
+      a slider.
+- [x] **Table**: six seats round an oval (two heads-up), you at the bottom and the next player on
+      your left; bets in front of each seat, the pot and the board in the middle; each event
+      animates in turn (blinds, the deal, bets, the board, the showdown, chips to the winner) and
+      the bet controls wait until the table has caught up. At the end of a session each CPU seat's
+      style is revealed on the table, in the player list and in the review.
+- [x] **CPU: six styles and six levels.** A seat's **style** is its personality: rock, calling
+      station, maniac, tight-aggressive, loose-aggressive, solid. Its **level** is how well it plays
+      it: levels 1 and 2 judge their hand against any two cards (level 1 misjudges widely and
+      ignores the price), level 3 puts each opponent on a range from what they did, levels 4 to 6
+      weigh every option by expected value with fold equity, and 5 and 6 also read each
+      opponent's session statistics. Preflop ranges come from a generated ranking of the 169
+      starting hands (`npm run generate:holdem`), and each level seats its own mix of styles,
+      weak ones at the bottom. A seat's style is fixed for the session from the table's public
+      number.
+- [x] **Coach**, each a switch that marks the game as training: **pot odds** (the price and the
+      break-even percentage), **outs** (cards that improve the hand and those that make a straight
+      or better, with the real chance to hit beside the rule of 2 and 4), **equity against their
+      likely hands** (and against any two cards), **name my hand** (top pair, flush draw...),
+      **positions**, the **preflop chart** for your seat with your hand outlined, and **session
+      statistics**: how often each player plays and raises a hand, in plain words ("loose and
+      passive: calls a lot"). That last one is the tracker a real player keeps in their head.
+- [x] **Review**: every decision you made, rated in big blinds "with what you knew" (equity against
+      the hands the others were likely to hold, and what they would fold to each bet), with the
+      cost "with every card face up" beside it in each reason; key moments, "play on from here",
+      "add to my practice"; the styles revealed.
+- [ ] **Learn and Practice**: being built alongside (see below once merged).
+
 ## M6. Go
 
 Built in its own checkout while M3 to M5 and M8 were built elsewhere, then merged into the main
