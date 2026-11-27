@@ -1,6 +1,6 @@
 # Kibitz progress
 
-Last updated 2026-11-27, at the end of milestone 1. The plan is `PLAN.md`; this file says what
+Last updated 2026-11-27, at the end of milestone 2. The plan is `PLAN.md`; this file says what
 has been built, what was decided along the way, and what is still open.
 
 **Swag's instruction after M0 (2026-11-27): "I trust you, build it all."** So the build carries
@@ -11,7 +11,7 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 
 - [x] **M0. Foundation** (2026-11-27)
 - [x] **M1. Chess: play** (2026-11-27)
-- [ ] M2. The learning loop, on Chess. Then stop for Swag's feedback.
+- [x] **M2. The learning loop, on Chess** (2026-11-27). The feedback stop is skipped, as Swag asked; feedback is still welcome.
 - [ ] M3. Cards and Brisca (2 players)
 - [ ] M4. Dominoes
 - [ ] M5. Texas Hold'em
@@ -27,7 +27,117 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [ ] M15. Stronger engines
 - [ ] M16. Table tools, polish, release
 
-Next up: **M2, the learning loop on Chess.**
+Next up: **M3, cards and Brisca (2 players).**
+
+## M2. The learning loop, on Chess
+
+- [x] **Lesson runner** (`src/teach/runner.ts`): a pure state machine for every step kind, used by
+      the lesson screen and by the linter's auto-player alike. Scripted replies wait for a pause;
+      wrong answers get tailored feedback; "Show me" plays the answer and its reply.
+- [x] **Lesson linter** (`scripts/lesson-lint.ts`, `src/teach/lint.ts`), the last step of
+      `npm run check`: legal positions, legal answers, computed numbers only, "only" and "mate"
+      claims by the rules, "best" claims by Stockfish (a 150-centipawn margin over every other
+      move at 1,000,000 nodes), free-play goals reached against the engine's best defence, and an
+      auto-player that finishes every lesson twice (right first time, and wrong then shown). The
+      generated stage checks are linted too. How to write lessons: `docs/lessons.md`.
+- [x] **Chess lessons, 37 in all** (`src/games/chess/learn/`), every word original:
+      stage 0 (2), stage 1, the rules (12), stage 2, first strategy (11: piece values, hanging
+      pieces, counting attackers and defenders, opening principles, king safety, checks-captures-
+      threats, mate in one, trading when ahead, open files, passed pawns, the active king),
+      stage 3 started (7: fork, pin, skewer, discovered attack, back rank, mate with king and queen,
+      mate with king and rook against the engine), and the Table-ready track (5: setting up,
+      touch-move, the clock, writing moves, offering and claiming draws and resigning).
+- [x] **Learn door**: stages with a recommended path ("Continue: ..."), nothing locked, and
+      "I already know this", a five-question check built from the stage's own lessons; passing
+      it (one miss allowed) marks the stage done.
+- [x] **Problems**: 5,820 puzzles from the Lichess puzzle database (CC0), imported with
+      `npm run import:puzzles` across ratings 600 to 2200 and themes, every line replayed through
+      the rules (`licenses/Lichess-puzzles-CC0.txt`). Sets: tactics (3,847, with theme chips),
+      checkmates (1,955), endgames. The problem player animates the opponent's setup move, plays
+      replies of multi-move lines, accepts any mate at the end of a mating line, has a three-step
+      hint (the piece, the idea, the move), retry and "show the solution".
+- [x] **Drills** (generated, on the lesson runner): basic mates with king and queen or rook
+      against the engine from random positions, and "count the material" on positions from the
+      puzzle set, checked against the rules module.
+- [x] **Review queue** (FSRS through `ts-fsrs`): missed problems and moments from your own games
+      become cards; right first time pushes a card out, a miss brings it back soon.
+- [x] **Game review**: every position searched by Stockfish in the bot worker (50,000 nodes, two
+      lines), each move rated by its loss in winning chances (best, good, inaccuracy at 5 points,
+      mistake at 10, blunder at 15), accuracy per side, three to five key moments with a
+      one-sentence reason (allowed mate, missed mate, left a piece to be taken, missed a win of
+      material, or what was better), arrows for the move played and the better one, "play on from
+      here" against the same level, and "add to my practice". Analyses are stored and backed up.
+- [x] **Ratings**: Elo, recomputed from the history so it cannot drift. Play rating from games
+      without helps against the CPU from the normal start; problem rating from first, unhinted
+      tries. The New game dialog suggests the level that gives about a 55% chance.
+- [x] **Today** builds a 10 to 20 minute session from the focus games: due reviews, one lesson
+      (or one game at the suggested level once the lessons are done), and problems to fill the time.
+- [x] **Progress**: per game, lesson stages, problem and play ratings (a question mark while
+      provisional), the accuracy trend of analysed games, the review queue, and the table-ready
+      checklist, ticked by doing (lessons, five right-first-time material counts, and a win
+      against level 3 with every help off).
+- [x] Storage schema version 2 adds the `analyses` table; backups include it (older backups still
+      import).
+
+### Gate: the definition of done for Chess (PLAN.md 2.10)
+
+| Item | Result |
+| --- | --- |
+| 1. `docs/rules/chess.md` | Done in M1: every rule as implemented, the options, sources |
+| 2. Golden, property and replay tests | Pass (`tests/unit/chess-rules.test.ts`, `tests/property/`) |
+| 3. At least four CPU levels pass the ladder | All eight, 16 games a rung with seats alternating: L1 beats random 1.000, L2 beats L1 0.813, L3 beats L2 0.719, L4 beats L3 0.906, L5 beats L4 0.813, L6 beats L5 0.719, L7 beats L6 0.813, L8 beats L7 0.875 |
+| 4. Learn stages 0 to 2 and Table-ready complete, passing lint | 2 + 12 + 11 lessons in stages 0 to 2 (the plan said about 25), 5 Table-ready, 7 in stage 3; `npm run lint:lessons` passes |
+| 5. At least three kinds of practice, each generated or with 100+ items | Tactics 3,847, checkmates 1,955 and endgames (Lichess, CC0); basic mates and counting material (generated) |
+| 6. Coach helps, including a counter a real player keeps in their head | Done in M1 (material count and the fifty-move count in the rail) |
+| 7. Review: key moments with reasons and "play on from here" | Yes, plus "add to my practice" |
+| 8. Save, resume, replay, reference card | Done in M1; still pass |
+| 9. End to end at phone landscape, screenshots looked at | `npm run e2e` green: 100 tests (2 skipped on purpose) at 844×390, 1180×820 and 1440×900, now including finishing a lesson, a stage check, solving a problem, a missed problem through the review queue, a drill, and a review with key moments, practice and play-on. All seventeen M2 screenshots looked at |
+| 10. `PROGRESS.md` | This section |
+| `npm run check` | Green: types, lint, 166 unit tests, 6 property tests, lesson lint |
+| APK | `out/kibitz-0.3.0-debug.apk`, 7.0 MB, signed with the repo key (checked by the build script) |
+
+Fixed after looking at the screenshots and play-throughs: the "missing white king" crash in the
+basic-mates drill (chess.js will not load an empty board); hints named broad tags ("Endgame")
+before the real idea ("Mate in one"); themed problem sessions showed a raw text key as their
+title; a wrong choice and the right one were not marked; "Show me" on a counting question did not
+show the number; the key moments sat below the move list where a phone could not see them, and
+the moment card pushed the review stepper off the screen; a game between two people called the
+winner "the CPU"; plural slips ("1 cards", "1 rated games"); the Review door still promised
+milestone 2; Today came to eight minutes instead of at least ten. The linter caught four lesson
+errors before anyone saw them: an illegal "wrong" answer, a position with the side not to move in
+check, a discovered attack where the engine found the other knight move far stronger, and a
+passed-pawn position where a king move won just as well.
+
+### Decisions in M2
+
+1. **Lichess was reachable after all.** `database.lichess.org` was refused by the network policy,
+   so it was added to this environment's allowed hosts through the approval card, as PLAN.md 2.11
+   says. The fallback generator was not needed. The download page states CC0 for database exports.
+2. **5,820 puzzles, not 6,000**: one bucket (600-rated trapped pieces) ran short within the first
+   three million puzzles, where the importer stops. Ratings, themes and lines are kept as Lichess
+   publishes them; the importer is repeatable.
+3. **Lesson text lives in the lesson data, in English**, not in the interface catalogue. A Spanish
+   build (M16) adds a parallel file per lesson set keyed by lesson id; the linter will check both.
+4. **Numbers in lesson text** are placeholders computed from the rules; small structural words
+   ("one square", "two rooks") are allowed in prose because the board itself checks them.
+5. **Ratings start at 500 for play and 600 for problems**, below the lowest CPU level, so a new
+   player is offered level 1; ten results settle a rating (shown with "?" until then).
+6. **Review verdicts** use winning chances (the curve Lichess publishes) with thresholds of 5, 10
+   and 15 points, and accuracy per move from the same published formula, averaged per side.
+7. **Free-play opponents are the engine at full strength with a modest search** (150,000 nodes in
+   the app), so basic mates are learned against the best defence.
+8. **The basic-mates drill allows the fifty-move rule's 50 moves**, and the lesson versions 30
+   (queen) and 50 (rook).
+9. **Hints and retries make a problem unrated**; the review queue never moves the rating.
+
+### Not done in M2, or open
+
+- **Pop quizzes during a game** (PLAN.md 1.1, point 4) and **suggesting a help be switched off**
+  (point 2) are not in M2's list; they will come with the polish milestone unless wanted sooner.
+- Stage 4 (advanced) has no chess lessons yet; stage 3 is "started", as the plan says.
+- The APK has still not run on a device (no emulator here). New in this build to check on the
+  phone: a lesson, a problem, the review analysis (it runs Stockfish on the phone; how long a
+  whole game takes there has not been measured), and Export with the new analyses table.
 
 ## M1. Chess: play
 
@@ -59,7 +169,7 @@ Next up: **M2, the learning loop on Chess.**
 | Check | Result |
 | --- | --- |
 | Perft cross-check | Our contract wrapper matches the published counts for six standard positions (to depth 2 or 3), and chess.js matches one ply deeper (`tests/unit/chess-rules.test.ts`) |
-| Ladder | Measured over 16 games a rung (seats alternate): L1 beats random 16–0 (earlier tuning), L2 beats random 0.97, L3 beats L2 0.72, L4 beats L3 0.91, L5 beats L4 0.81, L6 beats L5 0.72, L7 beats L6 0.81; L8 against L7 was still running at the time of writing (see the M2 section) |
+| Ladder | Measured over 16 games a rung (seats alternate): L2 beats random 0.97, L3 beats L2 0.72, L4 beats L3 0.91, L5 beats L4 0.81, L6 beats L5 0.72, L7 beats L6 0.81, L8 beats L7 0.875 (finished during M2); L1 and L2 against the final settings are in the M2 gate |
 | Scripted full game against level 1 in e2e | Yes, at 844×390, 1180×820 and 1440×900: Stockfish in Node plays the person's side to checkmate, then the game is reviewed move by move |
 | `npm run check` | Green: 136 unit tests, 6 property tests (chess random games keep the contract and replay), lint, types |
 | `npm run e2e` | Green: 78 tests (2 skipped on purpose: PGN runs once), including the M1 screenshots |
@@ -179,7 +289,8 @@ cache from matching (the service worker now ignores `Vary`).
   against the CPU plays, a game resumes after closing the app, Export opens the share sheet and
   Import reads the file back, and a later build installs over this one without losing games.
 - No fallback was needed: Capacitor worked, so the Trusted Web Activity route was not tried.
-- No blocked hosts mattered for M0. M2 needs `database.lichess.org` for chess problems.
+- No blocked hosts mattered for M0. M2 needed `database.lichess.org`; it was allowed through the
+  environment's approval card (see the M2 decisions).
 - Still open from the plan, and not blocking: which of these games Swag already plays.
 
 ## Versions (from `package-lock.json`, 2026-11-27)

@@ -42,7 +42,7 @@ export interface StoredRecord extends GameRecord {
   readonly profileId: string;
 }
 
-/** Lesson progress (filled from milestone 2). */
+/** Lesson progress: one row per finished (or skipped) lesson. */
 export interface LessonProgressRow {
   readonly profileId: string;
   readonly lessonId: string;
@@ -51,7 +51,7 @@ export interface LessonProgressRow {
   readonly data: Json;
 }
 
-/** One attempt at a practice problem (filled from milestone 2). */
+/** One attempt at a practice problem. Ratings are recomputed from these in order. */
 export interface ProblemAttemptRow {
   readonly id?: number;
   readonly profileId: string;
@@ -59,9 +59,13 @@ export interface ProblemAttemptRow {
   readonly problemId: string;
   readonly solved: boolean;
   readonly at: number;
+  /** The problem's difficulty rating at the time, when it is rated. */
+  readonly rating?: number;
+  /** False for retries, hinted tries and drills: they do not move the problem rating. */
+  readonly rated?: boolean;
 }
 
-/** A spaced-review card (filled from milestone 2). */
+/** A spaced-review card: a practice item with its FSRS schedule. */
 export interface ReviewCardRow {
   readonly id: string;
   readonly profileId: string;
@@ -70,7 +74,7 @@ export interface ReviewCardRow {
   readonly card: Json;
 }
 
-/** A rating per game and kind, such as play or problems (filled from milestone 2). */
+/** A rating per game and kind (play or problems), recomputed from games and attempts. */
 export interface RatingRow {
   readonly profileId: string;
   readonly gameId: string;
@@ -80,12 +84,21 @@ export interface RatingRow {
   readonly updatedAt: number;
 }
 
+/** A finished game's analysis, kept so a review opens at once the second time. */
+export interface AnalysisRow {
+  readonly recordId: string;
+  readonly profileId: string;
+  readonly gameId: string;
+  readonly createdAt: number;
+  readonly data: Json;
+}
+
 export interface DeviceRow {
   readonly key: string;
   readonly value: Json;
 }
 
-export const TABLES = ['profiles', 'settings', 'records', 'lessonProgress', 'problemAttempts', 'reviewCards', 'ratings', 'device'] as const;
+export const TABLES = ['profiles', 'settings', 'records', 'lessonProgress', 'problemAttempts', 'reviewCards', 'ratings', 'analyses', 'device'] as const;
 export type TableName = (typeof TABLES)[number];
 
 interface SchemaVersion {
@@ -108,6 +121,13 @@ const VERSIONS: readonly SchemaVersion[] = [
       device: 'key',
     },
   },
+  {
+    // Milestone 2: game analyses for review.
+    version: 2,
+    stores: {
+      analyses: 'recordId, profileId, [profileId+gameId]',
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = (VERSIONS[VERSIONS.length - 1] as SchemaVersion).version;
@@ -120,6 +140,7 @@ export class TabletopDb extends Dexie {
   problemAttempts!: EntityTable<ProblemAttemptRow, 'id'>;
   reviewCards!: EntityTable<ReviewCardRow, 'id'>;
   ratings!: Table<RatingRow, [string, string, string]>;
+  analyses!: EntityTable<AnalysisRow, 'recordId'>;
   device!: EntityTable<DeviceRow, 'key'>;
 
   constructor(name = 'tabletop') {

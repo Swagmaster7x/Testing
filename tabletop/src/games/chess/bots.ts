@@ -44,7 +44,7 @@ export const LEVEL_PARAMS: Record<number, LevelParams> = {
 /** Node budget for coach questions: strong enough to catch club-level blunders, quick on a phone. */
 const COACH_NODES = 40_000;
 
-function capturedBy(fen: string, uci: string): PieceType | null {
+export function capturedBy(fen: string, uci: string): PieceType | null {
   const board = chessAt(fen);
   try {
     const move = board.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' });
@@ -121,7 +121,7 @@ export function nullMoveFen(fen: string): string | null {
   }
 }
 
-function sanOf(fen: string, uci: string): string {
+export function sanOf(fen: string, uci: string): string {
   try {
     return chessAt(fen).move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] ?? 'q' }).san;
   } catch {
@@ -130,7 +130,7 @@ function sanOf(fen: string, uci: string): string {
 }
 
 /** Material swing over the first plies of a line, in pawns, for the side to move at the start. */
-function materialSwing(fen: string, pv: readonly string[], plies: number): number {
+export function materialSwing(fen: string, pv: readonly string[], plies: number): number {
   const board = chessAt(fen);
   const me = board.turn();
   let swing = 0;
@@ -195,6 +195,11 @@ function whiteScore(fen: string, result: SearchResult): number {
   if (!line) return 0;
   const v = scoreValue(line.score);
   return sideToMove(fen) === 'w' ? v : -v;
+}
+
+/** Node budgets asked for by the interface, kept within what a phone can search in a few seconds. */
+function clampNodes(value: Json | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(1_000_000, Math.max(1_000, Math.round(value))) : fallback;
 }
 
 async function advise(engine: Engine, view: ChessView, query: Json): Promise<Json> {
@@ -269,6 +274,22 @@ async function advise(engine: Engine, view: ChessView, query: Json): Promise<Jso
         mateIn: allowsMate && reply && 'mate' in reply.score ? reply.score.mate : null,
         reply: replyUci ? { uci: replyUci, san: sanOf(afterFen, replyUci) } : null,
         moved: moved.san,
+      };
+    }
+    case 'best': {
+      // The strongest move at a given size of search: free-play defence in lessons and drills.
+      const nodes = clampNodes(query.nodes, COACH_NODES);
+      const result = await engine.search({ fen, nodes, multiPv: 1 });
+      return { uci: result.bestmove, san: sanOf(fen, result.bestmove) };
+    }
+    case 'analyse': {
+      // Scores for the best few moves, from the side to move's point of view: game review.
+      const nodes = clampNodes(query.nodes, COACH_NODES);
+      const multiPv = typeof query.multiPv === 'number' ? Math.min(5, Math.max(1, Math.round(query.multiPv))) : 2;
+      const result = await engine.search({ fen, nodes, multiPv });
+      return {
+        best: result.bestmove,
+        lines: result.lines.map((l) => ({ uci: l.pv[0] ?? '', score: scoreValue(l.score), mate: 'mate' in l.score ? l.score.mate : null, pv: l.pv.slice(0, 8) })),
       };
     }
     default:

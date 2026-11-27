@@ -1,7 +1,7 @@
 # Third-party software
 
 Every dependency of Kibitz gets a line here (PLAN.md 2.1). Versions are the ones in
-`package-lock.json` on 2026-11-27, milestone 0. "Shipped" means it ends up inside the app or the
+`package-lock.json` on 2026-11-27 (milestones 0 to 2). "Shipped" means it ends up inside the app or the
 APK; the rest are only used to build and test it.
 
 ## Shipped in the app (web build and APK)
@@ -15,6 +15,7 @@ APK; the rest are only used to build and test it.
 | `@capacitor/filesystem` | 8.1.5 | MIT | APK only: writes the backup file before sharing it |
 | `@capacitor/share` | 8.0.3 | MIT | APK only: the share sheet for "Export" |
 | `chess.js` | 1.4.0 | BSD-2-Clause | Chess rules behind the game contract. Licence: `licenses/chess.js-BSD-2-Clause.txt` |
+| `ts-fsrs` | 6.0.1 | MIT | The spaced-review schedule (FSRS) for the review queue (milestone 2) |
 | Stockfish 19 (`stockfish`, lite single-threaded build) | 19.0.1 | GPL-3.0 | Chess engine for CPU levels and the coach. Only `stockfish-19-lite-single.js` and `.wasm` ship, as `engines/`. Licence: `licenses/Stockfish-GPL-3.0.txt`; source: github.com/nmrugg/stockfish.js and github.com/official-stockfish/Stockfish |
 | Inter (`@fontsource-variable/inter`) | 5.3.0 | SIL OFL 1.1 | Text font, Latin and Latin Extended. Licence: `licenses/Inter-OFL.txt` |
 | Fraunces (`@fontsource-variable/fraunces`) | 5.3.0 | SIL OFL 1.1 | Heading font, Latin and Latin Extended. Licence: `licenses/Fraunces-OFL.txt` |
@@ -45,6 +46,14 @@ APK; the rest are only used to build and test it.
 | `@types/react`, `@types/react-dom`, `@types/node` | 19.3.3, 19.3.0, 22.20.7 | MIT | Type definitions |
 | Android Gradle Plugin, Gradle | 8.13.0, 8.14.3 | Apache-2.0 | Builds the APK (from the Capacitor template) |
 
+## Data shipped in the app
+
+| Data | Licence | Use |
+| --- | --- | --- |
+| Lichess puzzle database (`lichess_db_puzzle.csv.zst` from database.lichess.org, file of 2026-11-11), 5,820 puzzles chosen on 2026-11-27 by `npm run import:puzzles` | CC0 1.0 (public domain dedication), as stated on the download page: "Database exports are released under the Creative Commons CC0 license" | Chess problems: tactics by theme, checkmates and endgames (`src/games/chess/practice/lichess-puzzles.json`). Every line was replayed through the rules on import. Attribution is not required, and is given anyway in the app and in `licenses/Lichess-puzzles-CC0.txt` |
+
+All chess lesson text and positions are original to this app.
+
 ## Art and sound
 
 All art is original and drawn as vectors for this app: the app icon (`assets/icon.svg`), the game
@@ -54,8 +63,8 @@ in the app with the Web Audio API; there are no sound files.
 
 ## Coming later
 
-The plan's later dependencies (`tsshogi`, the Sabaki Go packages, `ts-fsrs`, and the test
-oracles) are added in the milestones that need them, each with a line here.
+The plan's later dependencies (`tsshogi`, the Sabaki Go packages and the test oracles) are added
+in the milestones that need them, each with a line here.
 
 **Stockfish is GPL-3.** It runs as a separate worker file behind the `Engine` interface
 (`src/ai/uci.ts`). For a personal app that is fine. If this app is ever published, either publish

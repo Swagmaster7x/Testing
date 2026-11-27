@@ -4,8 +4,9 @@
  * Placeholders look like {name}. Counted phrases have ".one" and ".other" forms.
  */
 import brand from '../../brand.json';
+import { enLearn } from './en-learn';
 
-export const en = {
+const base = {
   'app.name': brand.name,
   'app.tagline': 'Learn and practise card, board and tile games.',
   'app.loading': 'Setting up the table…',
@@ -226,7 +227,7 @@ export const en = {
   'review.none': 'No finished games yet.',
   'review.none.short': 'No games yet',
   'review.vs': 'Against level {n}',
-  'review.key-moments': 'Key moments with reasons come with Chess in milestone 2. Here you can step through every move.',
+  'review.key-moments': 'This game has no analysis. You can step through every move.',
 
   'progress.title': 'Progress',
   'progress.intro': 'Skills and ratings for each game. Ratings move only on games played without coach helps.',
@@ -455,5 +456,7 @@ export const en = {
   'ref.noughts.term.fork': 'Fork: a move that makes two threats at once, so only one can be blocked.',
   'ref.noughts.term.block': 'Block: marking the square your opponent needs to finish a line.',
 } as const;
+
+export const en = { ...base, ...enLearn } as const;
 
 export type MessageKey = keyof typeof en;

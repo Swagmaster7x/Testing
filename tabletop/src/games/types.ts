@@ -8,6 +8,7 @@ import type { GameDef, GameEvent, Outcome, Seat } from '../core/contract';
 import type { QueueSnapshot } from '../core/events';
 import type { Json } from '../core/json';
 import type { GameRecord } from '../core/record';
+import type { GameAnalysis } from '../teach/analysis';
 import type { BoardArrow, BoardMark } from '../kits/board/GridBoard';
 import type { SoundName } from '../shell/sound';
 import type { MessageKey } from '../text';
@@ -99,6 +100,13 @@ export interface ClockChoice {
   readonly incrementMs: number;
 }
 
+/** Game review support: engine analysis of a finished game and "play on from here". */
+export interface GameReviewSupport<S, C> {
+  analyse(record: GameRecord, ask: AskCoach, onProgress: (done: number, total: number) => void, cancelled: () => boolean): Promise<GameAnalysis | null>;
+  /** The options for a new game that starts from this position. */
+  configAt(state: S): C;
+}
+
 export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly def: GameDef<S, A, C, V, E>;
   readonly levels: readonly BotLevel[];
@@ -128,6 +136,9 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   timeoutOutcome?(state: S, seat: Seat): Outcome;
   /** Export a record in the game's own file format (PGN for chess). */
   readonly exportRecord?: { readonly extension: string; readonly mime: string; write(record: GameRecord, names: readonly string[]): string };
+  readonly review?: GameReviewSupport<S, C>;
+  /** The squares a move goes from and to, for arrows on a board. */
+  moveSquares?(action: A): { from: string; to: string } | null;
   /** Import a game from its own file format into a record's config and actions. */
   readonly importRecord?: { readonly accept: string; read(text: string): { config: C; actions: readonly Json[]; outcome: Outcome | null; names: readonly string[] } };
 }

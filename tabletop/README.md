@@ -14,11 +14,12 @@ Run them from this folder with Node 22.
 | --- | --- |
 | `npm install` | Installs the exact versions in `package-lock.json` |
 | `npm run dev` | Dev server at http://localhost:5173 |
-| `npm run check` | Types, lint, unit tests, property tests, lesson lint |
-| `npm run e2e` | Builds, then runs the Playwright suite at 844×390, 1180×820 and 1440×900 and writes screenshots to `screenshots/m0/` |
+| `npm run check` | Types, lint, unit tests, property tests, lesson lint (engine-checked; searches are cached) |
+| `npm run e2e` | Builds, then runs the Playwright suite at 844×390, 1180×820 and 1440×900 and writes screenshots to `screenshots/m0/`, `m1/` and `m2/` |
 | `npm run ladder` | The slow bot ladders (`npm run ladder -- noughts 400` for one game) |
 | `npm run apk` | Builds the debug APK into `out/` |
 | `npm run icons` | Redraws the web and Android icons from `assets/icon.svg` |
+| `npm run import:puzzles` | Downloads the Lichess puzzle file (CC0) and picks the chess problems again (needs `database.lichess.org`) |
 
 `npm run e2e` uses the Chromium at `/opt/pw-browsers/chromium` when it exists (the cloud build
 environment); anywhere else run `npx playwright install chromium` once first. `npm run apk` needs

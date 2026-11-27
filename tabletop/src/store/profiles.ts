@@ -24,7 +24,7 @@ export async function renameProfile(db: TabletopDb, id: string, name: string): P
 
 /** Deletes a profile and every row it owns. The last profile cannot be deleted. */
 export async function deleteProfile(db: TabletopDb, id: string): Promise<void> {
-  await db.transaction('rw', [db.profiles, db.settings, db.records, db.lessonProgress, db.problemAttempts, db.reviewCards, db.ratings, db.device], async () => {
+  await db.transaction('rw', [db.profiles, db.settings, db.records, db.lessonProgress, db.problemAttempts, db.reviewCards, db.ratings, db.analyses, db.device], async () => {
     if ((await db.profiles.count()) <= 1) throw new Error('The last profile cannot be deleted');
     await db.profiles.delete(id);
     await db.settings.delete(id);
@@ -33,6 +33,7 @@ export async function deleteProfile(db: TabletopDb, id: string): Promise<void> {
     await db.problemAttempts.where('profileId').equals(id).delete();
     await db.reviewCards.where('profileId').equals(id).delete();
     await db.ratings.where('profileId').equals(id).delete();
+    await db.analyses.where('profileId').equals(id).delete();
     if ((await getActiveProfileId(db)) === id) {
       const next = await db.profiles.orderBy('createdAt').first();
       if (next) await setActiveProfileId(db, next.id);

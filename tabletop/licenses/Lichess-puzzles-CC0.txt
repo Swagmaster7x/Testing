@@ -1,0 +1,18 @@
+Lichess puzzle database
+=======================
+
+Source:   https://database.lichess.org/#puzzles  (file lichess_db_puzzle.csv.zst)
+Imported: 2026-11-27, 5,820 puzzles, by `npm run import:puzzles` (scripts/import-lichess-puzzles.ts)
+Stored:   src/games/chess/practice/lichess-puzzles.json
+
+Licence, as stated on the download page on 2026-11-27:
+
+  "Database exports are released under the Creative Commons CC0 license. Use them for research,
+  commercial purpose, publication, anything you like. You can download, modify and redistribute
+  them, without asking for permission."
+
+CC0 1.0 Universal is a public domain dedication:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+No attribution is required. Kibitz credits lichess.org anyway, on the Practice screen and here,
+with thanks to the Lichess project and the players whose games and votes made these puzzles.

@@ -77,13 +77,17 @@ function load(fen: string): Chess {
   return new Chess(fen);
 }
 
+/** The draw rules, as numbers the lessons can quote. */
+export const FIFTY_MOVE_RULE = 50;
+export const REPETITIONS_FOR_DRAW = 3;
+
 function judge(chess: Chess, keys: readonly string[]): ChessResult | null {
   if (chess.isCheckmate()) return { kind: 'checkmate', winner: seatOf(chess.turn() === 'w' ? 'b' : 'w') };
   if (chess.isStalemate()) return { kind: 'stalemate' };
   if (chess.isInsufficientMaterial()) return { kind: 'insufficient' };
   const key = keys[keys.length - 1];
-  if (key !== undefined && keys.filter((k) => k === key).length >= 3) return { kind: 'threefold' };
-  if (Number(chess.fen().split(' ')[4]) >= 100) return { kind: 'fifty-move' };
+  if (key !== undefined && keys.filter((k) => k === key).length >= REPETITIONS_FOR_DRAW) return { kind: 'threefold' };
+  if (Number(chess.fen().split(' ')[4]) >= FIFTY_MOVE_RULE * 2) return { kind: 'fifty-move' };
   return null;
 }
 

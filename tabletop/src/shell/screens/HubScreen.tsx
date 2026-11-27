@@ -5,10 +5,17 @@
 import { useState } from 'react';
 import type { CatalogGame } from '../../games/catalog';
 import { catalogGame } from '../../games/catalog';
+import { hasLessons, loadLessons } from '../../games/lessons';
+import { hasPractice } from '../../games/practice';
 import { loadGameUi } from '../../games/registry';
 import type { AnyGameUi } from '../../games/types';
 import { appDb } from '../../store/db';
 import type { StoredRecord } from '../../store/db';
+import { attemptsFor, cardsFor, lessonProgress } from '../../store/learning';
+import { problemRating } from '../../teach/progress';
+import type { RatingState } from '../../teach/rating';
+import { SETTLED_AFTER } from '../../teach/rating';
+import { playRatingFor, suggestedLevel } from '../ratings';
 import { activeRecord, finishedRecords } from '../../store/records';
 import { gameName, t, tCount, tDynamic } from '../../text';
 import { GameGlyph } from '../components/GameGlyph';
@@ -48,14 +55,15 @@ function Door({ icon, title, blurb, foot, footStrong = false, onOpen }: DoorProp
   );
 }
 
-function PlayDialog({ ui, profileId, active, seed, setup, now, onClose }: { ui: AnyGameUi; profileId: string; active: StoredRecord | undefined; seed: string | undefined; setup: unknown; now: number; onClose: () => void }) {
+function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }: { ui: AnyGameUi; profileId: string; active: StoredRecord | undefined; seed: string | undefined; setup: unknown; now: number; rating: RatingState; onClose: () => void }) {
+  const suggested = suggestedLevel(ui, rating);
   const remembered = useApp((s) => s.settings?.levels[ui.def.id]);
   const rememberedClock = useApp((s) => s.settings?.clocks[ui.def.id]);
   const updateSettings = useApp((s) => s.updateSettings);
   const levels = useApp((s) => s.settings?.levels ?? {});
   const clockChoices = useApp((s) => s.settings?.clocks ?? {});
   const clocks = ui.clocks ?? [];
-  const [level, setLevel] = useState<number>(remembered ?? ui.levels[0]?.level ?? 1);
+  const [level, setLevel] = useState<number>(remembered ?? suggested);
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
   const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
@@ -102,6 +110,18 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, onClose }: { ui: 
             <span className="eyebrow">{t('play.level')}</span>
             <Segmented<number> label={t('play.level')} options={ui.levels.map((l) => ({ value: l.level, label: String(l.level) }))} value={level} onChange={setLevel} />
             <p className="level-blurb">{ui.levelBlurb(level)}</p>
+            <p className="level-blurb faint num">
+              {t('play.suggested', { n: suggested, rating: rating.rating })}
+              {rating.count < SETTLED_AFTER ? ` (${t('rating.provisional')})` : ''}
+              {level !== suggested ? (
+                <>
+                  {' '}
+                  <button type="button" className="link-button inline" onClick={() => setLevel(suggested)}>
+                    {t('play.use-suggested')}
+                  </button>
+                </>
+              ) : null}
+            </p>
           </div>
           <div className="setup-row">
             <span className="eyebrow">{t('play.side')}</span>
@@ -188,16 +208,51 @@ function PlayableDoors({ game, seed, setup }: { game: CatalogGame; seed: string 
   const profileId = useApp((s) => s.profile?.id ?? '');
   const [open, setOpen] = useState<'play' | 'review' | null>(null);
   const data = useAsync(async () => {
-    const [ui, active, finished] = await Promise.all([loadGameUi(game.id), activeRecord(appDb(), profileId, game.id), finishedRecords(appDb(), profileId, game.id)]);
-    return { ui, active, finished, now: Date.now() };
+    const [ui, active, finished, pack, done, attempts, cards] = await Promise.all([
+      loadGameUi(game.id),
+      activeRecord(appDb(), profileId, game.id),
+      finishedRecords(appDb(), profileId, game.id),
+      hasLessons(game.id) ? loadLessons(game.id) : Promise.resolve(null),
+      lessonProgress(appDb(), profileId, game.id),
+      attemptsFor(appDb(), profileId, game.id),
+      cardsFor(appDb(), profileId, game.id),
+    ]);
+    const rating = await playRatingFor(ui, profileId);
+    return { ui, active, finished, pack, done, attempts, cards, rating, now: Date.now() };
   }, `${game.id}:${profileId}:${open ?? ''}`);
   if (data.status !== 'done') return <div className="doors" aria-busy="true" />;
-  const { ui, active, finished, now } = data.value;
+  const { ui, active, finished, pack, done, attempts, cards, rating, now } = data.value;
+  const due = cards.filter((c) => c.schedule.due <= now).length;
+  const lessons = pack?.lessons ?? [];
+  const lessonsDone = lessons.filter((l) => done.has(l.id)).length;
+  const nextLesson = lessons.find((l) => !done.has(l.id));
   return (
     <>
       <div className="doors">
-        <Door icon="learn" title={t('door.learn')} blurb={t('door.none')} />
-        <Door icon="practice" title={t('door.practice')} blurb={t('door.none')} />
+        {pack ? (
+          <Door
+            icon="learn"
+            title={t('door.learn')}
+            blurb={nextLesson ? t('door.learn.next', { title: nextLesson.title }) : t('learn.all-done')}
+            foot={t('door.learn.count', { done: lessonsDone, total: lessons.length })}
+            footStrong={lessonsDone > 0}
+            onOpen={() => navigate(`/games/${game.id}/learn`)}
+          />
+        ) : (
+          <Door icon="learn" title={t('door.learn')} blurb={t('door.none')} />
+        )}
+        {hasPractice(game.id) ? (
+          <Door
+            icon="practice"
+            title={t('door.practice')}
+            blurb={t('door.practice.blurb')}
+            foot={due > 0 ? t('door.practice.due', { n: due }) : t('door.practice.rating', { rating: problemRating(attempts).rating })}
+            footStrong={due > 0}
+            onOpen={() => navigate(`/games/${game.id}/practice`)}
+          />
+        ) : (
+          <Door icon="practice" title={t('door.practice')} blurb={t('door.none')} />
+        )}
         <Door
           icon="play"
           title={t('door.play')}
@@ -206,10 +261,10 @@ function PlayableDoors({ game, seed, setup }: { game: CatalogGame; seed: string 
           footStrong
           onOpen={() => setOpen('play')}
         />
-        <Door icon="review" title={t('door.review')} blurb={t('review.key-moments')} foot={finished.length > 0 ? tCount('count.finished', finished.length) : t('review.none.short')} footStrong={finished.length > 0} onOpen={() => setOpen('review')} />
+        <Door icon="review" title={t('door.review')} blurb={ui.review ? t('door.review.blurb') : t('review.key-moments')} foot={finished.length > 0 ? tCount('count.finished', finished.length) : t('review.none.short')} footStrong={finished.length > 0} onOpen={() => setOpen('review')} />
       </div>
       {open === 'play' ? (
-        <PlayDialog ui={ui} profileId={profileId} active={active} seed={seed} setup={Object.keys(setup).length > 0 ? ui.def.codec.config.fromJSON(setup) : undefined} now={now} onClose={() => setOpen(null)} />
+        <PlayDialog ui={ui} profileId={profileId} active={active} seed={seed} setup={Object.keys(setup).length > 0 ? ui.def.codec.config.fromJSON(setup) : undefined} now={now} rating={rating} onClose={() => setOpen(null)} />
       ) : null}
       {open === 'review' ? <ReviewDialog ui={ui} profileId={profileId} finished={finished} onClose={() => setOpen(null)} /> : null}
     </>

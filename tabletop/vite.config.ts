@@ -38,6 +38,9 @@ export default defineConfig({
     target: 'es2022',
     sourcemap: false,
     assetsInlineLimit: 0,
+    // Everything is precached for offline use. The largest chunk is the Lichess puzzle set
+    // (about 800 kB), which loads only when Practice opens.
+    chunkSizeWarningLimit: 900,
   },
   worker: {
     format: 'es',

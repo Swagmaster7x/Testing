@@ -10,6 +10,7 @@ import type { ChessAction, ChessConfig, ChessEvent, ChessState, ChessView, Piece
 import { chess, chessAt, material, uciOf } from '../rules';
 import { ChessCoachPanel } from './CoachPanel';
 import { ChessSeatMark, ChessSurface } from './ChessSurface';
+import { analyseChessGame } from '../review';
 
 const ORDER: readonly Exclude<PieceType, 'k'>[] = ['q', 'r', 'b', 'n', 'p'];
 
@@ -157,5 +158,7 @@ export const chessUi: GameUi<ChessState, ChessAction, ChessConfig, ChessView, Ch
     return { reason: 'timeout', results: [{ seat: other, place: 1, score: 1 }, { seat, place: 2, score: 0 }] };
   },
   exportRecord: { extension: 'pgn', mime: 'application/x-chess-pgn', write: writePgn },
+  review: { analyse: analyseChessGame, configAt: (state) => ({ fen: state.fen }) },
+  moveSquares: (action) => ({ from: action.from, to: action.to }),
   importRecord: { accept: '.pgn,application/x-chess-pgn,application/vnd.chess-pgn,text/plain', read: readPgn },
 };

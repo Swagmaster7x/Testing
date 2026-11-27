@@ -8,6 +8,11 @@ import { useRoute } from './router';
 import { CenterMessage, Screen } from './screens/common';
 import { GamesScreen } from './screens/GamesScreen';
 import { HubScreen } from './screens/HubScreen';
+import { LearnScreen } from './screens/LearnScreen';
+import { PracticeScreen } from './screens/PracticeScreen';
+import { DrillScreen } from './practice/DrillScreen';
+import { ProblemScreen } from './practice/ProblemScreen';
+import { LessonScreen } from './learn/LessonScreen';
 import { ProgressScreen } from './screens/ProgressScreen';
 import { ReferenceScreen } from './screens/ReferenceScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
@@ -60,6 +65,26 @@ export function App() {
       </div>
     );
   }
+  if (first === 'learn' && second) {
+    return (
+      <div className="app-full">
+        <LessonScreen key={second} lessonId={second} />
+        <Toast />
+      </div>
+    );
+  }
+  if (first === 'practice' && second && third) {
+    return (
+      <div className="app-full">
+        {third.startsWith('drill-') ? (
+          <DrillScreen key={`${second}/${third}`} gameId={second} drillId={third} seed={route.query.get('seed')} />
+        ) : (
+          <ProblemScreen key={`${second}/${third}/${route.query.get('theme') ?? ''}/${route.query.get('id') ?? ''}`} gameId={second} setId={third} theme={route.query.get('theme')} problemId={route.query.get('id')} />
+        )}
+        <Toast />
+      </div>
+    );
+  }
   if (first === 'review' && second) {
     const ply = third !== undefined && /^\d+$/.test(third) ? Number(third) : null;
     return (
@@ -78,6 +103,8 @@ export function App() {
       break;
     case 'games':
       if (second && third === 'reference') screen = <ReferenceScreen gameId={second} />;
+      else if (second && third === 'learn') screen = <LearnScreen gameId={second} />;
+      else if (second && third === 'practice') screen = <PracticeScreen gameId={second} />;
       else if (second && !third) {
         const fen = route.query.get('fen');
         screen = <HubScreen gameId={second} seed={route.query.get('seed') ?? undefined} setup={fen ? { fen } : {}} />;
