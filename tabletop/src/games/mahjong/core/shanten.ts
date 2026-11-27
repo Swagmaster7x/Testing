@@ -226,6 +226,65 @@ export function discardChoices(counts: readonly number[], melds: number, rules: 
   return out.sort((a, b) => a.shanten - b.shanten || b.count - a.count || a.kind - b.kind);
 }
 
+/** One reading of a hand for n sets and a pair: what the shanten number counts. */
+export interface Reading {
+  /** Complete sets: chows by their lowest kind, pungs by their kind. */
+  readonly sets: readonly { readonly type: 'chow' | 'pung'; readonly kind: Kind }[];
+  /** Partial sets: two tiles of a run, or a pair waiting for a third. */
+  readonly partials: readonly (readonly [Kind, Kind])[];
+  readonly pair: Kind | null;
+  /** Tiles that belong to nothing yet. */
+  readonly loose: readonly Kind[];
+  readonly shanten: number;
+}
+
+/**
+ * The best reading of the concealed part for `need` sets and a pair, found by a plain search over
+ * every way to group the tiles. Slower than `shantenStandard`; used to explain a hand, and in the
+ * tests as a second implementation.
+ */
+export function bestReading(counts: readonly number[], need: number): Reading {
+  const c = [...counts];
+  let best: Reading | null = null;
+  const sets: { type: 'chow' | 'pung'; kind: Kind }[] = [];
+  const partials: [Kind, Kind][] = [];
+  const loose: Kind[] = [];
+  let pair: Kind | null = null;
+  const value = () => 2 * need - 2 * sets.length - Math.min(partials.length, need - sets.length) - (pair === null ? 0 : 1);
+  const dfs = (k: number): void => {
+    while (k < PLAYING_KINDS && (c[k] ?? 0) === 0) k++;
+    if (k === PLAYING_KINDS) {
+      if (sets.length > need) return;
+      const v = value();
+      if (!best || v < best.shanten) best = { sets: [...sets], partials: partials.map((p) => [...p] as [Kind, Kind]), pair, loose: [...loose], shanten: v };
+      return;
+    }
+    const suited = k < SUIT_KINDS;
+    const r = suited ? k % 9 : -1;
+    const n = c[k] ?? 0;
+    const tryWith = (take: readonly Kind[], apply: () => void, undo: () => void) => {
+      if (take.some((x) => (c[x] ?? 0) <= 0)) return;
+      const used = new Map<Kind, number>();
+      for (const x of take) used.set(x, (used.get(x) ?? 0) + 1);
+      for (const [x, m] of used) if ((c[x] ?? 0) < m) return;
+      for (const x of take) c[x] = (c[x] ?? 0) - 1;
+      apply();
+      dfs(k);
+      undo();
+      for (const x of take) c[x] = (c[x] ?? 0) + 1;
+    };
+    if (n >= 3) tryWith([k, k, k], () => sets.push({ type: 'pung', kind: k }), () => sets.pop());
+    if (suited && r <= 6) tryWith([k, k + 1, k + 2], () => sets.push({ type: 'chow', kind: k }), () => sets.pop());
+    if (n >= 2 && pair === null) tryWith([k, k], () => (pair = k), () => (pair = null));
+    if (n >= 2) tryWith([k, k], () => partials.push([k, k]), () => partials.pop());
+    if (suited && r <= 7) tryWith([k, k + 1], () => partials.push([k, k + 1]), () => partials.pop());
+    if (suited && r <= 6) tryWith([k, k + 2], () => partials.push([k, k + 2]), () => partials.pop());
+    tryWith([k], () => loose.push(k), () => loose.pop());
+  };
+  dfs(0);
+  return best ?? { sets: [], partials: [], pair: null, loose: [], shanten: 2 * need };
+}
+
 /** Copies of each kind not seen by a player: four less those in `seen`. */
 export function unseenCounts(seen: readonly number[]): number[] {
   const out = new Array<number>(PLAYING_KINDS).fill(0);
