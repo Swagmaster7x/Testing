@@ -92,6 +92,10 @@ describe('results by name', () => {
     const nameOf = (seat: number) => ['Ana', 'Ben', 'Cy'][seat] ?? '?';
     const won = { players: people, outcome: { reason: 'x', results: [{ seat: 0, place: 2, score: 0 }, { seat: 1, place: 1, score: 1 }] } };
     expect(peopleResult(won, nameOf)).toBe('Ben wins');
+    // One-seat teams (a two-player game that also plays in pairs) still name one winner.
+    expect(peopleResult({ ...won, outcome: { ...won.outcome, teams: [[0], [1]] } }, nameOf)).toBe('Ben wins');
+    const pairs = { players: people, outcome: { reason: 'x', teams: [[0, 2], [1]], results: [{ seat: 0, place: 1, score: 1 }, { seat: 1, place: 2, score: 0 }, { seat: 2, place: 1, score: 1 }] } };
+    expect(peopleResult(pairs, nameOf)).toBe('Ana and Cy win');
     const three = { outcome: { reason: 'cc-home', results: [{ seat: 0, place: 2, score: 0 }, { seat: 1, place: 1, score: 1 }, { seat: 2, place: 3, score: 0 }] } };
     expect(placesLine(three, nameOf)).toBe('1. Ben · 2. Ana · 3. Cy');
     const shared = { players: people, outcome: { reason: 'x', results: [{ seat: 0, place: 1, score: 0 }, { seat: 1, place: 1, score: 0 }, { seat: 2, place: 3, score: 0 }] } };

@@ -17,7 +17,9 @@ import { ProgressScreen } from './screens/ProgressScreen';
 import { ReferenceScreen } from './screens/ReferenceScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TodayScreen } from './screens/TodayScreen';
-import { ToolsScreen } from './screens/ToolsScreen';
+import { BlindTimerScreen } from './tools/BlindTimerScreen';
+import { PadScreen } from './tools/PadScreen';
+import { ToolsScreen } from './tools/ToolsScreen';
 import { useApp } from './state';
 import { ReviewScreen } from './table/ReviewScreen';
 import { TableScreen } from './table/TableScreen';
@@ -121,7 +123,10 @@ export function App() {
       screen = <ProgressScreen />;
       break;
     case 'tools':
-      screen = <ToolsScreen />;
+      if (second === 'pad' && third) screen = <PadScreen key={third} padId={third} />;
+      else if (second === 'timer') screen = <BlindTimerScreen />;
+      else if (!second) screen = <ToolsScreen />;
+      else screen = <NotFound />;
       break;
     case 'settings':
       screen = <SettingsScreen />;

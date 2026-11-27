@@ -1,7 +1,7 @@
 {
   "name": "tabletop",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Kibitz: learn and practise card, board and tile games. Offline web app packaged as an Android APK.",
   "type": "module",
   "engines": {

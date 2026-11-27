@@ -1,7 +1,8 @@
 /*
  * Design tokens: a quiet club room (PLAN.md 1.5). Dark warm neutrals, green felt, walnut boards,
- * ivory cards and tiles, one brass accent. A light "daylight" look arrives with the polish
- * milestone as another [data-look] block that redefines these same names.
+ * ivory cards and tiles, one brass accent. The light "daylight" look (milestone 16) is the
+ * [data-look='daylight'] block below, which redefines the same names: paper for the room, ink for
+ * the text; the felt, the wood, the cards and the tiles stay as they are.
  */
 :root,
 :root[data-look='club'] {
@@ -99,6 +100,77 @@
 
   --nav-w: 76px;
   --rail-w: 236px;
+}
+
+:root[data-look='daylight'] {
+  color-scheme: light;
+
+  /* Paper, lightest first (the names stay those of the dark scale they replace) */
+  --ink-950: #fffcf6;
+  --ink-900: #f7f1e6;
+  --ink-850: #f1e9da;
+  --ink-800: #ebe1cf;
+  --ink-750: #e3d7c1;
+  --ink-700: #d8caaf;
+  --ink-600: #c3b294;
+  --ink-500: #a5937a;
+
+  --text-1: #241c13;
+  --text-2: #4d4132;
+  --text-3: #75685a;
+
+  --brass-1: #7a5519;
+  --brass-2: #94692a;
+  --brass-3: #b58e52;
+  --brass-wash: rgb(148 105 42 / 0.12);
+
+  --good: #4b7537;
+  --warn: #9a5d16;
+  --bad: #a64a33;
+
+  --line-1: rgb(36 28 19 / 0.09);
+  --line-2: rgb(36 28 19 / 0.17);
+  --surface-1: #f1e9da;
+  --surface-2: #ebe1cf;
+  --surface-3: #e3d7c1;
+  --scrim: rgb(40 30 18 / 0.42);
+  --shadow-1: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 1px 2px rgb(60 40 20 / 0.16);
+  --shadow-2: 0 10px 30px rgb(60 40 20 / 0.22), 0 2px 6px rgb(60 40 20 / 0.14);
+}
+
+/*
+ * In daylight the tables keep the club room: the felt, the dark wood, light text and the brass, so
+ * everything drawn on the felt stays readable. The same values as the club block above.
+ */
+:root[data-look='daylight'] :is(.table-body, .study-body, .pass-cover, .timer-face) {
+  color-scheme: dark;
+  color: #efe6d6;
+  --ink-950: #0e0c09;
+  --ink-900: #15120e;
+  --ink-850: #1a1611;
+  --ink-800: #201b15;
+  --ink-750: #26201a;
+  --ink-700: #2e271f;
+  --ink-600: #3b3228;
+  --ink-500: #54493c;
+  --text-1: #efe6d6;
+  --text-2: #c7bba7;
+  --text-3: #978b78;
+  --brass-1: #e2c27f;
+  --brass-2: #c9a25a;
+  --brass-3: #8f7140;
+  --brass-wash: rgb(201 162 90 / 0.14);
+  --good: #9cba84;
+  --warn: #d9a45b;
+  --bad: #d4836a;
+  --line-1: rgb(239 230 214 / 0.07);
+  --line-2: rgb(239 230 214 / 0.13);
+  --surface-1: #1a1611;
+  --surface-2: #201b15;
+  --surface-3: #26201a;
+  --scrim: rgb(8 6 4 / 0.62);
+  --shadow-1: 0 1px 0 rgb(255 240 210 / 0.035) inset, 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-2: 0 10px 30px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.35);
 }
 
 :root[data-motion='reduced'] {

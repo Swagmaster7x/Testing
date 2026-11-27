@@ -639,12 +639,21 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+  width: 100%;
   min-height: 52px;
-  padding: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.look-option + .look-option {
-  border-top: 1px solid var(--line-1);
+.look-option[aria-checked='true'] {
+  border-color: var(--brass-3);
+  background: var(--brass-wash);
 }
 
 .swatch {
@@ -662,7 +671,6 @@
   background:
     radial-gradient(circle at 72% 50%, #b68a3f 0 4px, transparent 4.5px),
     linear-gradient(90deg, #d9c19c 0 34%, #f4efe4 34% 100%);
-  opacity: 0.5;
 }
 
 .third-party {

@@ -11,7 +11,10 @@ import { Segmented } from '../components/Segmented';
 import { shortDate } from '../format';
 import { pickTextFile, saveTextFile } from '../platform';
 import { href } from '../router';
+import type { LookSetting } from '../../store/db';
 import { useApp } from '../state';
+import { resetTour } from '../components/TourCard';
+import { navigate } from '../router';
 import { SHIPPED } from '../third-party';
 import { Screen } from './common';
 
@@ -187,28 +190,34 @@ function TableCard() {
 }
 
 function LookCard() {
+  const look = useApp((s) => s.settings?.look ?? 'club');
+  const { updateSettings } = useApp.getState();
+  const option = (value: LookSetting, swatch: string) => (
+    <button type="button" className="look-option" role="radio" aria-checked={look === value} onClick={() => void updateSettings({ look: value })}>
+      <span className={`swatch ${swatch}`} aria-hidden="true" />
+      <span className="stack" style={{ gap: 0, flex: 1 }}>
+        <span className="setting-label">{t(value === 'club' ? 'settings.look.club' : 'settings.look.daylight')}</span>
+        <span className="setting-detail">{t(value === 'club' ? 'settings.look.club.detail' : 'settings.look.daylight.detail')}</span>
+      </span>
+      {look === value ? (
+        <span className="status">
+          <Icon name="check" size={16} />
+        </span>
+      ) : null}
+    </button>
+  );
   return (
     <section className="card" aria-labelledby="look-title">
       <div className="card-title">
         <h2 id="look-title">{t('settings.look')}</h2>
       </div>
-      <div className="look-option">
-        <span className="swatch" aria-hidden="true" />
-        <span className="stack" style={{ gap: 0, flex: 1 }}>
-          <span className="setting-label">{t('settings.look.club')}</span>
-          <span className="setting-detail">{t('settings.look.club.detail')}</span>
-        </span>
-        <span className="status">
-          <Icon name="check" size={16} />
-        </span>
+      <div role="radiogroup" aria-labelledby="look-title" className="stack" style={{ gap: 'var(--sp-2)' }}>
+        {option('club', '')}
+        {option('daylight', 'swatch-daylight')}
       </div>
-      <div className="look-option" aria-disabled="true">
-        <span className="swatch swatch-daylight" aria-hidden="true" />
-        <span className="stack" style={{ gap: 0, flex: 1 }}>
-          <span className="setting-label faint">{t('settings.look.daylight')}</span>
-          <span className="setting-detail">{t('settings.look.daylight.detail')}</span>
-        </span>
-      </div>
+      <button type="button" className="btn btn-small" style={{ marginTop: 'var(--sp-3)' }} onClick={() => void resetTour().then(() => navigate('/today'))}>
+        {t('settings.tour')}
+      </button>
     </section>
   );
 }

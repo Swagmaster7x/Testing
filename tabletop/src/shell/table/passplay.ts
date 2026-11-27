@@ -79,7 +79,8 @@ export function peopleResult(record: Pick<GameRecord, 'players' | 'outcome'>, na
   const outcome = record.outcome;
   if (!outcome) return t('result.unfinished');
   const teams = outcome.teams;
-  if (teams && teams.length > 1) {
+  // Partnerships only: a list of one-seat teams (two players) names a single winner.
+  if (teams && teams.length > 1 && teams.some((team) => team.length > 1)) {
     const best = Math.min(...outcome.results.map((r) => r.place));
     const winners = teams.filter((team) => team.some((s) => outcome.results.find((r) => r.seat === s)?.place === best));
     if (winners.length !== 1) return t('result.draw');
@@ -94,7 +95,7 @@ export function peopleResult(record: Pick<GameRecord, 'players' | 'outcome'>, na
 /** Everyone's place in a game of more than two, in order: "1 Ana · 2 CPU (Blue) · 3 Ben". */
 export function placesLine(record: Pick<GameRecord, 'outcome'>, nameOf: (seat: Seat) => string): string | null {
   const outcome = record.outcome;
-  if (!outcome || outcome.results.length <= 2 || (outcome.teams && outcome.teams.length > 1)) return null;
+  if (!outcome || outcome.results.length <= 2 || (outcome.teams && outcome.teams.some((team) => team.length > 1))) return null;
   return [...outcome.results]
     .sort((a, b) => a.place - b.place || a.seat - b.seat)
     .map((r) => t('result.place-line', { place: r.place, name: nameOf(r.seat) }))

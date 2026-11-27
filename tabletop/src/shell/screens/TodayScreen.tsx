@@ -3,6 +3,7 @@ import { catalogGame, nextUp } from '../../games/catalog';
 import { loadGameUi } from '../../games/registry';
 import { gameName, t } from '../../text';
 import { Icon } from '../components/Icon';
+import { TourCard } from '../components/TourCard';
 import { longDate } from '../format';
 import type { GameProgress } from '../progress-data';
 import { gameProgress } from '../progress-data';
@@ -104,6 +105,7 @@ export function TodayScreen() {
         <h1>{t('today.title')}</h1>
         <p className="num">{longDate(new Date())}</p>
       </header>
+      <TourCard />
       <div className="grid-2 today-grid">
         <section className="card" aria-labelledby="today-session">
           <div className="card-title">

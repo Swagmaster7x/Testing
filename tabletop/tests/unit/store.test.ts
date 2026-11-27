@@ -6,7 +6,9 @@ import { BackupError, backupFileName, exportBackup, importBackup, parseBackup, s
 import { SCHEMA_VERSION, TABLES, TabletopDb } from '../../src/store/db';
 import { createProfile, deleteProfile, ensureProfile, getActiveProfileId, listProfiles, renameProfile, setActiveProfileId } from '../../src/store/profiles';
 import { activeRecord, finishedRecords, getRecord, saveRecord } from '../../src/store/records';
+import { deletePad, getPad, listPads, savePad } from '../../src/store/pads';
 import { defaultSettings, getSettings, MAX_FOCUS, saveSettings, toggleFocus } from '../../src/store/settings';
+import { addEntry, newPad } from '../../src/tools/scorepad';
 
 let counter = 0;
 const opened: TabletopDb[] = [];
@@ -157,3 +159,27 @@ describe('backup', () => {
     expect(backupFileName('Kibitz', new Date('2026-11-27T23:00:00Z'))).toBe('kibitz-backup-2026-11-27.json');
   });
 });
+
+describe('scorepads', () => {
+  it('saves pads per profile, lists the latest first, carries them in a backup, and deletes them with the profile', async () => {
+    const db = freshDb();
+    const { profile } = await ensureProfile(db, 'Ana', 1);
+    const other = await createProfile(db, 'Ben', 2);
+    const a = addEntry(newPad('dominoes', 'pad-a', 10), { type: 'score', side: 0, points: 40 }, 11);
+    await savePad(db, profile.id, a);
+    await savePad(db, profile.id, newPad('brisca', 'pad-b', 20));
+    await savePad(db, other.id, newPad('tally', 'pad-c', 30));
+    expect((await listPads(db, profile.id)).map((p) => p.id)).toEqual(['pad-b', 'pad-a']);
+    expect(await getPad(db, other.id, 'pad-a')).toBeNull();
+    expect(await getPad(db, profile.id, 'pad-a')).toEqual(a);
+    const file = await exportBackup(db, { name: 'Kibitz', version: 'test' }, new Date(0));
+    expect(file.tables.pads).toHaveLength(3);
+    const copy = freshDb();
+    await importBackup(copy, parseBackup(JSON.stringify(file)));
+    expect(await getPad(copy, profile.id, 'pad-a')).toEqual(a);
+    await deletePad(db, profile.id, 'pad-b');
+    await deleteProfile(db, other.id);
+    expect((await db.pads.toArray()).map((p) => p.id)).toEqual(['pad-a']);
+  });
+});
+

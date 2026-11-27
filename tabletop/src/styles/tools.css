@@ -1,0 +1,214 @@
+/* Tools: scorepads and the blind timer (milestone 16). */
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+}
+
+.tool-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0;
+}
+
+.pad-list {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.pad-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.pad-list a {
+  display: grid;
+  gap: 2px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.pad-list a span {
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pad-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.pad-total {
+  display: grid;
+  justify-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--line-1);
+}
+
+.pad-total[data-leader='true'] {
+  border-color: var(--brass-3);
+}
+
+.pad-total[data-winner='true'] {
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 2px var(--brass-3);
+}
+
+.pad-name {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.pad-score {
+  font-size: clamp(28px, 6vw, 44px);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.pad-winner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.pad-form,
+.pad-settings {
+  margin-bottom: var(--sp-3);
+}
+
+.pad-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-2);
+}
+
+.pad-field {
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1 1 140px;
+  max-width: 260px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.pad-field-small {
+  min-width: 90px;
+  flex-basis: 90px;
+}
+
+.pad-settings summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: var(--sp-2);
+}
+
+.pad-settings .pad-field {
+  margin-bottom: var(--sp-2);
+}
+
+.pad-history {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-5);
+  display: grid;
+  gap: 2px;
+  color: var(--text-2);
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.form-error {
+  color: var(--danger, #e07a6a);
+  margin: var(--sp-2) 0 0;
+}
+
+.timer-face {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border-radius: var(--r-lg);
+  background: radial-gradient(ellipse at center, #22533f 0%, #163a2c 70%);
+  text-align: center;
+}
+
+.timer-face p {
+  margin: 0;
+}
+
+.timer-level {
+  color: var(--text-2);
+  font-size: var(--fs-md);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.timer-blinds {
+  font-size: clamp(28px, 7vw, 56px);
+  font-weight: 700;
+}
+
+.timer-clock {
+  font-size: clamp(48px, 14vw, 120px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-clock[data-low='true'] {
+  color: var(--brass-2, #e7c27a);
+}
+
+.timer-schedule {
+  margin: var(--sp-3) 0 0;
+  padding-left: var(--sp-5);
+  columns: 2;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.timer-schedule li[data-now='true'] {
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+/* The first-run tour, at the top of Today. */
+.tour-card {
+  margin-bottom: var(--sp-3);
+  border-color: var(--brass-3);
+  max-width: 720px;
+}
+
+.tour-card h2 {
+  margin: var(--sp-1) 0;
+}
+
+.tour-card p {
+  margin: 0 0 var(--sp-2);
+}

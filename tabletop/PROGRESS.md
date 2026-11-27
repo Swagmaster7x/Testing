@@ -1,6 +1,6 @@
 # Kibitz progress
 
-Last updated 2026-11-27, at the end of milestones 5 and 7. The plan is `PLAN.md`; this file says what
+Last updated 2026-11-27, with milestones 9 and 10 merged and milestone 12 under way. The plan is `PLAN.md`; this file says what
 has been built, what was decided along the way, and what is still open.
 
 **Swag's instruction after M0 (2026-11-27): "I trust you, build it all."** So the build carries
@@ -18,17 +18,17 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [x] **M6. Go** (2026-11-27, built alongside M4 and merged after M8)
 - [x] **M7. Chinese Checkers**, and pass-and-play for every game (2026-11-27, built alongside M5 and merged after it)
 - [x] **M8. Shogi** (2026-11-27, built alongside M4 and merged after it)
-- [ ] M9. Mahjong I: the shared engine, and Hong Kong style to play
-- [ ] M10. Mahjong II: teach it (all eight launch games complete here)
-- [ ] M11. Mahjong III: Riichi
-- [ ] M12. Card variants A
+- [x] **M9. Mahjong I**: the shared engine, and Hong Kong style to play (2026-11-27, built in its own checkout)
+- [x] **M10. Mahjong II: teach it** (2026-11-27). **All eight launch games are complete here.**
+- [ ] M11. Mahjong III: Riichi (being built in its own checkout)
+- [ ] M12. Card variants A: Omaha, Five-Card Draw and Seven-Card Stud done; Brisca for four with señas done; Tute being built in its own checkout
 - [ ] M13. Classic card pack
 - [ ] M14. More tile styles (one style per sitting)
 - [ ] M15. Stronger engines
-- [ ] M16. Table tools, polish, release
+- [ ] M16. Table tools, polish, release: scorepads, the blind timer, the daylight look and the first-run tour done
 
-Now: **M9** (Mahjong I) and **M13** (classic card pack) are being built in their own checkouts;
-**M12** (card variants) on the main branch.
+Now: **M11** (Riichi), **M13** (classic card pack) and **Tute** (the last part of M12) are being
+built in their own checkouts; the main branch goes on with wave 2 below.
 
 ### What is left, and how it will be built (plan of 2026-11-27)
 
@@ -40,7 +40,7 @@ says which.
 
 | Wave | Main branch | Checkout A | Checkout B | Depends on |
 | --- | --- | --- | --- | --- |
-| 1 (now) | M12 card variants: Omaha, Five-Card Draw and Seven-Card Stud on the poker engine; Brisca for four with señas; Tute | M9 Mahjong core and Hong Kong | M13 Blackjack, Hearts, Spades, Gin Rummy | M5 poker engine (done) |
+| 1 (done but Tute) | M12 card variants: Omaha, Five-Card Draw and Seven-Card Stud on the poker engine; Brisca for four with señas; Tute | M9 Mahjong core and Hong Kong | M13 Blackjack, Hearts, Spades, Gin Rummy | M5 poker engine (done) |
 | 2 | M16, first part: scorepads, the poker blind timer, the light look, the first-run tour | M10 teaching Mahjong (same checkout as M9) | M14a Dominoes: All Fives and Cuban double-nine | M9 for M10 |
 | 3 | M16, second part: the Spanish interface (every interface string; lessons stay English unless time allows), accessibility and performance passes | M11 Riichi (the second rules file; the core changes only with a written reason) | M15 stronger engines: time-boxed trials of Fairy-Stockfish (Shogi) and KataGo (Go), then the opening, castle and joseki trainers | M10 for M11 |
 | 4 | Merge and polish | M14b Mahjong Chinese Official, then Taiwanese | M14c Mahjong Sichuan Bloody, then American (an original practice card) | M11 for M14 Mahjong styles |
@@ -49,6 +49,394 @@ says which.
 Risks noted now: M15 needs engine and network downloads (a blocked host means the built-in engines
 stay, as the plan allows); the Spanish interface is large (about 2,000 strings), so it is split by
 area; each Mahjong style must not change the shared core without a note here.
+
+## M16, first part. Table tools, the daylight look, the first-run tour (under way)
+
+Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in their own checkouts.
+
+- [x] **Scorepads** (`src/tools/scorepad.ts`, `src/shell/tools/PadScreen.tsx`): Dominoes (two
+      sides, the winner of each hand scores, play to 100, 150, 200 or 500), Brisca (one side's
+      points each hand, 61 of 120 wins it, 60–60 a tie; hands to 1, 3, 5 or 7), Mahjong point
+      sticks (four players from 0 to 30,000; a win paid by the discarder alone, by everyone when
+      self-drawn, or by everyone with the discarder paying double), and a Tally for anything else
+      (two to eight players, most or fewest points, an optional end). Totals are always worked out
+      again from the entries, so the last one can be taken back. Pads are saved per profile in a
+      new `pads` table (database version 3), carried in backups and deleted with their profile.
+- [x] **The poker blind timer** (`src/tools/blinds.ts`, `src/shell/tools/BlindTimerScreen.tsx`):
+      the usual big-blind steps from a chosen first blind, 5 to 30 minutes a level, antes from a
+      chosen level; start, pause, next and previous level; a chime and a buzz when the level
+      changes; the screen kept awake while it runs where the browser allows. The clock is saved as
+      when it started, so closing the app does not stop it.
+- [x] **The daylight look**: a `[data-look='daylight']` block of the same design tokens (paper for
+      the room, ink for the text, a darker brass); tables keep their felt, wood, cards and tiles.
+      Chosen in Settings.
+- [x] **The first-run tour**: five short steps in a card at the top of Today (welcome, the four
+      doors of every game, Today, Progress and table-ready, the tools), each with a link; "No
+      thanks" or the last step puts it away; Settings shows it again. It never covers the screen.
+- [ ] Still to come in M16: the Spanish interface, accessibility and performance passes, the
+      Mahjong score calculators (after M14), the release APK, optional web hosting.
+
+### Decisions in M16 so far
+
+- Mahjong point sticks record payments, not hands: every style pays differently, and the
+  calculators come later; with them a win can be scored and paid in one step.
+- The tour is a card, not a dialog over the app, so it never stands between a person (or a test)
+  and the screen they came for.
+
+## M12. Card variants A (under way)
+
+Built on the main branch on 2026-11-27; Tute is being built in its own checkout.
+
+- [x] **Rules first**: `docs/rules/poker-variants.md` (Omaha with exactly two hole cards and three
+      board cards, pot-limit, Omaha high-low eight or better; Five-Card Draw with the draw of up to
+      three, or five, cards and the discards reshuffled if the deck runs out; Seven-Card Stud with
+      antes, the bring-in by the lowest card, completing, the best hand showing acting first, the
+      open-pair big bet on fourth street, the cap of three raises lifted heads-up, Stud high-low;
+      options, four presets, ask before you sit, golden cases, sources) and `docs/rules/brisca.md`
+      (now four players in pairs and the señas, with sources).
+- [x] **The poker engine plays them** (`src/games/holdem/rules.ts`, `showdown.ts`): new streets per
+      game, fixed-limit and pot-limit betting, the draw as an action (`dKs7h`, `d` to stand pat),
+      Stud's up cards, high and low hands, split pots by halves (an odd chip to the high half).
+      Golden cases `tests/unit/poker-variants.test.ts`; property tests run under every variant.
+- [x] **The CPU for the variants** (`variant-bots.ts`): it deals the cards it cannot see many
+      times, plays each deal out (everyone drawing by the standard strategy in Draw) and counts its
+      share of the pot, then bets by its style. Six levels by deals, misjudgement and heed of the
+      price; level 1 also draws carelessly. Measured over 150 hands, three seeds: level 5 beats
+      level 1 in pot-limit Omaha (three seeds of four), Draw and Stud; in Omaha high-low the levels
+      come out even. The slowest move is about 70 ms.
+- [x] **The table** shows four Omaha cards, five Draw cards (tap the ones to throw away, then
+      "Draw 2" or "Stand pat"), and each Stud seat's face-down and face-up rows; bring-in and
+      complete buttons; fixed-limit bets as one button each; pot-limit's largest bet labelled
+      "Pot", not all-in. The coach names the hand so far (with the low in high-low) and gives the
+      equity against any hands; the log and review know the new actions.
+- [x] **Lessons**: three Advanced lessons (Omaha: four cards, exactly two; Five-card draw;
+      Seven-card stud).
+- [x] **Brisca for four in pairs**: the engine keeps two or four seats (results by side, team
+      outcomes); partners across, play to the right; the winner draws first and the turned card
+      goes to the player before the winner; ten tricks. Presets "Four players in pairs" and "Four
+      in pairs, with señas".
+- [x] **Señas**: an action on your turn for each high trump you hold (As, Tres, Rey, Caballo,
+      Sota), seen only by your partner; the partner's sampled deals place the card. Original
+      drawings of the five signs (pagat.com's system). The CPU signs its As, Tres and Rey at once
+      and plays knowing its partner's signs; it loads a safe trick of its partner's (level 3 and
+      up; level 2 only when last to play).
+- [x] **Señas teaching**: lessons "Brisca for four" and "Señas: signs to your partner", and the
+      señas flash-card drill (read your partner's sign, drawn without its name; or make the sign
+      for one of two trumps you hold).
+- [ ] **Tute**, its own game on the Spanish deck: being built in its own checkout.
+
+### Gate so far
+
+- `npm run check` passes: typecheck, lint, 595 unit tests, 51 property tests, every lesson.
+- End to end at 844×390, 1180×820 and 1440×900: `poker-variants.spec.ts` (Omaha's four cards
+  and pot limit, a whole Draw session with a two-card draw, a whole Stud session, the Draw
+  lesson), `brisca-four.spec.ts` (a whole hand in pairs with señas, the señas lesson, the drill)
+  and the existing Brisca and poker specs.
+- Four-player Brisca levels, 100 hands each with the seats swapped: L2 beats L1 0.755, L3 against
+  L2 0.520 (about even: with four players the two play alike), L4 beats L3 0.625, L5 beats L4
+  0.650, L6 beats L5 0.600 (40 hands). The slowest move is about half a second.
+
+### Decisions in M12
+
+- The variants are options of the one poker game (`game`, `betting`, `split`, `maxDraw`) with
+  four presets, not separate games, so the coach, review, stats and pass-and-play carry over.
+- Draw is played with blinds, the common home and online form; the classic antes with Jacks or
+  Better to open is listed as not implemented.
+- Stud's forced bets come from the format's blinds: the ante a quarter of a big blind, the
+  bring-in half of one, the small bet one, the big bet two.
+- The draw event carries the hand before the draw for its owner's display, as the deal event
+  already carries the last hand's cards; no view leaks it.
+- Señas are always true and private: a sign only for a card held, never seen by the other side.
+  Catching the other side's signs, talking between partners and showing hands are not built.
+- With four players the CPU searches half as many deals and solves only the last two tricks
+  exactly, so it stays quick.
+
+### Not done in M12, or open
+
+- Tute (in progress). Practice drills for the poker variants beyond the lessons.
+- The coach's Outs and Preflop chart helps do nothing in the variants; they stay in the list.
+- Omaha high-low: the CPU levels do not separate.
+
+## M10. Mahjong II: teach it
+
+Built on 2026-11-27 in the same checkout as M9, after merging the main branch (Chinese Checkers,
+pass-and-play, the poker variants). With this milestone
+Mahjong meets the definition of done, and all eight launch games are complete.
+
+- [x] **Learn from zero, written once for every style** (`src/games/mahjong/learn/lessons.ts`):
+      stage 0 (Mahjong in a minute, the tiles), stage 1 (sets: chow, pung and kong; a complete
+      hand; drawing and throwing; chow from your left; pung and kong from anyone; who gets the
+      tile; winning on a throw; enough to win; a drawn hand and the next deal), stage 2 (tiles
+      from ready, lone tiles first, counting the useful tiles, waits, when to call, safe tiles).
+      These play at a table with no flowers and no minimum, so they hold for every style; the one
+      lesson on the minimum uses the Hong Kong default.
+- [x] **The Hong Kong track** (`learn/hk.ts`, stage 3, "Skills"): flowers and seasons, how a hand
+      scores, seat and round winds, the minimum and the limit, faan into points, who pays, and
+      counting a hand yourself.
+- [x] **Table-ready** (`learn/table.ts`): washing and building the wall, breaking it and dealing,
+      calls out loud, settling up, ask before you sit, manners.
+- [x] **Lessons on the real engine** (`learn/game.ts`, `learn/verify.ts`): positions built from the
+      tiles a lesson names with the rest dealt from a seed (every tile in one place; the other
+      hands never hold three alike or come close to winning; a throw on offer is yours alone to
+      call); every number computed (the set and hand from the rules, each pattern from one faan
+      table in the rules file, points, payments, tiles from ready, useful tiles, waits, unseen
+      tiles, what a win on offer scores and collects); every "best" discard proved by the coach's
+      calculators. All 30 lessons pass the linter, with the "I already know this" checks.
+- [x] **Practice** (`src/games/mahjong/practice/`): 161 rated "what would you discard" problems
+      from hands the CPU played (`npm run generate:mahjong`), each proved by the efficiency
+      calculator, with themes (lone tiles, breaking a shape, count what is seen, getting ready);
+      five drills generated on the spot: what would you discard, waits, name the pattern, score
+      the hand, safe tile.
+- [x] **Review**: the M9 review already rates every discard by the useful tiles it gave up and
+      analyses each deal-in (the tile that fed the winner and the safer one); with a practice
+      pack in place, a moment you keep now goes into the Mahjong review queue.
+- [x] **Auto-scoring switch**: "Score hands for me" in the coach, on by default. Off, a won hand
+      asks for its faan before the sheet shows, then says whether you were right.
+- [x] **Table-ready checklist** (`src/games/ready.ts`): set up and deal (wall, deal), calls and
+      terms (sets, calls out loud, how a hand scores), score a hand (the scoring drill right first
+      time five times), etiquette (manners, ask before you sit), beat level 3 without help.
+
+### Gate: the definition of done for Mahjong (PLAN.md 2.10)
+
+| Item | Result |
+| --- | --- |
+| 1. Rules document | `docs/rules/mahjong-hk.md` (M9): rules as implemented, 19 options, 6 presets, sources; `docs/rules/mahjong-core.md` now also says how teaching builds on the core |
+| 2. Golden, property and replay tests under every preset | M9: 40 faan cases, 25 engine cases, property tests under all six presets and four mixes, replay; still passing |
+| 3. At least four CPU levels pass the ladder | M9: all five levels (bots unchanged in M10) |
+| 4. Learn stages 0 to 2 and Table-ready, passing lint | 30 lessons: stage 0 2, stage 1 9, stage 2 6, stage 3 (Hong Kong) 7, Table-ready 6; `npm run lint:lessons` passes for all eight games |
+| 5. At least three kinds of practice, generated or 100+ items | 161 rated discard problems, and five generated drills |
+| 6. Coach helps, with a tracker a player keeps in their head | M9: hint, tiles from ready and useful tiles, the unseen-tile tracker, safe tiles, tiles up; M10 adds "Score hands for me" |
+| 7. Review with key moments, reasons and "play on from here" | M9; moments now feed the Mahjong review queue |
+| 8. Save, resume, replay and the reference card | M9 |
+| 9. End to end at phone landscape, screenshots looked at | `tests/e2e/mahjong-learn.spec.ts` (6 tests) and `tests/e2e/mahjong.spec.ts` (4) at 844×390, 1180×820 and 1440×900: 30 passed; `tests/e2e/screens-m10.spec.ts` → `screenshots/m10/` (29 shots), each looked at |
+| 10. Progress written | This file (`PROGRESS.md` is left to the merge, as instructed) |
+
+`npm run check`: typecheck, lint, 587 unit tests in 49 files, 50 property tests in 9 files, and
+the lesson lint for all eight games, all passing. `tests/unit/mahjong-learning.test.ts` (14
+tests) checks the computed numbers against the rules and the scorer, the lesson positions, the
+verifier (efficiency and safety claims, near ties refused), that every lesson asks for a move
+only on your turn and passes the linter, that every drill lints and asks what the calculators and
+the scorer say, that every rated problem is proved again from its rebuilt position, and the
+auto-scoring switch.
+
+### Decisions in M10
+
+1. **Stages 0 to 2 are written for every style** and play at a table with no flowers, no minimum
+   and one hand; style tracks come after them. The Hong Kong track is stage 3 under the shared
+   "Skills" label, with a blurb that names it; Riichi (M11) can add its track the same way.
+2. **Lesson positions are built, not typed**: a lesson names the tiles that matter and
+   `lessonPosition` deals the rest from a seed, with the other hands kept harmless (no three
+   alike, never near winning) and a throw on offer left to you alone, so a scripted step never
+   meets a surprise call.
+3. **"Best" means proved by the coach's own calculators**: a discard is best when it leaves the
+   fewest tiles from ready and then the most useful tiles you have not seen, ahead of every other
+   discard as fast by at least two tiles; on a position marked for it ("safety" seed), when the
+   safe-tile ranking puts it clearly safest. Calls are taught with "legal" claims and reasons,
+   since no calculator proves a call.
+4. **Tile names are notation** for the no-typed-numbers rule ("5 dots", "6-7-8 bamboo", "3 and
+   4 bamboo", 5D, Orchid (flower 2)); every count and value is a placeholder. Table customs the
+   engine does not model (two tiles high, four at a time) are in words.
+5. **One faan table** (`hkFaan` in the rules file) is read by the scorer, the lessons and the
+   drills, so they cannot disagree.
+6. **Rated problems come from real hands**, stored as specs that name every hand, meld, discard
+   and bonus tile and rebuilt when Practice opens; the wall's order is not part of a one-move
+   problem. Ratings (700 to 1620) rise with tempting alternatives, answers that only counting
+   the visible tiles decides, distance from ready and breaking a shape.
+7. **Drills are built to order** (complete hands steered toward a pattern, hands a few tiles from
+   complete, a player with three sets called), not taken from self-play, so each appears at once
+   (under 60 ms) and covers what it drills.
+8. **"Score hands for me" is not a training help**: turning it off makes the game harder. It asks
+   for the first winner's faan only; payments follow from the base, which the lessons and the
+   scoring drill teach.
+9. **Called sets at the side of the table are drawn larger** (as large as the space between the
+   seat tags allows), and your flowers too, since both are read in the lessons and drills.
+
+### Shared files changed in M10 (all additive)
+
+- `src/games/lessons.ts`, `src/games/practice.ts`, `src/games/ready.ts`: the Mahjong lesson pack,
+  practice pack and table-ready checklist.
+- `scripts/lesson-lint.ts`: the Mahjong suite.
+- `package.json`: `npm run generate:mahjong`.
+
+### Not done in M10, or open
+
+- **No free-play steps**: winning a whole hand depends on the wall, so lessons use set positions
+  and the drills give the practice; a scripted "win this hand" could come with stacked walls.
+- **Stage 4 is empty** for Mahjong; the Riichi track is milestone 11.
+- **Side melds stay small on a phone** when a player has called three or four sets: the column is
+  limited by the table's height. The coach's safe-tile panel names each threat in words.
+- **The dice and the break are taught, not simulated**: the engine deals from a shuffled wall
+  (as in M9's rules document).
+- **Problem ratings are estimates** until enough attempts move them.
+- **A kept review moment replaying in the queue** is covered by the shared review-queue tests,
+  not by a Mahjong end-to-end test.
+
+## M9. Mahjong I: the shared engine, and Hong Kong style to play
+
+Built on 2026-11-27 in its own checkout while Texas Hold'em lessons and Chinese Checkers were
+built on the main branch. Mahjong is playable; its Learn
+and Practice doors (lessons, drills, the Table-ready track) are milestone 10.
+
+- [x] **Rules first**: `docs/rules/mahjong-hk.md` (Hong Kong Old Style as implemented: the tiles,
+      the turn, calls and their priority, kongs and robbing, winning shapes, the faan table with
+      its limit hands, three point tables, payments, rounds; 19 options, 6 presets, the "ask
+      before you sit" card, golden cases, "not implemented, on purpose", sources) and
+      `docs/rules/mahjong-core.md` (the shared engine and the rules-file interface, and where each
+      later style plugs in).
+- [x] **The shared core** (`src/games/mahjong/core/`): tiles (43 kinds; tile ids such as `5p.2`;
+      sets of 136, 144 and 108, jokers on top), winning shapes (n sets and a pair for 13 or 16
+      tiles, seven pairs, thirteen orphans, every reading of a hand with the set the winning tile
+      completed), tiles from ready and acceptance (`shanten.ts`), and the engine (`engine.ts`): the
+      wall with a dead wall, the deal and flower replacement, draws and discards, calls in a claim
+      window (asked one seat at a time in turn order, choices hidden until it closes, priority win >
+      pung/kong > chow, several winners if the style allows), concealed, added and exposed kongs
+      with replacement tiles, robbing an added kong (and a concealed one with thirteen orphans),
+      the last discard, exhaustive draws, payments, the dealer keeping or passing the deal, the
+      prevailing wind, the game's length and an eight-hands-a-round cap. Nothing in it names a
+      style's pattern or value.
+- [x] **The Hong Kong rules file** (`src/games/mahjong/styles/hong-kong.ts`): the faan table (all
+      chows, all pungs, mixed and pure one suit, mixed orphans, seven pairs as an option, dragon
+      pungs, seat and prevailing wind, small and great three dragons, small four winds, self-drawn,
+      concealed, robbing a kong, win by a kong and a double kong, last tile, last discard, seat
+      flowers, a full set, no flowers) and nine limit hands; the minimum (0, 1, 3), the limit (8,
+      10, 13), half-spicy, full-spicy and old-style point tables, half-gun and full-gun payments,
+      and every disputed value as an option.
+- [x] **Behind the contract** (`src/games/mahjong/rules.ts`): `mahjong` with views that hold your
+      hand, every discard, meld and flower and the counts, never another hand, the wall, the seed
+      or a hidden call; `sample()`; JSON and readable notation (`5p`, `kong 5p`, `chow 3s`, `pung`,
+      `win`, `pass`, `next`); outcome with places and scores; "play on from here"; `position()`
+      for tests and lessons.
+- [x] **CPU, five levels and three styles of play** (`src/games/mahjong/bots.ts`,
+      `src/games/mahjong/strategy.ts`): novice, beginner (tiles from ready, a liking for honours,
+      calls everything), learner (useful tiles, still fond of honours), club (steers to the style's
+      scoring and the minimum, judges a ready hand by what it can win) and strong (expected points
+      from the style's own point table, a one-draw look-ahead on every promising discard, calls
+      judged the same way, and the cost of feeding a ready hand under the table's payments).
+      Attacker, balanced and defender seats (fixed by the table number, revealed after the game)
+      call and fear danger differently. Reason tags turn into "why" text in the log and the hint.
+- [x] **The table** (`src/games/mahjong/ui/`): original tile art (coins, jointed bamboo, a bird
+      for the one of bamboo, a framed white dragon, flower and season marks; the Chinese
+      characters traced from LXGW WenKai TC, SIL OFL) readable at 844×390, and the learner overlay
+      (number and suit letter, or letters, on every tile) as a coach switch, on by default. Your
+      hand along the bottom (tap to lift, tap again to discard; the drawn tile apart), your melds
+      beside it and your flowers at the left; each player's discards in front of them round the
+      middle; the other hands, melds and flowers at the edges; the claim prompt says what each
+      call takes (the tiles, with the discard outlined); Win and Kong buttons on your own turn; the
+      end of a hand shows the winner's tiles, each faan line, the total, the base points and every
+      payment, then Next hand. Animations come through the event queue like every table.
+- [x] **Coach**: a three-step hint; tiles from ready and the useful tiles for every discard (in
+      the rail, and as numbers above your tiles with the best discards marked); the tiles you
+      have not seen, kind by kind (the tracker a real player keeps in their head); safe tiles
+      against each player, with how ready each looks; tiles up. Every help but the learner tiles
+      makes the game training.
+- [x] **Review** (`src/games/mahjong/review.ts`): every discard judged by the top level "with what
+      you knew": useful tiles lost, steps from ready, a ready hand that cannot win, value given up,
+      danger, and when a discard fed someone's winning hand, the safer tile; missed wins; key
+      moments with reasons; "play on from here".
+
+### Gate: milestone 9 and the definition of done so far
+
+| Item | Result |
+| --- | --- |
+| Tile conservation | Checked at every step of every random game (`checkConservation`: 144 or 136 tiles, each in exactly one place) and when any position is read |
+| Faan golden cases for every pattern in the table | `tests/unit/mahjong-hk.test.ts`: 40 cases, every pattern alone, the stacking rules (named hands absorbing or counting their pungs, mixed orphans with all pungs, concealed and self-drawn under both settings), flowers, all nine limit hands, the minimum, the limit, the three point tables, payments under half-gun and full-gun, robbing, two winners |
+| Claim-priority cases | `tests/unit/mahjong-engine.test.ts`: chow only to the next player; win > pung > chow with the beaten callers keeping their tiles; a pung beating a chow; seats skipped when they cannot beat a call; choices hidden while the window is open; two winners under `first` and `all` |
+| The awkward rules | Same file: kong then a replacement-tile win, the double kong, an exposed kong then a win, robbing an added kong (on and off), thirteen orphans robbing a concealed kong, the last discard (only a win), an exhaustive draw paying nothing, the dealer keeping or passing the deal, the minimum, heavenly hand, the rounds |
+| Property tests under every preset | `tests/property/mahjong.property.test.ts`: random games under all six presets and four odd mixes (one-hand and East-round games): nothing crashes, every legal action applies, tiles conserved, payments add up to zero and to the scores, views never leak a hidden tile, the seed or a hidden call, samples agree with the view, records replay to the identical state |
+| Shanten checked against `syanten` | `tests/unit/mahjong-shanten.test.ts`: on 3,000 random hands ours is never higher and equal on more than 99%; each difference is a hand `syanten` reads greedily, and the test checks a real reading reaching our number; a second, plain search of our own agrees on every hand; seven pairs and thirteen orphans agree exactly; acceptance agrees wherever the shanten numbers agree |
+| A full game in e2e | `tests/e2e/mahjong.spec.ts` at 844×390, 1180×820 and 1440×900: a hand to the end with its scoring and review, a call, the coach's helps, the reference card (12 passed) |
+| `npm run check` | Typecheck, lint, 490 unit tests in 41 files, 39 property tests in 8 files, lesson lint: all pass |
+| Screens | `tests/e2e/screens-m9.spec.ts` → `screenshots/m9/` (16 shots at 844×390, then the table at 390×844 and 1440×900), each looked at |
+| At least four CPU levels pass the ladder | All five (table below) |
+
+The ladder (`npm run ladder -- mahjong 120`: East-round games under the default rules, the level
+under test in seats 0 and 2 against the other in 1 and 3, every deal played twice with the seats
+swapped; a side scores when its two seats together won more points; pass at 0.6):
+
+| Rung | Won | Drawn | Lost | Score |
+| --- | --- | --- | --- | --- |
+| Level 1 against random play | 91 | 29 | 0 | 0.879 |
+| Level 2 against level 1 | 72 | 12 | 36 | 0.650 |
+| Level 3 against level 2 | 93 | 5 | 22 | 0.796 |
+| Level 4 against level 3 | 85 | 3 | 32 | 0.721 |
+| Level 5 against level 4 | 74 | 2 | 44 | 0.625 |
+
+### Decisions in M9
+
+1. **Defaults follow the Old Style sources**: three faan to win, a 10-faan limit, the half-spicy
+   table, half-gun payments (the discarder pays double, the others single; self-drawn, everyone
+   pays double), flowers on, the first in turn taking a discard two players can win on, robbing an
+   added kong allowed, the dealer keeping the deal after a win or a draw, an East-round game. Each
+   is an option and the presets cover the common other tables.
+2. **Disputed values became options**, not guesses: pure one suit 6 or 7, small three dragons 4
+   or 5, great three dragons 8 or the limit, small four winds 6 or the limit, whether named
+   dragon and wind hands also count their pungs, a full set of flowers 1, 2 or 3, no flowers 0 or
+   1, concealed-and-self-drawn 2 or 3, seven pairs off, 3 or 4.
+3. **Calls are a claim window inside the turn-based contract**: the seats that could call are
+   asked in turn order after the discarder; their choices are hidden from the others until the
+   window closes, so it plays like calling at once. A seat is not asked when nothing it could call
+   would beat a call already made. The table hides who is being asked (`GameUi.shownTurn`) and
+   other seats' choices (`GameUi.moveVisible`); the log names each line's owner
+   (`GameUi.eventSeat`). The one tell left is a moment's pause, as at a real table.
+4. **After a chow or pung you discard at once**; kongs are declared after a draw. Only a win may
+   be called on the last discard.
+5. **The scores wait for you**: a finished hand stays on the table with its faan until the first
+   seat plays "Next hand" (the CPU goes on at once in CPU-only games and ladders).
+6. **A game ends after eight hands a round** as well as after its rounds, so a dealer who keeps
+   the deal on drawn hands cannot make a game endless.
+7. **The first dealer is drawn by lot from the seed**; you sit at the bottom, the next player on
+   your right. Other players' hidden tiles stay in the order they were drawn (as an unsorted
+   rack), so where a discard comes from says no more than at a real table.
+8. **Tile ids carry their copy** (`5p.2`), so every tile slides from wall to hand to discard to
+   meld, conservation is a set check, and a test can search a view for a tile it must not hold.
+   Actions name kinds only.
+9. **Our shanten is exact for its formula; `syanten` is an oracle with known gaps**: it reads
+   each suit greedily (most complete sets first) and on about one hand in a hundred and fifty
+   reports one more than the true number. The tests require ours never to be higher, equal on
+   nearly every hand, and back every difference with a real reading.
+10. **The CPU reads the rules file, never pattern names**: a style gives `hints` (the minimum and
+    limit, what a pung of each kind is worth, one-suit and all-pungs values, concealed and
+    self-draw values, flowers already held, the point table, what each loser pays). One bot
+    family therefore plays every later style; Riichi will add riichi and furiten knowledge.
+11. **Five levels, measured**: an early design with folding by rules of thumb and sampled
+    draws did not separate (folding barely pays when the discarder pays only double; sampled
+    draws were slow and no better). Expected points with a one-draw look-ahead did, and the
+    beginner habits (a liking for honours, calling everything) made the lower rungs. Strength
+    comes from knowledge and fixed look-ahead budgets, never time; the top level's slowest
+    decision in the unit test is under 0.7 s here.
+12. **Learner tiles are on by default and are not a training help**: they only label the tiles.
+    The efficiency helper, the unseen-tile tracker, safe tiles, tiles up and hints mark the game
+    as training.
+13. **The characters come from LXGW WenKai TC** (OFL 1.1), a regular-script face that reads like
+    real tiles, traced once into 24 SVG paths (`scripts/mahjong-glyphs.mjs`); no font ships.
+14. **Small shared changes, each optional for other games**: three `GameUi` hooks (`moveVisible`,
+    `shownTurn`, `eventSeat`) used by the table, the review and the log; a hub door for a shelf
+    game that has no lessons yet says they are on the way (was "None for the test table");
+    `outcomePoints` rounds its share, so a four-way tie is exactly a half (it was a hair under,
+    and a drawn mahjong hand read as a loss); and card and tile tables held upright on a phone
+    (`src/styles/cards.css`) get a 3:4 table with the players and the coach below at their own
+    heights (the stacked layout had left these tables no height at all, in every card game).
+15. **The CPU's reasons at the table are only the public ones** (a win, a kong, a call for value
+    or for speed). "Gets ready", "folds" or "a lone tile" would say what is in a hidden hand; the
+    hint and the review, which only ever speak about your own hand, keep every reason.
+16. **The table scales with the screen**: tiles grow on a tablet or laptop up to a cap; on a
+    narrow table the middle box shortens its text ("East 1", "Pick a tile to discard") and the
+    tag across moves below that player's rack rather than cover it.
+
+### Not done in M9, or open
+
+- **Learn and Practice** (lessons from zero, the Hong Kong track, Table-ready, drills for waits,
+  discards, naming and scoring patterns and safe tiles; the auto-scoring switch) are milestone 10.
+- **Responsibility payments** (*bau*), **flower hands** (seven robbing the eighth, eight winning at
+  once), **passing a winning discard** and **false-win penalties** are not implemented (see the
+  rules document); each is small to add as an option.
+- **Rules were read through search-engine extracts**: direct fetches of en.wikipedia.org and a
+  few rule sites were refused by this environment's network policy; values were cross-checked
+  across sources and every disagreement became an option. Corrections from a real Hong Kong table
+  are one option change each.
+- **Phone speed** of the top level is estimated from this machine (under 0.7 s for its slowest
+  decision); no APK was built in this checkout, as instructed.
+- **Ratings are nominal** (400 to 1250), not yet checked against people.
 
 ## M7. Chinese Checkers, and pass-and-play for every game
 

@@ -10,6 +10,7 @@ import { Dexie } from 'dexie';
 import type { EntityTable, Table } from 'dexie';
 import type { Json } from '../core/json';
 import type { GameRecord } from '../core/record';
+import type { Pad } from '../tools/scorepad';
 
 export interface Profile {
   readonly id: string;
@@ -19,7 +20,7 @@ export interface Profile {
 
 export type RailSide = 'left' | 'right';
 export type MotionSetting = 'system' | 'reduced' | 'full';
-export type LookSetting = 'club';
+export type LookSetting = 'club' | 'daylight';
 /** French cards in two colours, or four (spades black, hearts red, diamonds blue, clubs green). */
 export type DeckSetting = 'two' | 'four';
 
@@ -98,12 +99,17 @@ export interface AnalysisRow {
   readonly data: Json;
 }
 
+/** A scorepad for a game played at a real table (milestone 16). */
+export interface PadRow extends Pad {
+  readonly profileId: string;
+}
+
 export interface DeviceRow {
   readonly key: string;
   readonly value: Json;
 }
 
-export const TABLES = ['profiles', 'settings', 'records', 'lessonProgress', 'problemAttempts', 'reviewCards', 'ratings', 'analyses', 'device'] as const;
+export const TABLES = ['profiles', 'settings', 'records', 'lessonProgress', 'problemAttempts', 'reviewCards', 'ratings', 'analyses', 'pads', 'device'] as const;
 export type TableName = (typeof TABLES)[number];
 
 interface SchemaVersion {
@@ -133,6 +139,13 @@ const VERSIONS: readonly SchemaVersion[] = [
       analyses: 'recordId, profileId, [profileId+gameId]',
     },
   },
+  {
+    // Milestone 16: scorepads for live games.
+    version: 3,
+    stores: {
+      pads: 'id, profileId, updatedAt',
+    },
+  },
 ];
 
 export const SCHEMA_VERSION = (VERSIONS[VERSIONS.length - 1] as SchemaVersion).version;
@@ -146,6 +159,7 @@ export class TabletopDb extends Dexie {
   reviewCards!: EntityTable<ReviewCardRow, 'id'>;
   ratings!: Table<RatingRow, [string, string, string]>;
   analyses!: EntityTable<AnalysisRow, 'recordId'>;
+  pads!: EntityTable<PadRow, 'id'>;
   device!: EntityTable<DeviceRow, 'key'>;
 
   constructor(name = 'tabletop') {

@@ -28,7 +28,7 @@ export function resultTitle(ui: AnyGameUi, record: GameRecord): string {
   }
   const key = resultFor(record);
   const outcome = record.outcome;
-  const several = outcome.results.length > 2 && !(outcome.teams && outcome.teams.length > 1);
+  const several = outcome.results.length > 2 && !(outcome.teams && outcome.teams.some((team) => team.length > 1));
   if (several && key !== 'result.resigned' && key !== 'result.timeout') {
     const seat = humanSeats(record)[0] ?? 0;
     const place = outcome.results.find((r) => r.seat === seat)?.place ?? 1;
