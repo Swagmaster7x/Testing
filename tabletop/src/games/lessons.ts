@@ -16,6 +16,10 @@ const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
     const m = await import('./chess/learn');
     return { lessons: m.CHESS_LESSONS, game: m.chessLessonGame };
   },
+  shogi: async () => {
+    const m = await import('./shogi/learn');
+    return { lessons: m.SHOGI_LESSONS, game: m.shogiLessonGame };
+  },
 };
 
 export function hasLessons(gameId: string): boolean {

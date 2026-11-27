@@ -37,6 +37,7 @@ export interface PracticePack {
 
 const PACKS: Readonly<Record<string, () => Promise<PracticePack>>> = {
   chess: async () => (await import('./chess/practice')).loadChessPractice(),
+  shogi: async () => (await import('./shogi/practice')).loadShogiPractice(),
 };
 
 export function hasPractice(gameId: string): boolean {

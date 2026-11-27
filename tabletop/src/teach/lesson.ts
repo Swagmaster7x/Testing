@@ -113,10 +113,12 @@ export function fillText(text: string, computed: Readonly<Record<string, number 
 
 /**
  * Digits in lesson text are only allowed inside notation (squares like e4, moves like Nf3 or
- * O-O-O) and {placeholders}. Returns the offending fragments, if any.
+ * O-O-O) and {placeholders}. Returns the offending fragments, if any. A game whose notation uses
+ * digits differently (shogi's squares are "76") passes `stripNotation` to remove its own first.
  */
-export function typedNumbers(text: string): string[] {
-  const stripped = text
+export function typedNumbers(text: string, stripNotation?: (text: string) => string): string[] {
+  const own = stripNotation ? stripNotation(text) : text;
+  const stripped = own
     .replace(/\{[\w:.-]+\}/g, ' ')
     .replace(/\bO-O(-O)?\b/g, ' ')
     .replace(/\b[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?/g, ' ')

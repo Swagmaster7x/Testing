@@ -21,6 +21,8 @@ export interface LessonGame<S> {
   moves(state: S): string[];
   /** Values for {placeholders} in lesson text, computed from the rules module for a position. */
   computed(state: S): Readonly<Record<string, number | string>>;
+  /** Removes the game's own notation from text before the linter looks for typed numbers. */
+  stripNotation?(text: string): string;
 }
 
 export type Computed = Readonly<Record<string, number | string>>;

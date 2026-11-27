@@ -63,6 +63,9 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
   const levels = useApp((s) => s.settings?.levels ?? {});
   const clockChoices = useApp((s) => s.settings?.clocks ?? {});
   const clocks = ui.clocks ?? [];
+  const presets = ui.presets ?? [];
+  const [presetId, setPresetId] = useState<string>(presets[0]?.id ?? '');
+  const preset = setup === undefined ? presets.find((p) => p.id === presetId) : undefined;
   const [level, setLevel] = useState<number>(remembered ?? suggested);
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
   const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
@@ -77,7 +80,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
       level,
       side: choice?.seat ?? 'either',
       ...(seed ? { seed } : {}),
-      ...(setup !== undefined ? { config: setup } : {}),
+      ...(setup !== undefined ? { config: setup } : preset ? { config: preset.config } : {}),
       clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
     });
     navigate(`/play/${id}`);
@@ -123,6 +126,24 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
               ) : null}
             </p>
           </div>
+          {preset ? (
+            <div className="setup-row wide">
+              <label className="eyebrow" htmlFor="play-preset">
+                {t('play.rules')}
+              </label>
+              <select id="play-preset" className="preset-select" value={preset.id} onChange={(e) => setPresetId(e.target.value)}>
+                {presets.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              {preset.detail ? <p className="level-blurb">{preset.detail}</p> : null}
+              {preset.ratingOffset ? (
+                <p className="level-blurb faint num">{t('play.rules.strength', { n: Math.max(100, (ui.levels.find((l) => l.level === level)?.rating ?? 0) - preset.ratingOffset) })}</p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="setup-row">
             <span className="eyebrow">{t('play.side')}</span>
             <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />

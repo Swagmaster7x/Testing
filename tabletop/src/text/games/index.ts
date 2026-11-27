@@ -3,4 +3,6 @@
  * catalogue. Keep keys prefixed with the game id ("go.", "ref.go.", ...) so files never clash.
  * Add a game by importing its file here and spreading it into `enGames`.
  */
-export const enGames = {} as const;
+import { enShogi } from './shogi';
+
+export const enGames = { ...enShogi } as const;
