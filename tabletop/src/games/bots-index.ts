@@ -25,6 +25,7 @@ const loaders: Record<string, Loader> = {
   hearts: () => import('./hearts/bots').then((m) => m.heartsBots as unknown as BotSet<unknown, unknown>),
   spades: () => import('./spades/bots').then((m) => m.spadesBots as unknown as BotSet<unknown, unknown>),
   'gin-rummy': () => import('./gin-rummy/bots').then((m) => m.ginBots as unknown as BotSet<unknown, unknown>),
+  tute: () => import('./tute/bots').then((m) => m.tuteBots as unknown as BotSet<unknown, unknown>),
 };
 
 const cache = new Map<string, Promise<BotSet<unknown, unknown>>>();

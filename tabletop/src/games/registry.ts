@@ -15,6 +15,7 @@ const loaders: Record<string, () => Promise<AnyGameUi>> = {
   hearts: () => import('./hearts/ui').then((m) => m.heartsUi as unknown as AnyGameUi),
   spades: () => import('./spades/ui').then((m) => m.spadesUi as unknown as AnyGameUi),
   'gin-rummy': () => import('./gin-rummy/ui').then((m) => m.ginUi as unknown as AnyGameUi),
+  tute: () => import('./tute/ui').then((m) => m.tuteUi as unknown as AnyGameUi),
 };
 
 export function isPlayable(gameId: string): boolean {

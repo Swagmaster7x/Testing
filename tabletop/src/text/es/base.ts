@@ -51,7 +51,7 @@ export const esBase: Partial<Record<MessageKey, string>> = {
   'game.brisca.name': 'Brisca',
   'game.brisca.aka': 'Briscas, baraja española de 40 cartas',
   'game.brisca.launch': 'Dos jugadores, o cuatro en parejas con señas; baraja española de 40 cartas, cada regla de la casa como opción.',
-  'game.brisca.later': 'El tute, con la misma baraja, como juego aparte.',
+  'game.brisca.later': 'El tute, con la misma baraja, está en el estante como juego aparte.',
   'game.brisca.practice': 'Valor de las cartas, quién gana la baza, contar el montón, contar los triunfos, tarjetas de señas, finales resueltos.',
   'game.brisca.cpu': 'Bots que cuentan cartas, seis niveles.',
 

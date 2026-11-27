@@ -36,6 +36,10 @@ const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
     const m = await import('./chinese-checkers/learn');
     return { lessons: m.CC_LESSONS, game: m.ccLessonGame };
   },
+  tute: async () => {
+    const m = await import('./tute/learn');
+    return { lessons: m.TUTE_LESSONS, game: m.tuteLessonGame };
+  },
   poker: async () => {
     const m = await import('./holdem/learn');
     return { lessons: m.POKER_LESSONS, game: m.pokerLessonGame };

@@ -48,6 +48,7 @@ const PACKS: Readonly<Record<string, () => Promise<PracticePack>>> = {
   hearts: async () => (await import('./hearts/practice')).loadHeartsPractice(),
   spades: async () => (await import('./spades/practice')).loadSpadesPractice(),
   'gin-rummy': async () => (await import('./gin-rummy/practice')).loadGinPractice(),
+  tute: async () => (await import('./tute/practice')).loadTutePractice(),
 };
 
 export function hasPractice(gameId: string): boolean {

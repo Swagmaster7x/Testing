@@ -30,8 +30,8 @@ describe('message catalogue', () => {
     expect(gameName('chinese-checkers')).toBe('Chinese Checkers');
   });
 
-  it('keeps the launch games and the classic card pack on the shelf, with the test game off it', () => {
-    expect(SHELF.map((g) => g.id).sort()).toEqual(['blackjack', 'brisca', 'chess', 'chinese-checkers', 'dominoes', 'gin-rummy', 'go', 'hearts', 'mahjong', 'poker', 'shogi', 'spades']);
+  it('keeps the launch games, Tute and the classic card pack on the shelf, with the test game off it', () => {
+    expect(SHELF.map((g) => g.id).sort()).toEqual(['blackjack', 'brisca', 'chess', 'chinese-checkers', 'dominoes', 'gin-rummy', 'go', 'hearts', 'mahjong', 'poker', 'shogi', 'spades', 'tute']);
     expect(SHELF.some((g) => g.id === 'noughts')).toBe(false);
   });
 

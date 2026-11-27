@@ -38,6 +38,8 @@ import { mahjongVerifier } from '../src/games/mahjong/learn/verify';
 import { SHOGI_LESSONS, shogiLessonGame } from '../src/games/shogi/learn';
 import type { ClaimCache } from '../src/games/shogi/learn/verify';
 import { shogiVerifier } from '../src/games/shogi/learn/verify';
+import { TUTE_LESSONS, tuteLessonGame } from '../src/games/tute/learn';
+import { tuteVerifier } from '../src/games/tute/learn/verify';
 import type { Lesson } from '../src/teach/lesson';
 import { STAGES } from '../src/teach/lesson';
 import type { LessonVerifier } from '../src/teach/lint';
@@ -129,6 +131,7 @@ const SUITES: Record<string, Suite> = {
   hearts: { lessons: HEARTS_LESSONS, game: heartsLessonGame, verifier: () => heartsVerifier },
   spades: { lessons: SPADES_LESSONS, game: spadesLessonGame, verifier: () => spadesVerifier },
   'gin-rummy': { lessons: GIN_LESSONS, game: ginLessonGame, verifier: () => ginVerifier },
+  tute: { lessons: TUTE_LESSONS, game: tuteLessonGame, verifier: () => tuteVerifier },
 };
 
 /** Game folders whose name is not the game's id. */
