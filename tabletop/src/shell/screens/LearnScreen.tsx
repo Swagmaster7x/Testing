@@ -9,7 +9,7 @@ import { appDb } from '../../store/db';
 import { lessonProgress, wasSkipped } from '../../store/learning';
 import type { StageId } from '../../teach/lesson';
 import { STAGES } from '../../teach/lesson';
-import { gameName, t } from '../../text';
+import { gameName, hasText, t, tDynamic } from '../../text';
 import { Icon } from '../components/Icon';
 import { Segmented } from '../components/Segmented';
 import { href } from '../router';
@@ -76,7 +76,7 @@ export function LearnScreen({ gameId }: { gameId: string }) {
         <div className="card-title">
           <div>
             <h2 id="stage-title">{t(`learn.stage.${stage}`)}</h2>
-            <p className="muted learn-stage-blurb">{t(`learn.stage.${stage}.blurb`)}</p>
+            <p className="muted learn-stage-blurb">{hasText(`learn.stage.${stage}.blurb.${gameId}`) ? tDynamic(`learn.stage.${stage}.blurb.${gameId}`) : t(`learn.stage.${stage}.blurb`)}</p>
           </div>
           <div className="row" style={{ gap: 'var(--sp-2)' }}>
             <span className="faint num">{t('learn.stage.count', { done: stageDone, total: inStage.length })}</span>

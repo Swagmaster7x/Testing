@@ -1,6 +1,7 @@
 /**
- * Hold'em lessons: stage 0 (the rules), stage 1 (basics), stage 2 (strategy) and the Table-ready
- * track. All prose is original. Numbers are {placeholders} computed from the rules, the evaluator,
+ * Hold'em lessons: stage 0 (what the game is and how a hand is won), stage 1 (the rules), stage 2
+ * (first strategy: starting hands, position, pot odds, outs, equity), stage 3 (core skills: ranges,
+ * re-raises, reading players, sizing, short stacks, river calls) and the Table-ready track. All prose is original. Numbers are {placeholders} computed from the rules, the evaluator,
  * the equity code and the strategy modules (see game.ts); "best" claims are proved by equity and
  * pot-odds arithmetic (see verify.ts), against the real cards when a step shows every hand, or
  * against the range the position assumes. Play chips only.
@@ -68,25 +69,27 @@ function withStats(at: string, hands: number, rows: readonly (readonly [number, 
 }
 
 // Action scripts. With the button in seat 0 (you), the order before the flop is seats 3, 4, 5,
-// you, 1 (small blind), 2 (big blind); after it, seat 1 or 2 first, you last.
-/** Three folds, you raise on the button, the small blind folds and the big blind calls. */
-const BTN_VS_BB = ['fold', 'fold', 'fold', 'r5', 'fold', 'call'];
-/** ...then checked to the river, where the big blind checks to you. */
-const TO_RIVER = [...BTN_VS_BB, 'check', 'check', 'check', 'check', 'check'];
+// you, 1 (small blind), 2 (big blind); after it, seat 1 first and you last. Heads-up hands are
+// against Beto in the small blind: the table draws his cards above his name, clear of the labels.
+/** Three folds, you raise on the button, the small blind calls and the big blind folds. */
+const BTN_VS_SB = ['fold', 'fold', 'fold', 'r5', 'call', 'fold'];
+/** ...then checked to the river, where the small blind checks to you. */
+const TO_RIVER = [...BTN_VS_SB, 'check', 'check', 'check', 'check', 'check'];
 
-const buttonHand = (you: string, carmen: string | null, board: string, actions: readonly string[], extra: { stacks?: number[]; seed?: string } = {}): string =>
-  lessonPosition({ button: 0, holes: [h(you), null, carmen ? h(carmen) : null, null, null, null], board: h(board), actions, ...extra });
+/** A heads-up hand on the button against Beto in the small blind; `stack` is Beto's, if short. */
+const buttonHand = (you: string, beto: string | null, board: string, actions: readonly string[], extra: { stack?: number; seed?: string } = {}): string =>
+  lessonPosition({ button: 0, stacks: [200, extra.stack ?? 200, 200, 200, 200, 200], holes: [h(you), beto ? h(beto) : null, null, null, null, null], board: h(board), actions, ...(extra.seed ? { seed: extra.seed } : {}) });
 
 // Stage 0 positions
 
-/** A hand on the button against the big blind, from the deal. */
-const DEAL = lessonPosition({ button: 0, holes: [h('Ah Qh'), null, h('Kc Jc'), null, null, null], board: h('Qs 7h 2c 9d 3s') });
+/** A hand on the button against the small blind, from the deal. */
+const DEAL = lessonPosition({ button: 0, holes: [h('Ah Qh'), h('Kc Jc'), null, null, null, null], board: h('Qs 7h 2c 9d 3s') });
 const HEADS_UP = lessonPosition({ seats: 2, button: 0, holes: [h('Ah Qh'), h('Kc Jc')] });
 /** Diego raises under the gun; you hold a pair of nines on the button. */
 const FACING_RAISE = lessonPosition({ button: 0, holes: [h('9s 9d'), null, null, h('Ac Kh'), null, null], board: h('Kd 7c 2h 9c 4s'), actions: ['r6', 'fold', 'fold'] });
 /** In the cutoff, after a raise under the gun and a fold. */
 const MIN_RAISE = lessonPosition({ button: 1, holes: [h('Ac Qc'), null, null, null, null, null], actions: ['r6', 'fold'] });
-const ON_THE_FLOP = after(DEAL, BTN_VS_BB.join(' '));
+const ON_THE_FLOP = after(DEAL, BTN_VS_SB.join(' '));
 
 const R_FLUSH = buttonHand('Ah 4h', 'Tc 6s', 'Kh 9h 8c 7h 2d', TO_RIVER);
 const R_BOAT = buttonHand('9c 9d', 'Ah Jh', '9h 5h 5c Kh 2h', TO_RIVER);
@@ -95,9 +98,10 @@ const R_QUADS = buttonHand('6c 6d', 'Ad Ah', '6h 6s Ac Kd 2c', TO_RIVER);
 const K_KICKER = buttonHand('As Kd', 'Ac Jh', 'Ah 9c 6d 4s 2c', TO_RIVER);
 const K_BOARD = buttonHand('Ad 2d', 'Kc Qh', '5c 6d 7h 8s 9c', TO_RIVER);
 const K_TWO_PAIR = buttonHand('Ac 2d', 'Qc Jd', 'Kc Kd 8h 8s 3c', TO_RIVER);
-/** Carmen bets the river into you. */
-const RIVER_BET = buttonHand('Ah Qd', 'Qc Jc', 'Qs 7h 2c Jd 3s', [...BTN_VS_BB, 'check', 'check', 'check', 'check', 'r8']);
-const SPLIT = buttonHand('Jh 7c', 'Jc 7d', 'Ts 9d 8c 2h 3s', TO_RIVER);
+/** Beto bets the river into you. */
+const RIVER_BET = buttonHand('Ah Qd', 'Qc Jc', 'Qs 7h 2c Jd 3s', [...BTN_VS_SB, 'check', 'check', 'check', 'check', 'r8']);
+/** Félix opens, you and Beto call; Félix folds the flop, and you and Beto hold the same straight. The pot is odd. */
+const SPLIT = buttonHand('Jh 7c', 'Jc 7d', 'Ts 9d 8c 2h 3s', ['fold', 'fold', 'r5', 'call', 'call', 'fold', 'check', 'check', 'r4', 'call', 'fold', 'check', 'check', 'check']);
 /** Carmen all-in short, Diego raises, you call in the small blind. */
 const SIDE_POTS = lessonPosition({ button: 5, stacks: [200, 200, 40, 200, 200, 200], holes: [h('Jc Jd'), null, h('Ac Ad'), h('Ah Ks'), null, null], board: h('7c 5d 2h 9s 3c'), actions: ['r40', 'r100', 'fold', 'fold'] });
 
@@ -106,23 +110,24 @@ const SIDE_POTS = lessonPosition({ button: 5, stacks: [200, 200, 40, 200, 200, 2
 const UNDER_THE_GUN = lessonPosition({ button: 3, holes: [h('7c 2d'), null, null, null, null, null] });
 const KT_UTG = lessonPosition({ button: 3, holes: [h('Kh Td'), null, null, null, null, null] });
 const KT_CO = lessonPosition({ button: 1, holes: [h('Kh Td'), null, null, null, null, null], actions: ['fold', 'fold'] });
-/** Carmen, short-stacked, moves all-in on the turn against your two draws. */
-const POT_ODDS = buttonHand('Jh Th', 'Kc Qd', 'Kh 9h 2c 8d 7c', [...BTN_VS_BB, 'check', 'r8', 'call', 'r14'], { stacks: [200, 200, 27, 200, 200, 200] });
-const FLUSH_DRAW = buttonHand('Ah 7h', null, 'Kh 9h 2c 5s Jd', [...BTN_VS_BB, 'check']);
+/** Beto, short-stacked, moves all-in on the turn against your two draws. */
+const POT_ODDS = buttonHand('Jh Th', 'Kc Qd', 'Kh 9h 2c 8d 7c', [...BTN_VS_SB, 'check', 'r8', 'call', 'r14'], { stack: 27 });
+const FLUSH_DRAW = buttonHand('Ah 7h', null, 'Kh 9h 2c 5s Jd', [...BTN_VS_SB, 'check']);
 const FLUSH_DRAW_TURN = after(FLUSH_DRAW, 'check check');
-const OPEN_ENDED = buttonHand('9s 8d', null, '7c 6h 2d Kc 3h', [...BTN_VS_BB, 'check']);
-const GUTSHOT = buttonHand('9s 8d', null, 'Jc 7h 2d Kc 3h', [...BTN_VS_BB, 'check']);
-const COMBO_DRAW = buttonHand('Jh Th', null, 'Qh 9h 2c 4s 5d', [...BTN_VS_BB, 'check']);
-const EQUITY_PRE = buttonHand('Ac Kc', 'Qs Qh', '7d 7s 2h 9c 4c', ['fold', 'fold', 'fold', 'r5', 'fold']);
-const EQUITY_FLOP = buttonHand('Ks Qd', 'Ah 5h', 'Kh 8h 3c 2s 9d', [...BTN_VS_BB, 'check']);
-/** Your flush draw against top pair: you bet the flop and Carmen raises all-in. */
-const EQUITY_CALL = buttonHand('Th 9h', 'Qs Js', 'Qh 7h 3c 6d Kd', [...BTN_VS_BB, 'check', 'r6', 'r20'], { stacks: [200, 200, 25, 200, 200, 200] });
+const OPEN_ENDED = buttonHand('9s 8d', null, '7c 6h 2d Kc 3h', [...BTN_VS_SB, 'check']);
+const GUTSHOT = buttonHand('9s 8d', null, 'Jc 7h 2d Kc 3h', [...BTN_VS_SB, 'check']);
+const COMBO_DRAW = buttonHand('Jh Th', null, 'Qh 9h 2c 4s 5d', [...BTN_VS_SB, 'check']);
+/** You open on the button; Beto re-raises with a pair of queens, and the big blind folds. */
+const EQUITY_PRE = buttonHand('Ac Kc', 'Qs Qh', '7d 7s 2h 9c 4c', ['fold', 'fold', 'fold', 'r5', 'r15', 'fold']);
+const EQUITY_FLOP = buttonHand('Ks Qd', 'Ah 5h', 'Kh 8h 3c 2s 9d', [...BTN_VS_SB, 'check']);
+/** Your flush draw against top pair: you bet the flop and Beto raises all-in. */
+const EQUITY_CALL = buttonHand('Th 9h', 'Qs Js', 'Qh 7h 3c 6d Kd', [...BTN_VS_SB, 'check', 'r6', 'r20'], { stack: 25 });
 const VALUE = buttonHand('9c 8c', 'Ks Jd', 'Tc 7d 2s 6h Kd', TO_RIVER);
 const MIDDLING = buttonHand('Qd Td', 'Ah Kh', 'Ks Qh 4c 7d 2s', TO_RIVER);
-const C_BET = buttonHand('Ah Jh', '9s 8s', 'Kc 7d 2s 5h 3d', [...BTN_VS_BB, 'check']);
-/** Carmen, a rock, moves all-in on the turn into your top pair. */
-const ROCK_SHOVE = buttonHand('Ks Qs', 'Kc Jc', 'Kh Jd 2c 4h 9s', [...BTN_VS_BB, 'check', 'r6', 'call', 'r109'], {
-  stacks: [200, 200, 120, 200, 200, 200],
+const C_BET = buttonHand('Ah Jh', '9s 8s', 'Kc 7d 2s 5h 3d', [...BTN_VS_SB, 'check']);
+/** Beto, a rock, moves all-in on the turn into your top pair. */
+const ROCK_SHOVE = buttonHand('Ks Qs', 'Kc Jc', 'Kh Jd 2c 4h 9s', [...BTN_VS_SB, 'check', 'r6', 'call', 'r109'], {
+  stack: 120,
   seed: assume({ value: 'KK,JJ,44,22,KJs,KJo,K4s,K2s,J4s,J2s,42s' }),
 });
 
@@ -147,7 +152,7 @@ const STATS = withStats(lessonPosition({ button: 0, holes: [] }), 40, [
 /** A re-raised pot: you have top pair, best kicker, on a board full of draws. */
 const SIZING = lessonPosition({ button: 0, holes: [h('Ah Kh'), null, null, null, null, h('Jd Tc')], board: h('Kd 9d 8c 3s 2h'), actions: ['fold', 'fold', 'r5', 'r15', 'fold', 'fold', 'call', 'check'] });
 /** Your open-ended straight draw facing a bet on the turn, deep stacks behind. */
-const IMPLIED = buttonHand('9s 8s', 'Kd Qh', 'Kc 7d 6h 2c Ts', [...BTN_VS_BB, 'check', 'check', 'r8']);
+const IMPLIED = buttonHand('9s 8s', 'Kd Qh', 'Kc 7d 6h 2c Ts', [...BTN_VS_SB, 'check', 'check', 'r8']);
 /** Folded to your short stack in the small blind. */
 const shortStack = (hole: string, calls: string) =>
   lessonPosition({ button: 5, stacks: [16, 200, 200, 200, 200, 200], holes: [h(hole), null, null, null, null, null], actions: ['fold', 'fold', 'fold', 'fold'], seed: assume({ value: calls }) });
@@ -170,15 +175,15 @@ const ROCK_RIVER = riverShove(3, 'Ah Th', 'J9o');
 
 const OUT_OF_TURN = lessonPosition({ button: 0, holes: [h('7d 2c'), null, null, null, null, null] });
 const DECLARE = lessonPosition({ button: 0, holes: [h('Ad Kd'), null, null, null, null, null], actions: ['r6', 'fold', 'fold'] });
-/** The board makes you a straight you might not notice; Carmen bets the river. */
-const CARDS_SPEAK = buttonHand('6c 2d', 'Kd Qs', '5h 4s 3d Kc 9s', [...BTN_VS_BB, 'check', 'check', 'check', 'check', 'r8']);
+/** The board makes you a straight you might not notice; Beto bets the river. */
+const CARDS_SPEAK = buttonHand('6c 2d', 'Kd Qs', '5h 4s 3d Kc 9s', [...BTN_VS_SB, 'check', 'check', 'check', 'check', 'r8']);
 /** Level four of a sit-and-go: blinds and a big blind ante. */
 const BLIND_CLOCK = lessonPosition({ config: PRESETS['sit-and-go'] ?? SIX_MAX_CASH, handNo: 31, button: 0, stacks: [1200, 2100, 800, 1500, 2600, 800], holes: [] });
 /** The home-game preset: antes and a live straddle. */
 const HOME_GAME = lessonPosition({ config: { ante: 'ante', straddle: 'live' }, button: 0, holes: [] });
 
 export const POKER_LESSONS: readonly Lesson[] = [
-  // Stage 0: the rules
+  // Stage 0, the basics: what the game is and how a hand is won
   {
     id: 'poker.0.game',
     gameId: 'poker',
@@ -189,24 +194,131 @@ export const POKER_LESSONS: readonly Lesson[] = [
     steps: [
       { kind: 'say', text: 'Texas Hold’em uses one pack of {deck} cards. Each player is dealt {hole} cards face down, their hole cards. Yours are at the bottom of the table; nobody else sees them.' },
       { kind: 'say', text: 'Then {board:cards} shared cards come face up in the middle, the board. Your hand is the best {hand:cards} cards you can make from your {hole} and the board’s {board:cards}.' },
-      { kind: 'show', text: 'Watch the first round of betting. Three players fold, you raise, the small blind folds and the big blind calls.', moves: ['fold', 'fold', 'fold', 'r5', 'fold', 'call'] },
-      { kind: 'say', text: 'Only you and {name:2} are left. The first three board cards, the flop, are out, and the pot holds {pot}. Every new card brings another round of betting.' },
-      { kind: 'show', text: '{name:2} checks, you bet, she calls. The turn and the river come, and both of you check.', moves: ['check', 'r6', 'call', 'check', 'check', 'check', 'check'] },
+      { kind: 'show', text: 'Watch the first round of betting. Three players fold, you raise, the small blind calls and the big blind folds.', moves: BTN_VS_SB },
+      { kind: 'say', text: 'Only you and {name:1} are left. The first three board cards, the flop, are out, and the pot holds {pot}. Every new card brings another round of betting.' },
+      { kind: 'show', text: '{name:1} checks, you bet, he calls. The turn and the river come, and both of you check.', moves: ['check', 'r6', 'call', 'check', 'check', 'check', 'check'] },
       {
         kind: 'askChoice',
-        text: 'Both hands are turned up: you have {hand}, {name:2} has {hand:2}. Who wins the pot?',
+        text: 'Both hands are turned up: you have {hand}, {name:1} has {hand:1}. Who wins the pot?',
         options: [
-          { text: 'You: any pair beats a high card', correct: true, why: 'Yes. Your pair of queens beats her king high, so the pot is yours.' },
-          { text: '{name:2}: her king is higher than your queen', why: 'Single cards only count when nobody has anything better. You have a pair.' },
+          { text: 'You: any pair beats a high card', correct: true, why: 'Yes. Your pair of queens beats his king high, so the pot is yours.' },
+          { text: '{name:1}: his king is higher than your queen', why: 'Single cards only count when nobody has anything better. You have a pair.' },
           { text: 'Nobody: the pot is split', why: 'A pot is split only when the best hands are equal.' },
         ],
       },
     ],
   },
   {
-    id: 'poker.0.blinds',
+    id: 'poker.0.ranking',
     gameId: 'poker',
     stage: 'stage-0',
+    title: 'Which hand wins',
+    minutes: 4,
+    start: R_FLUSH,
+    steps: [
+      { kind: 'say', text: 'There are {categories} kinds of hand. Best first: straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, one pair, high card. A better kind always wins.' },
+      { kind: 'say', text: 'A straight is five ranks in a row; a flush, five cards of one suit; both at once, a straight flush (ace high, a royal flush). A full house is three of a kind with a pair. The ace plays high, or low in ace-two-three-four-five. Suits never rank.' },
+      {
+        kind: 'askChoice',
+        openHand: true,
+        text: 'Cards up: you have {hand}, {name:1} has {hand:1}. Who wins?',
+        options: [
+          { text: 'You: a flush beats a straight', correct: true, why: 'Yes. A flush is harder to make, so it ranks higher.' },
+          { text: '{name:1}: a straight beats a flush', why: 'The other way round: the flush is higher.' },
+          { text: 'A split pot', why: 'Only equal hands split. A flush and a straight are different kinds.' },
+        ],
+      },
+      {
+        kind: 'checkpoint',
+        openHand: true,
+        text: 'Three more. One try each.',
+        questions: [
+          {
+            kind: 'askChoice',
+            position: R_BOAT,
+            openHand: true,
+            text: 'You have {hand}; {name:1} has {hand:1}. Who wins?',
+            options: [
+              { text: 'You', correct: true, why: 'Yes: a full house beats a flush.' },
+              { text: '{name:1}', why: 'A full house beats a flush.' },
+              { text: 'A split pot', why: 'A full house beats a flush.' },
+            ],
+          },
+          {
+            kind: 'askChoice',
+            position: R_SET,
+            openHand: true,
+            text: 'You have {hand}; {name:1} has {hand:1}. Who wins?',
+            options: [
+              { text: 'You', why: 'Three of a kind beats two pair, even three small cards.' },
+              { text: '{name:1}', correct: true, why: 'Yes: three of a kind beats two pair, even three small cards.' },
+              { text: 'A split pot', why: 'Three of a kind beats two pair.' },
+            ],
+          },
+          {
+            kind: 'askChoice',
+            position: R_QUADS,
+            openHand: true,
+            text: 'You have {hand}; {name:1} has {hand:1}. Who wins?',
+            options: [
+              { text: 'You', correct: true, why: 'Yes: four of a kind beats a full house.' },
+              { text: '{name:1}', why: 'Four of a kind beats a full house, even aces full.' },
+              { text: 'A split pot', why: 'Four of a kind beats a full house.' },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'poker.0.best-five',
+    gameId: 'poker',
+    stage: 'stage-0',
+    title: 'Best five, kickers and the board',
+    minutes: 3,
+    start: K_KICKER,
+    steps: [
+      { kind: 'say', text: 'You play the best {hand:cards} of your {cards:all} cards: both hole cards, one of them, or none. When two hands are the same kind, the higher ranks in it win, then the other cards, the kickers.' },
+      {
+        kind: 'askChoice',
+        openHand: true,
+        text: 'You both have a pair of aces. Who wins?',
+        options: [
+          { text: 'You: your king outranks his jack', correct: true, why: 'Yes. Ace, ace, king, nine, six beats ace, ace, jack, nine, six: the king is your kicker.' },
+          { text: '{name:1}: he has the ace of clubs', why: 'Suits never count. The kickers decide: your king beats his jack.' },
+          { text: 'A split pot: both have aces', why: 'Same pair, so the next cards decide, and your king beats his jack.' },
+        ],
+      },
+      {
+        kind: 'askChoice',
+        position: K_BOARD,
+        openHand: true,
+        text: 'The board alone is {board:hand}. Who wins?',
+        options: [
+          { text: 'A split pot: both play the board', correct: true, why: 'Yes. Neither of you can make a better five than the board, so you share the pot.' },
+          { text: 'You: you hold an ace', why: 'The ace does not fit the straight, and your best five are the board’s.' },
+          { text: '{name:1}: his cards are higher', why: 'His king and queen do not fit the straight either. Both hands are the board.' },
+        ],
+      },
+      {
+        kind: 'askChoice',
+        position: K_TWO_PAIR,
+        openHand: true,
+        text: 'Both of you have {hand}, from the board. Who wins?',
+        options: [
+          { text: 'You: your ace is the fifth card', correct: true, why: 'Yes. Two pair uses only four cards; the fifth, your ace, beats his queen.' },
+          { text: '{name:1}: he holds two cards that are close', why: 'His queen and jack do not pair the board, so only the queen plays, as his fifth card.' },
+          { text: 'A split pot', why: 'The two pair are equal, but your ace beats his queen as the fifth card.' },
+        ],
+      },
+    ],
+  },
+
+  // Stage 1: the rules
+  {
+    id: 'poker.1.blinds',
+    gameId: 'poker',
+    stage: 'stage-1',
     title: 'The button and the blinds',
     minutes: 2,
     start: DEAL,
@@ -235,9 +347,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.0.actions',
+    id: 'poker.1.actions',
     gameId: 'poker',
-    stage: 'stage-0',
+    stage: 'stage-1',
     title: 'Fold, check, call, bet or raise',
     minutes: 3,
     start: FACING_RAISE,
@@ -258,9 +370,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.0.min-raise',
+    id: 'poker.1.min-raise',
     gameId: 'poker',
-    stage: 'stage-0',
+    stage: 'stage-1',
     title: 'The smallest raise',
     minutes: 3,
     start: MIN_RAISE,
@@ -274,9 +386,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.0.streets',
+    id: 'poker.1.streets',
     gameId: 'poker',
-    stage: 'stage-0',
+    stage: 'stage-1',
     title: 'The flop, the turn and the river',
     minutes: 2,
     start: ON_THE_FLOP,
@@ -286,7 +398,7 @@ export const POKER_LESSONS: readonly Lesson[] = [
         kind: 'askChoice',
         text: 'Who acts first on the flop?',
         options: [
-          { text: '{name:2}, the first player still in on the button’s left', correct: true, why: 'Yes. From the flop on, the button acts last and the first player on its left who is still in acts first.' },
+          { text: '{name:1}, the first player still in on the button’s left', correct: true, why: 'Yes. From the flop on, the button acts last and the first player on its left who is still in acts first.' },
           { text: 'You, because you raised before the flop', why: 'Raising does not change the order: after the flop it always starts left of the button.' },
         ],
       },
@@ -297,140 +409,35 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.0.ranking',
+    id: 'poker.1.showdown',
     gameId: 'poker',
-    stage: 'stage-0',
-    title: 'Which hand wins',
-    minutes: 4,
-    start: R_FLUSH,
-    steps: [
-      { kind: 'say', text: 'There are {categories} kinds of hand. Best first: straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, one pair, high card. A better kind always wins.' },
-      { kind: 'say', text: 'A straight is five ranks in a row; a flush, five cards of one suit; both at once, a straight flush (ace high, a royal flush). A full house is three of a kind with a pair. The ace plays high, or low in ace-two-three-four-five. Suits never rank.' },
-      {
-        kind: 'askChoice',
-        openHand: true,
-        text: 'Cards up: you have {hand}, {name:2} has {hand:2}. Who wins?',
-        options: [
-          { text: 'You: a flush beats a straight', correct: true, why: 'Yes. A flush is harder to make, so it ranks higher.' },
-          { text: '{name:2}: a straight beats a flush', why: 'The other way round: the flush is higher.' },
-          { text: 'A split pot', why: 'Only equal hands split. A flush and a straight are different kinds.' },
-        ],
-      },
-      {
-        kind: 'checkpoint',
-        openHand: true,
-        text: 'Three more. One try each.',
-        questions: [
-          {
-            kind: 'askChoice',
-            position: R_BOAT,
-            openHand: true,
-            text: 'You have {hand}; {name:2} has {hand:2}. Who wins?',
-            options: [
-              { text: 'You', correct: true, why: 'Yes: a full house beats a flush.' },
-              { text: '{name:2}', why: 'A full house beats a flush.' },
-              { text: 'A split pot', why: 'A full house beats a flush.' },
-            ],
-          },
-          {
-            kind: 'askChoice',
-            position: R_SET,
-            openHand: true,
-            text: 'You have {hand}; {name:2} has {hand:2}. Who wins?',
-            options: [
-              { text: 'You', why: 'Three of a kind beats two pair, even three small cards.' },
-              { text: '{name:2}', correct: true, why: 'Yes: three of a kind beats two pair, even three small cards.' },
-              { text: 'A split pot', why: 'Three of a kind beats two pair.' },
-            ],
-          },
-          {
-            kind: 'askChoice',
-            position: R_QUADS,
-            openHand: true,
-            text: 'You have {hand}; {name:2} has {hand:2}. Who wins?',
-            options: [
-              { text: 'You', correct: true, why: 'Yes: four of a kind beats a full house.' },
-              { text: '{name:2}', why: 'Four of a kind beats a full house, even aces full.' },
-              { text: 'A split pot', why: 'Four of a kind beats a full house.' },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'poker.0.best-five',
-    gameId: 'poker',
-    stage: 'stage-0',
-    title: 'Best five, kickers and the board',
-    minutes: 3,
-    start: K_KICKER,
-    steps: [
-      { kind: 'say', text: 'You play the best {hand:cards} of your {cards:all} cards: both hole cards, one of them, or none. When two hands are the same kind, the higher ranks in it win, then the other cards, the kickers.' },
-      {
-        kind: 'askChoice',
-        openHand: true,
-        text: 'You both have a pair of aces. Who wins?',
-        options: [
-          { text: 'You: your king outranks her jack', correct: true, why: 'Yes. Ace, ace, king, nine, six beats ace, ace, jack, nine, six: the king is your kicker.' },
-          { text: '{name:2}: she has the ace of clubs', why: 'Suits never count. The kickers decide: your king beats her jack.' },
-          { text: 'A split pot: both have aces', why: 'Same pair, so the next cards decide, and your king beats her jack.' },
-        ],
-      },
-      {
-        kind: 'askChoice',
-        position: K_BOARD,
-        openHand: true,
-        text: 'The board alone is {board:hand}. Who wins?',
-        options: [
-          { text: 'A split pot: both play the board', correct: true, why: 'Yes. Neither of you can make a better five than the board, so you share the pot.' },
-          { text: 'You: you hold an ace', why: 'The ace does not fit the straight, and your best five are the board’s.' },
-          { text: '{name:2}: her cards are higher', why: 'Her king and queen do not fit the straight either. Both hands are the board.' },
-        ],
-      },
-      {
-        kind: 'askChoice',
-        position: K_TWO_PAIR,
-        openHand: true,
-        text: 'Both of you have {hand}, from the board. Who wins?',
-        options: [
-          { text: 'You: your ace is the fifth card', correct: true, why: 'Yes. Two pair uses only four cards; the fifth, your ace, beats her queen.' },
-          { text: '{name:2}: she holds two cards that are close', why: 'Her queen and jack do not pair the board, so only the queen plays, as her fifth card.' },
-          { text: 'A split pot', why: 'The two pair are equal, but your ace beats her queen as the fifth card.' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'poker.0.showdown',
-    gameId: 'poker',
-    stage: 'stage-0',
+    stage: 'stage-1',
     title: 'The showdown and split pots',
     minutes: 3,
     start: RIVER_BET,
     steps: [
       { kind: 'say', text: 'If two or more players are in after the last round of betting, they show their hands: the showdown. The last player to bet or raise on the river shows first; if everyone checked, the first player on the button’s left does.' },
-      { kind: 'askMove', text: '{name:2} bets {current} on the river. Call to see her hand.', accept: ['call'], claim: 'legal', success: 'She made the last bet, so she shows first.' },
-      { kind: 'say', text: '{name:2} shows {hand:2}; you have {hand}. Cards speak: the best hand wins, whatever anyone says, so always let your hand be seen and read.' },
+      { kind: 'askMove', text: '{name:1} bets {current} on the river. Call to see his hand.', accept: ['call'], claim: 'legal', success: 'He made the last bet, so he shows first.' },
+      { kind: 'say', text: '{name:1} shows {hand:1}; you have {hand}. Cards speak: the best hand wins, whatever anyone says, so always let your hand be seen and read.' },
       { kind: 'say', position: SPLIT, openHand: true, text: 'Cards up: you both hold {hand}. Equal hands split the pot.' },
       { kind: 'show', openHand: true, text: 'You check behind, and the hands are shown.', moves: ['check'] },
       { kind: 'askNumber', openHand: true, text: 'The pot held {last:pot:0} chips. How many did you get?', answer: 'last:share:0:0', success: 'Yes, {last:share:0:0}. The pot does not split evenly, so one chip is left over.' },
       {
         kind: 'askChoice',
         openHand: true,
-        text: '{name:2} got {last:share:0:2}. Why did she get the odd chip?',
+        text: '{name:1} got {last:share:0:1}. Why did he get the odd chip?',
         options: [
-          { text: 'She is the first winner on the button’s left', correct: true, why: 'Yes: that is the rule here. Some tables give it to the highest card instead; ask before you sit.' },
-          { text: 'She called last', why: 'The odd chip goes by seat: the first winner on the button’s left.' },
+          { text: 'He is the first winner on the button’s left', correct: true, why: 'Yes: that is the rule here. Some tables give it to the highest card instead; ask before you sit.' },
+          { text: 'He called last', why: 'The odd chip goes by seat: the first winner on the button’s left.' },
           { text: 'The dealer keeps it for the next pot', why: 'Nobody keeps it: it goes to the first winner on the button’s left.' },
         ],
       },
     ],
   },
   {
-    id: 'poker.0.side-pots',
+    id: 'poker.1.side-pots',
     gameId: 'poker',
-    stage: 'stage-0',
+    stage: 'stage-1',
     title: 'All-in and side pots',
     minutes: 4,
     start: SIDE_POTS,
@@ -453,11 +460,11 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
 
-  // Stage 1: basics
+  // Stage 2: first strategy
   {
-    id: 'poker.1.starting',
+    id: 'poker.2.starting',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'Starting hands',
     minutes: 3,
     start: UNDER_THE_GUN,
@@ -478,9 +485,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.1.position',
+    id: 'poker.2.position',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'Position',
     minutes: 3,
     start: KT_UTG,
@@ -501,25 +508,25 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.1.pot-odds',
+    id: 'poker.2.pot-odds',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'Pot odds',
     minutes: 4,
     start: POT_ODDS,
     steps: [
       { kind: 'say', text: 'Pot odds compare what a call costs with what it can win. A call pays if you win at least your own share of the final pot.' },
-      { kind: 'say', text: '{name:2} moves all-in for {call} more. The pot holds {pot}; if you call, it will hold {final}, and {call} of that will be yours.' },
+      { kind: 'say', text: '{name:1} moves all-in for {call} more. The pot holds {pot}; if you call, it will hold {final}, and {call} of that will be yours.' },
       { kind: 'askNumber', text: 'What share of the final pot is your call, to the nearest per cent?', answer: 'need', success: 'Yes, {need}%. You must win more often than that for a call to pay.' },
-      { kind: 'say', openHand: true, text: 'Now see her cards: {hand:2}. You have a flush draw and a straight draw: {outs:win} of the cards to come win for you, which makes your equity {equity}%.' },
+      { kind: 'say', openHand: true, text: 'Now see his cards: {hand:1}. You have a flush draw and a straight draw: {outs:win} of the cards to come win for you, which makes your equity {equity}%.' },
       { kind: 'askMove', openHand: true, text: 'Your {equity}% beats the {need}% you need. Call or fold?', accept: ['call'], wrong: { fold: 'This gives up a pot you win often enough: {equity}% against a price of {need}%.' }, claim: 'best', success: 'Call. On average it gains about {ev:call} chips over folding.' },
       { kind: 'say', text: 'Win or lose this time, the call was right. At this price, the times you hit pay for the times you miss.' },
     ],
   },
   {
-    id: 'poker.1.outs',
+    id: 'poker.2.outs',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'Counting outs',
     minutes: 3,
     start: FLUSH_DRAW,
@@ -532,9 +539,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.1.rule-of-two-four',
+    id: 'poker.2.rule-of-two-four',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'From outs to odds',
     minutes: 3,
     start: FLUSH_DRAW,
@@ -554,9 +561,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.1.equity',
+    id: 'poker.2.equity',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'Equity',
     minutes: 3,
     start: EQUITY_PRE,
@@ -566,32 +573,32 @@ export const POKER_LESSONS: readonly Lesson[] = [
         kind: 'askChoice',
         position: EQUITY_FLOP,
         openHand: true,
-        text: 'On this flop you have top pair; {name:2} has the best flush draw and an ace. Who is ahead?',
+        text: 'On this flop you have top pair; {name:1} has the best flush draw and an ace. Who is ahead?',
         options: [
-          { text: 'You, with {equity}%', correct: true, why: 'Yes, but only just: she has many outs, two cards to come and an ace that pairs.' },
-          { text: '{name:2}, with {equity:2}%', why: 'Close, but not ahead: she wins {equity:2}% and you {equity}%.' },
-          { text: 'Neither: it is exactly even', why: 'Close, but your pair is ahead: {equity}% against {equity:2}%.' },
+          { text: 'You, with {equity}%', correct: true, why: 'Yes, but only just: he has many outs, two cards to come and an ace that pairs.' },
+          { text: '{name:1}, with {equity:1}%', why: 'Close, but not ahead: he wins {equity:1}% and you {equity}%.' },
+          { text: 'Neither: it is exactly even', why: 'Close, but your pair is ahead: {equity}% against {equity:1}%.' },
         ],
       },
-      { kind: 'say', position: EQUITY_CALL, openHand: true, text: 'Being behind does not mean you must fold. You bet the flop, and {name:2} raises all-in with top pair: {call} more to call. You have no pair, but a flush draw with {equity}% equity, and you need {need}%.' },
-      { kind: 'askMove', openHand: true, text: '{name:2} has raised all-in with top pair: {call} more to call. With your flush draw, call or fold?', accept: ['call'], wrong: { fold: 'Your {equity}% is more than the {need}% the price asks for. Call.' }, claim: 'best', success: 'Call. Equity against the price decides, not who is ahead right now. You will lose some of these, as you may now: the call still pays over time.' },
+      { kind: 'say', position: EQUITY_CALL, openHand: true, text: 'Being behind does not mean you must fold. You bet the flop, and {name:1} raises all-in with top pair: {call} more to call. You have no pair, but a flush draw with {equity}% equity, and you need {need}%.' },
+      { kind: 'askMove', openHand: true, text: '{name:1} has raised all-in with top pair: {call} more to call. With your flush draw, call or fold?', accept: ['call'], wrong: { fold: 'Your {equity}% is more than the {need}% the price asks for. Call.' }, claim: 'best', success: 'Call. Equity against the price decides, not who is ahead right now. You will lose some of these, as you may now: the call still pays over time.' },
     ],
   },
   {
-    id: 'poker.1.value-or-bluff',
+    id: 'poker.2.value-or-bluff',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'Value bet or bluff',
     minutes: 3,
     start: VALUE,
     steps: [
       { kind: 'say', text: 'There are two good reasons to bet. A value bet: you are probably ahead, and worse hands may call. A bluff: you are probably behind, and better hands may fold.' },
-      { kind: 'askMove', text: 'You have {hand}, and {name:2} checks the river. Bet for value, half the pot or more.', accept: raises(VALUE, 6, 11), wrong: { check: 'With the best hand, a check wins nothing more. Bet: worse hands may call.' }, claim: 'legal', success: 'A value bet: every chip a worse hand calls with is yours.', reply: 'call' },
-      { kind: 'say', text: '{name:2} called with {hand:2} and paid you off.' },
+      { kind: 'askMove', text: 'You have {hand}, and {name:1} checks the river. Bet for value, half the pot or more.', accept: raises(VALUE, 6, 12), wrong: { check: 'With the best hand, a check wins nothing more. Bet: worse hands may call.' }, claim: 'legal', success: 'A value bet: every chip a worse hand calls with is yours.', reply: 'call' },
+      { kind: 'say', text: '{name:1} called with {hand:1} and paid you off.' },
       {
         kind: 'askChoice',
         position: MIDDLING,
-        text: 'Here you have {hand}, and {name:2} checks to you. What would a bet be?',
+        text: 'Here you have {hand}, and {name:1} checks to you. What would a bet be?',
         options: [
           { text: 'Neither: better hands call, worse ones fold, so check', correct: true, why: 'Yes. A middling hand gains little from a bet. Check and see the showdown.' },
           { text: 'A value bet', why: 'Which worse hand would call? Most hands that call you here are better.' },
@@ -601,16 +608,16 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.1.c-bet',
+    id: 'poker.2.c-bet',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'The continuation bet',
     minutes: 2,
     start: C_BET,
     steps: [
       { kind: 'say', text: 'You raised before the flop, so the others expect a good hand. A bet on the flop, a continuation bet, often wins the pot at once: most flops miss most hands, theirs as well as yours.' },
-      { kind: 'askMove', text: 'The flop missed you, and {name:2} checks. Make a continuation bet of about half the pot, {size:half}.', accept: raises(C_BET, 4, 7), wrong: { check: 'Checking is allowed, but a small bet wins this pot often. Bet.' }, claim: 'legal', success: 'A continuation bet.', reply: 'fold' },
-      { kind: 'say', text: '{name:2} folded, and the pot is yours. A small bet risked little to win it.' },
+      { kind: 'askMove', text: 'The flop missed you, and {name:1} checks. Make a continuation bet of about half the pot, {size:half}.', accept: raises(C_BET, 4, 8), wrong: { check: 'Checking is allowed, but a small bet wins this pot often. Bet.' }, claim: 'legal', success: 'A continuation bet.', reply: 'fold' },
+      { kind: 'say', text: '{name:1} folded, and the pot is yours. A small bet risked little to win it.' },
       {
         kind: 'askChoice',
         text: 'Which flop suits a continuation bet better?',
@@ -622,26 +629,26 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.1.fold',
+    id: 'poker.2.fold',
     gameId: 'poker',
-    stage: 'stage-1',
+    stage: 'stage-2',
     title: 'When to fold',
     minutes: 3,
     start: ROCK_SHOVE,
     steps: [
       { kind: 'say', text: 'Folding is the play you will make most. Fold weak hands before the flop, and fold when the pot does not pay for your chance to win it.' },
-      { kind: 'say', text: '{name:2} is a rock: she plays few hands and never bluffs. She moves all-in for {call} on the turn. You have top pair with a good kicker.' },
+      { kind: 'say', text: '{name:1} is a rock: he plays few hands and never bluffs. He moves all-in for {call} on the turn. You have top pair with a good kicker.' },
       { kind: 'askNumber', text: 'What share of the final pot must you win to call?', answer: 'need', success: 'Yes, {need}%.' },
-      { kind: 'say', text: 'Say she moves all-in here only with two pair or better: {range:combos} hands she could hold. Against them your equity is {equity:range}%.' },
+      { kind: 'say', text: 'Say he moves all-in here only with two pair or better: {range:combos} hands he could hold. Against them your equity is {equity:range}%.' },
       { kind: 'askMove', text: 'The rock moves all-in only with two pair or better. With your top pair, call or fold?', accept: ['fold'], wrong: { call: 'Top pair is a good hand, but against two pair or better it wins only {equity:range}% of the time, and you need {need}%.' }, claim: 'best', success: 'A good fold. A strong hand is only as strong as the hands that bet into it.' },
     ],
   },
 
-  // Stage 2: strategy
+  // Stage 3: core skills
   {
-    id: 'poker.2.ranges',
+    id: 'poker.3.ranges',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Opening ranges by seat',
     minutes: 3,
     start: SUITED_UTG,
@@ -654,9 +661,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.three-bet',
+    id: 'poker.3.three-bet',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'The re-raise before the flop',
     minutes: 3,
     start: THREE_BET,
@@ -677,9 +684,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.styles',
+    id: 'poker.3.styles',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Reading playing styles',
     minutes: 3,
     start: STATS,
@@ -739,9 +746,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.beat-styles',
+    id: 'poker.3.beat-styles',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Beating each style',
     minutes: 3,
     start: STATS,
@@ -786,9 +793,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.sizing',
+    id: 'poker.3.sizing',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Bet sizing',
     minutes: 3,
     start: SIZING,
@@ -808,23 +815,23 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.implied-odds',
+    id: 'poker.3.implied-odds',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Draws and implied odds',
     minutes: 3,
     start: IMPLIED,
     steps: [
       { kind: 'say', text: 'Pot odds count only the chips in the pot now. Implied odds also count the chips you can win later, when your draw comes in.' },
-      { kind: 'askNumber', text: '{name:2} bets {call} into {pot:before}. What share of the final pot must you win to call?', answer: 'need', success: 'Yes, {need}%.' },
+      { kind: 'askNumber', text: '{name:1} bets {call} into {pot:before}. What share of the final pot must you win to call?', answer: 'need', success: 'Yes, {need}%.' },
       { kind: 'say', text: 'Your straight draw has {outs} outs, so the river makes it {hit}% of the time: short of the {need}% you need.' },
-      { kind: 'say', text: 'But when a ten or a five comes, {name:2} may pay you more; she has {stack:2} chips left. The call pays if, when you hit, you win about {implied:hit} more on average.' },
+      { kind: 'say', text: 'But when a ten or a five comes, {name:1} may pay you more; he has {stack:1} chips left. The call pays if, when you hit, you win about {implied:hit} more on average.' },
       {
         kind: 'askChoice',
-        text: '{name:2} is a calling station who pays off big hands. Call or fold?',
+        text: '{name:1} is a calling station who pays off big hands. Call or fold?',
         options: [
           { text: 'Call: what you win later covers the price', correct: true, why: 'Yes. A station will pay much more than that when you make your straight.' },
-          { text: 'Fold: the pot odds alone are short', why: 'They are, but the chips she pays later make up the difference.' },
+          { text: 'Fold: the pot odds alone are short', why: 'They are, but the chips he pays later make up the difference.' },
           { text: 'Raise all-in now', why: 'A station calls, and your draw is behind now.' },
         ],
       },
@@ -839,9 +846,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.push-or-fold',
+    id: 'poker.3.push-or-fold',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Short stack: all-in or fold',
     minutes: 3,
     start: PUSH,
@@ -854,9 +861,9 @@ export const POKER_LESSONS: readonly Lesson[] = [
     ],
   },
   {
-    id: 'poker.2.river',
+    id: 'poker.3.river',
     gameId: 'poker',
-    stage: 'stage-2',
+    stage: 'stage-3',
     title: 'Calling a possible bluff',
     minutes: 4,
     start: MANIAC_SHOVE,
@@ -984,14 +991,14 @@ export const POKER_LESSONS: readonly Lesson[] = [
       { kind: 'say', text: 'At the showdown, turn your cards face up and let them be read. Cards speak: the best hand wins, even if its owner misread it or said the wrong thing.' },
       {
         kind: 'askChoice',
-        text: '{name:2} bets the river. You thought you had six high, but look again: with the board you have {hand}. If you call, what do you do at the showdown?',
+        text: '{name:1} bets the river. You thought you had six high, but look again: with the board you have {hand}. If you call, what do you do at the showdown?',
         options: [
           { text: 'Turn both cards face up and let them be read', correct: true, why: 'Yes. Whatever you think you have, the cards decide.' },
           { text: 'Throw them away: six high cannot win', why: 'Never muck a hand you have not read. This one is a straight.' },
           { text: 'Say you have a pair and see what happens', why: 'Words do not change the result, and a wrong claim only causes trouble.' },
         ],
       },
-      { kind: 'askMove', text: 'Call.', accept: ['call'], claim: 'legal', success: 'She shows first, as the last to bet; you turn your cards up, and the straight wins.' },
+      { kind: 'askMove', text: 'Call.', accept: ['call'], claim: 'legal', success: 'He shows first, as the last to bet; you turn your cards up, and the straight wins.' },
       { kind: 'say', text: 'Keep your cards until the pot is pushed to the winner. Once a hand touches the discards, it cannot win.' },
     ],
   },
@@ -1005,7 +1012,7 @@ export const POKER_LESSONS: readonly Lesson[] = [
     steps: [
       { kind: 'say', text: 'At a home game the deal passes one seat to the left after each hand. Use a dealer button, so nobody loses track of who deals and who posts the blinds.' },
       { kind: 'say', text: 'The dealer shuffles, offers the cut to the player on the right, deals one card at a time starting on the button’s left, and burns a card before the flop, the turn and the river.' },
-      { kind: 'askNumber', text: 'Each player buys {cash:stack} chips, and the blinds are {cash:sb} and {cash:bb}. How many big blinds is a buy-in?', answer: 'cash:stack-bb', success: 'Yes, {cash:stack-bb}: a deep stack, with room to play after the flop.' },
+      { kind: 'askNumber', text: 'Each player starts with {cash:stack} chips, and the blinds are {cash:sb} and {cash:bb}. How many big blinds is a starting stack?', answer: 'cash:stack-bb', success: 'Yes, {cash:stack-bb}: a deep stack, with room to play after the flop.' },
       {
         kind: 'askChoice',
         text: 'This hand is over. Where does the button go?',

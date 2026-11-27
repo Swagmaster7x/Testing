@@ -346,6 +346,7 @@ export const enPoker = {
   'ref.poker.ask.5': 'In a tournament: how often do the blinds go up, and how are prizes split?',
   'ref.poker.levels': 'CPU levels',
 
+  'learn.stage.stage-3.blurb.poker': 'Core skills: opening ranges, re-raises, reading players, bet sizing and the big all-in decisions.',
   'practice.set.poker.spots': 'Call or fold: all-in, cards up',
   'practice.set.poker.spots.blurb': 'Another player moves all-in with every hand face up. Count your outs, work out the price, then call or fold. Each answer is proved by exact equity.',
   'practice.set.drill-poker-winner': 'Which hand wins',

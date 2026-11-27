@@ -5,8 +5,9 @@
  * "best" claim (src/games/holdem/learn/verify.ts): exact equity, dealing every rest of the board,
  * and pot-odds arithmetic, with the right play better by at least MARGIN of the pot.
  *
- * Hands come from four lines (you on the button against the big blind, you in the big blind
- * against a cutoff raise, a re-raised pot, and a check-raise all-in), on the flop or the turn,
+ * Hands come from four lines (src/games/holdem/practice/spot.ts: you on the button against the
+ * small blind, you in the big blind against a small-blind raise, a re-raised pot against the
+ * cutoff, and a check-raise all-in), on the flop or the turn,
  * with the other player's stack set so the price ranges from cheap to dear. A deal is kept when
  * the decision is worth thinking about: you hold a draw or a pair, they hold something, and the
  * equity is not far from the price. Writes src/games/holdem/practice/spots.json.

@@ -28,8 +28,8 @@ interface SpotFile {
   readonly problems: readonly { id: string; position: string; setup: string; line: string[]; rating: number; themes: string[] }[];
 }
 
-/** You open on the button, the big blind calls; then the big blind checks each round to the river. */
-const BTN_VS_BB = ['fold', 'fold', 'fold', 'r5', 'fold', 'call'];
+/** You open on the button and the small blind calls (Beto, seat 1, whose cards show clear of the labels). */
+const BTN_VS_SB = ['fold', 'fold', 'fold', 'r5', 'call', 'fold'];
 
 function shuffle<T>(random: () => number, list: readonly T[]): T[] {
   const out = [...list];
@@ -46,7 +46,7 @@ function lesson(id: string, title: string, start: string, steps: Lesson['steps']
   return { id: `poker.drill.${id}`, gameId: 'poker', stage: 'table', title, minutes: 1, start, steps };
 }
 
-const holes = (you: readonly Card[], carmen: readonly Card[] | null): (Card[] | null)[] => [[...you], null, carmen ? [...carmen] : null, null, null, null];
+const holes = (you: readonly Card[], beto: readonly Card[] | null): (Card[] | null)[] => [[...you], beto ? [...beto] : null, null, null, null, null];
 
 /** Which hand wins: two hands face up on a finished board, chosen so many are close. */
 function winnerDrill(random: () => number): Lesson {
@@ -61,11 +61,11 @@ function winnerDrill(random: () => number): Lesson {
     const fits =
       want === 'same-kind' ? a !== b && categoryOf(a) === categoryOf(b) && categoryOf(a) !== 'high-card' : want === 'split' ? a === b : want === 'different' ? categoryOf(a) !== categoryOf(b) && Math.min(a, b) >> 20 >= 1 : true;
     if (!fits && tries < 400) continue;
-    const start = lessonPosition({ button: 0, holes: holes(you, them), board, actions: [...BTN_VS_BB, 'check', 'check', 'check', 'check', 'check'] });
-    const both = 'you have {hand}, {name:2} has {hand:2}.';
+    const start = lessonPosition({ button: 0, holes: holes(you, them), board, actions: [...BTN_VS_SB, 'check', 'check', 'check', 'check', 'check'] });
+    const both = 'you have {hand}, {name:1} has {hand:1}.';
     const options = [
       { text: 'You', correct: a > b, why: a > b ? `Yes: ${both}` : `No: ${both}` },
-      { text: '{name:2}', correct: b > a, why: b > a ? `Yes: ${both}` : `No: ${both}` },
+      { text: '{name:1}', correct: b > a, why: b > a ? `Yes: ${both}` : `No: ${both}` },
       { text: 'A split pot', correct: a === b, why: a === b ? `Yes: the best five cards are equal; ${both}` : `No: ${both}` },
     ];
     return lesson('winner', 'Which hand wins', start, [{ kind: 'askChoice', openHand: true, text: 'Cards up, and the river is out. Who wins at the showdown?', options }]);
@@ -94,7 +94,7 @@ function outsDrill(random: () => number): Lesson {
     const madeAlready = made === 'straight' || made === 'flush' || made === 'full-house' || made === 'quads' || made === 'straight-flush';
     const wanted = tries < 3000 ? draw >= lo && draw <= hi : draw >= 4 && draw <= 15;
     if ((madeAlready || !wanted) && tries < 6000) continue;
-    const start = lessonPosition({ button: 0, holes: holes(you, null), board, actions: [...BTN_VS_BB, 'check', ...(turn ? ['check', 'check'] : [])] });
+    const start = lessonPosition({ button: 0, holes: holes(you, null), board, actions: [...BTN_VS_SB, 'check', ...(turn ? ['check', 'check'] : [])] });
     return lesson('outs', 'Count the outs', start, [
       { kind: 'askNumber', text: 'How many of the cards you cannot see would give you a straight or better?', answer: 'outs', success: 'Yes, {outs}. With {to-come} to come, the quick rule says about {rough}%; exactly, {hit}%.' },
     ]);

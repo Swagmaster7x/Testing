@@ -2,7 +2,8 @@
  * All-in spots for practice: a heads-up hand in a six-handed cash game where the other player
  * moves all-in, built through the rules from a deal and one of a few common lines. Shared by the
  * problem generator (scripts/generate-holdem-spots.ts) and the pot-odds drill, so both build the
- * same kind of hand.
+ * same kind of hand. The other player sits on the left or right of the table (seat 1 or 5), where
+ * the table draws their cards above their name, clear of the action labels and bets.
  */
 import type { Card } from '../cards';
 import { lessonPosition } from '../learn/game';
@@ -23,14 +24,14 @@ export interface Line {
 }
 
 export const LINES: readonly Line[] = [
-  // You open on the button; the big blind calls, then moves all-in.
-  { id: 'btn', button: 0, opp: 2, pre: ['fold', 'fold', 'fold', 'r5', 'fold', 'call'], flop: [], turn: ['check', 'r6', 'call'] },
-  // The cutoff opens, you call in the big blind and check; the cutoff moves all-in.
-  { id: 'bb', button: 4, opp: 3, pre: ['fold', 'fold', 'r5', 'fold', 'fold', 'call'], flop: ['check'], turn: ['check', 'r6', 'call', 'check'] },
+  // You open on the button; the small blind calls, then moves all-in.
+  { id: 'btn', button: 0, opp: 1, pre: ['fold', 'fold', 'fold', 'r5', 'call', 'fold'], flop: [], turn: ['check', 'r6', 'call'] },
+  // Folded to the small blind, who raises; you call in the big blind; the small blind moves all-in.
+  { id: 'bb', button: 4, opp: 5, pre: ['fold', 'fold', 'fold', 'fold', 'r6', 'call'], flop: [], turn: ['r6', 'call'] },
   // The cutoff opens, you re-raise on the button, the cutoff calls, then moves all-in.
   { id: '3bet', button: 0, opp: 5, pre: ['fold', 'fold', 'r5', 'r15', 'fold', 'fold', 'call'], flop: [], turn: ['check', 'r16', 'call'] },
-  // You open on the button and bet; the big blind check-raises all-in.
-  { id: 'xr', button: 0, opp: 2, pre: ['fold', 'fold', 'fold', 'r5', 'fold', 'call'], flop: ['check', 'r6'], turn: ['check', 'r6', 'call', 'check', 'r12'] },
+  // You open on the button and bet; the small blind check-raises all-in.
+  { id: 'xr', button: 0, opp: 1, pre: ['fold', 'fold', 'fold', 'r5', 'call', 'fold'], flop: ['check', 'r6'], turn: ['check', 'r6', 'call', 'check', 'r12'] },
 ];
 
 export interface Deal {
