@@ -18,7 +18,7 @@ export const GROUPS: readonly GameGroup[] = ['cards', 'boards', 'tiles'];
 
 export const CATALOG: readonly CatalogGame[] = [
   { id: 'brisca', group: 'cards', milestone: 3, playable: true, onShelf: true },
-  { id: 'poker', group: 'cards', milestone: 5, playable: false, onShelf: true },
+  { id: 'poker', group: 'cards', milestone: 5, playable: true, onShelf: true },
   { id: 'chess', group: 'boards', milestone: 1, playable: true, onShelf: true },
   { id: 'go', group: 'boards', milestone: 6, playable: true, onShelf: true },
   { id: 'chinese-checkers', group: 'boards', milestone: 7, playable: false, onShelf: true },

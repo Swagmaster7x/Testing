@@ -191,6 +191,8 @@ export interface HoldemState {
   readonly config: HoldemConfig;
   /** Shuffles every hand. Never part of a view. */
   readonly seed: string;
+  /** A public number drawn at the start; the CPU seats take their playing styles from it (shown after the session). */
+  readonly table: number;
   readonly handNo: number;
   readonly level: number;
   readonly blinds: Blinds;
@@ -230,11 +232,14 @@ export type HoldemEvent =
       readonly seats: readonly Seat[];
       /** How the last hand ended, so the interface can show it until this deal plays. */
       readonly previous: HandResult | null;
+      /** Last hand's hole cards, for the interface to keep showing a person their own (and only theirs, or the shown ones). */
+      readonly holes: readonly (readonly Card[])[];
     }
   | { readonly type: 'post'; readonly seat: Seat; readonly kind: 'ante' | 'small-blind' | 'big-blind' | 'straddle'; readonly amount: number; readonly allIn: boolean }
   | { readonly type: 'hole'; readonly seats: readonly Seat[] }
   | { readonly type: 'act'; readonly seat: Seat; readonly kind: LogKind; readonly amount: number; readonly to: number; readonly allIn: boolean }
-  | { readonly type: 'collect'; readonly pot: number }
+  /** The bets go into the middle: `bets` per seat, `pot` everything in the middle afterwards. */
+  | { readonly type: 'collect'; readonly pot: number; readonly bets: readonly number[] }
   | { readonly type: 'board'; readonly street: Street; readonly cards: readonly Card[] }
   | { readonly type: 'show'; readonly seat: Seat; readonly cards: readonly Card[]; readonly value: number }
   | { readonly type: 'muck'; readonly seat: Seat }
@@ -254,6 +259,7 @@ export interface PlayerView extends Player {
 export interface HoldemView {
   readonly seat: Seat;
   readonly config: HoldemConfig;
+  readonly table: number;
   readonly handNo: number;
   readonly level: number;
   readonly blinds: Blinds;
@@ -314,8 +320,11 @@ export function levelOf(config: HoldemConfig, handNo: number): number {
   return isFreezeout(config) ? 1 + Math.floor((Math.max(1, handNo) - 1) / config.levelHands) : 1;
 }
 
-/** In this hand: dealt in and not folded. */
-export const inHand = (p: Player): boolean => p.hole.length > 0 && !p.folded && !p.out;
+/** Hole cards a player holds: in a view, other seats' cards are hidden but counted. */
+const dealtCards = (p: Player): number => (p as Partial<PlayerView>).cards ?? p.hole.length;
+
+/** In this hand: dealt in and not folded. Works on states and on views. */
+export const inHand = (p: Player): boolean => dealtCards(p) > 0 && !p.folded && !p.out;
 
 export function seatsInHand(s: Pick<HoldemState, 'players'>): Seat[] {
   return s.players.flatMap((p, seat) => (inHand(p) ? [seat] : []));
@@ -343,7 +352,7 @@ function activeFrom(s: Pick<HoldemState, 'players'>, from: Seat, dealt: boolean)
   for (let k = 1; k <= n; k++) {
     const seat = (from + k) % n;
     const p = at(s.players, seat);
-    if (dealt ? p.hole.length > 0 && !p.out : !p.out && p.stack > 0) out.push(seat);
+    if (dealt ? dealtCards(p) > 0 && !p.out : !p.out && p.stack > 0) out.push(seat);
   }
   return out;
 }
@@ -507,6 +516,7 @@ function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: r
     const next = activeFrom(w, w.button, false)[0];
     if (next !== undefined) w.button = next;
   }
+  const previousHoles = w.players.map((p) => [...p.hole]);
   for (const p of w.players) {
     p.hole = [];
     p.bet = 0;
@@ -530,7 +540,7 @@ function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: r
   const bb = headsUp ? at(order, 0) : at(order, 1);
   const blinds = w.blinds;
   const straddler = blinds.straddle > 0 && order.length >= 3 && at(w.players, at(order, 2)).stack > blinds.straddle ? at(order, 2) : null;
-  events.push({ type: 'deal', handNo: w.handNo, button, level: w.level, blinds, seats: order, previous: w.lastHand });
+  events.push({ type: 'deal', handNo: w.handNo, button, level: w.level, blinds, seats: order, previous: w.lastHand, holes: previousHoles });
 
   if (blinds.ante > 0 && config.ante === 'ante') for (const seat of order) post(w, events, seat, blinds.ante, 'ante');
   post(w, events, sb, blinds.sb, 'small-blind');
@@ -559,7 +569,7 @@ function startHand(w: Work, events: HoldemEvent[], moveButton: boolean, deck?: r
  */
 function closeStreet(w: Work, events: HoldemEvent[]): 'betting' | 'showdown' {
   for (;;) {
-    events.push({ type: 'collect', pot: potOf(w) });
+    events.push({ type: 'collect', pot: potOf(w), bets: w.players.map((p) => p.bet) });
     for (const p of w.players) {
       p.bet = 0;
       p.actedAt = null;
@@ -871,7 +881,7 @@ function applyAction(s: HoldemState, action: HoldemAction): { state: HoldemState
   events.push({ type: 'act', seat, kind, amount, to: p.bet, allIn: entry.allIn });
 
   if (seatsInHand(w).length === 1) {
-    events.push({ type: 'collect', pot: potOf(w) });
+    events.push({ type: 'collect', pot: potOf(w), bets: w.players.map((q) => q.bet) });
     endHand(w, events, 'fold');
   } else {
     const next = nextToAct(w, seat);
@@ -1006,6 +1016,7 @@ function stateFromJson(json: Json): HoldemState {
   const s: HoldemState = {
     config,
     seed: typeof json.seed === 'string' ? json.seed : 'position',
+    table: num(json.table ?? 0, 'the table'),
     handNo: num(json.handNo ?? 1, 'the hand number'),
     level,
     blinds: json.blinds === undefined ? blindsAt(config, level) : blindsFrom(json.blinds),
@@ -1035,6 +1046,7 @@ function stateToJson(s: HoldemState): Json {
   return {
     config: configJson(s.config),
     seed: s.seed,
+    table: s.table,
     handNo: s.handNo,
     level: s.level,
     blinds: { ...s.blinds },
@@ -1114,6 +1126,7 @@ export function viewOf(s: HoldemState, seat: Seat): HoldemView {
   return {
     seat,
     config,
+    table: s.table,
     handNo: s.handNo,
     level: s.level,
     blinds: s.blinds,
@@ -1152,6 +1165,7 @@ export function sampleState(v: HoldemView, rng: Rng): HoldemState {
   return {
     config: v.config,
     seed: `sample/${rng.int(1_000_000_000)}`,
+    table: v.table,
     handNo: v.handNo,
     level: v.level,
     blinds: v.blinds,
@@ -1173,12 +1187,13 @@ export function sampleState(v: HoldemView, rng: Rng): HoldemState {
   };
 }
 
-function freshTable(config: HoldemConfig, seed: string, button: Seat): Work {
+function freshTable(config: HoldemConfig, seed: string, button: Seat, table: number): Work {
   const n = seatCount(config);
   const chips = startChips(config);
   return {
     config,
     seed,
+    table,
     handNo: 0,
     level: 1,
     blinds: blindsAt(config, 1),
@@ -1221,7 +1236,7 @@ export const holdem: GameDef<HoldemState, HoldemAction, HoldemConfig, HoldemView
       const from = stateFromJson(JSON.parse(config.start) as Json);
       return { ...from, config: { ...config, format: from.config.format }, seed };
     }
-    const w = freshTable(config, seed, rng.int(seatCount(config)));
+    const w = freshTable(config, seed, rng.int(seatCount(config)), rng.int(1_000_000));
     firstHand(w);
     return w;
   },
@@ -1260,9 +1275,10 @@ export function position(p: {
   readonly actions?: readonly string[];
   readonly handNo?: number;
   readonly seed?: string;
+  readonly table?: number;
 }): HoldemState {
   const config: HoldemConfig = { ...SIX_MAX_CASH, ...p.config };
-  const w = freshTable(config, p.seed ?? 'position', p.button ?? 0);
+  const w = freshTable(config, p.seed ?? 'position', p.button ?? 0, p.table ?? 0);
   const n = p.seats ?? w.players.length;
   w.players = w.players.slice(0, n);
   w.places = w.places.slice(0, n);

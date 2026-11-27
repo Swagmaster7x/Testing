@@ -1,7 +1,7 @@
 /**
  * A handful of short sounds, synthesised on the spot (no audio files), with a switch in Settings.
  */
-export type SoundName = 'place' | 'capture' | 'line' | 'end' | 'card' | 'shuffle' | 'tile';
+export type SoundName = 'place' | 'capture' | 'line' | 'end' | 'card' | 'shuffle' | 'tile' | 'chip';
 
 let context: AudioContext | null = null;
 
@@ -60,6 +60,12 @@ export function playSound(name: SoundName): void {
       tone(ctx, now, 1150, 0.02, 0.06, 'square');
       tone(ctx, now, 320, 0.07, 0.16, 'triangle');
       tone(ctx, now + 0.012, 2100, 0.04, 0.02, 'sine');
+      break;
+    case 'chip':
+      // Two clay chips knocking together: a bright, short clack.
+      tone(ctx, now, 2500, 0.03, 0.05, 'sine');
+      tone(ctx, now + 0.03, 3150, 0.035, 0.035, 'sine');
+      tone(ctx, now, 600, 0.03, 0.04, 'triangle');
       break;
   }
 }

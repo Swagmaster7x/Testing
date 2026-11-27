@@ -58,6 +58,7 @@ export async function runMatch<S, A, C, V, E extends GameEvent>(
   games: number,
   seedPrefix: string,
   paired = false,
+  score?: (outcome: Outcome, seats: readonly Seat[]) => number,
 ): Promise<MatchResult> {
   let total = 0;
   let wins = 0;
@@ -69,7 +70,7 @@ export async function runMatch<S, A, C, V, E extends GameEvent>(
     const bySeat = seats.map((seat) => (seat % 2 === aSeat ? a : b));
     // Paired games deal the same cards twice with the seats swapped, so luck cancels out.
     const outcome = await playGame(def, config, bySeat, `${seedPrefix}:${paired ? Math.floor(i / 2) : i}`);
-    const points = outcomePoints(outcome, aSeat);
+    const points = score ? score(outcome, seats.filter((seat) => seat % 2 === aSeat)) : outcomePoints(outcome, aSeat);
     total += points;
     if (points > 0.5) wins++;
     else if (points < 0.5) losses++;
@@ -87,6 +88,11 @@ export interface LadderSpec<S, A, C, V, E extends GameEvent> {
   readonly margin: number;
   /** Card and tile games: play each deal twice with the seats swapped. */
   readonly paired?: boolean;
+  /**
+   * How a game scores for the stronger side, from the seats it held (every other seat at a table of
+   * more than two); the share of its first seat when absent. Poker sums the chips won by all its seats.
+   */
+  readonly score?: (outcome: Outcome, seats: readonly Seat[]) => number;
 }
 
 export interface LadderRung {
@@ -108,7 +114,7 @@ export async function runLadder<S, A, C, V, E extends GameEvent>(
   let lower: Contender<V, A> = random;
   for (const level of spec.levels) {
     const higher = spec.bot(level);
-    const result = await runMatch(spec.def, spec.config, higher, lower, games, `${seedPrefix}:${higher.name}-${lower.name}`, spec.paired ?? false);
+    const result = await runMatch(spec.def, spec.config, higher, lower, games, `${seedPrefix}:${higher.name}-${lower.name}`, spec.paired ?? false, spec.score);
     const rung = { higher: higher.name, lower: lower.name, result, passed: result.score >= spec.margin };
     rungs.push(rung);
     onRung?.(rung);

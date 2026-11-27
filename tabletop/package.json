@@ -23,7 +23,8 @@
     "apk": "node scripts/apk.mjs",
     "import:puzzles": "tsx scripts/import-lichess-puzzles.ts",
     "generate:brisca": "tsx scripts/generate-brisca-endgames.ts",
-    "generate:dominoes": "tsx scripts/generate-dominoes-endgames.ts"
+    "generate:dominoes": "tsx scripts/generate-dominoes-endgames.ts",
+    "generate:holdem": "tsx scripts/generate-holdem-preflop.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.6.3",

@@ -401,3 +401,54 @@ button.line-end[data-usable='true'] {
   font-size: var(--fs-xs);
   color: var(--text-2);
 }
+
+/* French deck suit colours: two-colour by default, four-colour as a setting (data-deck='four'). */
+:root {
+  --suit-s: #1b1b1d;
+  --suit-h: #c0392b;
+  --suit-d: #c0392b;
+  --suit-c: #1b1b1d;
+}
+
+:root[data-deck='four'] {
+  --suit-d: #1d63b8;
+  --suit-c: #2b7a35;
+}
+
+.suit-s {
+  fill: var(--suit-s);
+}
+.suit-h {
+  fill: var(--suit-h);
+}
+.suit-d {
+  fill: var(--suit-d);
+}
+.suit-c {
+  fill: var(--suit-c);
+}
+.suit-text-s {
+  color: var(--suit-s);
+}
+.suit-text-h {
+  color: var(--suit-h);
+}
+.suit-text-d {
+  color: var(--suit-d);
+}
+.suit-text-c {
+  color: var(--suit-c);
+}
+
+.mini-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 3px;
+  margin: 0 1px;
+  border-radius: 3px;
+  background: #fbf8f1;
+  font-weight: 800;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
