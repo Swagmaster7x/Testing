@@ -243,7 +243,9 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
   d.seats.forEach((s, seat) => {
     const [fx, fy] = spotOf(seat);
     const mineSeat = seat === me;
-    const w = mineSeat ? myW : boardW * 0.62;
+    // Others' cards are small face down; face up (cards up, or shown) they are drawn larger to be read.
+    const faceUp = s.cards.some((c) => c !== null);
+    const w = mineSeat ? myW : boardW * (faceUp ? 0.8 : 0.62);
     // Others' cards sit just outside their name plate: below it at the top of the table, above it elsewhere.
     const plate = 19;
     const cardH = w * 1.5;
@@ -286,13 +288,13 @@ export function PokerSurface({ state, mySeats, canAct, legal, anim, onAction, on
                 {seat === d.button ? <span className="dealer-button" aria-label={t('poker.button')}>D</span> : null}
               </span>
               <span className="poker-stack num">{s.out ? t('poker.out') : s.stack}</span>
-              {s.label && !s.out && !showdown && !reveal?.[seat] ? <span className="poker-action" data-kind={s.label}>{s.stack === 0 && s.label !== 'fold' && s.label !== 'check' ? t('poker.act.all-in') : tDynamic(`poker.act.${s.label}`)}</span> : null}
+              {s.label && !s.out && !showdown && !reveal?.[seat] ? <span className="poker-action" data-kind={s.label} data-place={fy < 0.3 ? 'above' : 'below'}>{s.stack === 0 && s.label !== 'fold' && s.label !== 'check' ? t('poker.act.all-in') : tDynamic(`poker.act.${s.label}`)}</span> : null}
               {showdown ? <span className="poker-hand-name" data-place={fy < 0.3 ? 'above' : 'below'}>{showdown}</span> : null}
               {reveal?.[seat] && !showdown ? <span className="poker-style">{reveal[seat]}</span> : null}
               {s.won > 0 ? <span className="poker-won num">+{s.won}</span> : null}
             </div>
             {s.bet > 0 ? (
-              <div className="poker-bet" style={toward(0.42)}>
+              <div className="poker-bet" style={toward(fy < 0.3 ? 0.55 : 0.42)}>
                 <ChipStack amount={s.bet} label={t('poker.bet-of', { name: seatName(seat, me, names), n: s.bet })} />
               </div>
             ) : null}

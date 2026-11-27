@@ -115,7 +115,7 @@ export function PokerCoachPanel({ state, seat, helps, ask, markTraining }: Coach
       ) : null}
       {helps.potOdds && live ? (
         <p className="coach-line">
-          <span className="eyebrow">{t('poker.help.potOdds')}</span> {owe > 0 ? t('poker.coach.odds', { call: owe, pot: pot + owe, need: pct(owe / (pot + owe)) }) : t('poker.coach.odds.none')}
+          <span className="eyebrow">{t('poker.help.potOdds')}</span> {owe > 0 ? t('poker.coach.odds', { call: owe, pot, need: pct(owe / (pot + owe)) }) : t('poker.coach.odds.none')}
         </p>
       ) : null}
       {helps.outs && live && toCome > 0 ? (

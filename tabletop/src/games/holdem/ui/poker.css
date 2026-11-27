@@ -96,6 +96,13 @@
   white-space: nowrap;
 }
 
+/* At the top of the table the label goes above the name plate: the cards are below it. */
+.poker-action[data-place='above'] {
+  top: auto;
+  bottom: 100%;
+  transform: translate(-50%, -2px);
+}
+
 .poker-action[data-kind='fold'] {
   background: #6b6257;
   color: #f4efe6;

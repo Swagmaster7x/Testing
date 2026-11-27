@@ -109,6 +109,7 @@ export const enLearn = {
   'practice.hint': 'Hint',
   'practice.hint.more': 'Another hint',
   'practice.hint.move': 'Show the move',
+  'practice.hint.the-move': 'The move: {move}',
   'practice.hint.idea': 'Idea: {idea}',
   'practice.hint.idea.none': 'Look for the most forcing move: checks, captures, threats.',
   'practice.show': 'Show the solution',

@@ -59,14 +59,18 @@ export interface RunnerState {
   readonly mistakes: number;
   /** In a checkpoint: whether the last answer was right (null before the first). */
   readonly lastRight: boolean | null;
+  /** The position the current step (or checkpoint question) was asked in. Its text is filled from it, so the numbers do not change once a move is played. */
+  readonly asked: string;
 }
 
 export function startLesson(lesson: Lesson): RunnerState {
   const first = lesson.steps[0];
+  const position = first?.position ?? lesson.start;
   return {
     lesson,
     step: 0,
-    position: first?.position ?? lesson.start,
+    position,
+    asked: position,
     phase: 'ready',
     attempts: 0,
     shown: 0,
@@ -113,7 +117,7 @@ function enterStep<S>(game: LessonGame<S>, s: RunnerState, index: number): Runne
   if (!step) return { ...s, phase: 'done', feedback: null };
   const position = step.kind === 'checkpoint' ? (step.questions[0]?.position ?? step.position ?? s.position) : (step.position ?? s.position);
   game.position(position);
-  return { ...s, step: index, position, phase: 'ready', attempts: 0, shown: 0, question: 0, right: 0, freeMoves: 0, feedback: null, lastMove: null, pendingReply: null, lastRight: null };
+  return { ...s, step: index, position, asked: position, phase: 'ready', attempts: 0, shown: 0, question: 0, right: 0, freeMoves: 0, feedback: null, lastMove: null, pendingReply: null, lastRight: null };
 }
 
 /** Plays the scripted reply that follows a correct (or revealed) move, if there is one. */
@@ -232,7 +236,7 @@ function answerQuestion<S>(game: LessonGame<S>, s: RunnerState, count: number, o
   const position =
     step?.kind === 'checkpoint' && nextQuestion < count ? (step.questions[nextQuestion]?.position ?? s.position) : s.position;
   game.position(position);
-  return { ...s, question: nextQuestion, right: s.right + (ok ? 1 : 0), position, feedback, lastRight: ok, lastMove: null, phase: nextQuestion >= count ? 'correct' : 'ready', mistakes: ok ? s.mistakes : s.mistakes + 1 };
+  return { ...s, question: nextQuestion, right: s.right + (ok ? 1 : 0), position, asked: position, feedback, lastRight: ok, lastMove: null, phase: nextQuestion >= count ? 'correct' : 'ready', mistakes: ok ? s.mistakes : s.mistakes + 1 };
 }
 
 /** Shows the answer after the student has tried (the first accepted move or the right option). */

@@ -22,6 +22,8 @@ import { CHESS_LESSONS, chessLessonGame } from '../src/games/chess/learn';
 import { chessVerifier } from '../src/games/chess/learn/verify';
 import { GO_LESSONS, goLessonGame } from '../src/games/go/learn';
 import { goVerifier } from '../src/games/go/learn/verify';
+import { POKER_LESSONS, pokerLessonGame } from '../src/games/holdem/learn';
+import { pokerVerifier } from '../src/games/holdem/learn/verify';
 import { lessonGames } from '../src/games/lessons';
 import { SHOGI_LESSONS, shogiLessonGame } from '../src/games/shogi/learn';
 import type { ClaimCache } from '../src/games/shogi/learn/verify';
@@ -111,11 +113,15 @@ const SUITES: Record<string, Suite> = {
   shogi: { lessons: SHOGI_LESSONS, game: shogiLessonGame, verifier: () => shogiVerifier(shogiCache) },
   go: { lessons: GO_LESSONS, game: goLessonGame, verifier: () => goVerifier() },
   'chinese-checkers': { lessons: CC_LESSONS, game: ccLessonGame, verifier: () => ccVerifier() },
+  poker: { lessons: POKER_LESSONS, game: pokerLessonGame, verifier: () => pokerVerifier },
 };
+
+/** Game folders whose name is not the game's id. */
+const FOLDER_GAME: Readonly<Record<string, string>> = { holdem: 'poker' };
 
 const problems: string[] = [];
 const withFiles = readdirSync(gamesDir).filter((name) => statSync(join(gamesDir, name)).isDirectory() && lessonFiles(join(gamesDir, name, 'learn')).length > 0);
-for (const game of withFiles) if (!SUITES[game]) problems.push(`${game}: has lesson files but no lint suite in scripts/lesson-lint.ts`);
+for (const folder of withFiles) if (!SUITES[FOLDER_GAME[folder] ?? folder]) problems.push(`${folder}: has lesson files but no lint suite in scripts/lesson-lint.ts`);
 for (const game of lessonGames()) if (!SUITES[game]) problems.push(`${game}: the app loads lessons that are not linted`);
 
 const engine = cachedEngine();

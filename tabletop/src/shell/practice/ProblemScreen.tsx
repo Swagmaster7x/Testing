@@ -212,6 +212,8 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
             {run.phase === 'setup' ? t('practice.watch') : run.phase === 'solving' ? (ui.layout === 'table' ? t('practice.find.play') : t('practice.find', { side: sideName })) : run.phase === 'reply' ? t('practice.good-reply') : null}
           </p>
           {run.phase === 'solving' && run.hints >= 2 ? <p className="faint">{themeNames.length > 0 ? t('practice.hint.idea', { idea: themeNames[0] ?? '' }) : t('practice.hint.idea.none')}</p> : null}
+          {/* Card and tile tables draw no arrow, so the last hint says the move in words. */}
+          {run.phase === 'solving' && run.hints >= 3 && expected && ui.layout === 'table' ? <p className="faint">{t('practice.hint.the-move', { move: moveWords(ui, board.state, expected) })}</p> : null}
           {run.phase === 'solved' ? (
             <p className="lesson-feedback" data-tone="good" role="status">
               {t('practice.solved')}
@@ -276,4 +278,14 @@ function solverSeatOf(ui: AnyGameUi, run: ProblemRun, game: PracticePack['game']
   const start: unknown = run.problem.setup ? game.play(before, run.problem.setup) : before;
   if (start === null) return null;
   return ui.def.turn(ui.def.codec.state.fromText(game.notation(start)));
+}
+
+/** A move in a game's own words ("Raise to 12"), or its notation when it does not read back. */
+function moveWords(ui: AnyGameUi, state: unknown, notation: string): string {
+  try {
+    const action = ui.def.codec.action.fromText(notation, state);
+    return ui.moveText ? ui.moveText(action) : notation;
+  } catch {
+    return notation;
+  }
 }

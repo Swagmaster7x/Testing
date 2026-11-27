@@ -224,7 +224,9 @@ function preflop(v: HoldemView, seat: Seat, style: StyleParams, skill: Skill, rn
   const raises = pre.filter((e) => e.kind === 'raise').length;
   const limpers = pre.filter((e) => e.kind === 'call' && !pre.slice(0, pre.indexOf(e)).some((x) => x.kind === 'raise')).length;
   const order = dealtOrder(v);
-  const behind = order.length - 1 - order.indexOf(seat);
+  // Before the flop play starts left of the big blind and ends with the blinds (heads-up, the button first).
+  const preflopOrder = order.length === 2 ? [order[1], order[0]] : [...order.slice(2), ...order.slice(0, 2)];
+  const behind = preflopOrder.length - 1 - preflopOrder.indexOf(seat);
   const result = (action: HoldemAction | null, tags: string[], equity: number | null = null): Decision => ({ action: action ?? callOrCheck(v, seat), tags, equity });
 
   if (raises === 0) {
