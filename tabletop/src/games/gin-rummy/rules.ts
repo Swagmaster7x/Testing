@@ -222,7 +222,16 @@ export function canKnockWith(cards: readonly Card[], limit: number): boolean {
   return deadwood(cards) <= limit;
 }
 
-function legalActions(s: GinState, seat: Seat): GinAction[] {
+type LegalInput = Pick<GinState, 'over' | 'toAct' | 'phase' | 'hands' | 'stockOnly' | 'discard' | 'taken' | 'config' | 'upcard'> & { readonly stock: { readonly length: number } };
+
+/** The legal moves as a seat's view sees them (the same as the rules give for the true state). */
+export function viewLegal(v: GinView): GinAction[] {
+  const hands: (readonly Card[])[] = [[], []];
+  hands[v.seat] = v.hand;
+  return legalActions({ ...v, hands, stock: { length: v.stockCount } }, v.seat);
+}
+
+function legalActions(s: LegalInput, seat: Seat): GinAction[] {
   if (s.over || s.toAct !== seat) return [];
   const hand = s.hands[seat] ?? [];
   switch (s.phase) {

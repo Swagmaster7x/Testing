@@ -5,6 +5,7 @@
  *   npm run ladder                 every game
  *   npm run ladder -- chess 30     one game, 30 games per rung
  */
+import type { LadderRung } from '../src/ai/ladder';
 import { runLadder } from '../src/ai/ladder';
 import { buildLadders } from '../src/games/ladders';
 import { nodeEngine } from '../tests/harness/stockfish-node';
@@ -25,14 +26,21 @@ for (const id of ids) {
   const only = process.env.LADDER_LEVELS?.split(',').map(Number);
   const spec = only ? { ...ladder.spec, levels: ladder.spec.levels.filter((l) => only.includes(l)) } : ladder.spec;
   const started = Date.now();
-  console.log(`\n${id}: ${games} games per rung, seats alternate, margin ${ladder.spec.margin}`);
-  await runLadder(spec, games, `ladder:${id}`, ladder.random, (r) => {
+  const print = (r: LadderRung) => {
     const { wins, draws, losses, score } = r.result;
     console.log(
       `  ${r.higher.padEnd(4)} vs ${r.lower.padEnd(7)} W ${String(wins).padStart(4)}  D ${String(draws).padStart(4)}  L ${String(losses).padStart(4)}  score ${score.toFixed(3)}  ${r.passed ? 'ok' : 'FAIL'}`,
     );
     if (!r.passed) failed = true;
-  });
+  };
+  if (ladder.custom) {
+    // Blackjack: each level against the house over the same shoes; the score is the difference in standard errors.
+    console.log(`\n${id}: ${games} sessions per level, every level on the same shoes, a rung passes at 2 standard errors`);
+    await ladder.custom(games, print);
+  } else {
+    console.log(`\n${id}: ${games} games per rung, seats alternate, margin ${ladder.spec.margin}`);
+    await runLadder(spec, games, `ladder:${id}`, ladder.random, print);
+  }
   ladder.close?.();
   console.log(`  ${((Date.now() - started) / 1000).toFixed(1)} s`);
 }
