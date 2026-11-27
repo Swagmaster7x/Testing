@@ -25,7 +25,8 @@
     "generate:brisca": "tsx scripts/generate-brisca-endgames.ts",
     "generate:dominoes": "tsx scripts/generate-dominoes-endgames.ts",
     "generate:holdem": "tsx scripts/generate-holdem-preflop.ts",
-    "generate:holdem-spots": "tsx scripts/generate-holdem-spots.ts"
+    "generate:holdem-spots": "tsx scripts/generate-holdem-spots.ts",
+    "generate:mahjong": "tsx scripts/generate-mahjong-discards.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.6.3",

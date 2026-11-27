@@ -1,0 +1,7730 @@
+{
+ "problems": [
+  {
+   "id": "mj-discard-020",
+   "spec": {
+    "hand": "W 6s W 5s 7m 3p 8m 2s 1p W 2p 2s 9m 9s",
+    "drawn": "9s",
+    "hands": [
+     null,
+     "8p 4s 2s 9p 3m E E 4m 3s Rd 2m Rd Wd",
+     "6m 8m 9m 4m 9m 4m 9p 6m 8p 3m 7p 2m 7m",
+     "1s 5m 1s 5s 9p 1m 8p 4s 1m 6m 1p 1s 6s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8s E 1m N 9s 4p S 5m 3s 7s 8s",
+     "9s 2p 6p N 7m Gd 7s Wd 5m 8m 5p 3p",
+     "6p E 1s 1p 6p 6p Gd 4p S N 4p 7p",
+     "8s 8s 3p 3m 3m 4s 3p 5p Rd Wd 5p Gd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-020"
+   },
+   "best": [
+    "9s"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-023",
+   "spec": {
+    "hand": "8s 8p 3s 3m W 7s 4s 2s 5m 7p W 9s 6p E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "5s 2p 1p 4s 7m 3m 3p 1m 6s 8m 6m W 5m",
+     "1s 6m 6m 6m 8s 8m Gd 2m 9s 7m 7p 6p 2m",
+     "8p 9m 4m 1s 3p 3s 9p 2p E 5m Wd Wd Rd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3p 2s 1p 6s 9m",
+     "5p 5s N 8m 3m",
+     "5s Rd W 4p 2s 4m",
+     "2p 6s 6p N Gd 1m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-023"
+   },
+   "best": [
+    "E"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-027",
+   "spec": {
+    "hand": "2s 7s 9s 8s 9m S 9p 9m 1s S 3s 9p Rd 9p",
+    "drawn": "9p",
+    "hands": [
+     null,
+     "6s 9m 2m S S 4s 2m 9m 3s 2m 5s 2s 2p",
+     "4s 4m 6p 6m 1m 1m 5m Rd 5p 5s",
+     "3p 4p 3m 2p 4p 8m 7s 7s 7m 1m 4p 6m 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "N N N",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "8s 2p E 2s 5p 5s 7m 8p 3m Wd 7p 3m",
+     "Gd E 9s Rd 7p 8p Wd 3p 8s 6m 6m 3p",
+     "E Gd 8m 1p 6p W 8p 1s 4s 1p 5p 8m 3p",
+     "8p Rd N 4m 7p 6s Wd 9p 7s W Gd 8m 3m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-027"
+   },
+   "best": [
+    "Rd"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-049",
+   "spec": {
+    "hand": "6p 6m 3m 5p 2m 3m 1m 3m 4p 4m E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "6s 3p E 9p 6m 5s E 7m 5m 9s 7s 1p 7s",
+     "6m 8m 3m 1p 9m 4m 7s 1p 1m 9s S 5m Gd",
+     "5p 9s 6p 1p N 1s 3p 8m 9m N 2p 7m 8s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4s 6p N 1s 9p 8p 7m Wd",
+     "8s 2m 2s 8p 8m 6s 4p 4m",
+     "2p 5s W E 3p 1s Wd",
+     "5m 4s 5s 4s W Wd 3s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-049"
+   },
+   "best": [
+    "E"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-079",
+   "spec": {
+    "hand": "Rd Rd 6s 2s 8s 6p 3s 5p 5s 4s 1s 4p 6s 1p",
+    "drawn": "1p",
+    "hands": [
+     null,
+     "2m 2m 4p 4p 1m 9s 6m 4p 1m 5m 4m 9s W",
+     "8p 5m 5s 7s 9m 9m 7p 6s 4m Wd Wd 9p 3m",
+     "1m 7p 8s 7s 1p 1p 5p 1s 1p 9s Wd 1s 6p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "7m 2s 8p 3p 5p E 1m 8p 2m 3p 9m 6s N 9p",
+     "2s 3s 3p 8p 9p 7m 7s 5s Rd 3s 2p 8m 6m Rd",
+     "5m W 3m 7p 4s S 4s N E 2p 7p Gd 7s 9s 6m",
+     "S 6m 5s 4s 5m 7m S 4m N W 2s Gd N 8s 6p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-079"
+   },
+   "best": [
+    "1p"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-086",
+   "spec": {
+    "hand": "6s Wd 7s 5s 9p 2s 2m 3m 4s 5p Wd 4p 1m 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "1p 2p Gd 8m 4p N 9s 5p W 3s Rd 7m 5m",
+     "Wd 9p N 6p 8m 2m W Wd 3m N 6m 5p S",
+     "9p 4p 8s 1s 8p 3p 7p 3m 9s Gd Gd Rd 8p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m E S Rd",
+     "6s 8p E 2m",
+     "6s 9s E 3p",
+     "8s 7p 8s E"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-086"
+   },
+   "best": [
+    "9p"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-107",
+   "spec": {
+    "hand": "7m 9s 1p 2p 8m 3p 1p 8s 7s 4p Rd",
+    "drawn": "Rd",
+    "hands": [
+     null,
+     "N 7p 7s 6s 8s N 9m 9m 8p 1p 3p N 9p",
+     "3m 3m 2p 8m 3m 7m 2p 9m 7s 5s",
+     "1m 5p 6p 6m 9m 1m 1m 7m 4p 5m"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 3
+      }
+     ],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "W W W",
+       "from": 3
+      }
+     ],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 1
+      }
+     ]
+    ],
+    "discards": [
+     "2s Wd 8p 5p 5s 6p 5m 4s 6p 8s 2m 7p 5s 4p 2m 4m 5p 5m 7m 3s",
+     "W 5p 3p 8s 6s 1s 8p 6m 1s Wd 3m Rd Wd S 4s 6s 6p Wd 6m",
+     "2m 9s 3s 3s 7s 2s N 1s 6m 1m 7p Rd S 3p 1p 7p 4m 4m 4p 9p",
+     "3s 8p 2m 6s 1s 2s 9p 8m Rd 9s 4s 2p 4s 4m S S 5m 8m 9p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-107"
+   },
+   "best": [
+    "Rd"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-113",
+   "spec": {
+    "hand": "2s Gd 5s 3s 4m 2m 3m Wd 5m 6m Gd 5s Gd 7m",
+    "drawn": "7m",
+    "hands": [
+     null,
+     "3s N 9s S 9m 1p 7m 4s 1s W Wd 4s 1m",
+     "2p 1p E 1s 1m 6s 9m E 9s Rd 9m Rd 1m",
+     "3s 9s N 8s 9p 4p 3p N 1s 5p 8p 9p W"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "W 4p 8m",
+     "2m 7p 5m 5s",
+     "4m 8m 5p 6s",
+     "6s 6m 3p 8s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-113"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-114",
+   "spec": {
+    "hand": "2s Gd 5s 3s 4m 2m 3m 5m 6m Gd Gd 7m 2s 5p",
+    "drawn": "5p",
+    "hands": [
+     null,
+     "N 9s S 9m 1p 4s 1s W Wd 1m 9m Rd W",
+     "2p 1p E 1s 1m 9m E 9s Rd 9m Rd 1m 1s",
+     "3s 9s N 8s 9p 4p 3p N 1s 5p 9p S 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "W 4p 8m Wd 5m N 5s 3m 7s",
+     "2m 7p 5m 5s 6p 3s 4s 7m 7m 6p",
+     "4m 8m 5p 6s 6s 6m 5m 4s 2m 4s",
+     "6s 6m 3p 8s 8p 8s Wd 4p 3s W"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-114"
+   },
+   "best": [
+    "5p"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-139",
+   "spec": {
+    "hand": "4s 8p 6p 6p 1m 3p 3p 5s 7p 9p 3p 7s 3s 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "8s 4m 7p 3m 3m 1s 1m 7s 2m 5p 6p 9s 1p",
+     "6m 1p 4p 5m 7m 4p 1p 8m 7s 9m 9s 1s 4m",
+     "3m 5p 1p 4p 2m 1m 7m 5m 2p 9s 9s 6m S"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4m 2p S Wd Rd 4m 5p W E Gd 8m 7p",
+     "4s 5s N 6m 2p 5s E 3s Wd 3p Gd 7s E",
+     "6s 2p 4s 3m 2s 7p 6s Rd 3s Gd W 4s N",
+     "8p Wd N 3s S E 1s 6s S Gd 8s W 1m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-139"
+   },
+   "best": [
+    "1m"
+   ],
+   "rating": 700,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-002",
+   "spec": {
+    "hand": "Rd 3s 9s 3m 1s 2s 8m 3p 8s 9m Rd 4m 6p 7s",
+    "drawn": "7s",
+    "hands": [
+     null,
+     "S 4p 9p 7s 6m 1m 7m 1s 3s 3m 5p 7s N",
+     "1s 2s 8p 3p 4s 9s 1p 9m 6s 3s Rd 6p 1m",
+     "8m W 4p 8p 9m S S 9p S 2p W 4s 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6m 7p 6s",
+     "6m 7p 6s",
+     "5p W 2s Wd",
+     "8s 6m Wd 2m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-002"
+   },
+   "best": [
+    "3p",
+    "6p"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-008",
+   "spec": {
+    "hand": "7s 6m 5p 8s Rd 3p Rd 5m 3p 5p 5p Wd W Rd",
+    "drawn": "Rd",
+    "hands": [
+     null,
+     "6p 2p 1m 1p N 8p 2m 8p 4s 5p 5s 4p 5s",
+     "9m 6s 2m 7s Wd 8s 9p 3m 9p 9m 1s Wd 1m",
+     "1s 8p 7s 3s 6m 7p 6p 2s 1s 9s 5m W 4m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p 6m 5s 1s Gd N 1m 9m",
+     "6p Gd 2p 4m E 7p 9m 6p",
+     "7m 7p 4s 4s 2p 6m 8s 7m",
+     "S 6s 3p N 8m E 3s 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-008"
+   },
+   "best": [
+    "W",
+    "Wd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-011",
+   "spec": {
+    "hand": "9s 8m 4m 9p Rd 9p 1m 9m 7s 6m 8s 1m 1m 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "4p 4s 5s 2p 1p 3p 3s S 3s 6p 4s 5s 1m",
+     "Rd 3p 4s 8p Wd 6s 7m 6m 7p 7s 9m 9m 1s",
+     "1p 7p S 4m 9s 2s 9p Wd 7s 3m 2p 2m 2s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "W W 2s 7p 6s 3p",
+     "Gd 4m 8p Gd 4p 8s E",
+     "Gd 8p N 2m 1s E 7m",
+     "7p 4p 8m 6s N 3s Gd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-011"
+   },
+   "best": [
+    "6p",
+    "Rd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-012",
+   "spec": {
+    "hand": "9s 8m 4m 9p Rd 9p 1m 9m 7s 6m 8s 1m 1m 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "4p 4s 5s 2p 1p 3p 3s S 3s 6p 4s 5s 1m",
+     "Rd 3p 8p Wd 6s 7m 6m 7p 7s 9m 9m 1s 9s",
+     "1p 7p S 4m 9s 2s 9p Wd 7s 3m 2p 2m 2s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "W W 2s 7p 6s 3p 6p Wd",
+     "Gd 4m 8p Gd 4p 8s E E 4m",
+     "Gd 8p N 2m 1s E 7m 4s 3m",
+     "7p 4p 8m 6s N 3s Gd 2p 4p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-012"
+   },
+   "best": [
+    "3p",
+    "Rd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-026",
+   "spec": {
+    "hand": "2s 7s 9s 8s 9m S 9p 9m 1s S 3s 9p Rd 3m",
+    "drawn": "3m",
+    "hands": [
+     null,
+     "6s 9m 2m S S 4s 2m 9m 3s 2m 5s 2s 2p",
+     "4s 4m 6p 6m 1m 1m 5m Rd 5p 5s",
+     "3p 4p 3m 2p 4p 8m 7s 7s 7m 1m 4p 6m 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "N N N",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "8s 2p E 2s 5p 5s 7m 8p 3m Wd 7p",
+     "Gd E 9s Rd 7p 8p Wd 3p 8s 6m 6m",
+     "E Gd 8m 1p 6p W 8p 1s 4s 1p 5p 8m",
+     "8p Rd N 4m 7p 6s Wd 9p 7s W Gd 8m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-026"
+   },
+   "best": [
+    "3m",
+    "Rd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-028",
+   "spec": {
+    "hand": "9s S 4m 7s 3m 5m 8p 7m 8m 7p 9m 8s N 4p",
+    "drawn": "4p",
+    "hands": [
+     null,
+     "7m 9m 8m 6s 1s 1m N N 3s 7p W 5s 5p",
+     "5s 1p 5p W 7p 9s 9s 3p 6p 3s",
+     "2p 5p 8s 3p 2p 1m 7s 2m 3s 3m 4p 6s 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "Rd 2p 4p 4s E",
+     "4m Wd E 7m 6m",
+     "8s 2s 8p 5s 9m N",
+     "3m S 4s 1p 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-028"
+   },
+   "best": [
+    "4p",
+    "S",
+    "N"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-031",
+   "spec": {
+    "hand": "8s 7p 6m 7p 8m 1p 1p 7p W W 2m 4m 1p 4m",
+    "drawn": "4m",
+    "hands": [
+     null,
+     "2m 4s 2p 5s 2p 9s E 6s 4p 9m 8m 4p 8p",
+     "W 1s 6m Rd 7m E 9m 4p 5p 6s 7s 4m 9m",
+     "4p 6m 5m 2p 9p 5m 7m 9p 4m 7m E 7p 5m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3p N 6p 2s",
+     "Gd Rd 2s Wd",
+     "N 4s S 8p",
+     "S Gd 1m 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-031"
+   },
+   "best": [
+    "8s"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-032",
+   "spec": {
+    "hand": "8s 7p 6m 7p 8m 1p 1p 7p W W 2m 4m 1p 4s",
+    "drawn": "4s",
+    "hands": [
+     null,
+     "2m 4s 2p 5s 2p 9s E 6s 4p 9m 8m 4p 3m",
+     "1s 6m Rd 7m E 9m 4p 5p 6s 7s 4m 9m 2p",
+     "4p 6m 5m 2p 9p 5m 7m 9p 4m 7m E 7p 5m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3p N 6p 2s 4m",
+     "Gd Rd 2s Wd 8p",
+     "N 4s S 8p W",
+     "S Gd 1m 5s 6s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-032"
+   },
+   "best": [
+    "4s",
+    "8s"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-042",
+   "spec": {
+    "hand": "Rd 1s 1m 7p 9p S 3m 3s 2m 4m Rd Rd 4m 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "2p 3p 8p S Gd 7p Gd",
+     "Rd 7s 5m 6s 4p 5m 6m 1s 2p 8m 3p 1s Wd",
+     "S 6p 1p 4m E 3m 9m 1p 9m 8p"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "chow",
+       "tiles": "2p 3p 4p",
+       "from": 0
+      },
+      {
+       "type": "pung",
+       "tiles": "W W W",
+       "from": 0
+      }
+     ],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "N N N",
+       "from": 2
+      }
+     ]
+    ],
+    "discards": [
+     "8m 7m E 8s 7s Wd 4s 2m",
+     "4m 5s 6m Wd 1m 8p 5p 5p 5m 5p",
+     "Gd 6p 4s 1m E 6p 2m 2s E",
+     "2s 3s 7m Gd 9p 4p 7m 2s 4p 8m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-042"
+   },
+   "best": [
+    "8s",
+    "S"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-064",
+   "spec": {
+    "hand": "Wd 5m 4s Wd 5s 3p 9m Wd 6s 2p 1s 5m 2m 7m",
+    "drawn": "7m",
+    "hands": [
+     null,
+     "5p 3m W 7m 1p 7s W 8s 6m 8m 4p 2s S",
+     "N 8m 5s 8m Gd 5p 7s Gd 1m 7p",
+     "S 9p S 9p 1s 1p 4m 3p 2s 4m 4m N S"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 0
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "8p 4s W 5p",
+     "8p N E 8s",
+     "2p 6m 2p 1p 3s",
+     "6m 6s 4s E 9m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-064"
+   },
+   "best": [
+    "2m",
+    "1s"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-075",
+   "spec": {
+    "hand": "7p 6p Gd Gd 1p 1m 1p 7s 6s 8s 9p 5p 9p E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "3s 7m 7s 5s 5p 7s 9p N 5p 8p 5p 4s 5m",
+     "3m 2s 4s 1p 4p N 1s 2p 2m 3s 4m 4p 3s",
+     "1m 6p 7m 6m Wd 3m Wd 6m 6m 2m 9m 9s Wd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4s 7p 4m 4m 2m 3p 8p",
+     "E Rd 5m 8m 3m W 7m",
+     "5m 9m 6s 2s S 2p 4s",
+     "9s 6s 6p N S 7m E 8p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-075"
+   },
+   "best": [
+    "1m",
+    "E"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-091",
+   "spec": {
+    "hand": "8p 6m S Gd 7m 7m 3p 5m 9p S 2p 9m 8m Wd",
+    "drawn": "Wd",
+    "hands": [
+     null,
+     "9p 9s 2s 2p 9s 9p Gd N 4m 2m 3p Wd 2s",
+     "6m 5s 7p 8m S Wd 4s 1s S E 5p 4m 7m",
+     "2m 4p 8p 6s 3m 5p 1s 1m 6p 5s 1m 7s 7s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4s 8s 5p 3p",
+     "8s W 8m 2m",
+     "5s W N 8m",
+     "2m 8s 2p N Rd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-091"
+   },
+   "best": [
+    "Wd",
+    "Gd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-094",
+   "spec": {
+    "hand": "3m 7m 6m 1p 3m 8s 7p W 8m 2p 3m W 5p W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "1p 5m 6p S 3m 6m 4p 4s 4m 5m Gd 4p Rd",
+     "9m 1s 5p S 8p N 5s 6s Gd 5s 1m 2m 3p",
+     "9p 3s 2s 8p 9m 8m N 2m 9m 1p 1m Rd 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "1m 4m",
+     "8s Wd",
+     "2p 9s",
+     "2s 5p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-094"
+   },
+   "best": [
+    "8s"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-095",
+   "spec": {
+    "hand": "3m 7m 6m 1p 3m 7p W 8m 2p 3m W 5p W 7s",
+    "drawn": "7s",
+    "hands": [
+     null,
+     "1p 5m 6p S 3m 6m 4p 4s 4m 5m Gd 4p 5m",
+     "9m 1s 5p S N 5s 6s Gd 5s 1m 2m 3p 3p",
+     "9p 3s 2s 8p 9m N 2m 9m 1p 1m Rd 9m 4s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "1m 4m 8s",
+     "8s Wd Rd",
+     "2p 9s 8p",
+     "2s 5p 8m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-095"
+   },
+   "best": [
+    "7s"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-109",
+   "spec": {
+    "hand": "2m Gd 7m 6s Gd Gd 3s 6m 7s 1s 8m 9p 2m 1p",
+    "drawn": "1p",
+    "hands": [
+     null,
+     "1s 9s 5s 5p 6p 3s 3m 1s 4s 5m 4s 3s 2s",
+     "5s Gd 4p 5p 3p 7p 1m 6s 1s 2p 6p 9p 1m",
+     "W 8s W 9s 8p 6s 6p 9m 7s 7s 5s S 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 5m 4p 1p 4s 5m E 1m",
+     "2p Wd Rd 8m 3p 8p 2p Rd",
+     "2s Rd 8m N 6m E 3m 3p",
+     "Wd S Wd 2p 6m N 6s 1m 7m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-109"
+   },
+   "best": [
+    "1p",
+    "9p"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-117",
+   "spec": {
+    "hand": "5s 4p 7p 8m E 5m 7s 7p 4m 6m 7p 7m 4p 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "3p 2s 4s 1p 3s 5p 9s 6m 7s 5m Gd W 7p",
+     "9s 4p 2p 6p 9s 9m 4p Wd 1m N N 9m 1s",
+     "8p S 4m 8m 7s 3m 7m 9m 6s S 2m 8s 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Gd 2s 2p 6p Rd 1m 3p",
+     "2m 2s 8m 3m 8p Rd 4s",
+     "1s 8s 4s 6m 8m 4s 8s",
+     "8p 1p W 3p 9p 7s 8p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-117"
+   },
+   "best": [
+    "2s",
+    "E"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-124",
+   "spec": {
+    "hand": "9p 2m 5s 7s 2m 1m 6s 5s 4p 1m 5s 8s 6p E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "8p E 8s 2s E 9s 7m 2s 2s 8m 7p 6p 7s",
+     "9s 4m 7m 9p 9m 4m 4m 8m 9s 9s",
+     "5m 9m 1m 1p 1m 2p 5m 2p 5m 1p 6p 5p 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "8s 6s 5p W 4s 1s",
+     "3p 5s 8p 3m 3s N S",
+     "Wd Rd 3s Rd 3s 3m 4s 7m",
+     "6m 4s 4p 1s 3m W 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-124"
+   },
+   "best": [
+    "9p",
+    "E"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-127",
+   "spec": {
+    "hand": "4s 3s 3m 5s 9m 1s 7m 8m 5m 1s 4p E 4p Wd",
+    "drawn": "Wd",
+    "hands": [
+     null,
+     "4m 8p 5m 6m 6p 9p 5p 7m 9m 7p 7m 3s 3s",
+     "9s 6p 5p 1m 4p 2s 5m 1p 6m 7s 1m 4s 9p",
+     "3p 1m W 9p Rd Wd S Gd 8m 1m N 9m 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "S N 8p 3m 6s W 5s",
+     "6s S Rd 3s 3p 7s 4m",
+     "W Gd 6m 4s 2s E S",
+     "8s 5p 2s 2p 3p 2m 6p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-127"
+   },
+   "best": [
+    "E",
+    "Wd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-128",
+   "spec": {
+    "hand": "4s 3s 3m 5s 9m 1s 7m 8m 5m 1s 4p 4p Wd 1p",
+    "drawn": "1p",
+    "hands": [
+     null,
+     "4m 8p 5m 6m 6p 9p 5p 7m 9m 7p 7m 3s 3s",
+     "9s 6p 5p 1m 4p 2s 5m 1p 6m 7s 1m 4s 9p",
+     "1m W 9p Rd Wd S Gd 8m 1m N 9m 1s 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "S N 8p 3m 6s W 5s E",
+     "6s S Rd 3s 3p 7s 4m 5s",
+     "W Gd 6m 4s 2s E S 5m",
+     "8s 5p 2s 2p 3p 2m 6p 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-128"
+   },
+   "best": [
+    "1p",
+    "Wd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-146",
+   "spec": {
+    "hand": "3p 7s 8s 9p 6s 2m 2p 8m 9p 8m 3m 4p W N",
+    "drawn": "N",
+    "hands": [
+     null,
+     "4s 4p 7p 2m 3p 1p 7p 4p 7p 2s 2m 2p 3s",
+     "7m 2s 4s 5m 9m 8s 4m 9s 3m 7s 5s 1m S",
+     "6p 5s 4m 6s 8p S S 1m 1m N Wd 5m 7p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 5m Wd",
+     "6m Wd Rd",
+     "5p 8s 8p",
+     "3s 3p Rd 9s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-146"
+   },
+   "best": [
+    "W",
+    "N"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-150",
+   "spec": {
+    "hand": "1m 8p 3s 4s 1m 1s 3s 7p 3p E 2p 9p 4p 6m",
+    "drawn": "6m",
+    "hands": [
+     null,
+     "6m 3s 2m 3m 9p 5m 1p 4m 1s 9m 9p 9p 4m",
+     "9s 1m 5s Gd 4s 2m Gd 3m 8s 3p 5p 6s 4p",
+     "7m 1p 4s 8s N 7s 1p 7p 9m 2s 8m 5p 6p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "7m 8s 5p 6s Wd 3p 3p 9s Rd",
+     "6p Wd 3m 6s 2p 5s 6p 5s 2p",
+     "7m 8p 2s 4m N S 1p W 5s",
+     "7p 7m 7s 8p 7s Wd 7p S 3m 8s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-150"
+   },
+   "best": [
+    "6m",
+    "E"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-156",
+   "spec": {
+    "hand": "2p 4s 7m 8m 2p 6m 9s 5s 9p 6s 7p 9s Rd 2m",
+    "drawn": "2m",
+    "hands": [
+     null,
+     "2m 1m 3m 6s 2s 1p 4s 5p 1s 4p 1p 6p 9p",
+     "2p 1p 4m 9s 5m 5m 3s 3m 9s 1s 2s 9m 9m",
+     "1s 3s 5s 9p 6s 5p 4s S 4p S 2s 9p S"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3p W 6p 6s 8s Gd N 1s 3p 3m 4m Gd 8m 1m 3s 8s Wd",
+     "4m 7m 7m 8p 2s 5m 5p 4p W Gd 3p 6m 8s 6m Wd Gd 2p S",
+     "E N 8m 7p W 8m 7s 5s 5s 9m 3s E E Rd Wd 6p 7s 2m",
+     "4m Rd 5p 9m 7s 7m 1m 6m 7s Wd 8p 3m 2m Rd 8s 1m W 4s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-156"
+   },
+   "best": [
+    "2m",
+    "Rd"
+   ],
+   "rating": 760,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-006",
+   "spec": {
+    "hand": "7p 4m 9p 9s 8s 5m 9s 3p 2p Rd 8s Gd 3m 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "3m 3s N S 7p E 2s 5p 7s N 2m 9s 1m",
+     "3m 6m W 8m 4s 7m 6p 4s 5p 4s 1s 2m 1s",
+     "8p Rd N 9m 3p 7s 9p 6s 1s 9m 4p Rd Gd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s 7p 7m 5p",
+     "8m 7p 4m 6s",
+     "8m 8p 3p E",
+     "S 6m 3m 3p 8m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-006"
+   },
+   "best": [
+    "9m",
+    "Gd",
+    "Rd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-007",
+   "spec": {
+    "hand": "7s 6m 5p 8s 1m Rd 3p Rd 5m 3p 5p 5p 9m Wd",
+    "drawn": "Wd",
+    "hands": [
+     null,
+     "6p 2p 1m 1p N 8p 9m 2m 8p 4s 5p 5s 4p",
+     "9m 6s 7m 2m 7s Wd 8s 9p 3m 9p 9m 1s Wd",
+     "1s 8p 7s 3s 6m 7p 6p 2s 1s 9s 5m W 3s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p 6m 5s 1s Gd N",
+     "6p Gd 2p 4m E 7p",
+     "7m 7p 4s 4s 2p 6m",
+     "S 6s 3p N 8m E"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-007"
+   },
+   "best": [
+    "1m",
+    "9m",
+    "Wd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-014",
+   "spec": {
+    "hand": "1s 2s 7p 6m 8p 8p 1p 5m S 1p 7p 7m Gd 4p",
+    "drawn": "4p",
+    "hands": [
+     null,
+     "Gd Gd 1m E 9m 8m 9s E S 1m 9s 6s 9s",
+     "5s 3p 4s 9s 1p 4m 7s 2m 8s 6s 2p 1s Wd",
+     "Wd S Gd N 1p 9m Rd 1m 1s Rd W 8p W"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 2s W 5s 7s 8m 3m Wd",
+     "5m 8s 6s 3s 8s 4m 3s W",
+     "2s 6p 6m 8m 3p 9p Rd 7m",
+     "5p 4s 3p 4s 5p 6p 3m 6s 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-014"
+   },
+   "best": [
+    "4p",
+    "S",
+    "Gd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-025",
+   "spec": {
+    "hand": "2p 8p Gd Gd 3p 1p 9p 1s 2s Gd 3m Rd 1s 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "5s W 7m 2p 6s S Rd 4p 8m 1m W 1m 6m",
+     "7s 4m 8s 2s 3p 2m 8m 8m 4s 3s 9s 4p 3m",
+     "7p 4s 1p 2s 9p 9p Gd 6s W 6p 8p 1m 6m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Wd 8m S 6m E 4m",
+     "2s 8p 4p 1s 7p Wd",
+     "N S 5s 4m 3m 6m",
+     "2m 9s 2m E E 5m 7p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-025"
+   },
+   "best": [
+    "Rd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-041",
+   "spec": {
+    "hand": "Wd Rd 1s 1m 7p 9p S 3m 3s 2m 2m 4m Rd W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "W 2p 3p 8p 5p 5p W S Gd 7p",
+     "Rd 7s 2s 5m 6s 4p 5m 6m 1s 2p 8m 3p 2m",
+     "S 6p N 1p 4m 4p N 7m E 3m 9m 1p 9m"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "chow",
+       "tiles": "2p 3p 4p",
+       "from": 0
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "8m 7m E 8s 7s",
+     "4m 5s 6m Wd 1m 8p",
+     "Gd 6p 4s 1m E 6p",
+     "2s 3s 7m Gd 9p 4p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-041"
+   },
+   "best": [
+    "S",
+    "W",
+    "Wd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-050",
+   "spec": {
+    "hand": "6p 6m 3m 5p 2m 3m 1m 3m 4m 7p 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "6s 3p E 6m 5s E 7m 5m 9s 7s 1p 7s Rd",
+     "6m 8m 3m 1p 9m 4m 7s 1p 1m 9s S 5m 2m",
+     "5p 9s 6p 1p N 1s 3p 8m 9m N 2p 7m 8s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4s 6p N 1s 9p 8p 7m Wd E 4p",
+     "8s 2m 2s 8p 8m 6s 4p 4m 9p 3p",
+     "2p 5s W E 3p 1s Wd 4p Gd",
+     "5m 4s 5s 4s W Wd 3s 2m 1m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-050"
+   },
+   "best": [
+    "6p"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-051",
+   "spec": {
+    "hand": "3p 9s N 4s 8m 1p 8s Rd 6m 5s 4p 3s 4p S",
+    "drawn": "S",
+    "hands": [
+     null,
+     "5s 5p 2p 6s 2s 2p 3s 1s 4m 5m 3p 9s 7s",
+     "2m 4s Wd 8m 1m 4p 4p 2s 3m Wd Wd W 8m",
+     "8s 7p 2p 1s 8p 4m 7m 9m 7s 5m 2p 8m Rd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6p 8p 2s 6s E 6s 9p",
+     "W 2s 7p 1m 3s 9p E",
+     "6p 6p 7p 6p S Rd 6m",
+     "Rd 4m E 5m Gd 2m 9m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-051"
+   },
+   "best": [
+    "S",
+    "N",
+    "Rd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-053",
+   "spec": {
+    "hand": "1s 4m 9p 6m 2p 4p 2m E W 4m 7m 3m 9m 9p",
+    "drawn": "9p",
+    "hands": [
+     null,
+     "9s 6m 5s 1m 3m 9p 9p 1m 3s 3s 6m 1p 6p",
+     "3s 6m E E W W 5m 4m E 2s 4s 1p 4m",
+     "8s 2s 3p 2m 2s 8p 7s 9s 5p 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Wd Wd Wd",
+       "from": 1
+      }
+     ]
+    ],
+    "discards": [
+     "4s 8s 5s",
+     "Rd S",
+     "Rd 6s",
+     "N Gd 8m S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-053"
+   },
+   "best": [
+    "1s",
+    "E",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-055",
+   "spec": {
+    "hand": "5p 5p 4p 3s 6m W N Rd 1s 4s 5m 7p 1s 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "5s Rd 2s 8p 2p 7s 1s 5m 8m 8m 5s 6s 6s",
+     "2m 2p 8s 2p 9m 9m 2m 8p S 6p 7s 2p Wd",
+     "7m 9p N 9s N 7m E 7m Wd 6m 9s 4m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p Gd 7s 3s",
+     "2m 7s E 8s",
+     "5m 3s 8s 3p Rd",
+     "2s W Gd W 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-055"
+   },
+   "best": [
+    "W",
+    "N",
+    "Rd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-066",
+   "spec": {
+    "hand": "7s 9m 8p 7p W 8m W 7m Gd 1s 1s 1s 3p 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "7p 4p 9s W 4p 8s 4s 3s 5p 7s 2s 9m 6p",
+     "5m 1p 5m 4s N 1p 3s 8p 1p 7p 3m 1m 5s",
+     "Wd 5p 1s 9s Wd Gd 9s 6s 6p 3s 5s 9p 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3m E 3m N 2s 2p 6m",
+     "S 6s N 9m 2p 2m 4m",
+     "5p 2p Rd 2p 7s 8m 5p 7p",
+     "Rd 3m 7m 3p 8s 1p 4m 3s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-066"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-069",
+   "spec": {
+    "hand": "5p 4s N 5m 6m W 1s 5p W 5s 8m 6m 9s W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "8s 5s 5s 2s 9p 5s 8p 4s 9s 4m 4m 1m E",
+     "Rd 7p 3p 3p 6p 6s 3m 9p 1m 7p Gd 2m 6s",
+     "1p 3s 2s 7s Rd 1p 1p 8p 7p 9s Wd Rd 6p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2p 2m 2m",
+     "8p 8m 8s",
+     "8m Wd 4m",
+     "4p 2m 5m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-069"
+   },
+   "best": [
+    "1s",
+    "9s",
+    "N"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-074",
+   "spec": {
+    "hand": "8s 5m 7s W S 1s 4p E 7m S E",
+    "hands": [
+     null,
+     "2p 9s 9s 5m 7p 5m 6p 5m 2m 3p 4m 3m Wd",
+     "3p 4p 4p 9m 1s Gd 1m 7s 7p 1p E 6m 6m",
+     "S 9m 6s Wd Wd 9p 3s 7m S 3s 5s 8m 3s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s N 3m 3p",
+     "8m 1m 3s N",
+     "W N 4m 4m",
+     "2p 2m 8s 7p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-074"
+   },
+   "best": [
+    "4p",
+    "1s",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-080",
+   "spec": {
+    "hand": "Wd 7p 8p 4m 9m 3s 1p 4s 9s 9s 5m 2p 5s E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "2p S 5m 1p Rd 6m 5p 8m 6p 4m Rd 7m N",
+     "7p 2s 8p 2s 1p Wd S 8m 6m 8s 7s Rd Wd",
+     "6p 8p 9s 1m 9m 9m 6s 2m 5s 9s 1s 7s Gd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p W 5p 1m",
+     "2s 5s 2s E 5s",
+     "W Gd 3m E Gd",
+     "1p 7m 3s 2m N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-080"
+   },
+   "best": [
+    "9m",
+    "E",
+    "Wd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-083",
+   "spec": {
+    "hand": "W 9s Gd 1m 3m 1s 1s W 9p 9s 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "8p 9s 4s E 9p 3s 5p Rd 7p 7p 8s 9p E",
+     "2p 1p 7m 6p 4p Wd 7p 9p Gd S 9m 8m S",
+     "1m 3s 3m 1s 4s 6p 2s 3s 4p 4p 5p 3p Rd"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "N N N",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s 9m 6m 5m 7s",
+     "5m 8m W 4m 6s 1m",
+     "9s 7m 4m 6s 4s",
+     "W 8p 1p 4m S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-083"
+   },
+   "best": [
+    "9m",
+    "9p",
+    "Gd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-084",
+   "spec": {
+    "hand": "3s 7m 1m 8p 8m 9p N 4s 2m 5s 9s 1p N N",
+    "drawn": "N",
+    "hands": [
+     null,
+     "2s 8m 3m 9p 8p W 7p 9m 4m 4s 4s 2s E",
+     "6p 9s 2m Wd 3m 4m 9s 4p 5m 6p 6m 2p 4m",
+     "2s 5s 3p S 9p 9m 3s 9p Gd 7m 2p 8m 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 4m Rd 8p W Gd",
+     "S 8s 3p 8s 5p 6m",
+     "8s Rd E 4s 7s 3m Rd",
+     "Rd W 5m 5p 3s W 7s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-084"
+   },
+   "best": [
+    "1p",
+    "9s"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-087",
+   "spec": {
+    "hand": "6s Wd 5s 2s 2m 3m 4s 5p Wd 4p 1m 6p 1s 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "1p 2p Gd 8m 4p 9s 5p W 3s 7m 1p 2p 3s",
+     "Wd 9p N 6p 8m 2m W Wd 3m N 6m 5p S",
+     "9p 4p 8s 1s 8p 3p 7p 3m 9s Gd Gd Rd 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m E S Rd 9p 2s 7s",
+     "6s 8p E 2m Rd N 5m",
+     "6s 9s E 3p 6m 7s 2s",
+     "8s 7p 8s E 8p 8m 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-087"
+   },
+   "best": [
+    "6s"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-103",
+   "spec": {
+    "hand": "W 1s 1m 5s 4s 9s W 3m 1s W E E 8p 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "7p 6s 7m N 8p 6p 7s 1p 4p 3m 5p 7s 5s",
+     "3m 2p 5m 3p 9p 2m 1s 2p 3p 4m 9m 3s 2p",
+     "9m 4m 9p 8s 3s 4s 8m 1p 6m 7m 1m 2s 8s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 7s S 7p 7m 2s 7m",
+     "Wd E 5p S Rd Wd Gd",
+     "Wd 6p S E N 5p 3s",
+     "6p Wd Rd 8s 5p N 4s 9s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-103"
+   },
+   "best": [
+    "3p",
+    "8p",
+    "9s"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-119",
+   "spec": {
+    "hand": "2s 9s 7s 6s 7s W 1m S 7m 4m 2s 7m S 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "5m 7m 8m 6p E 4p 1p 3p 7m 6m 3p 8m E",
+     "7s 5s 4p 5m 9s 3s 6s 6m 5p 6m 1s W 3m",
+     "4m 1p N 8s 3s 9p 4s 8s S 3m Rd 8m 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 7p 5p",
+     "2m 8s 4s",
+     "2m 4s 7p",
+     "6p Wd Gd Gd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-119"
+   },
+   "best": [
+    "1m",
+    "4m",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-120",
+   "spec": {
+    "hand": "2s 9s 7s 6s 7s W 1m S 7m 2s 7m S 8s 4m",
+    "drawn": "4m",
+    "hands": [
+     null,
+     "5m 7m 8m 6p E 4p 1p 3p 7m 6m 3p 8m E",
+     "7s 5s 4p 5m 9s 3s 6s 6m 5p 6m 1s W 3m",
+     "4m 1p N 8s 3s 9p 4s 8s S 3m Rd 8m 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 7p 5p 4m",
+     "2m 8s 4s 5s",
+     "2m 4s 7p 4s",
+     "6p Wd Gd Gd Wd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-120"
+   },
+   "best": [
+    "1m",
+    "4m",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-134",
+   "spec": {
+    "hand": "3m 5s 4m 4s W Wd 9p 1p Wd 2p Gd Gd Gd 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "2p 9p 9s 6s 7s Rd 1p 9p Rd 5m 9p 5s 2p",
+     "4p 6p 3p 7s Rd 9s 6p 4m 2m 3m 9m Rd 8s",
+     "4m 4m 7m 9m 3s 2m 3s S 9s 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 0
+      }
+     ]
+    ],
+    "discards": [
+     "5s Gd S 8p 8s 2p 1s",
+     "8m 2s N Wd 2m 8m 5p 9m",
+     "7m 8p 6m S 7m 1s E N",
+     "7p 5m S 1p 5p N 6s W 5m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-134"
+   },
+   "best": [
+    "9m",
+    "9p",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-138",
+   "spec": {
+    "hand": "Gd 4s 8p 6p 6p 1m 3p 3p 5s 7p 9p 3p 8m 7s",
+    "drawn": "7s",
+    "hands": [
+     null,
+     "8s 4m 7p 3m 3m 1s 1m 7s 2m Gd 5p 6p 9s",
+     "6m 1p 4p W 5m 7m 4p 1p 8m 7s 9m 9s 1s",
+     "W 3m 5p 1p 4p 2m 8s 1m 1m 7m 5m 2p 9s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4m 2p S Wd Rd 4m 5p W E",
+     "4s 5s N 6m 2p 5s E 3s Wd 3p",
+     "6s 2p 4s 3m 2s 7p 6s Rd 3s Gd",
+     "8p Wd N 3s S E 1s 6s S Gd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-138"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-143",
+   "spec": {
+    "hand": "9p 9s Wd 7s 1m 9p 9m Wd 1s 1m 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "1p Gd 8m 1s 6p 7s 7m 6s 9p 4p 8p 8s 8p",
+     "5m 3s 7p 6s 5s Gd 7s 5s 7m 7p W 1m W",
+     "2s 5s 4p 4p 4m 2s 5m 3m 2p 2p 4s 4p 9s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 3
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5m 7p E 6s 5p",
+     "6p N 4s 3m Rd S",
+     "E 5p S 4m 2m 2p",
+     "8m S 3m 6m 6p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-143"
+   },
+   "best": [
+    "9m",
+    "6p",
+    "1s"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-148",
+   "spec": {
+    "hand": "6s 7p 9s Rd 8p 3m 8m 5s 1p 2p 3m 7m 9m W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "7p 1s 7m 8s 7s 2p 7p 7p 3p 1s E S 9m",
+     "7m 8m E Wd 5s 6s 2s 4m 3m 3s Wd 7s 9m",
+     "4s 4s 1p 9s 8s 9s 5m E 7s 4s 1p 6m 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m 6s W 6m",
+     "2p 8s 9p 5p 5m",
+     "S N Gd Rd 6m",
+     "2p Gd 2s 1m 6p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-148"
+   },
+   "best": [
+    "9s",
+    "W",
+    "Rd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-152",
+   "spec": {
+    "hand": "3s 8p 6p 8m 5s 6s 8m 1p 2m 8m 8p Rd 3s 9p",
+    "drawn": "9p",
+    "hands": [
+     null,
+     "2s 5s 3m 4s 1s 3p 3p 5m Gd 6s 3s 4m 8s",
+     "9s 3m 1p 9p 6p 7p 1p 9s 1s 5p 5m 4p 1s",
+     "N Rd 1p Gd 2p Rd 2m 7p 7m 3m 6m 9p 2m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "W S N E Gd",
+     "W 9m Wd 2s Wd",
+     "S 8m 5s 7p 3p",
+     "W S 7s 6p 4p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-152"
+   },
+   "best": [
+    "2m",
+    "1p",
+    "Rd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-154",
+   "spec": {
+    "hand": "9s 4s 8p 4m 9s 9p S 5p 3p 2s 5m 9m 4p W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "N 3m N E 8s 2m 6s 9p 3s 2s 7p 8s 6p",
+     "Gd 3p W 1m 9s E 9p Gd Rd N 1s Rd 2p",
+     "6p 6m 7s 7m Gd Wd 6p 9s Wd 9m S 9m Wd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "7m 2m 4m 8p",
+     "6m 2p 2p 2m 3s",
+     "4s 5p 7p 6s 4p",
+     "2p 3m 3p 7s 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-154"
+   },
+   "best": [
+    "9m",
+    "S",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-155",
+   "spec": {
+    "hand": "6p 2p 6s 4s 3s 3m 7m 8m 2p 1m 6m Gd 8s N",
+    "drawn": "N",
+    "hands": [
+     null,
+     "2m 1m 3m 8p 6s 3p 2s 1p 4s 5p W Gd 1s",
+     "2p 1p Wd 4m 9s 5m 5m W 3s 8m 2m 5s 9m",
+     "1s 3s 1m Wd 5s 9m 9p 6s 7s 5p 4s S 4p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3p W",
+     "4m 7m 7m",
+     "E N 8m",
+     "4m Rd 5p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-155"
+   },
+   "best": [
+    "6p",
+    "N",
+    "Gd"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-160",
+   "spec": {
+    "hand": "6m 4p 9m 9s 1m W 1m 9s 1p 6p 5m 7m 1s 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "1s 9m 9m 9p 3m 2m 4s 9p 3s W S 6s Wd",
+     "5m 2m 5s 2m 7p 4s 9p 9s 4m 1s",
+     "8p 8s 7s 1m 3p 9p 4p 2s 8s 2s 3m 3s 2p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 0
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "N N 7s Wd N S 6p E",
+     "8p 3p 7s 6s 8m 6p 3s Rd 2p",
+     "8m 5s Rd E 7m 1p 8m 5m W 5p",
+     "5s 8p 6m S 1p 7s 8p 5p 8m 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-160"
+   },
+   "best": [
+    "1p",
+    "1s",
+    "W"
+   ],
+   "rating": 820,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-034",
+   "spec": {
+    "hand": "Wd 1p 5m 7s 6s 8m 5s 4m 8m 4m 2p 8p 7p 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "3s 3p 9m 8m 9p Wd 1m 2s 4s 2p 1p 7p Wd",
+     "8s 7m 4p 1s 9p 9m 9p 3s 9p 7m 3p 6s 5p",
+     "3m 8p 2p 7p 6p E 2m 9s 9s 5p 1p 6p Gd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2s 4p E 8s 1s Gd 2m",
+     "S 6p 6m 7s 5m 2s Rd",
+     "8p 4m E 4s Gd Rd N",
+     "S 2s N 7m 7s 5s 8p 8s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-034"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 870,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-045",
+   "spec": {
+    "hand": "9m 2m 2p 3p 7m N N 5s 2p 6s 7s 3m 8m 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "1m 9s 8p 8p Wd Gd 2m Wd E 9m E E 7m",
+     "9p 2m Wd 9s 2m 1p 9s 9p Gd S 6s 5m Gd",
+     "5p Rd 3s 5p 8p 9s S 9p 6m 3p 1p 1s 8s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5m 7s",
+     "6m 3p 6p",
+     "2s 7p W",
+     "6m 3s 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-045"
+   },
+   "best": [
+    "2s"
+   ],
+   "rating": 870,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-052",
+   "spec": {
+    "hand": "3p 9s 4s 8m 1p 8s 5s 4p 3s 4p 9m 7s Gd 1p",
+    "drawn": "1p",
+    "hands": [
+     null,
+     "5s 5p 2p 6s 2s 2p 3s 1s 4m 5m 3p 7s 1s",
+     "2m 4s Wd 8m 1m 4p 4p 2s 3m Wd Wd 6m 9p",
+     "8s 7p 2p 4m 7m 9m 7s 5m 2p 8m Rd Wd 8p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6p 8p 2s 6s E 6s 9p N 6m 4s Rd S",
+     "W 2s 7p 1m 3s 9p E 8p 5s 6s W 9s",
+     "6p 6p 7p 6p S Rd 6m Gd 3m 8m 7s W",
+     "Rd 4m E 5m Gd 2m 9m 8p 8s 1s Gd 7p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-052"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 870,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-090",
+   "spec": {
+    "hand": "8p 6m S Gd 7m 7m 3p 5m 9p 3p S 2p 9m 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "9p 9s 2s 2p 9s 9p Gd N 4m 2m 3p Wd 2s",
+     "6m 5s 7p 8m S Wd 4s 1s S E 5p 8m 4m",
+     "2m 4p Rd 8p 6s 3m 5p 1s 1m 6p 5s 1m 7s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4s 8s 5p",
+     "8s W 8m",
+     "5s W N",
+     "2m 8s 2p N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-090"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 870,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-003",
+   "spec": {
+    "hand": "6p N 8m 9m 1p 9p 2s 1p 9m 8s 2m 6p 7m Gd",
+    "drawn": "Gd",
+    "hands": [
+     null,
+     "6m 6s 3p N 3m 4m 7p 9m 4m 5m 8s 6s N",
+     "E 1m W Gd 4p 5p 4p 6m E 2m 8m 6m 5m",
+     "3p 4s 7s 5s 1s 7p Gd Rd 1p Rd 6p 9s Wd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 2p",
+     "Wd 2s W",
+     "7s 3s 7p",
+     "3m 6m 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-003"
+   },
+   "best": [
+    "N",
+    "Gd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-015",
+   "spec": {
+    "hand": "4m 9p 5m 5m 2p S 7p 6s 8p 3s 6s S Wd 9p",
+    "drawn": "9p",
+    "hands": [
+     null,
+     "9m 2s 2s 3s 9m 3s 3p 2s 2p 5m",
+     "4s 4p 6s 8m 6m 3p 8m N 7m 1p 6m 5p N",
+     "2m 7s 6p 2m 6p 8s 6s 5s 2s 4s 3s 2m 9s"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 2
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "8m E Gd W",
+     "5s W 5m 9s 1m",
+     "E 9s 4p 9p 5p",
+     "E W 4p 7p 1m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-015"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-016",
+   "spec": {
+    "hand": "4m 9p 5m 2p S 7p 6s 8p 3s 6s S Wd 9p 4m",
+    "drawn": "4m",
+    "hands": [
+     null,
+     "9m 2s 2s 3s 9m 3s 3p 2s 2p 3p",
+     "4s 4p 6s 8m 6m 3p 8m N 7m 1p 6m 5p N",
+     "2m 7s 6p 2m 6p 8s 6s 5s 2s 4s 3s 2m 9s"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 2
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "8m E Gd W 5m",
+     "5s W 5m 9s 1m 5m",
+     "E 9s 4p 9p 5p 3m",
+     "E W 4p 7p 1m 6m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-016"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-024",
+   "spec": {
+    "hand": "2p 8p Gd Gd 4m 3p 1p 9p 1s 2s Gd 3m Rd 1s",
+    "drawn": "1s",
+    "hands": [
+     null,
+     "5s Wd W 7m 2p 6s S Rd 4p 8m 1m W 1m",
+     "7s 4m 8s 2s 3p 2m 8m 8m 4s 3s 9s 4p 3m",
+     "7p 4s 1p 2s 9p 9p Gd 6s W 6p 8p 1m 7p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Wd 8m S 6m E",
+     "2s 8p 4p 1s 7p",
+     "N S 5s 4m 3m",
+     "2m 9s 2m E E 5m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-024"
+   },
+   "best": [
+    "2s",
+    "Rd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-030",
+   "spec": {
+    "hand": "4s 5s 8m 6s 3s 9m 8m 9m 2s 3m 4m 4s 4p 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "6p 6p 9s 7s 1s 1m 1m 1m S 1s",
+     "4m 6m 1s 7p 2p Wd 8p 1p 5m W 9s 1s Wd",
+     "9p 4p E 7m 3m 8m 9p 4m 2m E 9m 5p S"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "Gd N 4s 3p 7p 1p 7s 5m 8p",
+     "6s 9p 7m 3p 3s 6s 4s W 5m 3s",
+     "7s N 5p N 3s 4p S 3m 6s 5p",
+     "8p 2s N 7m Gd 5s 7m 2p 3m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-030"
+   },
+   "best": [
+    "4p",
+    "2s"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-036",
+   "spec": {
+    "hand": "1p 4p 1m 8m 7m 9m 9s 1s 2p 1m 4p 7p 6m Wd",
+    "drawn": "Wd",
+    "hands": [
+     null,
+     "E E 8m 9s 3s 7m W 7s Rd 3s 9m 2m 1m",
+     "2p 6s 3m 4s 5m 7p 7s 8s Gd 9m 4m 6p 8p",
+     "3m 3s 3p 2s 4s W 6s 9s 8s 4p 9s E 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8m N 2m Gd",
+     "Wd Wd 4m S",
+     "7s W Rd 5m",
+     "6m 9m S 3m 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-036"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-039",
+   "spec": {
+    "hand": "7p 7m 9s 2m 8m Rd 8p 3s 1p 7s N W 3m 5s",
+    "drawn": "5s",
+    "hands": [
+     null,
+     "N Rd 9p Wd 2m Rd 1m 3p 9m N 2p 7p Wd",
+     "6s Gd 3p 5m 1m Rd 1s 9p 1s 7p 8m 7m 8m",
+     "3m 9p 2s 8s 6s 5s 6m 3s 6m 5s W 4m 5p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 8p S",
+     "2p 4m 7s",
+     "2s 6p E",
+     "7m 3m S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-039"
+   },
+   "best": [
+    "1p",
+    "W",
+    "N",
+    "Rd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-040",
+   "spec": {
+    "hand": "7p 7m 9s 2m 8m Rd 8p 3s 7s N W 3m 5s 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "N Rd 9p Wd 2m Rd 1m 3p 9m N 2p 7p Wd",
+     "6s Gd 5m 1m Rd 1s 9p 1s 7p 8m 7m 8m Gd",
+     "3m 9p 2s 8s 6s 5s 6m 3s 6m 5s W 4m 2m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 8p S 1p",
+     "2p 4m 7s 6m",
+     "2s 6p E 3p",
+     "7m 3m S 5p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-040"
+   },
+   "best": [
+    "W",
+    "N",
+    "Rd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-046",
+   "spec": {
+    "hand": "9m 2m 2p 3p 7m N N 5s 6s 7s 3m 8m 2s 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "1m 9s 8p 8p Wd Gd 2m Wd E 9m E E 7m",
+     "9p 2m Wd 9s 2m 1p 9s 9p Gd 6s 5m Gd 5p",
+     "5p Rd 3s 5p 8p 9s S 9p 3p 1p 1s 8s 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5m 7s 2p",
+     "6m 3p 6p 2s",
+     "2s 7p W S",
+     "6m 3s 4m 6m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-046"
+   },
+   "best": [
+    "9m",
+    "2s"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-056",
+   "spec": {
+    "hand": "3p S 7m 1p S 5p 3p 6p 1p 6m 9p 1p 5m 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "8s 6s 3m 4m 9s 5m 2s 3s 1s 9m 9s 6m 2m",
+     "6m 3p N 2m 3s 6m 1m 7s 2s 4p Wd Rd 8s",
+     "4p 8p 8m 3s 2s 1s 6p 5p 1m 7p 9p 7m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6s 2m 3m 7m 1s W 9s 4s Rd 8m",
+     "8s N 2p W 5p Gd 6s 1p S 3m",
+     "Wd 2m 8m 3p 8p 6p 3s 8m 8s 5s",
+     "4m E Rd W N 6p 4m 8p 9s 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-056"
+   },
+   "best": [
+    "9m",
+    "9p"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-061",
+   "spec": {
+    "hand": "7m 6m N S 6s 3p 5p 7s 7s 3s 3s 3s 5p 3m",
+    "drawn": "3m",
+    "hands": [
+     null,
+     "8s 9p 6p 5p 8m 2s 7p 1m 2s 7s",
+     "4p 2s 9m 5m 3p 4m 9s 9m 6m Gd 9s 2s 1s",
+     "4p 5m 1p 9m 6s 6s 2p 6m 3p 3s 5s 7m N"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "W Gd 2m Gd 8p",
+     "2p Rd N 8s 4s 8s",
+     "5m 2m 8p 8p 3m 4s",
+     "W Rd 1m Wd 2p S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-061"
+   },
+   "best": [
+    "S",
+    "N"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-098",
+   "spec": {
+    "hand": "5s 1m 4s 5p 8p 4p 6p 6m 7m 8p 3m 6s N 4s",
+    "drawn": "4s",
+    "hands": [
+     null,
+     "9p 3p 2s N 3s 9s 9p N 4p 5p 1m Rd 2m",
+     "Wd 3p Wd 2p 8p 9m 9p 4m W 6m E 9m 4m",
+     "4s 5s 1s 4p 7p 3p 7p 2p 7p 1s 5p 5p 6s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "S 3s 7s Gd 6p 3s W 7m",
+     "6s 1p Gd 6s 4p 1p S 7m",
+     "2s 2p Rd Gd 2s 7s 8s 5s 5s",
+     "4s 2m 3p 9m 5m 9s E 9p 7m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-098"
+   },
+   "best": [
+    "4s",
+    "N"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-100",
+   "spec": {
+    "hand": "9p 9s 9m 1p W 6s 8m 6s 7s 2s 3p 1m 4s 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "3m Wd 2m 2p 8s E 7m 8p 1s 2p 2m 1m S",
+     "6p 3s S 7p 1p 7s 3s S 9s 3p 6p 7p 6s",
+     "2m 9s Gd 7m Wd 5m 2s 9m 9p 9m 2p 9p 4m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Rd 3p",
+     "4s 5p",
+     "4p 4m",
+     "5s 8p W"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-100"
+   },
+   "best": [
+    "1m",
+    "6p",
+    "9p",
+    "W"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-112",
+   "spec": {
+    "hand": "1m 5p 7m 8s 3p 5p 7m 4p 1s 6s 1s 7s 3m 9p",
+    "drawn": "9p",
+    "hands": [
+     null,
+     "4m 4s 7p 5m 9m 6s S 7p 8m N S W 6m",
+     "5m N 7p Wd Gd 3s 8s 8p 9s 2s 9p 4s 3m",
+     "E 2p 9s 7m E 2p 1p 1p 5s 6s 8p Gd 4s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p 3p",
+     "4m 1m",
+     "2s 2s",
+     "4p 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-112"
+   },
+   "best": [
+    "5p",
+    "9p"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-121",
+   "spec": {
+    "hand": "Gd S 9p 7p 2s 3s 2m 5s 9m 6s Wd Rd 8m 4m",
+    "drawn": "4m",
+    "hands": [
+     null,
+     "7m 9p 1m Gd 7p 7m 1p 1s 7m N 6p 4p 9s",
+     "Wd 2s 2s 8m 5p 1s Wd 3s W E 9s 2m 2m",
+     "3p 9s 7s 6p 8m 1p 3p 3m 1m 4p 8s 9m 4m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "E 2p",
+     "4s W 5m",
+     "8p 5m 6s",
+     "W 3m 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-121"
+   },
+   "best": [
+    "S",
+    "Wd",
+    "Gd",
+    "Rd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-122",
+   "spec": {
+    "hand": "9p 7p 2s 3s 5s 9m 6s Rd 8m 4m 7m 4s 6m 7p",
+    "drawn": "7p",
+    "hands": [
+     null,
+     "7m 9p 7p 7m 1p 7m N 6p 4p 9s N 3p S",
+     "2s 5p 1s 3s E 9s 2m 2m E 5p",
+     "3p 9s 7s 6p 8m 1p 3m 1m 4p 8s 9m Gd 3m"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Wd Wd Wd",
+       "from": 0
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "E 2p S Gd 2m",
+     "4s W 5m Gd 1s 1m",
+     "8p 5m 6s W 5m 2s 8m",
+     "W 3m 5s 4m 4s 3m 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-122"
+   },
+   "best": [
+    "9p",
+    "Rd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-125",
+   "spec": {
+    "hand": "N 9s 7m Rd 5s 9m 5s Gd 4p 9p 5m 1p Rd 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "W E 6m E S 1s 6p 4s 8m W 3s 9s 7p",
+     "7m 9s 3m Rd 9p W Gd 3p Wd N E S Wd",
+     "9m 7p 5p 7m 1m 2s 6p 3s 4p 1s N 1m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m 2s 2m",
+     "8s 8m 4p",
+     "2p 8m 5p",
+     "6s 5m 3m 5p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-125"
+   },
+   "best": [
+    "N",
+    "Gd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-126",
+   "spec": {
+    "hand": "N 9s 7m Rd 5s 9m 5s 4p 9p 5m 1p Rd 3p 5s",
+    "drawn": "5s",
+    "hands": [
+     null,
+     "W E 6m E S 1s 6p 4s 8m W 3s 9s 7p",
+     "9s 3m Rd 9p W Gd 3p Wd N E S Wd 8s",
+     "9m 7p 5p 7m 1m 2s 6p 3s 4p 1s 1m 9p Wd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m 2s 2m Gd",
+     "8s 8m 4p 2m",
+     "2p 8m 5p 7m",
+     "6s 5m 3m 5p N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-126"
+   },
+   "best": [
+    "N"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-129",
+   "spec": {
+    "hand": "Rd 3s 8s 3m 3s 2s 3p Rd 2p S 4s 8p N 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "4s 3m 3p 4p 4s 5p 1s 9m 7s 1m 6s 1s 5s",
+     "6s 8m 9s 6p Gd Rd 7m 3s W 4p 6s 7p 9s",
+     "2p Gd Wd 5m S 6p 8p 3m 4m 7p 2m 2s 7p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6m E",
+     "6m 8m",
+     "1p E",
+     "2s 8m 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-129"
+   },
+   "best": [
+    "S",
+    "N"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-142",
+   "spec": {
+    "hand": "9p 9s Wd 7s 1m 9p 6s 9m Wd 1s E",
+    "hands": [
+     null,
+     "1p Gd 8m 1s 6p 7s 7m 6s Rd 9p 4p S 8p",
+     "5m 3s 7p 6s 4m 5s 2m Gd 7s 5s 7m 7p W",
+     "2s 5s 4p 4p 4m 2s 5m 3m 2p 2p 4s 4p 9s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 3
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5m 7p",
+     "6p N 4s",
+     "E 5p S",
+     "8m S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-142"
+   },
+   "best": [
+    "E"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-144",
+   "spec": {
+    "hand": "3s 1p 1p Wd 4m 9p 5m Wd 3p 1s 4s 7m 6m N",
+    "drawn": "N",
+    "hands": [
+     null,
+     "6s Gd 7m 9m 6m 2s W 9m 5m 2p 3s 2p 5s",
+     "W 1m E Wd 1m W Wd 1s 1s Gd",
+     "8p 4p 3s 5p S 7p 4s 9s 1p 3p S 9m 2p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "8m 8m 8m",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "6p Gd 8s N",
+     "N 3m 8s 7p 9s",
+     "2p S Rd 6m 6p 7p",
+     "5p 2m Rd 6s 7s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-144"
+   },
+   "best": [
+    "N"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-147",
+   "spec": {
+    "hand": "3p 7s 8s 9p 6s 2m 2p 8m 9p 8m 3m 4p N 2p",
+    "drawn": "2p",
+    "hands": [
+     null,
+     "4s 4p 7p 2m 3p 1p 7p 4p 7p 2s 2m 2p 3s",
+     "7m 2s 4s 5m 9m 8s 4m 9s 3m 7s 5s 1m S",
+     "6p 5s 4m 6s 8p S S 1m 1m N 5m 7p 6m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 5m Wd W",
+     "6m Wd Rd 8m",
+     "5p 8s 8p 8s",
+     "3s 3p Rd 9s Wd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-147"
+   },
+   "best": [
+    "2p",
+    "N"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-151",
+   "spec": {
+    "hand": "3s 8p 6p 8m 5s 6s 8m 1p 2m Gd 8m 8p Rd 3s",
+    "drawn": "3s",
+    "hands": [
+     null,
+     "2s 5s 3m 4s 1s 3p 3p 5m Gd 6s 3s 4m 8s",
+     "9s 3m 1p 9p 6p 7p 1p 9s 1s 5p 3p 5m 4p",
+     "N Rd 1p Gd 2p Rd 2m 4p 7p 7m 3m 6m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "W S N E",
+     "W 9m Wd 2s",
+     "S 8m 5s 7p",
+     "W S 7s 6p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-151"
+   },
+   "best": [
+    "Gd",
+    "Rd"
+   ],
+   "rating": 880,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-070",
+   "spec": {
+    "hand": "5p 4s 5m 6m W 5p W 5s 8m 6m W 1m Wd 5p",
+    "drawn": "5p",
+    "hands": [
+     null,
+     "8s 5s 5s 2s 9p 5s 8p 4s 9s 4m 4m 1m 7s",
+     "Rd 7p 3p 3p 6p 6s 3m 9p 1m 7p Gd 2m 6s",
+     "1p 3s 2s 7s Rd 1p 1p 8p 7p 9s Rd 6p 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2p 2m 2m 9s N 4p 1s",
+     "8p 8m 8s E S 5m 8m",
+     "8m Wd 4m 7m 1s 1s N",
+     "4p 2m 5m Wd 4m 4s 2p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-070"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 930,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-111",
+   "spec": {
+    "hand": "3p 4s 2p 4p 3m 1p 3p Gd 9m 5p 9m 2s 7p 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "7m 5p 2p Gd 7p 4m 1p 9m 5m 6p N 1s N",
+     "Wd 9s 7p E 9p 1p 5s 6s 7s 3s 2p 3s 4s",
+     "9m 7s 6m 3p 5p 9p 6m 6s 4p 1m 8s 8m 2m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8s 8m 8s Rd 8p 4p",
+     "5s 1s Rd Wd 7s 2m",
+     "4m 7m 5s 2s Rd S 3m",
+     "Rd W E S 6s 2p 1p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-111"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 930,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-123",
+   "spec": {
+    "hand": "9p 2m 5s 7s 2m 1m 6s 5s 4p 1m 5s 8s 1s 4s",
+    "drawn": "4s",
+    "hands": [
+     null,
+     "8p E 8s 2s E 9s N 7m 2s 2s 8m 7p S",
+     "9s Gd Gd 4m 3m 7m 4s 9p 9m 4m 4m 8m 9s",
+     "5m 9m 1m 1p 1m 2p 5m 2p 5m W 1p 3p 6p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8s 6s 5p W",
+     "3p 5s 8p 3m 3s",
+     "Wd Rd 3s Rd 3s",
+     "6m 4s 4p 1s 3m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-123"
+   },
+   "best": [
+    "1s"
+   ],
+   "rating": 930,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-001",
+   "spec": {
+    "hand": "Rd 3s 9s 3m 1s 2s 8m 6s 3p 8s 9m Rd 4m 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "S 4p 9p 7s 6m 1m 7m 1s 3s 3m 5p 7s N",
+     "1s 2s 8p 3p 4s 9s 1p 9m 6s 3s Wd Rd 6p",
+     "8m W 4p 8p 9m S S 9p S 2p W 4s 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6m 7p",
+     "6m 7p",
+     "5p W 2s",
+     "8s 6m Wd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-001"
+   },
+   "best": [
+    "3p",
+    "6p",
+    "6s",
+    "9s"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-013",
+   "spec": {
+    "hand": "1s 2s 7p 6m 8p Wd 8p 3m 1p 5m S 1p 7p 7m",
+    "drawn": "7m",
+    "hands": [
+     null,
+     "3s Gd Gd 1m E 9m 8m 9s W E S 1m 9s",
+     "5s Rd 3p 4s 9s 1p 4m 7s 2m 8s 6s 2p 1s",
+     "Wd S Gd 6s N 1p 9m Rd 1m 1s Rd W 8p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 2s W 5s 7s 8m",
+     "5m 8s 6s 3s 8s 4m",
+     "2s 6p 6m 8m 3p 9p",
+     "5p 4s 3p 4s 5p 6p 3m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-013"
+   },
+   "best": [
+    "3m",
+    "S",
+    "Wd"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-037",
+   "spec": {
+    "hand": "2p 7s 4s 8s 2s 4m 3p 1p 2s 3m 5p S 7p 1p",
+    "drawn": "1p",
+    "hands": [
+     null,
+     "3m 9s 3s 7m 2m 8p 3p 1m 2s 7m 7p 1m 1s",
+     "4m N 2m 5m 9m 6p 9m S 6p 9m 3p 5m 9s",
+     "Rd 9s 4s 2s 1p 4s Gd Rd 7s 6s 2p 9m 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p 8m 4s 5s 4p E",
+     "W Gd Wd 8m 5s W",
+     "8m Gd Wd 5s E 6s",
+     "2m E Wd 7p 5p 6m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-037"
+   },
+   "best": [
+    "1p",
+    "4s",
+    "S"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-038",
+   "spec": {
+    "hand": "2p 7s 8s 2s 4m 3p 1p 2s 3m 5p S 7p 1p 7m",
+    "drawn": "7m",
+    "hands": [
+     null,
+     "3m 9s 3s 7m 2m 8p 1m 2s 7m 7p 1m 1s 7s",
+     "4m N 2m 5m 9m 6p 9m 6p 9m 3p 5m 9s 3m",
+     "Rd 9s 4s 2s 1p 4s Gd Rd 7s 6s 2p 1m N"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p 8m 4s 5s 4p E 4s",
+     "W Gd Wd 8m 5s W 3p",
+     "8m Gd Wd 5s E 6s S",
+     "2m E Wd 7p 5p 6m 9m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-038"
+   },
+   "best": [
+    "7m",
+    "1p",
+    "S"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-093",
+   "spec": {
+    "hand": "7m 1s 3p 7s 8p 2p 7p 8s 1s 8m W Rd 9s 9s",
+    "drawn": "9s",
+    "hands": [
+     null,
+     "Wd 9p 5s 9m 7m 1s 6m Wd 4m W 5m 6s 2s",
+     "4s 4p 5p 5s 6s 9s 3s 5m 7s 5m 3p 1p 6m",
+     "3m Wd 8p N 3s 1s 4m 9m 9m 6m 1m 9p Gd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3m 5p 7p 3p 8s Wd",
+     "1p S 1m 5s 6p 7p E",
+     "2m 8p Gd N 4s 2m N",
+     "8m 8p 3m 4p 6p 4s S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-093"
+   },
+   "best": [
+    "9s",
+    "W",
+    "Rd"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-097",
+   "spec": {
+    "hand": "5s 1m 4s W 3s 5p 8p Gd 4p 6p 6p 6m 7s 7m",
+    "drawn": "7m",
+    "hands": [
+     null,
+     "9p 3p 2s N 3s 9s Gd 9p N 4p 5p 1m 4p",
+     "5s Wd 5s 3p Wd 2p 8p 9m 7s 9p 4m W Gd",
+     "9m 4s 5s 1s 4p 7p 3p 7p 2p 7p 9s 5m 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "S 3s",
+     "6s 1p",
+     "2s 2p Rd",
+     "4s 2m 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-097"
+   },
+   "best": [
+    "1m",
+    "7s",
+    "W",
+    "Gd"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-104",
+   "spec": {
+    "hand": "6s 6s 4p W 2s 7s 3p 3m Rd 4m 7m 9s 5m W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "9s 1s 5s 8m 4s 7s 2m 1m 9s 8s 7m 3s 3m",
+     "8m 1p 3s 5p 4s 1m E 3m 4p 2m 6p 9m 3p",
+     "4s 7p 4s 1p 7m 9p 9m 8m 2s 9m 8p 6s 8m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Gd S",
+     "2p 5m E",
+     "2m 6m 4m",
+     "6p 7p N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-104"
+   },
+   "best": [
+    "7m",
+    "2s",
+    "Rd"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-136",
+   "spec": {
+    "hand": "9m 4p 2p 7s 3m 1p 6s 1m 3m 9p 8p",
+    "hands": [
+     null,
+     "W E 8s Rd 2m 9m N E 7s 6s 1m Wd 4m",
+     "9m 2p 4m 2p 1s 5p 3s 9m S 6p Rd 5m 1s",
+     "N 4p 1m 1s 2s 6m 6m 9s 6m 3s 1s 9s 3s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Wd Wd Wd",
+       "from": 3
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8m 4p 5m",
+     "5m 6p S",
+     "7m Gd 3s 5s",
+     "5s 8m 5m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-136"
+   },
+   "best": [
+    "1m",
+    "9m",
+    "1p",
+    "4p"
+   ],
+   "rating": 940,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-029",
+   "spec": {
+    "hand": "9s 4m 7s 3m 5m 8p 7m 8m 7p 9m 8s N W 5p",
+    "drawn": "5p",
+    "hands": [
+     null,
+     "7m 9m 8m 6s 1s 1m N N 3s 7p W 5s 9p",
+     "5s 1p 5p 7p 9s 9s 3p 6p 3s 1m",
+     "2p 5p 8s 3p 2p 1m 7s 2m 3s 3m 4p 6s 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "Rd 2p 4p 4s E 4p S 2s",
+     "4m Wd E 7m 6m 8m 5p 4p",
+     "8s 2s 8p 5s 9m N Wd 5m W",
+     "3m S 4s 1p 3p 1s 8m 7p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-029"
+   },
+   "best": [
+    "W",
+    "N"
+   ],
+   "rating": 980,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-043",
+   "spec": {
+    "hand": "2s 3s Gd Gd 5s S 5s 6s",
+    "hands": [
+     null,
+     "6m 7m 6s 9s 2p 3p 5m 4p 2m 5s Rd 3m 9s",
+     "7m 1s 7p 2m 3s 3m 7p 8m 6m 9m N 9m W",
+     "3m 5m 8s 2p 4p 6p 6p 9s 8m 6p 7m N 4m"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      },
+      {
+       "type": "pung",
+       "tiles": "1p 1p 1p",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 4m 8p",
+     "4p 3s 5m 9p",
+     "5p Rd 4s",
+     "4s Rd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-043"
+   },
+   "best": [
+    "S"
+   ],
+   "rating": 980,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-076",
+   "spec": {
+    "hand": "7p 6p Gd Gd 1p 1p 7s 6s 8s 9p 5p 9p E 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "7m 7s 5s 5p 7s 9p N 5p 8p 5p 4s 5m 6s",
+     "3m 2s 4s 1p 4p N 1s 2m 3s 4p 3s 1m 4p",
+     "1m 6p 6m Wd 3m Wd 6m 6m 2m 9m Wd 6p 8s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4s 7p 4m 4m 2m 3p 8p 1m 8s",
+     "E Rd 5m 8m 3m W 7m Rd 3s",
+     "5m 9m 6s 2s S 2p 4s 4m 2p",
+     "9s 6s 6p N S 7m E 8p 9s 7m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-076"
+   },
+   "best": [
+    "E"
+   ],
+   "rating": 980,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-004",
+   "spec": {
+    "hand": "6p 8m 9m 1p 9p 2s 1p 9m 8s 2m 6p 7m Gd S",
+    "drawn": "S",
+    "hands": [
+     null,
+     "6m 6s N 3m 4m 7p 9m 4m 5m 8s 6s N 8p",
+     "E 1m W Gd 4p 5p 4p 6m E 2m 8m 6m 5m",
+     "3p 4s 7s 5s 1s 7p Gd Rd 1p Rd 6p 9s Wd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 2p N",
+     "Wd 2s W 3p",
+     "7s 3s 7p 7p",
+     "3m 6m 5s 3m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-004"
+   },
+   "best": [
+    "S",
+    "Gd"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-035",
+   "spec": {
+    "hand": "1p 4p 1m 8m 7m 9m 9s 1s 2p 1m Gd 4p 7p 2m",
+    "drawn": "2m",
+    "hands": [
+     null,
+     "4m E E 8m 9s 3s 7m W 7s Rd 3s 9m 2m",
+     "2p 6s 3m 4s 5m 7p 7s Rd 8s Gd 9m 4m 6p",
+     "3m 3s 3p 2s 4s W 4m 6s 9s 8s 4p 9s E"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8m N",
+     "Wd Wd",
+     "7s W",
+     "6m 9m S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-035"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-054",
+   "spec": {
+    "hand": "5p 5p 4p 3s 6m W N Rd 1s 4s 5m 3s 7p 1s",
+    "drawn": "1s",
+    "hands": [
+     null,
+     "5s Rd 2s 8p 2p 7s 1s 8s 5m 8m 8m 5s 6s",
+     "2m 2p 8s Rd 2p 9m 9m 2m 8p S 6p 7s 2p",
+     "7m 9p N 9s 5s N 7m E 7m Wd 6m 9s 4m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8p Gd 7s",
+     "2m 7s E",
+     "5m 3s 8s 3p",
+     "2s W Gd W"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-054"
+   },
+   "best": [
+    "W",
+    "N",
+    "Rd"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-065",
+   "spec": {
+    "hand": "7s 6m 9m 2p N 8p 2s 7p W 8m W 7m Gd 3m",
+    "drawn": "3m",
+    "hands": [
+     null,
+     "7p 4p 9s W 4p 8s 4s 3s 2m N 5p 7s 4m",
+     "7s 5m 8m 1p 5m 4s N 1p 3s 8p 1p 7p 3m",
+     "Wd 5p 1s 1p 9s Wd Gd 8s 9s 3p 6s 6p 3s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3m E",
+     "S 6s",
+     "5p 2p Rd",
+     "Rd 3m 7m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-065"
+   },
+   "best": [
+    "N",
+    "Gd"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-078",
+   "spec": {
+    "hand": "Rd Rd 6s 6s 2s 8s 6p 3s 5p 9m 5s 4s 1s 8p",
+    "drawn": "8p",
+    "hands": [
+     null,
+     "2m 2m 4p 4p Rd 1m 9s 6m 4p 1m 5m 4m 2p",
+     "8p E 5m 5s 7s 9m 9m 6m 7p 9s 6s 7s 4m",
+     "2s 1m 7p 8s 7s W 1p 1p 5p Gd 1s 1p N"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "7m 2s 8p 3p 5p E 1m",
+     "2s 3s 3p 8p 9p 7m 7s",
+     "5m W 3m 7p 4s S 4s N",
+     "S 6m 5s 4s 5m 7m S 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-078"
+   },
+   "best": [
+    "9m",
+    "8p"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-088",
+   "spec": {
+    "hand": "9s 1s 5s 4s 2m 9s 3p 6m Rd 3m 6p N 5p 5s",
+    "drawn": "5s",
+    "hands": [
+     null,
+     "Gd 1m 9m 3s 8m 9p 5m 4m 2p 9m 6m 6s 1m",
+     "4p 1p 7s 5p 3p 7p 7p",
+     "1m 7s 3m 5p 4m 6p 1s 9s Rd N 8s 4p 2s"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "S S S",
+       "from": 0
+      },
+      {
+       "type": "pung",
+       "tiles": "Wd Wd Wd",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "2m",
+     "2m",
+     "E 5m 2m",
+     "Gd 8p 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-088"
+   },
+   "best": [
+    "1s",
+    "N",
+    "Rd"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-092",
+   "spec": {
+    "hand": "7m 1s 3p 7s Wd 8p 2p 7p 8s 1s 8m W Rd 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "Wd 9p 5s 9m 7m 1s 6m Wd 7p 4m W 5m 6s",
+     "4s 4p 5p 5s 6s 9s 3s 5m 7s 5m 3p 1p 6m",
+     "3m Wd 8p N 3s 4s 1s 4m 9m 9m 6m 1m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3m 5p 7p 3p",
+     "1p S 1m 5s 6p",
+     "2m 8p Gd N 4s",
+     "8m 8p 3m 4p 6p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-092"
+   },
+   "best": [
+    "W",
+    "Wd",
+    "Rd"
+   ],
+   "rating": 990,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-068",
+   "spec": {
+    "hand": "9m Rd 9p 9p 1p E 9m 9s Gd E 8s S S 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "1s N 8p 5m 6m 4p 7m 6p 7s 1s 5s 6p 6s",
+     "N 9p 2m 8p W W 6p 7s 6s 3m Wd 5p 4m",
+     "1m 8s Rd 9m 5p E 2s 1s 8s 5p 1m 7p 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3s 6p 3p",
+     "9s Wd S",
+     "3p 8m 8p 7s",
+     "2m 2p 4s 2p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-068"
+   },
+   "best": [
+    "1p",
+    "6s",
+    "9s",
+    "Gd",
+    "Rd"
+   ],
+   "rating": 1000,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-115",
+   "spec": {
+    "hand": "2s W Gd Wd 1m 9s 1m Rd E 9p 6m 5p W 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "5s 4s 9s 6s 2s 8s 5p 1s 7s 7m 7m 3s 1s",
+     "N 9m Rd 1m 2m 7m N 6s 7s 4p 3p 8s S",
+     "5s 3p 4s 1m 8s 7s 1p 3m 3s S S 9p 2m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m 8m 7s 6s 8p 6p 2s",
+     "5s 8s 3m 1p 7p 4s 9m",
+     "8p 4m 6p 6m Wd 7p 7p",
+     "7m 5s 5m Wd E 1s 8m 8p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-115"
+   },
+   "best": [
+    "1m",
+    "6m",
+    "8m",
+    "5p",
+    "2s",
+    "W"
+   ],
+   "rating": 1000,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-116",
+   "spec": {
+    "hand": "W Gd Wd 1m 9s 1m Rd E 9p W 9s 3p 9m 8p",
+    "drawn": "8p",
+    "hands": [
+     null,
+     "5s 4s 9s 6s 2s 8s 1s 7s 7m 7m 3s 1s 9s",
+     "N 9m 1m 2m N 6s 7s 4p 3p 8s 2p N 9m",
+     "5s 4s 1m 8s 7s 1p 3m 3s S S 9p 2m 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m 8m 7s 6s 8p 6p 2s 5p 6m 8m 5p 3p 6m 2s",
+     "5s 8s 3m 1p 7p 4s 9m 5p S W Gd 2p 3m Rd",
+     "8p 4m 6p 6m Wd 7p 7p 6s Rd 4p 7m 4m S 2p",
+     "7m 5s 5m Wd E 1s 8m 8p 5m 4m 1s 5m E 4p 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-116"
+   },
+   "best": [
+    "1m",
+    "3p",
+    "8p",
+    "9s",
+    "W"
+   ],
+   "rating": 1000,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-005",
+   "spec": {
+    "hand": "7p 4m 9p 9s 8s 5m 9s 3p 2p Rd 8s Gd 3m 5p",
+    "drawn": "5p",
+    "hands": [
+     null,
+     "3m 3s N S 7p E 2s 5p 7s N 2m 9s 1m",
+     "3m 6m W 8m 4s 7m 6p 4s 5p 4s 1s E 2m",
+     "8p Rd 8m N 9m 3p 7s 9p 6s 1s 9m 4p Rd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s 7p 7m",
+     "8m 7p 4m",
+     "8m 8p 3p",
+     "S 6m 3m 3p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-005"
+   },
+   "best": [
+    "Gd",
+    "Rd"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-021",
+   "spec": {
+    "hand": "9m 1m 7s 4s 9m 2s S 1s 6s 7m 1s 3m 2m Rd",
+    "drawn": "Rd",
+    "hands": [
+     null,
+     "5m 2s 4m 7m 2s 4s 4s 9m S 9s 3m 9s N",
+     "4s W 4m 1m 8m 3m 9m W S 4m Wd 3s E",
+     "6p 5p 6p 8s 5p 3s 3s 5s 8s 7p 1p 4p 6m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Rd E 4p 8p 6s",
+     "N 3p 2p 5m 5m",
+     "5p 8m 6s 9s 6m",
+     "Rd E S Gd 2m W"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-021"
+   },
+   "best": [
+    "S",
+    "Rd"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-022",
+   "spec": {
+    "hand": "9m 1m 7s 9m 2s 1s 6s 1s 3m 2m Wd N 2s 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "4m 7m 4s 9m S 9s 3m 9s N N Wd 2m 5s",
+     "W 4m W 4m Wd 3s E Gd Gd Wd 1p W 1s",
+     "6p 5p 6p 8s 5p 3s 3s 5s 7p 5s 7p 9s 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Rd E 4p 8p 6s S 5p E 7s 9p 7m 3p Rd 4s",
+     "N 3p 2p 5m 5m 2s 8p 4s 6m 5m 2p 3p 6m 2s",
+     "5p 8m 6s 9s 6m S 7s 2p 3m 8m 1m 9m 2m 4s",
+     "Rd E S Gd 2m W 6m 8p 1p 4m 1m 6s 4p 6p 8s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-022"
+   },
+   "best": [
+    "N",
+    "Wd"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-044",
+   "spec": {
+    "hand": "2s 3s 5s 5s 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "6m 7m 6s 9s 2p 3p 5m 4p 2m 5s 3m 9s 4s",
+     "7m 1s 7p 2m 3s 3m 8m 6m 9m N 9m 6p W",
+     "3m 5m 8s 4p 6p 6p 9s 8m 6p 7m 4m Gd 5p"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      },
+      {
+       "type": "pung",
+       "tiles": "1p 1p 1p",
+       "from": 2
+      },
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 1
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 4m 8p 6s S 9p 3p",
+     "4p 3s 5m 9p Rd 8p Wd",
+     "5p Rd 4s 7p W 7s",
+     "4s Rd N 2s 2p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-044"
+   },
+   "best": [
+    "2s"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-059",
+   "spec": {
+    "hand": "N E 6p 4m 5p 5p 8s 4p 3p 9s 3m 7s S 1m",
+    "drawn": "1m",
+    "hands": [
+     null,
+     "3p 8s 3s 8p 1s 9s 8p 4s 2p 4s W 2s 1p",
+     "6s 3p 1p 7p 6s 6m 9s 1p 2p 5m 7m 9p 3s",
+     "2m 4p 3m 9m 7m E 9p 8m 9s 5p 5s 7s 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s 6m 3m 2s 7m 6s Gd",
+     "5m 2m 8m 8s Gd 2m 2p",
+     "Rd 6p 6m W 7p 1m 4p",
+     "3m 6s Wd 7m 2p Gd Rd 3s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-059"
+   },
+   "best": [
+    "E",
+    "S",
+    "N"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-062",
+   "spec": {
+    "hand": "7m 6m S 6s 3p 5p 7s 7s 3s 3s 3s 5p 3m 2p",
+    "drawn": "2p",
+    "hands": [
+     null,
+     "8s 9p 6p 5p 8m 2s 7p 1m 2s 7s",
+     "4p 2s 9m 5m 3p 4m 9s 9m 6m Gd 9s 1s 5p",
+     "4p 5m 1p 9m 6s 6s 2p 6m 3p 3s 5s 7m W"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "W Gd 2m Gd 8p N",
+     "2p Rd N 8s 4s 8s 4s",
+     "5m 2m 8p 8p 3m 4s 2s",
+     "W Rd 1m Wd 2p S N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-062"
+   },
+   "best": [
+    "3m",
+    "S"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-063",
+   "spec": {
+    "hand": "5p Wd 5m 4s Wd 5s 3p 9m Wd 6s 2p 1s 5m 2m",
+    "drawn": "2m",
+    "hands": [
+     null,
+     "5p 3m W 7m 1p 7s W 8s 6m 8m 4p 2s 8s",
+     "N 8m 5s 8m Gd 5p 7s Gd 1m 7p",
+     "S 9p S 9p 1s 1p 4m 3p 2s 4m 4m N 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 0
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "8p 4s W",
+     "8p N E",
+     "2p 6m 2p 1p",
+     "6m 6s 4s E"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-063"
+   },
+   "best": [
+    "9m",
+    "1s"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-081",
+   "spec": {
+    "hand": "7p 8p 3s 1p 4s 9s 9s 5m 2p 5s Rd 3p 3s 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "2p 5m Rd 6m 5p 8m 6p 4m Rd 7m 4p S 4p",
+     "7p 2s 8p 2s 8m 6m 8s 7s 7m 9p",
+     "9s 1m 9m 9m 6s 5s 9s 1s 7s 9m 1s 9p 6s"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Wd Wd Wd",
+       "from": 0
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "8p W 5p 1m E 9m 5m W 4m Gd E",
+     "2s 5s 2s E 5s S 5p N 1m 6s 6p 1p",
+     "W Gd 3m E Gd Rd 7p S 4s 1p 3m 1s 8s",
+     "1p 7m 3s 2m N Gd 5m 4p 8p 6p 4s 7s 2m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-081"
+   },
+   "best": [
+    "Rd"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-085",
+   "spec": {
+    "hand": "3s 7m 1m 8p 8m 9p N 4s 2m 5s 9s N N 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "2s 8m 3m 9p 8p 7p 9m 4m 4s 4s 2s E 5m",
+     "6p 9s 2m 3m 4m 9s 4p 5m 6p 6m 2p 4m 3p",
+     "2s 5s 3p S 9p 9m 3s 9p 7m 2p 8m 5s 1p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5p 4m Rd 8p W Gd 1p",
+     "S 8s 3p 8s 5p 6m W",
+     "8s Rd E 4s 7s 3m Rd Wd",
+     "Rd W 5m 5p 3s W 7s Gd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-085"
+   },
+   "best": [
+    "9s"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-153",
+   "spec": {
+    "hand": "9s 4s 8p 4m 9s 9p S 8p 5p 3p 2s 5m 9m 4p",
+    "drawn": "4p",
+    "hands": [
+     null,
+     "N 3m N E 8s 2m 6s 9p 3s 2s 7p 3s 8s",
+     "Gd 3p W 1m 9s E 4p 9p Gd Rd N 1s Rd",
+     "6p 6m 7s 7m Gd Wd 6p 5s 9s Wd 9m S 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "7m 2m 4m",
+     "6m 2p 2p 2m",
+     "4s 5p 7p 6s",
+     "2p 3m 3p 7s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-153"
+   },
+   "best": [
+    "9m",
+    "S"
+   ],
+   "rating": 1040,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-105",
+   "spec": {
+    "hand": "6s 4p W 2s 7s 3p 3m Rd 4m 9s 5m W 1s Wd",
+    "drawn": "Wd",
+    "hands": [
+     null,
+     "9s 1s 5s 8m 4s 7s 2m 1m 9s 8s 7m 3s 3m",
+     "8m 3s 5p 4s 1m 3m 4p 2m 6p 9m 3p 6p Gd",
+     "4s 7p 4s 7m 9p 9m 8m 2s 9m 8p 6s 8m 4p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Gd S 7m 6s",
+     "2p 5m E 5p 5s",
+     "2m 6m 4m 1p E",
+     "6p 7p N 1p S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-105"
+   },
+   "best": [
+    "9s",
+    "Wd",
+    "Rd"
+   ],
+   "rating": 1050,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-096",
+   "spec": {
+    "hand": "7m 6m 6s 4m 4m 2s 5m 8p 3s 3p 4s 4p 2m 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "9s S W 9m W 2m 1p 1m E 9p Wd 7m 2p",
+     "6p 9m 9s 3s 8s 1s 7p W W N 7s 4s 9m",
+     "6m 3p 7p 7p 7p 9s 8m 7s 4p 5p 9p 1m 8m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2s Rd N 2s",
+     "4s 2s 8s 8p 8p",
+     "3s Gd Wd 4p 2p",
+     "6s S S Gd E"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-096"
+   },
+   "best": [
+    "8p"
+   ],
+   "rating": 1090,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-048",
+   "spec": {
+    "hand": "1p 8s W 8s 3p 3s Wd 5m 4s 3m Wd 9p 5p 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "7s 2s 2s Wd 6s 1m 6p 8s 5m 4s 2s 4s 3s",
+     "1p 2m 9s 2m 3m N 7s 3m 2p 2m",
+     "E 3p 4m 6p 6m 9s 5m 5p 4m 7m 5p 4m 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "W W W",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "6p 3s 6s 7m",
+     "7s Rd 2p S",
+     "Rd 6m 8p Gd 7p",
+     "8m S 2s 9p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-048"
+   },
+   "best": [
+    "9m",
+    "9p",
+    "W"
+   ],
+   "rating": 1100,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-099",
+   "spec": {
+    "hand": "9p 9p 8p 5m 6m 1m 8p 2s 9s Wd 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "N N 3p 1s 1s 3p 1s 8p 9s 7p 3m 1m 2m",
+     "Wd 8s 6s W W W 3p 4p Wd Wd S 7s 2p",
+     "4s 5p 3m 9m 5m 9m 3p 3s 4p 4m 5p 7p 5s"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Rd Rd Rd",
+       "from": 1
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8m 8m N 5p 6m",
+     "2m 6m 4m E",
+     "7m 3m 4s 7s",
+     "6p 1m Gd 2s 2s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-099"
+   },
+   "best": [
+    "Wd"
+   ],
+   "rating": 1100,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-118",
+   "spec": {
+    "hand": "5s 4p 7p 8m E 5m 7s 7p 4m 6m 7p 7m 4p 2m",
+    "drawn": "2m",
+    "hands": [
+     null,
+     "3p 2s 4s 1p 3s 5p 9s 6m 7s 5m Gd 7p 2p",
+     "9s 4p 2p 6p 9s 9m 4p Wd 1m N N 9m 1s",
+     "8p S 8m 7s 3m 7m 9m 6s S 2m 8s 1m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Gd 2s 2p 6p Rd 1m 3p 2s",
+     "2m 2s 8m 3m 8p Rd 4s W",
+     "1s 8s 4s 6m 8m 4s 8s 4m",
+     "8p 1p W 3p 9p 7s 8p 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-118"
+   },
+   "best": [
+    "2m",
+    "E"
+   ],
+   "rating": 1100,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-089",
+   "spec": {
+    "hand": "9s 1s 5s 4s 2m 9s 3p 6m Rd 3m 6p N 5p N",
+    "drawn": "N",
+    "hands": [
+     null,
+     "1m 9m 3s 9p 5m 4m 2p 9m 6m 6s 1m 1s 1m",
+     "4p 1p 5p 3p 7p 7p 8p",
+     "1m 7s 3m 5p 6p 1s 9s Rd N 8s 4p 2s E"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "S S S",
+       "from": 0
+      },
+      {
+       "type": "pung",
+       "tiles": "Wd Wd Wd",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "2m 5s 9p",
+     "2m Gd 8m",
+     "E 5m 2m 9p 7s",
+     "Gd 8p 5s 2s 4m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-089"
+   },
+   "best": [
+    "6m",
+    "3p",
+    "1s",
+    "Rd"
+   ],
+   "rating": 1110,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-130",
+   "spec": {
+    "hand": "Rd 3s 8s 3m 2s 3p Rd 2p S 4s 8p 8s 8s E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "4s 3m 3p 4p 4s 5p 1s 7s 1m 6s 1s 5s 4p",
+     "6s 8m 9s 6p Gd Rd W 4p 6s 7p 9s 6p 8m",
+     "2p Gd S 6p 8p 3m 4m 7p 2m 2s 7p 1p 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6m E N 3s",
+     "6m 8m 4p 9m",
+     "1p E 3s 7m",
+     "2s 8m 5s Wd 5m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-130"
+   },
+   "best": [
+    "E"
+   ],
+   "rating": 1110,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-131",
+   "spec": {
+    "hand": "5p 3s 7p N 2s N 8m 7m 3m 8p E 8s W E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "1p 6s W N 9m 2s 1p 8m 5m 5s 7s 5p 1s",
+     "7m 4p 9s W 4p 6p 9s 6s 9s 4m 6m 4p W",
+     "7p 3p 2m 2m 5m 6s 9p Wd 7m E 1m 2m 6s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Rd Wd",
+     "2p Rd 8m",
+     "2p Rd 2s",
+     "3s Rd 7s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-131"
+   },
+   "best": [
+    "3m",
+    "5p",
+    "8s",
+    "W"
+   ],
+   "rating": 1110,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-132",
+   "spec": {
+    "hand": "5p 3s 7p N 2s N 8m 7m 3m 8p E W E Gd",
+    "drawn": "Gd",
+    "hands": [
+     null,
+     "1p 6s W N 9m 2s 1p 8m 5m 5s 7s 5p 1s",
+     "7m 4p 9s W 4p 9s 6s 9s 4m 6m 4p W 4s",
+     "7p 3p 2m 2m 5m 6s 9p 7m E 1m 2m 6s 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Rd Wd 8s",
+     "2p Rd 8m 2p",
+     "2p Rd 2s 6p",
+     "3s Rd 7s Wd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-132"
+   },
+   "best": [
+    "3m",
+    "5p",
+    "W",
+    "Gd"
+   ],
+   "rating": 1110,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-108",
+   "spec": {
+    "hand": "5m E 2m 1m Gd 7m 6s Gd Gd 3s 6m 7s 1s 8m",
+    "drawn": "8m",
+    "hands": [
+     null,
+     "1s 9s 5s 5p 6p 3s 3m 8p 1s 4s 5m 4s 3s",
+     "5s Gd 3m 4p 5p 3p 7p 1m 6s E 1s 2p 6p",
+     "W 1m 8s W 9s 8p 6s 6p 9m 7m 7s 7s 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 5m 4p 1p 4s",
+     "2p Wd Rd 8m 3p",
+     "2s Rd 8m N 6m",
+     "Wd S Wd 2p 6m N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-108"
+   },
+   "best": [
+    "5m",
+    "8m",
+    "E"
+   ],
+   "rating": 1120,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-010",
+   "spec": {
+    "hand": "W N 9p 1m N W 1m 2s 1m 7m 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "4m 9s 9p 9s 9s 2m 5p 3m 1p 1p 1s 1s 6p",
+     "S S 4p N 5m 6p 5p 9s 4m 7s N 9p E",
+     "5m 2s 6p 9m 2m 6m 6p 9m 9m 1s 1m 7m 9p"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5m 4s 8m 3m 3p S 7p 2p",
+     "Rd 5p Wd E 6m 2s E 3p",
+     "2m Rd 2p 8m 5s 8m 7s",
+     "5s 2p W 4s 7s 7m 4m Rd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-010"
+   },
+   "best": [
+    "9p"
+   ],
+   "rating": 1150,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-017",
+   "spec": {
+    "hand": "3s W 9m 1p 2p 1s 1m 5p N 1m 9m 3p N 3m",
+    "drawn": "3m",
+    "hands": [
+     null,
+     "5m 5m 8m 5s 7s 8p 1p 2p 9p 9m 6s 2p 1s",
+     "4p 9p 9m 5m 3p 6s 8p 7m 6s 2p 6p 8m 7p",
+     "S Gd Rd 3m 1m 1s W E N W 2m 9p 6m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "E 7s 8m 5s 7p",
+     "2m 2s 6m 4s Wd",
+     "2m E Rd Wd 2s",
+     "8m 8p 8s 4m 5p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-017"
+   },
+   "best": [
+    "5p",
+    "W"
+   ],
+   "rating": 1160,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-033",
+   "spec": {
+    "hand": "Wd 1p 5m 7s 6s 8m 5s 4m 8m 4m 2m 2p 8p 7p",
+    "drawn": "7p",
+    "hands": [
+     null,
+     "3s 3p 9m 8m 9p Wd 1m 2s 4s 2p 1p 7p Wd",
+     "8s 7m 4p 1s 9p 9m 9p 3s 9p 7m 3p 6s 5p",
+     "3m 8p 2p 7p 6p E 2m 9s 9s 5p 1p 6p Gd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2s 4p E 8s 1s Gd",
+     "S 6p 6m 7s 5m 2s",
+     "8p 4m E 4s Gd Rd",
+     "S 2s N 7m 7s 5s 8p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-033"
+   },
+   "best": [
+    "2m",
+    "Wd"
+   ],
+   "rating": 1160,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-057",
+   "spec": {
+    "hand": "3p S 7m 1p S 5p 3p 1p 6m 9p 1p 5m 4p 1s",
+    "drawn": "1s",
+    "hands": [
+     null,
+     "8s 6s 3m 4m 9s 5m 2s 3s 1s 9s 6m 2m Rd",
+     "6m 3p 2m 3s 1m 7s 2s 4p Wd Rd 9m 7s 5m",
+     "4p 8p 8m 3s 2s 1s 6p 5p 1m 7p 9p 7m 9p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "6s 2m 3m 7m 1s W 9s 4s Rd 8m 9m Gd E 4m 7s 6p",
+     "8s N 2p W 5p Gd 6s 1p S 3m 7p 7p 6s 5p 9m 9p",
+     "Wd 2m 8m 3p 8p 6p 3s 8m 8s 5s 8p 5m 2s N 8s 6m",
+     "4m E Rd W N 6p 4m 8p 9s 5s W 4s N 4s E 5s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-057"
+   },
+   "best": [
+    "9p"
+   ],
+   "rating": 1160,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-060",
+   "spec": {
+    "hand": "7m 3p 4s 4m 7s 1m 6m 2p Wd 4s 4m 5m 9s 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "W 9m W 3s 5s 2p 1p 1m 7m 8m 3p 1p 3m",
+     "2p 7p 1p 1s 8s 3s 7s 7p 2m 3p 4m 9m E",
+     "5m 9p 2s Wd 1s 2s 1p 9p 7s 6s 6m S Wd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2s 8p N Gd 5p",
+     "4m 5p N Rd 9p 7s",
+     "8p 4p 6m N E Wd",
+     "7p 8m 3m W 3m 4s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-060"
+   },
+   "best": [
+    "1m",
+    "9s",
+    "Wd"
+   ],
+   "rating": 1160,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-102",
+   "spec": {
+    "hand": "W 7m 1s 1m 5s 4s 9s W 3m 1s W E E 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "7p 6s 7m N 8p 6p 7s 1p 4p 3m 5p Gd 7s",
+     "3m 2p 5m 3p 9p 2m 1s 2p 3p 4m 9m 3s 3s",
+     "9m 4m 9s 9p 8s 3s 4s 8m 1p 6m 7m 4s 1m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "4p 7s S 7p 7m",
+     "Wd E 5p S Rd",
+     "Wd 6p S E N",
+     "6p Wd Rd 8s 5p N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-102"
+   },
+   "best": [
+    "7m",
+    "2s",
+    "9s"
+   ],
+   "rating": 1160,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-141",
+   "spec": {
+    "hand": "9s 3s 4s 1m 9p 7s 9m W 1m 8p 5s 9m 8m 1s",
+    "drawn": "1s",
+    "hands": [
+     null,
+     "1p 1m 5m 4p 3p 6m 1p 3s 4m 4s 2s 1p 5p",
+     "4s 3p E W W 2p 3s 7m W E 8m 9p Wd",
+     "6s 7p 2m 1s 3m 1s 6s 9p 9p 8p 8p 4m 6s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m Gd 4m 3p 2s 2s 6p 6m 4m 6s 2p 8m",
+     "Gd 3s 8s 4p 5m 8p 6p 5s 2m Gd 9s 2p",
+     "2m N Wd 7s Rd 5p 3p 5m 8m Gd 8s 7m 1m",
+     "2s 6m S 2p 4p 5p N E 6m 9s 5p 5s Rd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-141"
+   },
+   "best": [
+    "1s",
+    "W"
+   ],
+   "rating": 1160,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-110",
+   "spec": {
+    "hand": "Rd 3p 4s 2p 4p 4p 3m 1p 3p Gd 9m 5p 9m 8p",
+    "drawn": "8p",
+    "hands": [
+     null,
+     "7m 5p 2p Wd Gd 7p 4m 1p 9m 5m 6p N 1s",
+     "Wd 9s 7p E 9p 1p 5s 6s 7s Rd 3s 2p 3s",
+     "9m 7s 6m 3p 5p 9p 6m 6s 4p 1m 8s 8m 6s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8s 8m 8s",
+     "5s 1s Rd",
+     "4m 7m 5s 2s",
+     "Rd W E S"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-110"
+   },
+   "best": [
+    "Rd"
+   ],
+   "rating": 1170,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-157",
+   "spec": {
+    "hand": "7s 2s 4p 7m 3s Gd 8m W 8s 5p 8m 3s 4p Rd",
+    "drawn": "Rd",
+    "hands": [
+     null,
+     "9p 9m 9s 5s 6s 5p 9p 3m 7p 3p",
+     "4p 7m 5m 2s 4s 2p 9p S 2p S 5p 1p 8p",
+     "4m 1p 9m 7s 1p 8p 6p 6m Wd 3s 8s 3p S"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "7s 8p",
+     "2p W Rd N",
+     "7s 2m 4s 4s",
+     "Rd W N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-157"
+   },
+   "best": [
+    "W",
+    "Rd"
+   ],
+   "rating": 1170,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-159",
+   "spec": {
+    "hand": "6m 4p 9m 9s 1m W 1m 9s 1p 6p 5m 7m 1s N",
+    "drawn": "N",
+    "hands": [
+     null,
+     "1s 9m 9m 9p 3m 2m Rd 4s 9p 3s 3s W S",
+     "5m 2m 5s 2m 7p 4s 9p 5m 9s W",
+     "8p 8s 5p 7s 1m 3p 9p 4p 2s 8s 2s 8p 3m"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 0
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "N N 7s Wd",
+     "8p 3p 7s 6s 8m",
+     "8m 5s Rd E 7m 1p",
+     "5s 8p 6m S 1p 7s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-159"
+   },
+   "best": [
+    "N"
+   ],
+   "rating": 1170,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-149",
+   "spec": {
+    "hand": "1m Rd 8p 3s 4s 1m 1s 3s 7p 3p E Wd 2p 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "6m 3s 2m 3m 9p 5m 6s 2p 1p 5s 4m 2p 1s",
+     "9s 1m 5s 4m Gd 4s 2m Gd 3m N 8s 3p 5p",
+     "7m 1p 4s 8s N 7s S Wd 1p 7p 9m 2s 7p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "7m 8s 5p",
+     "6p Wd 3m",
+     "7m 8p 2s",
+     "7p 7m 7s 8p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-149"
+   },
+   "best": [
+    "E",
+    "Wd",
+    "Rd"
+   ],
+   "rating": 1210,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-077",
+   "spec": {
+    "hand": "1p 1p 8p 3s S 9p 6p 6m E N 4s 8p 7m 6p",
+    "drawn": "6p",
+    "hands": [
+     null,
+     "6p 7p E 1m 2m 2m 1m E 2p 3m 1s 2s 4m",
+     "5p 3m 5m 6s 2m 5s 6s 3m 6s 2p 4p 7p 3p",
+     "1s Gd Gd 7m 2s Gd 4p 3s 3p 2p 9m 8m 1s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2p W 8s 8s",
+     "7p S 5m 5s",
+     "W Wd Rd N",
+     "8s 7s 6m S 3m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-077"
+   },
+   "best": [
+    "9p",
+    "E",
+    "S",
+    "N"
+   ],
+   "rating": 1220,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-009",
+   "spec": {
+    "hand": "W 3p 7p N 9p S 1m N W 3m 2p",
+    "hands": [
+     null,
+     "4m 6m 9s 9p 9s 3p 9s 2m 5p 3m 1p 1p 1s",
+     "S S 4p 8m N 5m 5s 6p 8m 2p 5p 9s 4m",
+     "7m 4m 5m 2s 6p 9m Rd 2m 6m 6p 9m 4s 9m"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "Gd Gd Gd",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5m 4s 8m",
+     "Rd 5p Wd",
+     "2m Rd",
+     "5s 2p W"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-009"
+   },
+   "best": [
+    "S"
+   ],
+   "rating": 1260,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-018",
+   "spec": {
+    "hand": "3s W 9m 1p 2p 1s 1m N 1m 9m 3p N 3m 5m",
+    "drawn": "5m",
+    "hands": [
+     null,
+     "5m 5m 8m 5s 7s 8p 1p 2p 9p 9m 6s 1s Rd",
+     "4p 9p 9m 5m 3p 6s 8p 7m 6s 2p 8m 7p 4m",
+     "S Gd Rd 3m 1m 1s W E N W 2m 9p 6m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "E 7s 8m 5s 7p 5p",
+     "2m 2s 6m 4s Wd 2p",
+     "2m E Rd Wd 2s 6p",
+     "8m 8p 8s 4m 5p 3s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-018"
+   },
+   "best": [
+    "W"
+   ],
+   "rating": 1260,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-082",
+   "spec": {
+    "hand": "W 6m 9s Gd 5m 1m 3m 7s 1s 1s W",
+    "drawn": "W",
+    "hands": [
+     null,
+     "8p 9s 4s E 9p 3s 5p Rd 7p 7p 6s 8s 1m",
+     "2p 1p 6s 7m 6p 4p Wd 7p 9p Gd S 9m 8m",
+     "1m 3s 3m 1p 1s 4s 6p S 2s 3s 4p 4p 5p"
+    ],
+    "melds": [
+     [
+      {
+       "type": "pung",
+       "tiles": "N N N",
+       "from": 2
+      }
+     ],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s 9m",
+     "5m 8m W",
+     "9s 7m",
+     "W 8p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-082"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 1260,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-106",
+   "spec": {
+    "hand": "7m 9s 1p 2m 2p 8m 3p 4m 1p 4p Gd Gd 5s 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "N 7p 4s 7s 6s 8s 6s N 9m 9m 8p 6p S",
+     "3m 3m 2p 8m 3m 7p 9p 7m 2p 9m",
+     "1m E 4m 5p 6p 8m E 6m 9m 1m 1m 7m 4p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "W W W",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "2s Wd 8p 5p 5s 6p 5m 4s 6p 8s 2m 7p",
+     "W 5p 3p 8s 6s 1s 8p 6m 1s Wd 3m Rd",
+     "2m 9s 3s 3s 7s 2s N 1s 6m 1m 7p Rd S",
+     "3s 8p 2m 6s 1s 2s 9p 8m Rd 9s 4s 2p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-106"
+   },
+   "best": [
+    "5s"
+   ],
+   "rating": 1260,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-071",
+   "spec": {
+    "hand": "4s E 9m 2m 1p 1p 1s 8p 9s W W 6p 9p 6m",
+    "drawn": "6m",
+    "hands": [
+     null,
+     "5p 1m 7p 9p 3p 5m 3p 5m 4p 1p",
+     "4m 9m 3s 7m 5s 3m 2p 3s 2m 2p 3s Wd 5s",
+     "1m S 6m 5p 1s S 7p Wd Rd Wd 4p 2p 4m"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "6m 3p",
+     "8m 4m 7s",
+     "2s 5m 6m",
+     "8s 7s 4s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-071"
+   },
+   "best": [
+    "6m"
+   ],
+   "rating": 1280,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-072",
+   "spec": {
+    "hand": "E 9m 2m 1p 1p 1s 8p 9s W W 6p 9p 6m 8s",
+    "drawn": "8s",
+    "hands": [
+     null,
+     "5p 1m 7p 9p 3p 5m 3p 5m 4p 1p",
+     "4m 9m 3s 7m 5s 3m 2p 3s 2m 2p 3s Wd 5s",
+     "1m S 6m 5p 1s S Wd Rd Wd 4p 2p 4m 3m"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "6m 3p 4s",
+     "8m 4m 7s 7s",
+     "2s 5m 6m 2s",
+     "8s 7s 4s 7p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-072"
+   },
+   "best": [
+    "E"
+   ],
+   "rating": 1280,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-158",
+   "spec": {
+    "hand": "7s 4p 7m 3s Gd 8m W 8s 5p 3s 4p 6p 5m 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "9p 9m 9s 5s 6s 5p 9p 7p 3p 8m",
+     "4p 7m 5m 4s 9p S S 5p 1p 8p 1m 6m 2p",
+     "4m 1p 9m 7s 1p 8p 6p 6m Wd 8s S 1m 1p"
+    ],
+    "melds": [
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 3
+      }
+     ],
+     [],
+     []
+    ],
+    "discards": [
+     "7s 8p 8m 2s Rd",
+     "2p W Rd N 3m 6m 8m",
+     "7s 2m 4s 4s 2p 2p 2s",
+     "Rd W N 3p 3s N"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-158"
+   },
+   "best": [
+    "W"
+   ],
+   "rating": 1280,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-047",
+   "spec": {
+    "hand": "1p 8s W 8s 3p 3s Wd 5m 4s 7m 3m Wd 9p 5p",
+    "drawn": "5p",
+    "hands": [
+     null,
+     "7s 2s S 2s Wd 6s 1m 6p 8s 5m 4s 2s 4s",
+     "1p 2m 9s 2m 3m N 7s 3m 2p 2m",
+     "E 3p 4m 6p 6m 9p 9s 5m 5p 4m 7m 5p 4m"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "W W W",
+       "from": 3
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "6p 3s 6s",
+     "7s Rd 2p",
+     "Rd 6m 8p Gd",
+     "8m S 2s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 0,
+    "round": 0,
+    "seed": "mj-discard-047"
+   },
+   "best": [
+    "9p",
+    "W"
+   ],
+   "rating": 1320,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-067",
+   "spec": {
+    "hand": "9m Rd 9p 9p 1p E 9m 9s Gd E 8s S S 3p",
+    "drawn": "3p",
+    "hands": [
+     null,
+     "1s N 8p 5m 6m 4p 7m 6p 7s 1s 5s 6p 6s",
+     "N 9p 2m 8p W W 6p 7s 6s 7s 3m Wd 5p",
+     "1m 8s Rd 9m 5p E 2s 1s 8s 5p 1m 7p 9m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "3s 6p",
+     "9s Wd",
+     "3p 8m 8p",
+     "2m 2p 4s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-067"
+   },
+   "best": [
+    "Gd",
+    "Rd"
+   ],
+   "rating": 1320,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-073",
+   "spec": {
+    "hand": "8s 5m Rd 7s 3p W S Rd 1s 4p E 7m S E",
+    "drawn": "E",
+    "hands": [
+     null,
+     "2p N 9s 9s 5m 7p 5m 6p 5m 2m 3p 4m 3m",
+     "3p 4p 4p 9m 1s Gd 1m 7s 7p 1p E 6m 6m",
+     "S 9m 6s Wd Wd 9p 3s 7m S 3s 5s 8m 3s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s N 3m",
+     "8m 1m 3s",
+     "W N 4m 4m",
+     "2p 2m 8s 7p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-073"
+   },
+   "best": [
+    "1s",
+    "W"
+   ],
+   "rating": 1320,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-133",
+   "spec": {
+    "hand": "3m 5s 8p 4m 4s W 1s Wd 9p 1p Wd 2p Gd Gd",
+    "drawn": "Gd",
+    "hands": [
+     null,
+     "2p 9p 9s 6s 7s Rd 1p 5p 9p Rd 5m 9p 5s",
+     "4p 6p 7m 3p 7s Rd 9s 6p 4m 2m 3m 9m 1s",
+     "4m 4m 7m 5m 9m 3s 2m W 3s S"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "E E E",
+       "from": 0
+      }
+     ]
+    ],
+    "discards": [
+     "5s Gd S",
+     "8m 2s N Wd",
+     "7m 8p 6m S",
+     "7p 5m S 1p 5p"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-133"
+   },
+   "best": [
+    "1s",
+    "W"
+   ],
+   "rating": 1320,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-137",
+   "spec": {
+    "hand": "1p 2p 2m 2p 4m N 7s 9m 8m 5m 2p 4s 6s 9p",
+    "drawn": "9p",
+    "hands": [
+     null,
+     "3s 7p 2s 6p 1m 8s Rd 7s Rd 9m W Wd 7p",
+     "7m W 1p 8m 3p 8m 3m 2m 3s 1p 5s 7m 1m",
+     "9m 5p 8s 6p E 3m 1m E 8s 3p 4p E 5s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8m 4p 7p",
+     "7p 2s 6m 3p",
+     "8s 7s 5m S",
+     "W 3m S 2s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-137"
+   },
+   "best": [
+    "9p",
+    "N"
+   ],
+   "rating": 1320,
+   "themes": [
+    "mj-discard",
+    "mj-lone"
+   ]
+  },
+  {
+   "id": "mj-discard-101",
+   "spec": {
+    "hand": "9p 9s 9m 1p W 6s 8m 7s 2s 3p 1m 4s W 2s",
+    "drawn": "2s",
+    "hands": [
+     null,
+     "3m 2m 2p 8s E 7m 8p 1s 2p 1m S N 7p",
+     "6p 3s S 7p 1p 7s 3s S 9s 3p 7p 6s Rd",
+     "2m 9s Gd 7m 5m 2s 9m 9p 9m 2p 9p 4m 5m"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "Rd 3p 6p 6s",
+     "4s 5p 2m Wd",
+     "4p 4m 6p 2m",
+     "5s 8p W Wd E"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-101"
+   },
+   "best": [
+    "1m",
+    "9p",
+    "9s"
+   ],
+   "rating": 1330,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-135",
+   "spec": {
+    "hand": "9m 4p 2p 7s 3m 1p 6s Wd 1m 3m 9p 8p Wd 5m",
+    "drawn": "5m",
+    "hands": [
+     null,
+     "W E 8s Rd 2m 9m N E 7s 6s 1m S Wd",
+     "9m 2p 4m 2p 1s 5p 3s 9m S 6p Rd 5s 5m",
+     "N 4p 1m 1s 2s 6m 6m 9s 6m 3s 1s Wd 9s"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8m 4p",
+     "5m 6p",
+     "7m Gd 3s",
+     "5s 8m 5m"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-135"
+   },
+   "best": [
+    "9m",
+    "1p",
+    "4p"
+   ],
+   "rating": 1330,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-140",
+   "spec": {
+    "hand": "9s 3s 4s 1m 9p 7s 9m W 1m 8p 5s 9m 8m 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "1p 1m 5m 4p 3p 2p 6m 1p 3s 4m 4s 2s Gd",
+     "4s 3p E W W 2p 3s 1m 7m W E 8m 9p",
+     "6s 7p 2m 1s 3m 1s 6s 9p 9p 8p 8p 4m 5p"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "2m Gd 4m 3p 2s 2s 6p 6m 4m",
+     "Gd 3s 8s 4p 5m 8p 6p 5s 2m",
+     "2m N Wd 7s Rd 5p 3p 5m 8m Gd",
+     "2s 6m S 2p 4p 5p N E 6m 9s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 2,
+    "round": 0,
+    "seed": "mj-discard-140"
+   },
+   "best": [
+    "9s",
+    "W"
+   ],
+   "rating": 1380,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-145",
+   "spec": {
+    "hand": "3s 1p 1p Wd 4m 9p 5m Wd 3p 1s 6m 1s 9p 3m",
+    "drawn": "3m",
+    "hands": [
+     null,
+     "6s Gd 7m 9m 6m 2s 9m 5m 2p 3s 2p 5s 7s",
+     "1m Wd 1m Wd 1s 1s 2m",
+     "8p 3s S 7p 4s 9s 1p 3p S 9m 2p 9m 6p"
+    ],
+    "melds": [
+     [],
+     [],
+     [
+      {
+       "type": "pung",
+       "tiles": "8m 8m 8m",
+       "from": 3
+      },
+      {
+       "type": "pung",
+       "tiles": "W W W",
+       "from": 1
+      }
+     ],
+     []
+    ],
+    "discards": [
+     "6p Gd 8s N N 7m 6p 4s",
+     "N 3m 8s 7p 9s 4m 5s 8p",
+     "2p S Rd 6m 6p 7p Gd E 3p 4p",
+     "5p 2m Rd 6s 7s 5p 5m 4p 7s"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-145"
+   },
+   "best": [
+    "3m",
+    "6m"
+   ],
+   "rating": 1380,
+   "themes": [
+    "mj-discard",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-019",
+   "spec": {
+    "hand": "W 6s W 5s 7m 3p 8m 2s 1p W 2p 7s 2s 9m",
+    "drawn": "9m",
+    "hands": [
+     null,
+     "5p 8p 4s 2s 9p 3m E E 4m 3s 3p Rd 2m",
+     "6m 8m 9m 4m 9m 4m 9p 6m 8p 3m 7p 2m 7m",
+     "1s 5m 1s 5s 9p 1m 8p 4s 1m 6m 1p 1s Gd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "8s E 1m N 9s 4p S 5m 3s",
+     "9s 2p 6p N 7m Gd 7s Wd 5m 8m",
+     "6p E 1s 1p 6p 6p Gd 4p S N",
+     "8s 8s 3p 3m 3m 4s 3p 5p Rd Wd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 1,
+    "round": 0,
+    "seed": "mj-discard-019"
+   },
+   "best": [
+    "9m"
+   ],
+   "rating": 1440,
+   "themes": [
+    "mj-discard",
+    "mj-ready",
+    "mj-count",
+    "mj-shape"
+   ]
+  },
+  {
+   "id": "mj-discard-058",
+   "spec": {
+    "hand": "N E 6p 4m 5p 5p 8s 4p 3p 9s 3m Gd 7s 6s",
+    "drawn": "6s",
+    "hands": [
+     null,
+     "3p 8s 3s 8p 1s 9s 8p 4s 2p 4s W 2s 1p",
+     "6s 1m 3p 1p 7p 6s 6m 9s 1p 2p 5m 7m 9p",
+     "2m 4p 3m 9m 7m E 9p 8m 9s 5p 3s 5s Rd"
+    ],
+    "melds": [
+     [],
+     [],
+     [],
+     []
+    ],
+    "discards": [
+     "5s 6m 3m 2s 7m",
+     "5m 2m 8m 8s Gd",
+     "Rd 6p 6m W 7p",
+     "3m 6s Wd 7m 2p Gd"
+    ],
+    "bonus": [
+     "",
+     "",
+     "",
+     ""
+    ],
+    "options": {
+     "length": "hand"
+    },
+    "dealer": 3,
+    "round": 0,
+    "seed": "mj-discard-058"
+   },
+   "best": [
+    "Gd"
+   ],
+   "rating": 1440,
+   "themes": [
+    "mj-discard",
+    "mj-count",
+    "mj-lone"
+   ]
+  }
+ ]
+}

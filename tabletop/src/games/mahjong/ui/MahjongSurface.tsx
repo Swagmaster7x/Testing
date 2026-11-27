@@ -7,7 +7,8 @@
  *
  * Tap a tile to lift it, tap it again to discard it. When a discard can be called, a prompt above
  * your hand says what each call takes. At the end of a hand every hand is shown, with the
- * winner's faan line by line and the payments.
+ * winner's faan line by line and the payments (with "Score hands for me" off, you count the faan
+ * first).
  *
  * What is drawn lags the rules by the events still queued (as on every table): a discard the
  * rules have made stays in the hand until its event plays, then slides to the discards.
@@ -259,8 +260,39 @@ function OwnTurnButtons({ legal, counts, onAction }: { legal: readonly MahjongAc
 
 // The end of a hand
 
-function ResultPanel({ result, me, learner, canNext, over, onNext }: { result: HandResult; me: Seat; learner: boolean; canNext: boolean; over: boolean; onNext: () => void }) {
+/**
+ * With "Score hands for me" off, a won hand asks you for its faan before the sheet shows, as you
+ * would count it at a real table.
+ */
+function CountYourself({ faan, onDone }: { faan: number; onDone: (guess: number | null) => void }) {
+  const [entry, setEntry] = useState('');
+  const guess = entry.trim() === '' ? null : Number(entry);
+  return (
+    <form
+      className="mj-count"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (guess !== null && Number.isFinite(guess)) onDone(guess);
+      }}
+    >
+      <span className="mj-count-ask">{t('mahjong.self.ask')}</span>
+      <input className="mj-count-input num" type="number" inputMode="numeric" min={0} max={99} aria-label={t('mahjong.self.label')} value={entry} onChange={(e) => setEntry(e.target.value)} />
+      <button type="submit" className="btn btn-primary btn-small" disabled={guess === null || !Number.isFinite(guess)}>
+        {t('mahjong.self.check')}
+      </button>
+      <button type="button" className="btn btn-small btn-quiet" onClick={() => onDone(null)} data-faan={faan}>
+        {t('mahjong.self.reveal')}
+      </button>
+    </form>
+  );
+}
+
+function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore }: { result: HandResult; me: Seat; learner: boolean; canNext: boolean; over: boolean; onNext: () => void; selfScore: boolean }) {
   const wins = result.wins;
+  // Counting yourself: the guess for the first winner's faan, once given (undefined before).
+  const [counted, setCounted] = useState<number | null | undefined>(undefined);
+  const asking = selfScore && wins.length > 0 && counted === undefined;
+  const first = wins[0];
   return (
     <div className="mj-result" role="status" aria-label={t('mahjong.result.payments')}>
       {wins.length === 0 ? <h2>{t('mahjong.result.draw')}</h2> : null}
@@ -292,6 +324,13 @@ function ResultPanel({ result, me, learner, canNext, over, onNext }: { result: H
                 </span>
               ) : null}
             </div>
+            {asking && w === first ? <CountYourself faan={w.score.total} onDone={setCounted} /> : null}
+            {selfScore && w === first && counted !== undefined && counted !== null ? (
+              <p className="mj-count-verdict" data-right={counted === w.score.total}>
+                {counted === w.score.total ? t('mahjong.self.right', { n: w.score.total }) : t('mahjong.self.wrong', { guess: counted, n: w.score.total })}
+              </p>
+            ) : null}
+            {asking ? null : (
             <ul className="mj-faan">
               {w.score.lines.length === 0 ? <li>{t('mahjong.result.chicken')}</li> : null}
               {w.score.lines.map((l) => (
@@ -308,18 +347,21 @@ function ResultPanel({ result, me, learner, canNext, over, onNext }: { result: H
                 <span className="num">{t('mahjong.result.base', { n: w.score.base })}</span>
               </li>
             </ul>
+            )}
           </div>
         );
       })}
-      <div className="mj-pay">
-        <span className="mj-pay-title">{over ? t('mahjong.result.game-over') : t('mahjong.result.payments')}</span>
-        {result.deltas.map((d, seat) => (
-          <span key={seat} className="num" data-sign={d > 0 ? 'up' : d < 0 ? 'down' : 'none'}>
-            {seatName(seat, me)} {d > 0 ? `+${d}` : d}
-          </span>
-        ))}
-      </div>
-      {canNext ? (
+      {asking ? null : (
+        <div className="mj-pay">
+          <span className="mj-pay-title">{over ? t('mahjong.result.game-over') : t('mahjong.result.payments')}</span>
+          {result.deltas.map((d, seat) => (
+            <span key={seat} className="num" data-sign={d > 0 ? 'up' : d < 0 ? 'down' : 'none'}>
+              {seatName(seat, me)} {d > 0 ? `+${d}` : d}
+            </span>
+          ))}
+        </div>
+      )}
+      {canNext && !asking ? (
         <button type="button" className="btn btn-primary btn-small mj-next" onClick={onNext}>
           {t('mahjong.next')}
         </button>
@@ -554,7 +596,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       {W > 0 ? tags : null}
       {claiming ? <ClaimPrompt state={state} me={me} legal={legal} learner={learner} onAction={onAction} /> : null}
       {myTurn ? <OwnTurnButtons legal={legal} counts={view.hand.reduce<number[]>((c, id) => { c[kindOf(id)] = (c[kindOf(id)] ?? 0) + 1; return c; }, new Array<number>(34).fill(0))} onAction={onAction} /> : null}
-      {showResult && result ? <ResultPanel result={result} me={me} learner={learner} canNext={acting && legal.some((a) => a.type === 'next')} over={state.over} onNext={() => onAction({ type: 'next' })} /> : null}
+      {showResult && result ? <ResultPanel key={state.results.length} result={result} me={me} learner={learner} canNext={acting && legal.some((a) => a.type === 'next')} over={state.over} onNext={() => onAction({ type: 'next' })} selfScore={helps.autoScore === false} /> : null}
     </div>
   );
 }
