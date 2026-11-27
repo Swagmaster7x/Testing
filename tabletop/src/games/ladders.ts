@@ -10,6 +10,10 @@ import { chessBots } from './chess/bots';
 import type { ChessAction, ChessConfig, ChessEvent, ChessState, ChessView } from './chess/rules';
 import { chess } from './chess/rules';
 import { noughtsBots } from './noughts/bots';
+import { shogiBots } from './shogi/bots';
+import { LADDER_MOVE_LIMIT } from './shogi/presets';
+import type { ShogiAction, ShogiConfig, ShogiEvent, ShogiState, ShogiView } from './shogi/rules';
+import { shogi } from './shogi/rules';
 import type { NoughtsAction, NoughtsConfig, NoughtsEvent, NoughtsState, NoughtsView } from './noughts/rules';
 import { noughts } from './noughts/rules';
 
@@ -68,9 +72,28 @@ function chessLadder(deps: LadderDeps): Ladder<ChessState, ChessAction, ChessCon
   };
 }
 
+function shogiLadder(): Ladder<ShogiState, ShogiAction, ShogiConfig, ShogiView, ShogiEvent> {
+  return {
+    spec: {
+      def: shogi,
+      // Games between programs always end: a draw at the computer-shogi move limit.
+      config: { moveLimit: LADDER_MOVE_LIMIT },
+      levels: shogiBots.levels.map((l) => l.level),
+      bot: (level) => ({
+        name: `L${level}`,
+        choose: async (view, seat, rng) => (await shogiBots.choose({ view, seat, level, rng })).action,
+      }),
+      margin: 0.6,
+    },
+    random: { name: 'random', choose: (view, seat, rng) => randomChoice(shogi, view, seat, rng) },
+    games: 20,
+  };
+}
+
 export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, never, never, never, never>> {
   return {
     noughts: noughtsLadder() as unknown as Ladder<never, never, never, never, never>,
     chess: chessLadder(deps) as unknown as Ladder<never, never, never, never, never>,
+    shogi: shogiLadder() as unknown as Ladder<never, never, never, never, never>,
   };
 }
