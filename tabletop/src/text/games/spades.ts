@@ -169,4 +169,11 @@ export const enSpades = {
   'why.spades-nil': 'You bid nil: the {move} kept you out of the trick.',
   'why.spades-overtook': 'Your partner was already winning this trick; the {move} would have saved a high card.',
   'why.spades-trumped': 'A spade spent here; the {move} did better.',
+
+  'practice.set.spades.drill-spades-count': 'Count a bid',
+  'practice.set.spades.drill-spades-count.blurb': 'Count aces, guarded kings and long spades into a bid, hand after hand.',
+  'practice.set.spades.drill-spades-score': 'Score the hand',
+  'practice.set.spades.drill-spades-score.blurb': 'Made or set, bags and the ten-bag penalty: score it yourself.',
+  'practice.set.spades.drill-spades-trick': 'Win it or duck it',
+  'practice.set.spades.drill-spades-trick.blurb': 'Win cheaply while your side needs tricks; duck once the bid is made.',
 };

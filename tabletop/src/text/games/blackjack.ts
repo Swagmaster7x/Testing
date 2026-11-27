@@ -205,7 +205,7 @@ export const enBlackjack = {
   'ref.blackjack.moves.4': 'Surrender: give up the hand for half your bet, as your first move.',
   'ref.blackjack.moves.5': 'Split aces take one card each; 21 after a split is not a blackjack.',
   'ref.blackjack.pay': 'Payouts',
-  'ref.blackjack.pay.1': 'A win pays even money; equal totals push (your bet comes back).',
+  'ref.blackjack.pay.1': 'A win pays 1 to 1; equal totals push (your bet comes back).',
   'ref.blackjack.pay.2': 'Blackjack pays 3 to 2 (a bet of 10 wins 15), or 6 to 5 at worse tables (10 wins 12).',
   'ref.blackjack.pay.3': 'Insurance pays 2 to 1.',
   'ref.blackjack.pay.4': 'Play chips only: there is nothing to buy.',
@@ -237,4 +237,14 @@ export const enBlackjack = {
   'why.blackjack-split': 'The chart splits differently here ({move}): about {n} chips per 100 bet.',
   'why.blackjack-surrender': 'Surrendering saved more: about {n} chips per 100 bet.',
   'why.blackjack-insurance': 'Insurance loses in the long run unless you count the cards.',
+
+  'practice.set.blackjack.drill-blackjack-chart': 'Basic-strategy trainer',
+  'practice.set.blackjack.drill-blackjack-chart.blurb': 'Every hand against every dealer card, answered by the chart computed from the rules.',
+  'practice.set.blackjack.drill-blackjack-count': 'Running count',
+  'practice.set.blackjack.drill-blackjack-count.blurb': 'Keep the Hi-Lo count of a whole table at a glance.',
+  'practice.set.blackjack.drill-blackjack-pay': 'Payouts',
+  'practice.set.blackjack.drill-blackjack-pay.blurb': 'What a blackjack pays at 3 to 2 and 6 to 5, and what insurance pays.',
+  'practice.set.blackjack.drill-blackjack-total': 'Hand totals',
+  'practice.set.blackjack.drill-blackjack-total.blurb': 'Soft or hard, add up a hand without thinking.',
+  'ready.blackjack.beat': 'Play twenty hands by the chart, right first time',
 };

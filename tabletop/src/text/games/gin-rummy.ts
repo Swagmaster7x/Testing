@@ -101,10 +101,10 @@ export const enGinRummy = {
   'reason.gin-dead': 'The hand was dead.',
   'reason.gin-tie': 'Equal totals.',
 
-  'gin.level.1': 'Just learning: throws its highest card, takes a discard only for a meld, knocks at once.',
-  'gin.level.2': 'Knows the basics: keeps pairs and near-runs, does not feed you what you collect, waits for a low knock early on.',
-  'gin.level.3': 'Thinks ahead: plays each choice eight turns on over a dozen possible deals.',
-  'gin.level.4': 'The strongest: twelve turns ahead over thirty-six deals.',
+  'gin.level.1': 'Just learning: throws its highest loose card, always draws from the stock, knocks the moment it can.',
+  'gin.level.2': 'Knows the basics: takes a discard that melds, keeps pairs and near-runs, does not feed you what you collect; knocks at once.',
+  'gin.level.3': 'Patient: plays like level 2 but holds out for gin until the stock runs low.',
+  'gin.level.4': 'The strongest: plans each discard over thirty deals of the cards it cannot see, and holds out for gin almost to the end.',
 
   'gin.preset.standard': 'Standard',
   'gin.preset.standard.detail': 'knock at 10, gin 25, undercut 25, big gin 31, line bonus 25, game 100 with a doubled bonus for a shutout.',
@@ -195,4 +195,11 @@ export const enGinRummy = {
   'why.gin-fed': 'That card helps what the other player is collecting; {move} was safer.',
   'why.gin-deadwood': 'Throwing the {move} would have left less deadwood.',
   'why.gin-missed-pile': 'The discard would have made a meld.',
+
+  'practice.set.gin-rummy.drill-gin-deadwood': 'Count the deadwood',
+  'practice.set.gin-rummy.drill-gin-deadwood.blurb': 'Find the melds and add up what is left.',
+  'practice.set.gin-rummy.drill-gin-discard': 'Which discard?',
+  'practice.set.gin-rummy.drill-gin-discard.blurb': 'Throw the card that leaves the least deadwood (each answer proved by counting).',
+  'practice.set.gin-rummy.drill-gin-score': 'Score the knock',
+  'practice.set.gin-rummy.drill-gin-score.blurb': 'Both hands shown: lay off, count, and score the knock or the undercut.',
 };

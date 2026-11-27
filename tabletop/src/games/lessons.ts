@@ -40,6 +40,22 @@ const PACKS: Readonly<Record<string, () => Promise<LessonPack>>> = {
     const m = await import('./holdem/learn');
     return { lessons: m.POKER_LESSONS, game: m.pokerLessonGame };
   },
+  blackjack: async () => {
+    const m = await import('./blackjack/learn');
+    return { lessons: m.BLACKJACK_LESSONS, game: m.blackjackLessonGame };
+  },
+  hearts: async () => {
+    const m = await import('./hearts/learn');
+    return { lessons: m.HEARTS_LESSONS, game: m.heartsLessonGame };
+  },
+  spades: async () => {
+    const m = await import('./spades/learn');
+    return { lessons: m.SPADES_LESSONS, game: m.spadesLessonGame };
+  },
+  'gin-rummy': async () => {
+    const m = await import('./gin-rummy/learn');
+    return { lessons: m.GIN_LESSONS, game: m.ginLessonGame };
+  },
 };
 
 export function hasLessons(gameId: string): boolean {

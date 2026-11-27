@@ -152,4 +152,11 @@ export const enHearts = {
   'why.hearts-queen': 'This let the queen of spades come to you.',
   'why.hearts-took-points': 'This took a trick with points in it; the {move} would have ducked.',
   'why.hearts-led-heart': 'Leading a heart here gave points away; the {move} was safer.',
+
+  'practice.set.hearts.drill-hearts-points': 'Count the trick',
+  'practice.set.hearts.drill-hearts-points.blurb': 'Add up the hearts and the queen on a trick, until the count is instant.',
+  'practice.set.hearts.drill-hearts-duck': 'Duck under',
+  'practice.set.hearts.drill-hearts-duck.blurb': 'Find the cards that stay under the one that is winning.',
+  'practice.set.hearts.drill-hearts-void': 'Nothing to follow with',
+  'practice.set.hearts.drill-hearts-void.blurb': 'You cannot follow suit: throw the queen, or your highest heart, while it is safe.',
 };

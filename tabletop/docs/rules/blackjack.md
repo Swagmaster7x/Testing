@@ -31,7 +31,7 @@ chips only (PLAN.md decision 6): nothing is bought, nothing is money. Code: `src
    card only after the players have finished.
 3. **Insurance** (option, offered by default): when the dealer shows an ace, each box may insure
    for half its bet. Insurance pays 2 to 1 if the dealer has blackjack. Taking it with a blackjack
-   is "even money" and is treated the same way.
+   (taking a sure 1 to 1 win) is treated the same way.
 4. **The peek** (hole-card rule): with an ace or a ten-value card showing, the dealer checks for
    blackjack. If the dealer has it, the round ends: every box loses its bet except a blackjack,
    which pushes. Otherwise insurance is lost, and every player blackjack is paid at once.
@@ -50,9 +50,9 @@ chips only (PLAN.md decision 6): nothing is bought, nothing is money. Code: `src
 6. **The dealer** turns the hole card and draws until reaching 17 or more. On a soft 17 the dealer
    stands (default) or hits (option). The dealer does not draw if every player hand is bust,
    surrendered or a paid blackjack.
-7. **Settlement**: a hand closer to 21 than the dealer wins even money; equal totals push; a bust
+7. **Settlement**: a hand closer to 21 than the dealer wins 1 to 1; equal totals push; a bust
    dealer pays every hand still standing. A blackjack pays 3 to 2 (default) or 6 to 5 (option).
-   With the **five-card Charlie** option, a hand of five cards that is not bust wins even money
+   With the **five-card Charlie** option, a hand of five cards that is not bust wins 1 to 1
    whatever the dealer has.
 8. **No hole card** (European rule): if the dealer's second card makes blackjack, the players lose
    every bet on the table, doubles and splits included (option: or only their original bets).
