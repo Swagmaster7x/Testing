@@ -192,7 +192,7 @@ export function LessonPlayer({ lesson, pack, ui, drill }: { lesson: Lesson; pack
           onAction={onAction}
           onSkip={board.skip}
           flipped={false}
-          helps={{ legal: true, openHand: step?.openHand === true, openPiles: step?.openPiles === true }}
+          helps={{ legal: true, openHand: step?.openHand === true || question?.openHand === true, openPiles: step?.openPiles === true || question?.openPiles === true }}
           overlay={overlay}
         />
       }
