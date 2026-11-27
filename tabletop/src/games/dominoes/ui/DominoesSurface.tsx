@@ -319,7 +319,7 @@ export function DominoesSurface({ state, mySeats, canAct, legal, anim, onAction,
         </div>
       ) : null}
       {fives && ends.length > 0 ? (
-        <div className="count-tag num" data-scores={endsCount(d.layout) % 5 === 0 && endsCount(d.layout) > 0} style={{ right: `${sideW + gap}px`, top: `${n === 2 ? area.y - labelH : gap / 2}px` }} aria-label={t('dominoes.count.label', { n: endsCount(d.layout) })}>
+        <div className="count-tag num" data-scores={endsCount(d.layout) % 5 === 0 && endsCount(d.layout) > 0} style={{ right: `${sideW + gap}px`, top: `${n === 2 ? area.y - labelH : gap / 2}px` }}>
           {t('dominoes.count', { n: endsCount(d.layout) })}
         </div>
       ) : null}

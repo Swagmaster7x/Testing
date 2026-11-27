@@ -2,8 +2,19 @@
  * Dominoes styles end to end (milestone 14, first part): a whole All Fives match against level 1
  * and its review, a Cuban double-nine hand, and an All Fives lesson, at every screen size.
  */
+import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+
+/**
+ * Serious and critical axe findings on the page (as tests/e2e/a11y.spec.ts counts them). The
+ * shell's move list and log, once long enough to scroll, are not focusable
+ * (scrollable-region-focusable): a shell finding, left out here and reported.
+ */
+async function axeProblems(page: Page): Promise<string[]> {
+  const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).disableRules(['label-content-name-mismatch', 'scrollable-region-focusable']).analyze();
+  return result.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 4).join(' | ')}`);
+}
 
 async function startGame(page: Page, seed: string, preset: RegExp, oneHand: boolean) {
   await page.goto(`/#/games/dominoes?seed=${seed}`);
@@ -71,6 +82,22 @@ test.describe('dominoes styles', () => {
     expect(labels.some((l) => /[789]/.test(l))).toBe(true);
     await playToTheEnd(page, 30);
     await expect(page.locator('.result-card h2')).toHaveText(/You win|The CPU wins|Draw|win|lose/i);
+  });
+
+  test('the All Fives and Cuban tables pass the accessibility scan', async ({ page }) => {
+    test.setTimeout(240_000);
+    await startGame(page, 'e2e-a11y-fives', /^All Fives \(two players\)/, true);
+    const turn = page.locator('.status-turn');
+    // Play on until the count of the ends shows, with a few tiles down.
+    for (let i = 0; i < 6; i++) {
+      await expect(turn).toHaveText(/Your move|Game over/, { timeout: 60_000 });
+      if ((await turn.textContent())?.includes('Game over')) break;
+      await playToTheEnd(page, 1).catch(() => undefined);
+    }
+    expect(await axeProblems(page)).toEqual([]);
+    await startGame(page, 'e2e-a11y-cuban', /^Cuban double nine/, true);
+    await expect(turn).toHaveText(/Your move|Game over/, { timeout: 60_000 });
+    expect(await axeProblems(page)).toEqual([]);
   });
 
   test('finishes an All Fives lesson: the end of a hand, rounded to five', async ({ page }) => {

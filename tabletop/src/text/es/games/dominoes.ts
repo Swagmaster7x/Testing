@@ -46,7 +46,6 @@ export const esDominoes: Partial<Record<MessageKey, string>> = {
   'dominoes.hand.we-target': 'Meta alcanzada: gana tu lado ({n} en esta mano)',
   'dominoes.hand.they-target': 'Meta alcanzada: ganan ellos ({n} en esta mano)',
   'dominoes.count': 'Puntas: {n}',
-  'dominoes.count.label': 'Las puntas suman {n}',
   'dominoes.scored': '+{n}',
   'dominoes.log.play': '{tile} {end}',
   'dominoes.log.left': 'por la izquierda',

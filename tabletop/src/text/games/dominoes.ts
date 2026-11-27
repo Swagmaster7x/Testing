@@ -41,7 +41,6 @@ export const enDominoes = {
   'dominoes.hand.we-target': 'Target reached: your side wins ({n} this hand)',
   'dominoes.hand.they-target': 'Target reached: they win ({n} this hand)',
   'dominoes.count': 'Ends: {n}',
-  'dominoes.count.label': 'The open ends count {n}',
   'dominoes.scored': '+{n}',
   'dominoes.log.play': '{tile} {end}',
   'dominoes.log.left': 'on the left',
