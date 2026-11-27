@@ -260,7 +260,7 @@
 .poker-odds {
   right: 6px;
   bottom: 50px;
-  max-width: 44%;
+  max-width: min(32%, 250px);
 }
 
 .poker-reading {

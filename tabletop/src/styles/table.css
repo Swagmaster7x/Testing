@@ -545,6 +545,15 @@
   .table-body[data-wide='true'] .table-surface {
     padding: var(--sp-1);
   }
+
+  /* A phone held sideways: the result fits the short side column. */
+  .table-body[data-wide='true'] .result-card {
+    padding: var(--sp-2);
+  }
+
+  .table-body[data-wide='true'] .result-card h2 {
+    font-size: var(--fs-lg);
+  }
 }
 
 /* Pass-and-play: the cover between two people's turns in a game with hidden cards or tiles. */
@@ -594,5 +603,5 @@
 
 .result-card .places {
   font-size: var(--fs-xs);
-  color: var(--text-1);
+  color: #5b4a37;
 }
