@@ -14,7 +14,7 @@ import type { SurfaceProps } from '../../types';
 import { holeName, NEIGHBOUR, parseHole } from '../board';
 import { movePath } from '../engine';
 import type { CcAction, CcEvent, CcState } from '../rules';
-import { boardArray, layoutOf, placesOf, SEAT_LETTERS } from '../rules';
+import { boardArray, layoutOf, placesOf, positionText, SEAT_LETTERS } from '../rules';
 import './cc.css';
 
 export const seatColour = (seat: number): string => tDynamic(`cc.seat.${seat}`);
@@ -130,7 +130,7 @@ export function CcSurface({ state, mySeats, canAct, legal, lastAction, anim, onA
   else text = t('cc.strip.turn', { colour: seatColour(state.toMove) });
 
   return (
-    <div className="cc-surface">
+    <div className="cc-surface" data-state={positionText(state)}>
       <div className="cc-board">
         <StarBoard
           holes={holes}

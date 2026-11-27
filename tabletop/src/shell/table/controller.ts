@@ -185,11 +185,11 @@ export class TableController<S, A, C, V, E extends GameEvent> {
     this.persist(next);
   }
 
-  /** The person resigns. In a game with several people the first of them resigns. */
-  resign(): void {
+  /** The person resigns: `seat` when given (pass-and-play: whoever holds the device), else the first person. */
+  resign(who?: Seat): void {
     const { record, state } = this.snap;
     if (this.stopped || record.status !== 'active') return;
-    const seat = record.players.findIndex((p) => p.kind === 'human');
+    const seat = who !== undefined && record.players[who]?.kind === 'human' ? who : record.players.findIndex((p) => p.kind === 'human');
     if (seat < 0) return;
     this.commitClock();
     this.deps.bots.cancelAll();

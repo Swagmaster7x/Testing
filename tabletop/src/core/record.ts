@@ -14,6 +14,8 @@ export interface SeatPlayer {
   readonly kind: PlayerKind;
   /** CPU level, for bots. */
   readonly level?: number;
+  /** A person's name at a pass-and-play table (several people at one device). */
+  readonly name?: string;
 }
 
 export type RecordStatus = 'active' | 'finished';
@@ -125,6 +127,15 @@ export function withClock(record: GameRecord, remainingMs: readonly number[]): G
   return { ...record, clock: { ...record.clock, remainingMs: [...remainingMs] } };
 }
 
+/**
+ * True when several people share the device: a pass-and-play game, which never moves a rating.
+ * Such games name their people (a game opened from a file has unnamed people on every seat).
+ */
+export function isPassAndPlay(record: Pick<GameRecord, 'players'>): boolean {
+  const people = record.players.filter((p) => p.kind === 'human');
+  return people.length >= 2 && people.some((p) => p.name !== undefined);
+}
+
 /** The seats a person plays in this record. */
 export function humanSeats(record: GameRecord): Seat[] {
   const seats: Seat[] = [];
@@ -154,7 +165,8 @@ export function parseRecord(value: unknown): GameRecord {
   if (!Array.isArray(r.players) || !Array.isArray(r.actions)) throw new Error('Game record needs players and actions');
   const players = r.players.map((p): SeatPlayer => {
     if (!isJsonObject(p) || (p.kind !== 'human' && p.kind !== 'bot')) throw new Error('Bad player in game record');
-    return typeof p.level === 'number' ? { kind: p.kind, level: p.level } : { kind: p.kind };
+    const name = typeof p.name === 'string' && p.name.trim() ? { name: p.name.trim().slice(0, 24) } : {};
+    return typeof p.level === 'number' ? { kind: p.kind, level: p.level, ...name } : { kind: p.kind, ...name };
   });
   const status = r.status;
   if (status !== 'active' && status !== 'finished') throw new Error('Bad game record status');

@@ -60,6 +60,9 @@ Rules version: 1.
      home count as filling it, so nobody can stop you finishing by parking in your home.
    - *all your own*: every hole of the home holds one of your own marbles (the strict rule, under
      which a parked marble can stop you finishing; the turn limit then ends the game).
+   Under *filled* a player could in principle finish very early by dropping one marble into the
+   last free hole of a home that the other side has hardly left; it does not happen in real play,
+   because everyone leaves their start long before anyone arrives there.
    A player who has finished takes no more turns; their marbles stay where they are and still count
    as marbles to jump over.
 9. **Places** (*option*):

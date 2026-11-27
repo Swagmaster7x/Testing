@@ -799,3 +799,53 @@ details summary {
     padding-top: var(--sp-3);
   }
 }
+
+/* Pass-and-play in the New game dialog: one row a seat, a person (with a name) or the CPU. */
+.pnp-seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.pnp-seat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.pnp-seat .player-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.pnp-seat .player-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pnp-side {
+  min-width: 6.5em;
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}
+
+.pnp-name {
+  flex: 1 1 8em;
+  min-width: 0;
+  max-width: 14em;
+  min-height: 36px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+}

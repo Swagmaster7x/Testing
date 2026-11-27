@@ -42,6 +42,13 @@ const READY: Readonly<Record<string, readonly ReadyItem[]>> = {
     { id: 'etiquette', lessons: ['shogi.table.etiquette', 'shogi.table.clock'] },
     { id: 'beat', beatLevel: 3 },
   ],
+  'chinese-checkers': [
+    { id: 'setup', lessons: ['chinese-checkers.table.setup'] },
+    { id: 'terms', lessons: ['chinese-checkers.1.hop', 'chinese-checkers.1.chain', 'chinese-checkers.1.blocked'] },
+    { id: 'score', drill: { id: 'drill-cc-rows', times: 5 } },
+    { id: 'etiquette', lessons: ['chinese-checkers.table.manners', 'chinese-checkers.table.ask'] },
+    { id: 'beat', beatLevel: 3 },
+  ],
   go: [
     { id: 'setup', lessons: ['go.table.nigiri', 'go.table.handicap'] },
     { id: 'terms', lessons: ['go.1.atari', 'go.1.ko', 'go.table.etiquette'] },

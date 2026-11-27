@@ -474,6 +474,17 @@ export const chineseCheckers: GameDef<CcState, CcAction, CcConfig, CcView, CcEve
   codec: { state: stateCodec, action: actionCodec, config: configCodec },
 };
 
+/** The legal move written as text ("4b-5f", "3a-5e-7e" or "fnfm") in this position, or null. */
+export function findMove(state: CcState, text: string): CcAction | null {
+  if (state.end !== null) return null;
+  try {
+    const wanted = packAction(actionFromText(text));
+    return legalMoves(state).includes(wanted) ? actionOf(wanted) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The options for a new game that starts from this position (play on from here, lessons). */
 export function configAt(state: CcState): CcConfig {
   const fresh: CcState = state.end !== null ? { ...state, end: null, toMove: state.toMove, passes: 0 } : state;

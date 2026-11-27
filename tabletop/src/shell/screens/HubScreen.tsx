@@ -4,6 +4,9 @@
  */
 import { useState } from 'react';
 import { stableStringify } from '../../core/json';
+import type { SeatPlayer } from '../../core/record';
+import { isPassAndPlay } from '../../core/record';
+import { createRng } from '../../core/rng';
 import type { CatalogGame } from '../../games/catalog';
 import { catalogGame } from '../../games/catalog';
 import { hasLessons, loadLessons } from '../../games/lessons';
@@ -25,7 +28,7 @@ import { Icon } from '../components/Icon';
 import { Segmented } from '../components/Segmented';
 import { shortDate, timeAgo } from '../format';
 import { href, navigate } from '../router';
-import { resultFor } from '../results';
+import { resultTitle } from '../results';
 import { useApp } from '../state';
 import { useEscape } from '../useEscape';
 import { importGame, startGame } from '../table/start';
@@ -54,6 +57,15 @@ function Door({ icon, title, blurb, foot, footStrong = false, onOpen }: DoorProp
       {foot ? <span className={footStrong ? 'door-foot status' : 'door-foot status status-quiet'}>{foot}</span> : null}
     </button>
   );
+}
+
+/** The seats at a table with these options (a set-up the game refuses still shows two). */
+function seatsAt(ui: AnyGameUi, config: unknown): number[] {
+  try {
+    return ui.def.seats(ui.def.setup(config, createRng('seats')));
+  } catch {
+    return [0, 1];
+  }
 }
 
 function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }: { ui: AnyGameUi; profileId: string; active: StoredRecord | undefined; seed: string | undefined; setup: unknown; now: number; rating: RatingState; onClose: () => void }) {
@@ -89,11 +101,21 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
   // The rules at this table, for games that have options (a link's set-up wins).
   const [rules, setRules] = useState<unknown>(() => (setup !== undefined ? setup : ui.rules ? ui.def.defaultConfig : undefined));
   const RulesPicker = ui.rules?.Picker;
+  // Who plays: one person against the CPU, or pass-and-play with each seat a person or the CPU.
+  const [mode, setMode] = useState<'cpu' | 'pnp'>('cpu');
+  const [people, setPeople] = useState<Readonly<Record<number, { readonly kind: 'human' | 'bot'; readonly name: string }>>>({});
+  const tableConfig = setup !== undefined ? setup : RulesPicker ? rules : options ? config : setupPreset ? setupPreset.config : ui.def.defaultConfig;
+  const seats = seatsAt(ui, tableConfig);
+  const seatPlayers = seats.map((seat) => people[seat] ?? { kind: 'human' as const, name: '' });
+  const withCpu = mode === 'cpu' || seatPlayers.some((p) => p.kind === 'bot');
+  const setSeat = (seat: number, change: Partial<{ kind: 'human' | 'bot'; name: string }>) => setPeople((all) => ({ ...all, [seat]: { ...(all[seat] ?? { kind: 'human', name: '' }), ...change } }));
   useEscape(onClose);
   const start = async () => {
     setBusy(true);
     const choice = ui.sides.find((s) => s.id === side);
     const clock = clocks.find((c) => c.id === clockId);
+    const players: SeatPlayer[] | undefined =
+      mode === 'pnp' ? seatPlayers.map((p) => (p.kind === 'bot' ? { kind: 'bot' as const, level } : { kind: 'human' as const, ...(p.name.trim() ? { name: p.name.trim().slice(0, 24) } : {}) })) : undefined;
     await updateSettings({
       levels: { ...levels, [ui.def.id]: level },
       clocks: { ...clockChoices, [ui.def.id]: clockId },
@@ -105,6 +127,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
       ...(seed ? { seed } : {}),
       ...(setup !== undefined ? { config: setup } : RulesPicker ? { config: rules } : options ? { config } : setupPreset ? { config: setupPreset.config } : {}),
       clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
+      ...(players ? { players } : {}),
     });
     navigate(`/play/${id}`);
   };
@@ -133,22 +156,60 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
             </a>
           ) : null}
           <div className="setup-row wide">
-            <span className="eyebrow">{t('play.level')}</span>
-            <Segmented<number> label={t('play.level')} options={ui.levels.map((l) => ({ value: l.level, label: String(l.level) }))} value={level} onChange={setLevel} />
-            <p className="level-blurb">{ui.levelBlurb(level)}</p>
-            <p className="level-blurb faint num">
-              {t('play.suggested', { n: suggested, rating: rating.rating })}
-              {rating.count < SETTLED_AFTER ? ` (${t('rating.provisional')})` : ''}
-              {level !== suggested ? (
-                <>
-                  {' '}
-                  <button type="button" className="link-button inline" onClick={() => setLevel(suggested)}>
-                    {t('play.use-suggested')}
-                  </button>
-                </>
-              ) : null}
-            </p>
+            <span className="eyebrow">{t('play.mode')}</span>
+            <Segmented<'cpu' | 'pnp'> label={t('play.mode')} options={[{ value: 'cpu', label: t('play.mode.cpu') }, { value: 'pnp', label: t('play.mode.pnp') }]} value={mode} onChange={setMode} />
+            {mode === 'pnp' ? (
+              <>
+                <ul className="pnp-seats" aria-label={t('play.mode.pnp')}>
+                  {seats.map((seat, i) => {
+                    const player = seatPlayers[i] ?? { kind: 'human', name: '' };
+                    const sideName = ui.sideName(seat);
+                    const order = seatPlayers.slice(0, i + 1).filter((p) => p.kind === 'human').length;
+                    return (
+                      <li key={seat} className="pnp-seat">
+                        <span className="player-mark">
+                          <ui.SeatMark seat={seat} />
+                        </span>
+                        <span className="pnp-side">{sideName}</span>
+                        <Segmented<'human' | 'bot'>
+                          label={t('play.seat.label', { side: sideName })}
+                          options={[
+                            { value: 'human', label: t('play.seat.person') },
+                            { value: 'bot', label: t('play.seat.cpu') },
+                          ]}
+                          value={player.kind}
+                          onChange={(kind) => setSeat(seat, { kind })}
+                        />
+                        {player.kind === 'human' ? (
+                          <input className="pnp-name" type="text" maxLength={16} aria-label={t('play.seat.name', { side: sideName })} placeholder={t('pnp.player', { n: order })} value={player.name} onChange={(e) => setSeat(seat, { name: e.target.value })} />
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="level-blurb faint">{t('play.pnp.note')}</p>
+              </>
+            ) : null}
           </div>
+          {withCpu ? (
+            <div className="setup-row wide">
+              <span className="eyebrow">{t('play.level')}</span>
+              <Segmented<number> label={t('play.level')} options={ui.levels.map((l) => ({ value: l.level, label: String(l.level) }))} value={level} onChange={setLevel} />
+              <p className="level-blurb">{ui.levelBlurb(level)}</p>
+              <p className="level-blurb faint num">
+                {t('play.suggested', { n: suggested, rating: rating.rating })}
+                {rating.count < SETTLED_AFTER ? ` (${t('rating.provisional')})` : ''}
+                {level !== suggested ? (
+                  <>
+                    {' '}
+                    <button type="button" className="link-button inline" onClick={() => setLevel(suggested)}>
+                      {t('play.use-suggested')}
+                    </button>
+                  </>
+                ) : null}
+              </p>
+            </div>
+          ) : null}
           {setupPreset ? (
             <div className="setup-row wide">
               <label className="eyebrow" htmlFor="play-preset">
@@ -167,7 +228,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
               ) : null}
             </div>
           ) : null}
-          {ui.sides.length > 1 ? (
+          {ui.sides.length > 1 && mode === 'cpu' ? (
             <div className="setup-row">
               <span className="eyebrow">{t('play.side')}</span>
               <Segmented<string> label={t('play.side')} options={ui.sides.map((s) => ({ value: s.id, label: t(s.label) }))} value={side} onChange={setSide} />
@@ -268,8 +329,8 @@ function ReviewDialog({ ui, profileId, finished, onClose }: { ui: AnyGameUi; pro
               return (
                 <li key={r.id}>
                   <a href={href(`/review/${r.id}`)}>
-                    <span className="result">{t(resultFor(r))}</span>
-                    <span className="muted">{bot ? t('review.vs', { n: bot.level ?? 1 }) : null}</span>
+                    <span className="result">{resultTitle(ui, r)}</span>
+                    <span className="muted">{isPassAndPlay(r) ? t('pnp.title') : bot ? t('review.vs', { n: bot.level ?? 1 }) : null}</span>
                     <span className="faint num" style={{ marginLeft: 'auto' }}>
                       {shortDate(r.updatedAt)}
                     </span>

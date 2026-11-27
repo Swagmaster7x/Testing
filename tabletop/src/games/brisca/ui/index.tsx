@@ -1,6 +1,6 @@
 import type { Seat } from '../../../core/contract';
 import { t, tDynamic } from '../../../text';
-import type { GameOptions, GameUi, OptionField, ReferenceSection } from '../../types';
+import type { GameOptions, GameUi, OptionField, ReferenceSection, SeatNames } from '../../types';
 import { BRISCA_LEVELS } from '../bots';
 import { analyseBriscaGame } from '../review';
 import type { BriscaAction, BriscaConfig, BriscaEvent, BriscaState, BriscaView } from '../rules';
@@ -9,7 +9,8 @@ import { BriscaCoachPanel } from './CoachPanel';
 import { cardName, suitName } from './names';
 import { BriscaSeatMark, BriscaSurface } from './BriscaSurface';
 
-const who = (seat: Seat, mySeats: readonly Seat[] | undefined): string => ((mySeats ?? [0]).includes(seat) ? t('brisca.who.you') : t('brisca.who.cpu'));
+/** You, the CPU, or at a pass-and-play table the other person's name. */
+const who = (seat: Seat, mySeats: readonly Seat[] | undefined, names?: SeatNames): string => ((mySeats ?? [0]).includes(seat) ? t('brisca.who.you') : (names?.(seat) ?? t('brisca.who.cpu')));
 
 const FIELDS: readonly { key: keyof BriscaConfig; values: readonly (string | number)[] }[] = [
   { key: 'swap', values: ['seven-and-two', 'seven', 'none'] },
@@ -49,7 +50,7 @@ export const briscaUi: GameUi<BriscaState, BriscaAction, BriscaConfig, BriscaVie
     { id: 'either', label: 'play.side.either', seat: 'either' },
   ],
   sideName: (seat) => tDynamic(`brisca.seat.${seat}`),
-  movePrefix: (seat, mySeats) => ((mySeats ?? [0]).includes(seat) ? t('brisca.you') : t('brisca.cpu')),
+  movePrefix: (seat, mySeats, _seats, names) => ((mySeats ?? [0]).includes(seat) ? t('brisca.you') : (names?.(seat) ?? t('brisca.cpu'))),
   eventDuration(event) {
     switch (event.type) {
       case 'play':
@@ -68,22 +69,29 @@ export const briscaUi: GameUi<BriscaState, BriscaAction, BriscaConfig, BriscaVie
         return 0;
     }
   },
-  describeEvent(event, mySeats) {
+  describeEvent(event, mySeats, _seats, names) {
     switch (event.type) {
       case 'play':
-        return t(event.call ? 'brisca.log.call' : 'brisca.log.play', { who: who(event.seat, mySeats), card: cardName(event.card) });
+        return t(event.call ? 'brisca.log.call' : 'brisca.log.play', { who: who(event.seat, mySeats, names), card: cardName(event.card) });
       case 'swap':
-        return t('brisca.log.swap', { who: who(event.seat, mySeats), gave: cardName(event.gave), took: cardName(event.took) });
+        return t('brisca.log.swap', { who: who(event.seat, mySeats, names), gave: cardName(event.gave), took: cardName(event.took) });
       case 'trick':
-        return event.points > 0 ? t('brisca.log.trick', { who: who(event.winner, mySeats), n: event.points }) : t('brisca.log.trick.none', { who: who(event.winner, mySeats) });
-      case 'draw':
-        if (event.turned) return t('brisca.log.draw.turned', { who: who(event.seat, mySeats), card: cardName(event.card) });
-        return (mySeats ?? [0]).includes(event.seat) ? t('brisca.log.draw.you', { card: cardName(event.card) }) : t('brisca.log.draw.cpu');
+        return event.points > 0 ? t('brisca.log.trick', { who: who(event.winner, mySeats, names), n: event.points }) : t('brisca.log.trick.none', { who: who(event.winner, mySeats, names) });
+      case 'draw': {
+        if (event.turned) return t('brisca.log.draw.turned', { who: who(event.seat, mySeats, names), card: cardName(event.card) });
+        if ((mySeats ?? [0]).includes(event.seat)) return t('brisca.log.draw.you', { card: cardName(event.card) });
+        const person = names?.(event.seat);
+        return person ? t('brisca.log.draw.other', { who: person }) : t('brisca.log.draw.cpu');
+      }
       case 'deal':
         return t('brisca.log.deal', { n: event.handNo + 1, suit: suitName(event.trumpSuit) });
       case 'hand-end': {
         const me = (mySeats ?? [0])[0] ?? 0;
-        return t('brisca.log.hand-end', { a: event.points[me] ?? 0, b: event.points[me === 0 ? 1 : 0] ?? 0 });
+        const them = me === 0 ? 1 : 0;
+        const person = names?.(them);
+        return person
+          ? t('brisca.log.hand-end.named', { a: event.points[me] ?? 0, who: person, b: event.points[them] ?? 0 })
+          : t('brisca.log.hand-end', { a: event.points[me] ?? 0, b: event.points[them] ?? 0 });
       }
       case 'match-end':
         return t('brisca.log.match-end');

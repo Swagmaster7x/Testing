@@ -546,3 +546,53 @@
     padding: var(--sp-1);
   }
 }
+
+/* Pass-and-play: the cover between two people's turns in a game with hidden cards or tiles. */
+.pass-cover {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  background:
+    radial-gradient(120% 90% at 50% 40%, rgb(255 255 255 / 0.04), transparent 60%),
+    linear-gradient(180deg, var(--felt-700), var(--felt-800));
+}
+
+.pass-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: 30rem;
+  text-align: center;
+}
+
+.pass-card h1 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--fs-xl);
+}
+
+.pass-card p {
+  margin: 0;
+  color: var(--text-2);
+}
+
+.pass-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+}
+
+.pass-mark svg {
+  width: 48px;
+  height: 48px;
+}
+
+.result-card .places {
+  font-size: var(--fs-xs);
+  color: var(--text-1);
+}

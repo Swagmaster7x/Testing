@@ -292,7 +292,7 @@ describe('notation', () => {
     expect(cc.codec.action.fromJSON('fnfm')).toEqual(move('4b', '5f'));
     expect(cc.codec.action.fromText('3a-5e-7e')).toEqual(move('3a', '7e'));
     expect(cc.codec.action.toText(move('3a', '5e'))).toBe('3a-5e');
-    for (const config of Object.values(PRESETS) as CcConfig[]) expect(cc.codec.config.fromJSON(cc.codec.config.toJSON(config))).toEqual(config);
+    for (const config of Object.values<CcConfig>(PRESETS)) expect(cc.codec.config.fromJSON(cc.codec.config.toJSON(config))).toEqual(config);
     const mid = play(cc.setup(cc.defaultConfig, createRng('x')), '3a', '5e').state;
     const again = cc.setup(configAt(mid), createRng('y'));
     expect(positionText(again)).toBe(positionText(mid));

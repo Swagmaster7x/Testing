@@ -43,7 +43,7 @@ function forward(legal: readonly CcAction[], rng: Rng, s: CcState): CcAction {
 
 /** Every preset, where a player heading for home usually finishes, and odd mixes, which only have to end. */
 const CONFIGS: readonly { name: string; config: CcConfig; finishes: boolean }[] = [
-  ...(Object.entries(PRESETS) as [string, CcConfig][]).map(([name, config]) => ({ name, config, finishes: true })),
+  ...Object.entries<CcConfig>(PRESETS).map(([name, config]) => ({ name, config, finishes: true })),
   { name: 'four, never stop in other points, frozen homes', config: makeConfig(4, 10, { stop: 'never', home: 'frozen' }), finishes: false },
   { name: 'six, long jumps, all your own, first home wins', config: makeConfig(6, 10, { jumps: 'long', finish: 'own', end: 'first' }), finishes: false },
   { name: 'three, free homes, turn limit 100', config: makeConfig(3, 10, { home: 'free', limit: 100 }), finishes: false },

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Json } from '../../core/json';
 import type { GameEvent } from '../../core/contract';
 import { EventQueue } from '../../core/events';
-import { canOpen, humanSeats, parseRecord } from '../../core/record';
+import { canOpen, humanSeats, isPassAndPlay, parseRecord } from '../../core/record';
 import { replay, startState } from '../../core/replay';
 import { loadGameUi } from '../../games/registry';
 import type { AnyGameUi, AskCoach, SurfaceOverlay } from '../../games/types';
@@ -25,7 +25,8 @@ import { Icon } from '../components/Icon';
 import { useReducedMotion } from '../motion';
 import { href, navigate } from '../router';
 import { CenterMessage } from '../screens/common';
-import { resultFor } from '../results';
+import { resultTitle } from '../results';
+import { personName, placesLine } from './passplay';
 import { useApp } from '../state';
 import { useAsync } from '../useAsync';
 import { Counters, MoveList, RailSection, TableShell } from './TableShell';
@@ -129,10 +130,11 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
       }
     : NO_OVERLAY;
   const humanSeat = mySeats[0] ?? 0;
+  const pnp = isPassAndPlay(record);
   const playOn = async () => {
     const review = ui.review;
     if (!review) return;
-    const id = await startGame(ui, profileId, { level: bot?.level ?? 1, side: humanSeat, config: review.configAt(state), clock: null });
+    const id = await startGame(ui, profileId, { level: bot?.level ?? 1, side: humanSeat, config: review.configAt(state), clock: null, ...(pnp ? { players: record.players } : {}) });
     navigate(`/play/${id}`);
   };
   const addMoment = async (m: MoveVerdict) => {
@@ -142,7 +144,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
     notify(added ? t('practice.added') : t('practice.added.already'));
   };
   const exportAs = (format: NonNullable<AnyGameUi['exportRecord']>) => {
-    const names = ui.def.seats(start).map((s) => (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
+    const names = ui.def.seats(start).map((s) => personName(record, s) ?? (record.players[s]?.kind === 'bot' ? `${t('common.cpu')} ${t('common.level', { n: record.players[s]?.level ?? 1 })}` : t('common.you')));
     const fileName = `${ui.def.id}-${new Date(record.createdAt).toISOString().slice(0, 10)}.${format.extension}`;
     saveTextFile(fileName, format.write(record, names), name).then(
       () => notify(t('table.exported', { file: fileName })),
@@ -157,7 +159,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
       wide={ui.layout === 'table'}
       label={`${t('review.title')}: ${name}`}
       title={`${t('review.title')} · ${name}`}
-      meta={bot ? [{ key: 'level', text: t('review.vs', { n: bot.level ?? 1 }) }] : []}
+      meta={pnp ? [{ key: 'pnp', text: t('pnp.title') }] : bot ? [{ key: 'level', text: t('review.vs', { n: bot.level ?? 1 }) }] : []}
       turn={{ text: positionText, mine: false }}
       backTo={`/games/${ui.def.id}`}
       railSide={settings?.railSide ?? 'right'}
@@ -252,7 +254,8 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
           </ul>
           {record.outcome ? (
             <div className="result-card">
-              <h2>{record.players.some((p) => p.kind === 'bot') ? t(resultFor(record)) : sideResult(ui, record)}</h2>
+              <h2>{pnp || record.players.some((p) => p.kind === 'bot') ? resultTitle(ui, record) : sideResult(ui, record)}</h2>
+              {placesLine(record, (seat) => whoPlayed(ui, record, seat)) ? <p className="places num">{placesLine(record, (seat) => whoPlayed(ui, record, seat))}</p> : null}
               <p>{tDynamic(`reason.${record.outcome.reason}`)}</p>
             </div>
           ) : null}
@@ -310,7 +313,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
                 ) : null}
               </div>
             ) : null}
-            {ui.review && bot ? (
+            {ui.review && (bot || pnp) ? (
               <button type="button" className="btn btn-small play-on" onClick={() => void playOn()}>
                 <Icon name="play" size={16} />
                 {t('review.play-on')}
@@ -341,6 +344,8 @@ function sideResult(ui: AnyGameUi, record: StoredRecord): string {
 
 /** "You" and "CPU" against the computer; the side's name when people played both sides. */
 function whoPlayed(ui: AnyGameUi, record: StoredRecord, seat: number): string {
+  const person = personName(record, seat);
+  if (person) return person;
   if (ui.playerName) return playerName(ui, record, seat);
   const hasBot = record.players.some((p) => p.kind === 'bot');
   if (!hasBot) return ui.sideName(seat);
