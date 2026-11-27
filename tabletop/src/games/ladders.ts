@@ -136,6 +136,17 @@ function dominoesLadder(): Ladder<DominoesState, DominoesAction, DominoesConfig,
   };
 }
 
+/**
+ * The other Dominoes styles (milestone 14): All Fives for two to 250, as the preset plays it, and
+ * Cuban double nine to 500 rather than 100, because a single Cuban hand often scores 100 and the
+ * luck of one deal would decide the match.
+ */
+function dominoesStyleLadder(preset: 'all-fives' | 'cuban', games: number, target?: number): Ladder<DominoesState, DominoesAction, DominoesConfig, DominoesView, DominoesEvent> {
+  const base = dominoesLadder();
+  const config = DOMINOES_PRESETS[preset] as DominoesConfig;
+  return { ...base, spec: { ...base.spec, config: target ? { ...config, target } : config }, games };
+}
+
 function shogiLadder(): Ladder<ShogiState, ShogiAction, ShogiConfig, ShogiView, ShogiEvent> {
   return {
     spec: {
@@ -261,6 +272,8 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     chess: chessLadder(deps) as unknown as Ladder<never, never, never, never, never>,
     brisca: briscaLadder() as unknown as Ladder<never, never, never, never, never>,
     dominoes: dominoesLadder() as unknown as Ladder<never, never, never, never, never>,
+    'dominoes-all-fives': dominoesStyleLadder('all-fives', 60) as unknown as Ladder<never, never, never, never, never>,
+    'dominoes-cuban': dominoesStyleLadder('cuban', 60, 500) as unknown as Ladder<never, never, never, never, never>,
     shogi: shogiLadder() as unknown as Ladder<never, never, never, never, never>,
     go: goLadder() as unknown as Ladder<never, never, never, never, never>,
     poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,

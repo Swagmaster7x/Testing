@@ -56,8 +56,8 @@ export const esBase: Partial<Record<MessageKey, string>> = {
   'game.brisca.cpu': 'Bots que cuentan cartas, seis niveles.',
 
   'game.dominoes.name': 'Dominó',
-  'game.dominoes.aka': 'Dominó, doble seis',
-  'game.dominoes.launch': 'Robado, bloqueo y parejas a 200 o 500, con todas las bonificaciones.',
+  'game.dominoes.aka': 'Dominó, doble seis y doble nueve',
+  'game.dominoes.launch': 'Robado, bloqueo y parejas a 200 o 500, con todas las bonificaciones; todos los cincos y el cubano de doble nueve.',
   'game.dominoes.later': 'Todos los cincos y el dominó cubano de doble nueve.',
   'game.dominoes.practice': 'Contar los puntos, lo que no pueden tener, cuándo trancar, finales resueltos.',
   'game.dominoes.cpu': 'Bots que cuentan y una CPU de pareja.',

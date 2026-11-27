@@ -12,9 +12,9 @@ import { t, tDynamic } from '../../../text';
 import type { CoachPanelProps } from '../../types';
 import { NO_OVERLAY } from '../../types';
 import { playScore } from '../bots';
-import type { DominoesState, End, HandResult, Pip, Tile } from '../rules';
-import { cantHave, drawing, endsCount, handPips, hasNumber, isTile, numbersOf, openEnds, seatCount, setPips, sideCount, sideOf, tileOf, tilesOfSet, tilesOnTable, unseenTiles, viewOf } from '../rules';
-import { endName, seatName, tileLabel, whoName } from './names';
+import type { DominoesState, End, Pip, Tile } from '../rules';
+import { cantHave, drawing, endsCount, handPips, hasNumber, isTile, numbersOf, openEnds, seatCount, setPips, tileOf, tilesOfSet, tilesOnTable, unseenTiles, viewOf } from '../rules';
+import { endName, handResultText, tileLabel, whoName } from './names';
 
 interface Hint {
   readonly key: string;
@@ -24,16 +24,6 @@ interface Hint {
 }
 
 const LETTER_END: Readonly<Record<string, End>> = { L: 'left', R: 'right', U: 'up', D: 'down' };
-
-/** The last hand's result, as the coach says it. */
-function lastText(last: HandResult, me: number, n: number): string {
-  const side = sideOf(me, n);
-  if (last.reason === 'target') return t(last.winner === side ? 'dominoes.hand.we-target' : 'dominoes.hand.they-target', { n: last.points[last.winner ?? 0] ?? 0 });
-  if (last.winner === null) return last.split ? t('dominoes.hand.split', { n: last.points[last.split[0] ?? 0] ?? 0 }) : t('dominoes.hand.tie');
-  const points = last.points[last.winner] ?? 0;
-  if (sideCount(n) > 2 && last.winner !== side) return t(last.reason === 'domino' ? 'dominoes.hand.other-domino' : 'dominoes.hand.other-block', { who: seatName(last.winner, me, n), n: points });
-  return t(side === last.winner ? (last.reason === 'domino' ? 'dominoes.hand.we-domino' : 'dominoes.hand.we-block') : last.reason === 'domino' ? 'dominoes.hand.they-domino' : 'dominoes.hand.they-block', { n: points });
-}
 
 export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTraining }: CoachPanelProps<DominoesState>) {
   const [hint, setHint] = useState<Hint | null>(null);
@@ -112,7 +102,7 @@ export function DominoesCoachPanel({ state, seat, helps, ask, setOverlay, markTr
       )}
       {last ? (
         <p className="coach-last">
-          <span className="eyebrow">{t('dominoes.coach.last')}</span> {lastText(last, me, n)}
+          <span className="eyebrow">{t('dominoes.coach.last')}</span> {handResultText(last, me, n, state.config)}
         </p>
       ) : null}
       {helps.scoring ? (

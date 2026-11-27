@@ -160,6 +160,8 @@ export const dominoesUi: GameUi<DominoesState, DominoesAction, DominoesConfig, D
   },
   coach: {
     helps: [
+      // On by default and not training: the layout is in view of everyone at a real table. Lessons and drills that ask for the count pass no helps, so it stays hidden there.
+      { id: 'count', label: 'dominoes.help.count', on: true, training: false },
       { id: 'tilesOut', label: 'dominoes.help.tilesOut', on: false, training: true },
       { id: 'cantHave', label: 'dominoes.help.cantHave', on: false, training: true },
       { id: 'pips', label: 'dominoes.help.pips', on: false, training: true },

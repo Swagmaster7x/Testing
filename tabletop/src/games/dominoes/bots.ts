@@ -22,7 +22,7 @@ import type { Json } from '../../core/json';
 import { isJsonObject } from '../../core/json';
 import type { Rng } from '../../core/rng';
 import type { DominoesAction, DominoesView, End, Layout, Pip, Tile } from './rules';
-import { actionText, cantHave, dominoes, drawing, endsCount, endsOf, fitsLayout, fivesScore, hasNumber, isDouble, openEnds, pipsOf, placeOn, sampleState, seatCount, sideOf, tilePips, tilesOfSet, topOf, unseenTiles } from './rules';
+import { actionText, cantHave, dominoes, drawing, endsCount, endsOf, fitsLayout, fivesScore, hasNumber, isDouble, openEnds, pipsOf, placeOn, sampleState, seatCount, setPips, sideOf, tilePips, tilesOfSet, topOf, TOTAL_PIPS, unseenTiles } from './rules';
 import type { Sim } from './sim';
 import { cloneSim, DRAW, endCode, fromState, liveTiles, marginOf, moveOf, PASS, peek, playToEnd, popcount, simApply, solveMargin, tileIndex } from './sim';
 
@@ -53,8 +53,13 @@ export const LEVEL_PARAMS: Readonly<Record<number, LevelParams>> = {
   6: { samples: 400, policy: 3, exactAt: 12 },
 };
 
-/** How close (in points) the search may rate a conventional play to the best and still choose it. */
+/** How close (in points, with the double six) the search may rate a conventional play to the best and still choose it. */
 const CONVENTION_MARGIN = 1;
+
+/** The convention margin for a set: a point with the double six, scaled up with the pips in the set (about three with the double nine). */
+function conventionMargin(v: Pick<DominoesView, 'config'>): number {
+  return (CONVENTION_MARGIN * setPips(v.config.set)) / TOTAL_PIPS;
+}
 
 // What the view tells a seat
 
@@ -199,6 +204,8 @@ function scoringDanger(v: DominoesView, layout: Layout, reading: Reading, rest: 
 export const TUNE = { weight: 0.6, double: 5, options: 2, shut: 9, half: 2, coverPartner: 6, toPartner: 4, partnerPass: 4, coverOpp: 0, toOpp: 0, closeOut: 6, block: 1, control: 2, nextStrong: 0 };
 /** Scoring as you play: what a point made now is worth to each heuristic, and (level 3) what a point left to the next player costs. */
 export const FIVES_TUNE = { take1: 2, take2: 1.5, take3: 1.6, danger: 0.5 };
+/** With the double nine (Cuban), a blocked hand goes to the lightest single hand: levels 2 and 3 weigh a tile's pips this much more. */
+export const NINE_TUNE = { weightScale: 3.5 };
 
 /** A play's score under each heuristic. Higher is better. */
 export function heuristicScore(v: DominoesView, action: DominoesAction, policy: 1 | 2 | 3, reading: Reading = readTable(v)): number {
@@ -211,11 +218,12 @@ export function heuristicScore(v: DominoesView, action: DominoesAction, policy: 
   const weight = tilePips(tile);
   const gain = v.config.fives === 'on' && layout ? fivesScore(endsCount(layout)) : 0;
   if (policy === 1) return weight + (isDouble(tile) ? 0.5 : 0) + FIVES_TUNE.take1 * gain;
+  const scale = v.config.set === 'double-nine' ? NINE_TUNE.weightScale : 1;
   const fits = (t: Tile) => after.some((x) => hasNumber(t, x));
   const options = rest.filter(fits).length;
   // Level 2 keeps its options but does not yet read the passes.
-  if (policy === 2) return 0.6 * weight + (isDouble(tile) ? 5 : 0) + 2 * options + FIVES_TUNE.take2 * gain;
-  let score = TUNE.weight * weight + (isDouble(tile) ? TUNE.double : 0) + TUNE.options * options;
+  if (policy === 2) return 0.6 * scale * weight + (isDouble(tile) ? 5 : 0) + 2 * options + FIVES_TUNE.take2 * gain;
+  let score = TUNE.weight * scale * weight + (isDouble(tile) ? TUNE.double : 0) + TUNE.options * options;
   if (v.config.fives === 'on' && layout) score += FIVES_TUNE.take3 * gain - FIVES_TUNE.danger * scoringDanger(v, layout, reading, rest);
   const opp = reading.cant[reading.nextOpp] ?? new Set<number>();
   const shut = after.every((x) => opp.has(x));
@@ -290,7 +298,7 @@ export function heuristic(v: DominoesView, policy: 1 | 2 | 3, rng: Rng): Dominoe
 // Search
 
 /** Rollout weights (see rolloutPick); control 1.5 beat 0 by 0.675 to 0.625 against level 3. */
-export const ROLLOUT = { control: 1.5, fives: 1 };
+export const ROLLOUT = { control: 1.5, fives: 1, weight: 0.6, double: 5 };
 
 /** The play the rollouts use for every seat inside a sampled deal (where every hand is known). */
 function rolloutPick(s: Sim, legal: number[], rng: Rng): number {
@@ -325,7 +333,7 @@ function rolloutPick(s: Sim, legal: number[], rng: Rng): number {
     }
     const a = t.a[tile] as number;
     const b = t.b[tile] as number;
-    let score = 0.6 * (t.pips[tile] ?? 0) + (a === b ? 5 : 0) + 2 * (popcount(restLo & openLo) + popcount(restHi & openHi));
+    let score = ROLLOUT.weight * (t.pips[tile] ?? 0) + (a === b ? ROLLOUT.double : 0) + 2 * (popcount(restLo & openLo) + popcount(restHi & openHi));
     if ((nextLo & openLo) === 0 && (nextHi & openHi) === 0) score += 7;
     if (n === 4 && ((partnerLo & openLo) !== 0 || (partnerHi & openHi) !== 0)) score += 2;
     if (ROLLOUT.control) {
@@ -352,9 +360,14 @@ function encode(action: DominoesAction, v: Pick<DominoesView, 'config'>): number
 
 /** Expected margin (our side's hand points less theirs) of each legal action, over sampled deals. */
 export function evaluateActions(v: DominoesView, samples: number, exactAt: number, rng: Rng): { action: DominoesAction; margin: number }[] {
+  return evaluateDetailed(v, samples, exactAt, rng).map(({ action, margin }) => ({ action, margin }));
+}
+
+/** As evaluateActions, with each action's value in every sampled deal (the same deals for every action). */
+function evaluateDetailed(v: DominoesView, samples: number, exactAt: number, rng: Rng): { action: DominoesAction; margin: number; values: readonly number[] }[] {
   const legal = viewLegal(v);
   const side = sideOf(v.seat, seatCount(v.config));
-  if (legal.length <= 1) return legal.map((action) => ({ action, margin: 0 }));
+  if (legal.length <= 1) return legal.map((action) => ({ action, margin: 0, values: [] }));
   // The same tile on either end, when both ends show its number, is the same play in a line game.
   const plain = v.config.spinner !== 'first-double' && v.config.fives !== 'on';
   const keyOf = (a: DominoesAction) => {
@@ -366,6 +379,7 @@ export function evaluateActions(v: DominoesView, samples: number, exactAt: numbe
   const keys = legal.map(keyOf);
   const unique = [...new Set(keys)];
   const totals = new Map<string, number>(unique.map((k) => [k, 0]));
+  const values = new Map<string, number[]>(unique.map((k) => [k, []]));
   const moves = new Map<string, number>(unique.map((k) => [k, encode(legal[keys.indexOf(k)] as DominoesAction, v)]));
   const pick = (sim: Sim, l: number[]) => rolloutPick(sim, l, rng);
   for (let i = 0; i < samples; i++) {
@@ -381,10 +395,37 @@ export function evaluateActions(v: DominoesView, samples: number, exactAt: numbe
         value = marginOf(child.pts, side);
       }
       totals.set(k, (totals.get(k) ?? 0) + value);
+      values.get(k)?.push(value);
     }
   }
-  return legal.map((action, j) => ({ action, margin: samples > 0 ? (totals.get(keys[j] as string) ?? 0) / samples : 0 }));
+  return legal.map((action, j) => ({ action, margin: samples > 0 ? (totals.get(keys[j] as string) ?? 0) / samples : 0, values: values.get(keys[j] as string) ?? [] }));
 }
+
+/** How many standard errors a play must beat the conventional one by, on the same deals, before the search leaves the convention (double nine). */
+export const NOISE = { z: 2 };
+
+/**
+ * The search's choice with the double nine, where hands are worth three times as much and the
+ * samples are noisier: the conventional play stands unless another play beats it, on the same
+ * sampled deals, by more than the convention margin and by more than `NOISE.z` standard errors of
+ * the difference. (Measured in Cuban paired matches: level 4 against level 3 went from 0.33 to
+ * 0.56. With the double six the old rule stays; in All Fives it measured no better.)
+ */
+function bestOfPaired(scored: readonly { action: DominoesAction; margin: number; values: readonly number[] }[], preferred: DominoesAction, rng: Rng, within: number): DominoesAction {
+  const conv = scored.find((x) => actionText(x.action) === actionText(preferred));
+  if (!conv || conv.values.length < 2) return bestOf(scored, preferred, rng, within);
+  const n = conv.values.length;
+  const clear = scored.filter((x) => {
+    const d = x.values.map((value, i) => value - (conv.values[i] ?? 0));
+    const mean = d.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(d.reduce((a, b) => a + (b - mean) * (b - mean), 0) / (n - 1));
+    return mean > Math.max(within, (NOISE.z * sd) / Math.sqrt(n));
+  });
+  if (clear.length === 0) return conv.action;
+  return bestOf(clear, null, rng);
+}
+
+
 
 /** Reason tags for a play, from the view before it. */
 export function tagsFor(v: DominoesView, action: DominoesAction): string[] {
@@ -411,11 +452,11 @@ export function tagsFor(v: DominoesView, action: DominoesAction): string[] {
   return tags;
 }
 
-function bestOf(scored: readonly { action: DominoesAction; margin: number }[], preferred: DominoesAction | null, rng: Rng): DominoesAction {
+function bestOf(scored: readonly { action: DominoesAction; margin: number }[], preferred: DominoesAction | null, rng: Rng, within = CONVENTION_MARGIN): DominoesAction {
   const top = Math.max(...scored.map((x) => x.margin));
   if (preferred) {
     const p = scored.find((x) => actionText(x.action) === actionText(preferred));
-    if (p && p.margin >= top - CONVENTION_MARGIN) return p.action;
+    if (p && p.margin >= top - within) return p.action;
   }
   const best = scored.filter((x) => x.margin >= top - 1e-9);
   return rng.pick(best).action;
@@ -430,7 +471,8 @@ export function chooseAction(v: DominoesView, level: number, rng: Rng): Dominoes
   // The lead follows the convention, so a partner can read it.
   if (v.chain.length === 0) return heuristic(v, 3, rng);
   const conventional = heuristic(v, 3, rng);
-  return bestOf(evaluateActions(v, params.samples, params.exactAt, rng), conventional, rng);
+  if (v.config.set === 'double-nine') return bestOfPaired(evaluateDetailed(v, params.samples, params.exactAt, rng), conventional, rng, conventionMargin(v));
+  return bestOf(evaluateActions(v, params.samples, params.exactAt, rng), conventional, rng, conventionMargin(v));
 }
 
 /** Coach answers: a hint, the best move for free play, and every move's value for review. */
@@ -441,7 +483,7 @@ function advise(v: DominoesView, query: Json, rng: Rng): Json {
     case 'hint':
     case 'best': {
       const legal = viewLegal(v);
-      const action = legal.length === 1 ? (legal[0] as DominoesAction) : bestOf(evaluateActions(v, samples, 8, rng), heuristic(v, 3, rng), rng);
+      const action = legal.length === 1 ? (legal[0] as DominoesAction) : bestOf(evaluateActions(v, samples, 8, rng), heuristic(v, 3, rng), rng, conventionMargin(v));
       return { action: actionText(action), tags: tagsFor(v, action) };
     }
     case 'analyse': {

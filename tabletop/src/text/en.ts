@@ -64,8 +64,8 @@ const base = {
   'game.brisca.cpu': 'Card-counting bots, six levels.',
 
   'game.dominoes.name': 'Dominoes',
-  'game.dominoes.aka': 'Dominó, double-six',
-  'game.dominoes.launch': 'Draw, Block, and Partnership to 200 or 500, with every bonus preset.',
+  'game.dominoes.aka': 'Dominó, double six and double nine',
+  'game.dominoes.launch': 'Draw, Block, and Partnership to 200 or 500, with every bonus preset; All Fives and Cuban double nine.',
   'game.dominoes.later': 'All Fives and Cuban double-nine.',
   'game.dominoes.practice': 'Pip counting, what they cannot have, block decisions, solved endgames.',
   'game.dominoes.cpu': 'Counting bots and a CPU partner.',
