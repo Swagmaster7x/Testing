@@ -12,7 +12,7 @@ import type { ShogiConfig } from '../presets';
 import { DECLARE_BLACK, DECLARE_PIECES, DECLARE_WHITE, HANDICAPS, IMPASSE_24, IMPASSE_BIG, IMPASSE_SMALL, POINTS_PER_RANK, PRESETS, REPETITIONS } from '../presets';
 import { analyseShogiGame } from '../review';
 import type { ShogiAction, ShogiEvent, ShogiState, ShogiView } from '../rules';
-import { canonicalAction, checksInARow, impassePoints, material, PIECE_NAMES, positionOf, repetitionCount, shogi, TEACHING_VALUE } from '../rules';
+import { canonicalAction, checksInARow, handOf, impassePoints, material, PIECE_NAMES, positionOf, repetitionCount, shogi, TEACHING_VALUE } from '../rules';
 import { ShogiCoachPanel } from './CoachPanel';
 import { MARKS_HELP } from './look';
 import { pieceWord, ShogiSeatMark, ShogiSurface } from './ShogiSurface';
@@ -73,13 +73,15 @@ export const shogiUi: GameUi<ShogiState, ShogiAction, ShogiConfig, ShogiView, Sh
   counters(state) {
     const p = positionOf(state.sfen);
     const m = material(state);
+    const inHand = (seat: 0 | 1) => handOf(state, seat).reduce((n, h) => n + h.count, 0);
     const rows = [
       { label: t('shogi.counter.material'), value: `${m[0]} · ${m[1]}` },
+      { label: t('shogi.counter.hand'), value: `${inHand(0)} · ${inHand(1)}` },
       { label: t('shogi.counter.repetition'), value: t('shogi.counter.of', { n: repetitionCount(state), total: REPETITIONS }) },
       { label: t('shogi.counter.checks'), value: String(checksInARow(state)) },
     ];
     if (state.rules.board === 'standard') {
-      rows.splice(1, 0, { label: t('shogi.counter.impasse'), value: `${impassePoints(p, 0, state.rules)} · ${impassePoints(p, 1, state.rules)}` });
+      rows.splice(2, 0, { label: t('shogi.counter.impasse'), value: `${impassePoints(p, 0, state.rules)} · ${impassePoints(p, 1, state.rules)}` });
     }
     return rows;
   },

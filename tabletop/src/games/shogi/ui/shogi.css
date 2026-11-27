@@ -114,11 +114,15 @@
   flex: 0 0 auto;
   margin-bottom: auto;
   height: 26px;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--line-1);
   border-radius: var(--r-sm);
   background: rgb(0 0 0 / 0.18);
   color: var(--text-2);
-  font-size: var(--fs-sm);
+  /* Small enough for the narrowest hand column (34px). */
+  font-size: 10.5px;
+  letter-spacing: -0.01em;
   cursor: pointer;
 }
 

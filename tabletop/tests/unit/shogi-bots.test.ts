@@ -83,6 +83,31 @@ describe('mate search', () => {
     expect(solver.mateMoves(3).map((m) => canonicalOf(p.geo, m))).toEqual(['G*22']);
   });
 
+  it('lists exactly the checks and the answers that brute force finds', () => {
+    const rng = createRng('mate-lists');
+    let compared = 0;
+    for (const seed of ['a', 'b']) {
+      let s = shogi.setup({ moveLimit: 200 }, createRng(seed));
+      while (shogi.turn(s) !== null) {
+        const p = parseSfen(s.sfen);
+        const solver = new MateSolver(p);
+        const all = p.legalMoves();
+        const checks = all.filter((m) => {
+          p.make(m);
+          const check = p.inCheck();
+          p.unmake(m);
+          return check;
+        });
+        const sorted = (list: number[]) => [...list].sort((a, b) => a - b);
+        if (p.inCheck()) expect(sorted(solver.answers()), s.sfen).toEqual(sorted(all));
+        else expect(sorted(solver.checks()), s.sfen).toEqual(sorted(checks));
+        compared++;
+        s = shogi.apply(s, rng.pick(shogi.legal(s, shogi.turn(s) ?? 0))).state;
+      }
+    }
+    expect(compared).toBeGreaterThan(100);
+  }, 60_000);
+
   it('never counts a pawn-drop mate, and finds no mate where there is none', () => {
     expect(new MateSolver(parseSfen('7nk/7p1/7S1/9/9/9/9/9/K8 b P 1')).shortest(3)).toBeNull();
     expect(new MateSolver(parseSfen(START_SFEN.standard)).shortest(3)).toBeNull();

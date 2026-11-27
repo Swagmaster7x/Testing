@@ -1,5 +1,5 @@
 /**
- * npm run problems:shogi — generates the shogi mate problems (PLAN.md 2.6) from the engine's own
+ * Generates the shogi mate problems (PLAN.md 2.6) from the engine's own
  * games. Positions come from self-play between CPU levels (seeded, so the run repeats); every
  * position where the engine sees a large advantage is searched for a mate by checks (tsume) in
  * one, three or five plies. A problem is kept only when the mate is proven, its length is the
@@ -99,6 +99,13 @@ function consider(before: ShogiState, setup: string, after: ShogiState, game: nu
     themes,
   });
   console.log(`mate in ${plies}: ${found[1]!.length} / ${found[3]!.length} / ${found[5]!.length}  (${after.sfen})`);
+  save(game);
+}
+
+/** Saved after every problem, so a run that is stopped keeps what it found. */
+function save(games: number): void {
+  const problems = [...found[1]!, ...found[3]!, ...found[5]!];
+  writeFileSync(out, `${JSON.stringify({ generated: new Date().toISOString().slice(0, 10), games, problems }, null, 0)}\n`);
 }
 
 for (const extra of (process.env.MERGE ?? '').split(',').filter(Boolean)) {
@@ -135,6 +142,6 @@ while (!full() && Date.now() < deadline) {
   }
 }
 
+save(game);
 const problems = [...found[1]!, ...found[3]!, ...found[5]!];
-writeFileSync(out, `${JSON.stringify({ generated: new Date().toISOString().slice(0, 10), games: game, problems }, null, 0)}\n`);
 console.log(`Wrote ${problems.length} problems (${found[1]!.length} / ${found[3]!.length} / ${found[5]!.length}) from ${game} games to ${out}`);

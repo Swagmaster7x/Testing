@@ -37,6 +37,12 @@ can click it by name), seat marks, side extras, sides, event durations and log l
 `review` (analysis and play-on) and `moveSquares` if it has a board. Shared pieces belong in
 `src/kits/`. Add it to `src/games/registry.ts` and set `playable: true` in `src/games/catalog.ts`.
 
+Named rule presets go in `GameUi.presets` (the New game dialog shows them under "Rules at this
+table", the first is the default; `ratingOffset` says how many rating points a handicap preset
+takes off the CPU's level), and `GameUi.replayConfig` says which options "Play again" keeps
+(shogi keeps its preset and drops a set-up position). Both are optional; shogi (milestone 8) is
+the first game to use them.
+
 Interface text goes in `src/text/games/<game>.ts` (keys prefixed with the game id), spread into
 `src/text/games/index.ts`. The `game.<id>.*` lines in `src/text/en.ts` describe the game on the
 shelf; update them when the game arrives.
@@ -48,6 +54,9 @@ shelf; update them when the game arrives.
   `src/games/lessons.ts` and in the `SUITES` of `scripts/lesson-lint.ts`.
 - Practice in `src/games/<game>/practice/` (at least three kinds, each generated or with 100 or
   more items), registered in `src/games/practice.ts`, with every problem proved by a solver.
+  Drill ids must start with `drill-` (the router opens those as drills, the rest as problem sets).
+- If the game's notation uses digits (shogi squares are "76"), give the `LessonGame` a
+  `stripNotation` so the linter's typed-number check skips the notation.
 - The table-ready checklist in `src/games/ready.ts`.
 - Review: `ui.review.analyse` rates each decision in the game's own unit (`src/teach/analysis.ts`
   holds the shared arithmetic), names the key moments with a one-sentence reason, and

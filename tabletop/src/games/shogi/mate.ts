@@ -8,7 +8,7 @@
 import type { Position } from './core';
 import * as core from './core';
 
-const { dropType, isDrop, PAWN, capturedOf, EMPTY, KING, typeOfCode, movingOf } = core;
+const { dropType, isDrop, PAWN, capturedOf, EMPTY, KING, typeOfCode, movingOf, moveTo } = core;
 
 export class MateBudgetExceeded extends Error {}
 
@@ -50,8 +50,8 @@ export class MateSolver {
   checks(ply = 0): number[] {
     const p = this.p;
     const buffer = this.buffer[ply % this.buffer.length]!;
-    const count = p.generate(buffer);
     const out: number[] = [];
+    const count = p.generateBoardMoves(buffer, 0, false);
     for (let i = 0; i < count; i++) {
       const m = buffer[i]!;
       if (!p.isLegal(m)) continue;
@@ -60,6 +60,16 @@ export class MateSolver {
       p.unmake(m);
       if (check) out.push(m);
     }
+    // A drop adds a piece and uncovers nothing, so it checks exactly when the dropped piece
+    // attacks the king from where it lands.
+    const king = p.kings[1 - p.side]!;
+    if (king < 0) return out;
+    const drops = p.generateDrops(buffer, 0);
+    for (let i = 0; i < drops; i++) {
+      const m = buffer[i]!;
+      if (!p.pieceAttacks(movingOf(m), moveTo(m), king)) continue;
+      if (p.isLegal(m)) out.push(m);
+    }
     return out;
   }
 
@@ -67,11 +77,45 @@ export class MateSolver {
   answers(ply = 0): number[] {
     const p = this.p;
     const buffer = this.buffer[ply % this.buffer.length]!;
-    const count = p.generate(buffer);
     const out: number[] = [];
+    const count = p.generateBoardMoves(buffer, 0, false);
     for (let i = 0; i < count; i++) if (p.isLegal(buffer[i]!)) out.push(buffer[i]!);
+    // Only a drop between a single long-range checker and the king can answer a check.
+    const king = p.kings[p.side]!;
+    const between = king >= 0 ? this.blockSquares(king) : null;
+    if (between === null || between.size > 0) {
+      const drops = p.generateDrops(buffer, 0);
+      for (let i = 0; i < drops; i++) {
+        const m = buffer[i]!;
+        if (between !== null && !between.has(moveTo(m))) continue;
+        if (p.isLegal(m)) out.push(m);
+      }
+    }
     const rank = (m: number) => (isDrop(m) ? 2 : capturedOf(m) !== EMPTY || typeOfCode(movingOf(m)) === KING ? 0 : 1);
     return out.sort((a, b) => rank(a) - rank(b));
+  }
+
+  /**
+   * The squares where a drop could block the check on `king`: empty when no drop can help
+   * (a double check, or a checker next to the king), null when the king is not in check.
+   */
+  private blockSquares(king: number): Set<number> | null {
+    const p = this.p;
+    const checkers = p.attackers(king, (1 - p.side) as 0 | 1);
+    if (checkers.length === 0) return null;
+    const out = new Set<number>();
+    if (checkers.length > 1) return out;
+    const from = checkers[0]!;
+    const df = Math.sign(p.geo.fileOf[king]! - p.geo.fileOf[from]!);
+    const dr = Math.sign(p.geo.rankOf[king]! - p.geo.rankOf[from]!);
+    const step = dr * p.geo.stride - df;
+    // A knight is never in line with the king: the walk meets the edge first, and nothing blocks.
+    let x = from + step;
+    for (let n = 0; x !== king; x += step, n++) {
+      if (p.board[x] !== EMPTY || n > 9) return new Set();
+      out.add(x);
+    }
+    return out;
   }
 
   /** True when the side to move (the attacker) mates within `depth` plies. */

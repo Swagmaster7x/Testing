@@ -119,14 +119,14 @@ export function ShogiPiece({ type, seat, down, style, marks }: ShogiPieceProps):
   const promoted = isPromotedType(type);
   const color = promoted ? RED : INK;
   let face: ReactNode;
+  let letter: ReactNode = null;
   if (style === 'symbols') {
-    face = (
-      <g>
-        <Diagram type={type} cx={50} cy={46} scale={size} color={color} />
-        <text x={50} y={50 + 36 * size} textAnchor="middle" fontSize={22 * size} fontWeight={700} fill={color} fontFamily="Inter Variable, Inter, system-ui, sans-serif">
-          {promoted ? `+${LETTER[type]}` : LETTER[type]}
-        </text>
-      </g>
+    face = <Diagram type={type} cx={50} cy={44} scale={size * 1.08} color={color} />;
+    // The letter stays upright for both sides, so it reads the same from either chair.
+    letter = (
+      <text x={50} y={down ? 50 - 26 * size : 50 + 38 * size} textAnchor="middle" fontSize={23 * size} fontWeight={700} fill={color} fontFamily="Inter Variable, Inter, system-ui, sans-serif">
+        {promoted ? `+${LETTER[type]}` : LETTER[type]}
+      </text>
     );
   } else if (style === 'kanji2') {
     const word = type === 7 && seat === 1 ? '王将' : (TWO_KANJI[type] ?? '');
@@ -141,13 +141,21 @@ export function ShogiPiece({ type, seat, down, style, marks }: ShogiPieceProps):
     const ch = type === 7 && seat === 1 ? '王' : (ONE_KANJI[type] ?? '');
     face = <Glyph ch={ch} x={50} y={56} size={54 * size} color={color} />;
   }
-  return (
+  const body = (
     <g transform={down ? 'rotate(180 50 50)' : undefined}>
       <path d={pentagon(size)} fill="url(#shogi-wood)" stroke="#5e4022" strokeWidth={2.4} strokeLinejoin="round" />
       <path d={pentagon(size)} fill="none" stroke="#fff6dc" strokeOpacity={0.45} strokeWidth={1} transform="translate(0 1.2)" />
       {face}
       {marks ? <Marks type={type} size={size} /> : null}
     </g>
+  );
+  return letter ? (
+    <g>
+      {body}
+      {letter}
+    </g>
+  ) : (
+    body
   );
 }
 

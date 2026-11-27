@@ -126,8 +126,15 @@ export function ShogiSurface({ state, mySeats, canAct, legal, lastAction, anim, 
 
   const onHand = (piece: HandPiece) => {
     if (pending || !mine) return;
-    if (selected && 'piece' in selected && selected.piece === piece) select(null);
-    else select({ sfen: state.sfen, piece });
+    if (selected && 'piece' in selected && selected.piece === piece) {
+      select(null);
+      return;
+    }
+    select({ sfen: state.sfen, piece });
+    // Say why when the piece has nowhere to go (a pawn on every file, say).
+    if (!legal.some((a) => a.type === 'drop' && a.piece === piece)) {
+      setNote({ sfen: state.sfen, text: t(piece === 'P' ? 'shogi.hand.no-drop.pawn' : 'shogi.hand.no-drop'), tone: 'info' });
+    }
   };
 
   // Legal targets for the selection, shown as dots when the legal-moves help is on.
@@ -244,7 +251,7 @@ export function ShogiSurface({ state, mySeats, canAct, legal, lastAction, anim, 
             aria-label={t('shogi.look.cycle', { style: t(`shogi.look.${look.style}`) })}
             onClick={() => setStyle(STYLE_ORDER[(STYLE_ORDER.indexOf(look.style) + 1) % STYLE_ORDER.length] ?? 'kanji1')}
           >
-            {look.style === 'symbols' ? 'P' : look.style === 'kanji2' ? '歩兵' : '歩'}
+            {t('shogi.look.button')}
           </button>
         ) : null}
         {shown.length === 0 ? <span className="shogi-hand-empty">{t('shogi.hand.none')}</span> : null}
