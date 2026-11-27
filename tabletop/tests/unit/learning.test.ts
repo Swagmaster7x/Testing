@@ -130,11 +130,12 @@ describe('problems', () => {
   it('ships more than a hundred problems in each set, every one replaying through the rules', async () => {
     const pack = await loadChessPractice();
     expect(pack.problems.length).toBeGreaterThan(5000);
-    for (const set of pack.sets) expect(pack.problems.filter((p) => inSet(p, set)).length, set.id).toBeGreaterThan(100);
+    // The opening trainer's set (M15) holds the openings to learn by heart, not a hundred problems.
+    for (const set of pack.sets.filter((s) => s.review !== 'auto')) expect(pack.problems.filter((p) => inSet(p, set)).length, set.id).toBeGreaterThan(100);
     const rng = createRng('sample');
     for (const p of rng.shuffle(pack.problems).slice(0, 300)) {
       let s = chessLessonGame.position(p.position);
-      for (const m of [p.setup as string, ...p.line]) {
+      for (const m of [...(p.setup ? [p.setup] : []), ...p.line]) {
         const next = chessLessonGame.play(s, m);
         expect(next, `${p.id} ${m}`).not.toBeNull();
         s = next as typeof s;

@@ -223,4 +223,11 @@ export const enGo = {
   'theme.go-live': 'Make life',
   'theme.go-kill': 'Kill',
   'theme.go-eye': 'Eye shape',
+  'practice.set.go-joseki': 'Joseki',
+  'practice.set.go-joseki.blurb': 'Play your side of each corner sequence from memory, on the full board. Every one you finish comes back for review on a schedule. No rating changes.',
+  'practice.set.drill-go-joseki': 'Next move of the joseki',
+  'practice.set.drill-go-joseki.blurb': 'A joseki at a random point: play the next move, for either side.',
+  'theme.joseki-4-4': 'On the 4-4 point',
+  'theme.joseki-3-4': 'On the 3-4 point',
+  'learn.stage.stage-4.blurb.go': 'Joseki basics: the most common corner sequences on the 4-4 and 3-4 points.',
 } as const;

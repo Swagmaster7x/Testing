@@ -15,6 +15,13 @@ export interface PracticeSetDef {
   readonly exclude?: readonly string[];
   /** Themes offered as narrower choices within the set. */
   readonly chips?: readonly string[];
+  /**
+   * "auto": every problem finished in this set goes into the review queue and is graded at once,
+   * so it comes back on the spaced-review schedule (line trainers, M15).
+   */
+  readonly review?: 'auto';
+  /** False when the set's results do not move the problem rating (lines learnt by heart). */
+  readonly rated?: boolean;
 }
 
 export interface DrillDef {

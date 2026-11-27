@@ -225,4 +225,11 @@ export const esGo: Partial<Record<MessageKey, string>> = {
   'theme.go-live': 'Vivir',
   'theme.go-kill': 'Matar',
   'theme.go-eye': 'Forma de ojo',
+  'practice.set.go-joseki': 'Joseki',
+  'practice.set.go-joseki.blurb': 'Juega de memoria tu bando de cada secuencia de esquina, en el tablero completo. Cada una que termines vuelve a repaso según un calendario. No cambia ninguna puntuación.',
+  'practice.set.drill-go-joseki': 'La siguiente jugada del joseki',
+  'practice.set.drill-go-joseki.blurb': 'Un joseki en un punto al azar: juega la siguiente jugada, de cualquiera de los dos bandos.',
+  'theme.joseki-4-4': 'En el punto 4-4',
+  'theme.joseki-3-4': 'En el punto 3-4',
+  'learn.stage.stage-4.blurb.go': 'Joseki básicos: las secuencias de esquina más comunes en los puntos 4-4 y 3-4.',
 };

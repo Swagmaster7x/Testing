@@ -170,6 +170,13 @@ export const esShogi: Partial<Record<MessageKey, string>> = {
   'theme.shogi-drop': 'Un lanzamiento',
   'theme.shogi-sacrifice': 'Un sacrificio',
   'theme.shogi-promotion': 'Promoción',
+  'practice.set.shogi-castles': 'Construye un castillo',
+  'practice.set.shogi-castles.blurb': 'Construye de memoria cada castillo desde la posición inicial: tú juegas con negras y blancas responde. Cada castillo que termines vuelve a repaso según un calendario. No cambia ninguna puntuación.',
+  'practice.set.drill-shogi-build': 'La siguiente jugada del castillo',
+  'practice.set.drill-shogi-build.blurb': 'Un castillo a medio construir: juega la siguiente jugada, de cualquiera de los dos bandos.',
+  'theme.castle-ranging': 'Castillos de torre desplazada (furibisha)',
+  'theme.castle-static': 'Castillos de torre estática (ibisha)',
+  'learn.stage.stage-4.blurb.shogi': 'El entrenador de castillos: nueve castillos construidos jugada a jugada desde la posición inicial.',
 
   'ref.shogi.pieces': 'Las piezas y cómo mueven',
   'ref.shogi.promotion': 'Promoción',

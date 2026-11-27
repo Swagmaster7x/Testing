@@ -105,6 +105,12 @@ describe('Fairy-Stockfish as shogi level 8 and for review', () => {
     expect(lines).toHaveLength(2);
   });
 
+  it('plays a level-8 game on at level 7 where the strong engine is missing', () => {
+    const state = shogi.setup({}, createRng('x'));
+    const choice = shogiBots.choose({ view: state, seat: 0, level: 8, rng: createRng('a') }) as { action: Parameters<typeof canonicalAction>[0] };
+    expect(shogi.legal(state, 0).map(canonicalAction)).toContain(canonicalAction(choice.action));
+  });
+
   it('keeps mini-shogi on the built-in engine', async () => {
     const mini = shogi.setup({ board: 'mini' }, createRng('mini'));
     const answer = await bots.advise!({ view: mini, seat: 0, query: { type: 'analyse', nodes: 2_000, multiPv: 1, engine: 'strong' }, rng: createRng('r') });

@@ -116,7 +116,7 @@
 }
 
 .go-insight-lead {
-  font-family: var(--font-head, inherit);
+  font-family: var(--font-serif);
   font-size: var(--fs-lg);
   color: var(--text-1);
 }

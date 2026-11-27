@@ -1,0 +1,17 @@
+Lichess chess opening names
+===========================
+
+Source:   lichess-org/chess-openings on GitHub (files a.tsv to e.tsv), fetched 2026-11-27
+Used:     the names, ECO codes and moves of 31 openings, in src/games/chess/openings.ts (milestone 15).
+          Each line is the list's own line for that name. The one-sentence ideas are Kibitz's own.
+
+Licence, as stated in the repository's README on 2026-11-27:
+
+  "As a collection of facts, this data set is in the public domain. Considerable effort was spent
+  curating and cleaning the data. Insofar as that qualifies for copyright, the work is released
+  under the CC0 Public Domain Dedication."
+
+CC0 1.0 Universal is a public domain dedication:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+No attribution is required. Kibitz credits the Lichess project anyway, with thanks.

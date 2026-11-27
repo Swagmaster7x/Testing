@@ -336,7 +336,8 @@ function advise(view: ShogiView, query: Json): Json {
 }
 
 function chooseBuiltIn({ view, level, rng }: BotInput<ShogiView>): BotChoice<ShogiAction> {
-  const params = LEVEL_PARAMS[level];
+  // A level-8 game resumed where the strong engine cannot run plays on at level 7.
+  const params = LEVEL_PARAMS[level] ?? (level === STRONG_LEVEL.level ? LEVEL_PARAMS[SHOGI_LEVELS[SHOGI_LEVELS.length - 1]!.level] : undefined);
   if (!params) throw new Error(`Shogi has no level ${level}`);
   const state = view;
   if (shogi.turn(state) === null) throw new Error('No move to make: the game is over');

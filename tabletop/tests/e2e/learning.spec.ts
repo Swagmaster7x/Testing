@@ -28,7 +28,7 @@ test.describe('learning loop', () => {
     await expect(page.getByRole('heading', { name: 'Lesson complete' })).toBeVisible();
     await expect(page.getByText('Mistakes along the way: 1.')).toBeVisible();
     await page.getByRole('link', { name: 'All Chess lessons' }).click();
-    await expect(page.getByText('1 of 37 lessons done')).toBeVisible();
+    await expect(page.getByText(/^1 of \d+ lessons done$/)).toBeVisible();
     await page.getByRole('radio', { name: 'Rules' }).click();
     await expect(page.locator('.lesson-row', { hasText: 'The rook' })).toContainText('Done');
   });

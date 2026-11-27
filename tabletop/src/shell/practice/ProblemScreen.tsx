@@ -12,6 +12,7 @@ import { appDb } from '../../store/db';
 import type { ReviewCard } from '../../store/learning';
 import { addAttempt, addCard, attemptsFor, dueCards, gradeCard, hasCard } from '../../store/learning';
 import type { Problem, ProblemRun } from '../../teach/problem';
+import { itemKey } from '../../teach/srs';
 import { expectedMove, pickProblem, playProblemReply, playSetup, retryProblem, showSolution, startProblem, submitProblemMove, takeHint } from '../../teach/problem';
 import { problemRating } from '../../teach/progress';
 import { gameName, practiceText, t, tDynamic } from '../../text';
@@ -105,7 +106,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
     if (!run || (run.phase !== 'solved' && run.phase !== 'failed') || recorded.current === run.problem.id) return;
     recorded.current = run.problem.id;
     const solved = run.phase === 'solved';
-    const rated = !isReview && run.hints === 0 && !(solved && run.spoiled) && !tried.has(run.problem.id);
+    const rated = !isReview && session.set?.rated !== false && run.hints === 0 && !(solved && run.spoiled) && !tried.has(run.problem.id);
     const now = Date.now();
     tried.set(run.problem.id, now);
     void (async () => {
@@ -114,6 +115,12 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
         if (card) await gradeCard(appDb(), card.id, solved && run.hints === 0, now);
       } else {
         await addAttempt(appDb(), { profileId, gameId, problemId: run.problem.id, solved, at: now, rating: run.problem.rating, rated });
+        // Lines learnt by heart go straight into the review queue, graded by this try.
+        if (session.set?.review === 'auto') {
+          const item = { kind: 'problem' as const, problemId: run.problem.id };
+          await addCard(appDb(), profileId, gameId, item, now);
+          await gradeCard(appDb(), `${profileId}:${itemKey(gameId, item)}`, solved && run.hints === 0 && !run.spoiled, now);
+        }
         if (rated) {
           const next = problemRating(await attemptsFor(appDb(), profileId, gameId));
           setDelta(next.rating - rating.rating);
@@ -123,7 +130,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
       setScore((s) => (solved ? { ...s, solved: s.solved + 1 } : { ...s, failed: s.failed + 1 }));
       setSaved(await hasCard(appDb(), profileId, gameId, { kind: 'problem', problemId: run.problem.id }));
     })();
-  }, [gameId, isReview, profileId, queue, queueIndex, rating.rating, run, tried]);
+  }, [gameId, isReview, profileId, queue, queueIndex, rating.rating, run, session.set, tried]);
 
   const nextProblem = () => {
     setDelta(null);
@@ -170,7 +177,8 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
   const Surface = ui.Surface;
   const sideName = solverSeat !== null ? ui.sideName(solverSeat) : '';
   const done = run.phase === 'solved' || run.phase === 'failed' || run.phase === 'shown';
-  const meta = isReview ? t('practice.review.count', { n: queueIndex + 1, total: queue.length }) : t('practice.rating', { rating: rating.rating });
+  // A set that moves no rating (lines learnt by heart) shows its size instead.
+  const meta = isReview ? t('practice.review.count', { n: queueIndex + 1, total: queue.length }) : session.set?.rated === false ? t('practice.count', { n: pool.length }) : t('practice.rating', { rating: rating.rating });
   const themeNames = pack.themeOrder.filter((th) => run.problem.themes.includes(th)).map((th) => tDynamic(`theme.${th}`));
 
   const addToPractice = async () => {
@@ -208,10 +216,21 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
       panel={
         <div className="lesson-panel" data-problem={run.problem.id}>
           <p className="eyebrow">{isReview ? t('practice.review.eyebrow') : run.problem.rating > 0 ? t('practice.problem.rated', { rating: run.problem.rating }) : t('practice.problem')}</p>
+          {run.problem.title ? <h2 className="problem-title">{run.problem.title}</h2> : null}
           <p className="lesson-text">
-            {run.phase === 'setup' ? t('practice.watch') : run.phase === 'solving' ? (ui.layout === 'table' ? t('practice.find.play') : t('practice.find', { side: sideName })) : run.phase === 'reply' ? t('practice.good-reply') : null}
+            {run.phase === 'setup'
+              ? t('practice.watch')
+              : run.phase === 'solving'
+                ? run.problem.title
+                  ? t('practice.line.find', { side: sideName })
+                  : ui.layout === 'table'
+                    ? t('practice.find.play')
+                    : t('practice.find', { side: sideName })
+                : run.phase === 'reply'
+                  ? t('practice.good-reply')
+                  : null}
           </p>
-          {run.phase === 'solving' && run.hints >= 2 ? <p className="faint">{themeNames.length > 0 ? t('practice.hint.idea', { idea: themeNames[0] ?? '' }) : t('practice.hint.idea.none')}</p> : null}
+          {run.phase === 'solving' && run.hints >= 2 ? <p className="faint">{run.problem.note ?? (themeNames.length > 0 ? t('practice.hint.idea', { idea: themeNames[0] ?? '' }) : t('practice.hint.idea.none'))}</p> : null}
           {/* Card and tile tables draw no arrow, so the last hint says the move in words. */}
           {run.phase === 'solving' && run.hints >= 3 && expected && ui.layout === 'table' ? <p className="faint">{t('practice.hint.the-move', { move: moveWords(ui, board.state, expected) })}</p> : null}
           {run.phase === 'solved' ? (
@@ -227,6 +246,7 @@ function ProblemSession({ session, gameId, setId, theme, profileId }: { session:
             </p>
           ) : null}
           {run.phase === 'shown' ? <p className="lesson-feedback" role="status">{t('practice.solution')}</p> : null}
+          {done && run.problem.note ? <p className="problem-note">{run.problem.note}</p> : null}
           {done && themeNames.length > 0 && !isReview ? <p className="faint">{t('practice.themes', { themes: themeNames.slice(0, 4).join(', ') })}</p> : null}
           {!isReview ? <p className="faint num">{t('practice.session', { solved: score.solved, failed: score.failed })}</p> : null}
           {pack.attribution && run.problem.id.startsWith('lichess:') ? <p className="faint attribution">{t(pack.attribution)}</p> : null}

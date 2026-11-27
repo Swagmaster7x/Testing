@@ -163,6 +163,13 @@ export const enShogi = {
   'theme.shogi-drop': 'A drop',
   'theme.shogi-sacrifice': 'A sacrifice',
   'theme.shogi-promotion': 'Promotion',
+  'practice.set.shogi-castles': 'Build a castle',
+  'practice.set.shogi-castles.blurb': 'Build each castle from the starting position from memory: you play Black, White answers. Every castle you finish comes back for review on a schedule. No rating changes.',
+  'practice.set.drill-shogi-build': 'Next move of the castle',
+  'practice.set.drill-shogi-build.blurb': 'A castle half built: play the next move, for either side.',
+  'theme.castle-ranging': 'Ranging Rook castles',
+  'theme.castle-static': 'Static Rook castles',
+  'learn.stage.stage-4.blurb.shogi': 'The castle trainer: nine castles built move by move from the starting position.',
 
   'ref.shogi.pieces': 'The pieces and how they move',
   'ref.shogi.promotion': 'Promotion',
