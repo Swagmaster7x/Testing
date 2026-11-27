@@ -23,12 +23,12 @@ test.describe('the shell', () => {
     }
   });
 
-  test('the shelf shows the eight launch games, grouped, built ones playable, without the test game', async ({ page }) => {
+  test('the shelf shows the eight launch games and Tute, grouped, built ones playable, without the test game', async ({ page }) => {
     await page.goto('/#/games');
     for (const group of ['Cards', 'Boards', 'Tiles']) await expect(page.getByRole('heading', { name: group })).toBeVisible();
     const tiles = page.locator('.tile');
-    await expect(tiles).toHaveCount(8);
-    for (const name of ['Brisca', 'Poker', 'Chess', 'Go', 'Chinese Checkers', 'Shogi', 'Dominoes', 'Mahjong']) {
+    await expect(tiles).toHaveCount(SHELF.length);
+    for (const name of ['Brisca', 'Poker', 'Tute', 'Chess', 'Go', 'Chinese Checkers', 'Shogi', 'Dominoes', 'Mahjong']) {
       await expect(page.getByRole('link', { name: `Open ${name}` })).toBeVisible();
     }
     await expect(page.getByText('Noughts and crosses')).toHaveCount(0);

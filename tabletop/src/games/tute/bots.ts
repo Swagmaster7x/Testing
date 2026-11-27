@@ -57,7 +57,7 @@ export type Policy = number;
 const BASIC: Skill = { random: 0, forget: 0, pairs: true, load: true, cash: false, count: false, voids: false };
 
 export const SKILLS: Record<number, Skill> = {
-  1: { random: 0.25, forget: 0.5, pairs: false, load: false, cash: false, count: false, voids: false },
+  1: { random: 0.4, forget: 0.6, pairs: false, load: false, cash: false, count: false, voids: false },
   2: { random: 0, forget: 0, pairs: true, load: true, cash: false, count: false, voids: false },
   3: { random: 0, forget: 0, pairs: true, load: true, cash: true, count: true, voids: true },
 };

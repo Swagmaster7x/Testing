@@ -259,7 +259,7 @@ function mahjongLadder(): Ladder<MahjongState, MahjongAction, MahjongConfig, Mah
 }
 
 /**
- * Tute rungs are matches to three games under the default rules (Spain, in pairs): the level under
+ * Tute rungs are matches to five games under the default rules (Spain, in pairs): the level under
  * test sits in seats 0 and 2 against the other level in 1 and 3, and every deal is played twice
  * with the sides swapped, so the luck of the cards cancels out.
  */
@@ -267,7 +267,7 @@ function tuteLadder(): Ladder<TuteState, TuteAction, TuteConfig, TuteView, TuteE
   return {
     spec: {
       def: tute,
-      config: SPAIN_PAIRS,
+      config: { ...SPAIN_PAIRS, matchTo: 5 },
       levels: tuteBots.levels.map((l) => l.level),
       bot: (level) => ({
         name: `L${level}`,
@@ -277,7 +277,7 @@ function tuteLadder(): Ladder<TuteState, TuteAction, TuteConfig, TuteView, TuteE
       paired: true,
     },
     random: { name: 'random', choose: (view, seat, rng) => randomChoice(tute, view, seat, rng) },
-    games: 100,
+    games: 300,
   };
 }
 
