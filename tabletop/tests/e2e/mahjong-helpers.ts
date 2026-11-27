@@ -39,7 +39,7 @@ export async function takeTurn(page: Page, policy: Policy = 'drawn'): Promise<bo
     await next.click();
     return true;
   }
-  const win = page.getByRole('button', { name: /^Win \(zi mo/ });
+  const win = page.getByRole('button', { name: /^(Win \(zi mo|Tsumo)/ });
   if (await win.isVisible()) {
     await win.click();
     return true;

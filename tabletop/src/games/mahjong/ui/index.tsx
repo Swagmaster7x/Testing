@@ -3,26 +3,49 @@ import { t, tDynamic } from '../../../text';
 import type { GameOptions, GameUi, OptionField, ReferenceSection } from '../../types';
 import { MAHJONG_LEVELS, playStyleOf } from '../bots';
 import type { MahjongAction, MahjongConfig, MahjongEvent, MahjongState, MahjongView } from '../rules';
-import { DEFAULT_CONFIG, mahjong, STYLES } from '../rules';
+import { DEFAULT_CONFIG, engine, mahjong, STYLES } from '../rules';
 import { analyseMahjongGame } from '../review';
 import { seatWind } from '../core/engine';
 import { kindOf } from '../core/tiles';
 import { HK_OPTIONS, HK_PRESETS } from '../styles/hong-kong';
+import { doraOf, RIICHI_PRESETS } from '../styles/riichi';
 import { MahjongCoachPanel } from './CoachPanel';
 import { MahjongSeatMark, MahjongSurface } from './MahjongSurface';
 import { kindName, moveName, runName, seatName, tileName, whoName, windName } from './names';
 
-export const mahjongOptions: GameOptions<MahjongConfig> = {
-  presets: HK_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'hong-kong', options: p.options } })),
-  fields: HK_OPTIONS.map(
+const fieldsOf = (style: string): OptionField[] => {
+  const prefix = style === 'riichi' ? 'mahjong.riichi.option' : 'mahjong.option';
+  return (STYLES[style]?.options ?? HK_OPTIONS).map(
     (spec): OptionField => ({
       key: spec.key,
-      label: tDynamic(`mahjong.option.${spec.key}`),
-      choices: spec.values.map((value) => ({ value, label: tDynamic(`mahjong.option.${spec.key}.${value}`) })),
+      label: tDynamic(`${prefix}.${spec.key}`),
+      choices: spec.values.map((value) => ({ value, label: tDynamic(`${prefix}.${spec.key}.${value}`) })),
     }),
-  ),
-  get: (config, key) => config.options[key] ?? DEFAULT_CONFIG.options[key] ?? '',
-  set: (config, key, value) => ({ style: config.style, options: { ...config.options, [key]: value } }),
+  );
+};
+
+/** The style first (switching it starts from that style's defaults), then that style's options. */
+const STYLE_FIELD: OptionField = {
+  key: 'style',
+  label: t('mahjong.option.style'),
+  choices: Object.keys(STYLES).map((id) => ({ value: id, label: tDynamic(`mahjong.style-name.${id}`) })),
+};
+
+export const mahjongOptions: GameOptions<MahjongConfig> = {
+  presets: [
+    ...HK_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'hong-kong', options: p.options } })),
+    ...RIICHI_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'riichi', options: p.options } })),
+  ],
+  fields: [STYLE_FIELD, ...fieldsOf('hong-kong')],
+  fieldsFor: (config) => [STYLE_FIELD, ...fieldsOf(config.style)],
+  get: (config, key) => (key === 'style' ? config.style : (config.options[key] ?? STYLES[config.style]?.defaults[key] ?? DEFAULT_CONFIG.options[key] ?? '')),
+  set: (config, key, value) => {
+    if (key === 'style') {
+      const style = STYLES[String(value)];
+      return style ? { style: String(value), options: style.defaults } : config;
+    }
+    return { style: config.style, options: { ...config.options, [key]: value } };
+  },
 };
 
 const me = (mySeats: readonly Seat[] | undefined): Seat => (mySeats ?? [0])[0] ?? 0;
@@ -108,6 +131,7 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       case 'win': {
         const w = event.win;
         const params = { who: whoName(w.seat, m), from: w.from === null ? '' : whoName(w.from, m), faan: w.score.total };
+        if (w.score.unit === 'han') return t(w.from === null ? 'mahjong.log.tsumo' : 'mahjong.log.ron', { ...params, value: w.score.yakuman ? t('mahjong.band.yakuman') : t('mahjong.result.han-fu', { han: w.score.total, fu: w.score.fu ?? 0 }) });
         return t(w.from === null ? 'mahjong.log.win.self' : w.robbed ? 'mahjong.log.win.robbed' : 'mahjong.log.win.discard', params);
       }
       case 'exhausted':
@@ -132,11 +156,26 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
     const minimum = Number(options.minFaan ?? 0);
     const limit = Number(options.limit ?? 10);
     const order = [0, 1, 2, 3].map((i) => (m + i) % 4);
+    if (state.config.style === 'riichi') {
+      return [
+        { label: t('mahjong.counter.round'), value: t('mahjong.counter.round.value', { wind: windName(state.round), n: state.passes + 1 }) },
+        { label: t('mahjong.counter.seat'), value: windName(seatWind(m, state.dealer)) },
+        { label: t('mahjong.counter.dealer'), value: seatName(state.dealer, m) },
+        { label: t('mahjong.counter.wall'), value: String(Math.max(0, state.wall.length - engine.rules(state.config).deadWall)) },
+        // The dora themselves, one row each; the table shows the indicators.
+        ...(state.indicators?.tiles.slice(0, state.indicators.shown) ?? []).map((id, i) => ({ label: i === 0 ? t('mahjong.counter.dora') : t('mahjong.counter.kan-dora', { n: i }), value: kindName(doraOf(kindOf(id))) })),
+        { label: t('mahjong.counter.honba'), value: String(state.counter) },
+        { label: t('mahjong.counter.sticks'), value: String(state.stakes) },
+        { label: t('mahjong.counter.minimum'), value: t('mahjong.counter.minimum.yaku') },
+        // Five-figure scores do not fit four to a line, so each seat has its own row.
+        ...order.map((s) => ({ label: seatName(s, m), value: String(state.scores[s] ?? 0) })),
+      ];
+    }
     return [
       { label: t('mahjong.counter.round'), value: t('mahjong.counter.round.value', { wind: windName(state.round), n: state.handNo + 1 }) },
       { label: t('mahjong.counter.seat'), value: windName(seatWind(m, state.dealer)) },
       { label: t('mahjong.counter.dealer'), value: seatName(state.dealer, m) },
-      { label: t('mahjong.counter.wall'), value: String(state.wall.length) },
+      { label: t('mahjong.counter.wall'), value: String(Math.max(0, state.wall.length - engine.rules(state.config).deadWall)) },
       { label: t('mahjong.counter.scores'), value: order.map((s) => String(state.scores[s] ?? 0)).join(' · ') },
       { label: t('mahjong.counter.minimum'), value: minimum > 0 ? t('mahjong.counter.minimum.value', { n: minimum, limit }) : t('mahjong.counter.minimum.none', { limit }) },
     ];
@@ -179,7 +218,9 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
     const mine = outcome?.results.find((r) => r.seat === seat);
     if (!outcome || !mine) return null;
     const tied = outcome.results.filter((r) => r.place === mine.place).length > 1;
-    const score = mine.score > 0 ? `+${mine.score}` : String(mine.score);
+    // Hong Kong scores start at nothing and show a sign; Riichi scores are the points held.
+    const riichi = (record.config as { style?: string } | null)?.style === 'riichi';
+    const score = mine.score > 0 && !riichi ? `+${mine.score}` : String(mine.score);
     return t(tied ? 'mahjong.result.finished.tied' : 'mahjong.result.finished', { place: tDynamic(`mahjong.place.${mine.place}`), score });
   },
   revealSeat: (start, record, seat) => (record.players[seat]?.kind === 'bot' ? t('mahjong.reveal', { style: t(`mahjong.style.${playStyleOf(start.table, seat)}`) }) : null),

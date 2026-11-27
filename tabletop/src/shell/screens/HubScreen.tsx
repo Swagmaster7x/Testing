@@ -253,7 +253,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
               </div>
               {showRules ? (
                 <div className="rule-fields">
-                  {options.fields.map((f) => (
+                  {(options.fieldsFor ? options.fieldsFor(config) : options.fields).map((f) => (
                     <div key={f.key} className="rule-field">
                       <span className="rule-label">{f.label}</span>
                       <Segmented<string | number> label={f.label} options={f.choices.map((c) => ({ value: c.value, label: c.label }))} value={options.get(config, f.key)} onChange={(v) => setConfig(options.set(config, f.key, v))} />

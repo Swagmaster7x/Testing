@@ -105,7 +105,7 @@ const DOT_LAYOUT: Readonly<Record<number, readonly (readonly [number, number, st
 
 const DOT_RADIUS: Readonly<Record<number, number>> = { 2: 11, 3: 9.5, 4: 10, 5: 9, 6: 8.5, 7: 7.6, 8: 7.6, 9: 7.4 };
 
-function Dots({ n }: { n: number }) {
+function Dots({ n, red = false }: { n: number; red?: boolean }) {
   if (n === 1) {
     return (
       <g>
@@ -124,7 +124,7 @@ function Dots({ n }: { n: number }) {
   return (
     <g>
       {(DOT_LAYOUT[n] ?? []).map(([cx, cy, colour], i) => (
-        <Coin key={i} cx={cx} cy={cy} r={r} colour={colour} />
+        <Coin key={i} cx={cx} cy={cy} r={r} colour={red ? RED_INK : colour} />
       ))}
     </g>
   );
@@ -257,14 +257,14 @@ function Bird() {
   );
 }
 
-function Bamboo({ n }: { n: number }) {
+function Bamboo({ n, red = false }: { n: number; red?: boolean }) {
   if (n === 1) return <Bird />;
   const layout = BAMBOO_LAYOUT[n];
   if (!layout) return null;
   return (
     <g>
       {layout.sticks.map(([x, y, colour], i) => (
-        <Stick key={i} x={x} y={y} h={layout.h} colour={colour} w={layout.w} />
+        <Stick key={i} x={x} y={y} h={layout.h} colour={red ? RED_INK : colour} w={layout.w} />
       ))}
     </g>
   );
@@ -293,19 +293,19 @@ export function learnerCode(kind: Kind): string {
   return ['E', 'S', 'W', 'N'][kind - 27] ?? '';
 }
 
-function Art({ kind }: { kind: Kind }) {
+function Art({ kind, red = false }: { kind: Kind; red?: boolean }) {
   const suit = suitOf(kind);
   const n = rankOf(kind);
   if (suit === 0) {
     return (
       <g>
-        <Glyph ch={NUMERALS[n - 1] ?? ''} x={13} y={5} size={34} fill={INK} />
+        <Glyph ch={NUMERALS[n - 1] ?? ''} x={13} y={5} size={34} fill={red ? RED_INK : INK} />
         <Glyph ch="萬" x={11} y={36} size={38} fill={RED_INK} />
       </g>
     );
   }
-  if (suit === 1) return <Dots n={n} />;
-  if (suit === 2) return <Bamboo n={n} />;
+  if (suit === 1) return <Dots n={n} red={red} />;
+  if (suit === 2) return <Bamboo n={n} red={red} />;
   if (kind >= 27 && kind <= 30) return <Glyph ch={WIND_GLYPHS[kind - 27] ?? ''} x={6} y={16} size={48} fill={INK} />;
   if (kind === RED) return <Glyph ch="中" x={5} y={15} size={50} fill={RED_INK} />;
   if (kind === GREEN) return <Glyph ch="發" x={5} y={15} size={50} fill={GREEN_INK} />;
@@ -334,17 +334,17 @@ function Art({ kind }: { kind: Kind }) {
   return null;
 }
 
-/** The face of a tile, filling its box. `learner` adds the number and letters badge. */
-export function TileFace({ kind, learner = false }: { kind: Kind; learner?: boolean }) {
+/** The face of a tile, filling its box. `learner` adds the number and letters badge; `red` draws a red five. */
+export function TileFace({ kind, learner = false, red = false }: { kind: Kind; learner?: boolean; red?: boolean }) {
   const code = learnerCode(kind);
   return (
     <svg className="mj-svg" viewBox="0 0 60 80" preserveAspectRatio="none" aria-hidden="true">
       <rect x={0.8} y={0.8} width={58.4} height={78.4} rx={7} fill={BACK} />
       <rect x={0.8} y={0.8} width={58.4} height={74.4} rx={7} fill={FACE} stroke={EDGE} strokeWidth={1.4} />
-      <Art kind={kind} />
+      <Art kind={kind} red={red} />
       {learner ? (
         <g>
-          <path d="M1.5 52 H58.5 V68 Q58.5 74.5 52 74.5 H8 Q1.5 74.5 1.5 68 Z" fill={INK} opacity={0.86} />
+          <path d="M1.5 52 H58.5 V68 Q58.5 74.5 52 74.5 H8 Q1.5 74.5 1.5 68 Z" fill={red ? RED_INK : INK} opacity={0.86} />
           <text x={30} y={70} textAnchor="middle" fontSize={21} fontWeight={750} fill="#fff" fontFamily="Inter Variable, Inter, sans-serif" letterSpacing={0.5}>
             {code}
           </text>

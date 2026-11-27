@@ -193,10 +193,13 @@ button.mj-tile:focus-visible {
 
 .mj-own {
   position: absolute;
-  right: 6px;
+  /* Centred over your hand, clear of the seat tags in both bottom corners. */
+  left: 50%;
   bottom: calc(var(--mj-hand, 64px) + 10px);
   z-index: 450;
-  justify-content: flex-end;
+  justify-content: center;
+  max-width: calc(100% - 12px);
+  transform: translateX(-50%);
 }
 
 .mj-call {
@@ -286,7 +289,8 @@ button.mj-tile:focus-visible {
   padding-top: 1px;
 }
 
-.mj-pay {
+.mj-pay,
+.mj-final {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
@@ -295,6 +299,10 @@ button.mj-tile:focus-visible {
 
 .mj-pay-title {
   font-weight: 700;
+}
+
+.mj-final {
+  margin-top: 2px;
 }
 
 .mj-pay [data-sign='up'] {
@@ -442,4 +450,61 @@ button.mj-tile:focus-visible {
 
 .mj-count-verdict[data-right='true'] {
   color: #1f5d3a;
+}
+
+/* Riichi: the mark on a seat, furiten, the dora in the middle, the riichi switch. */
+.mj-riichi-mark {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #f2e6c4;
+  color: #7a1d16;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mj-furiten {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #7a1d16;
+  color: #fff;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+
+.mj-centre-dora {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+}
+
+.mj-centre-dora .mj-mini {
+  display: inline-block;
+}
+
+.mj-riichi-toggle[data-on='true'] {
+  border-color: var(--brass-1);
+  background: var(--brass-1);
+  color: var(--ivory-ink, #1d1a14);
+}
+
+.mj-result-dora {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 4px;
+  font-size: var(--fs-xs, 0.85rem);
+  font-weight: 600;
+}
+
+.mj-result-dora span + .mj-mini {
+  margin-left: 2px;
+}
+
+.mj-result-ready {
+  margin: 0 0 4px;
+  font-size: var(--fs-xs, 0.85rem);
+  font-weight: 600;
 }
