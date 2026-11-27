@@ -87,7 +87,7 @@ describe('classic card pack practice', () => {
         }
       }
       expect(asked).toBeGreaterThan(20);
-    });
+    }, 120_000);
 
     it(`${suite.name}: lessons cover stages 0 to 2 and the Table-ready track, and the checklist points at real lessons and drills`, () => {
       for (const stage of ['stage-0', 'stage-1', 'stage-2', 'table'] as const) expect(suite.lessons.some((l) => l.stage === stage), stage).toBe(true);

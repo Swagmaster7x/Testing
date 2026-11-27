@@ -17,8 +17,8 @@ import type { Rng } from '../../core/rng';
 import type { Card, Suit } from '../classic/cards';
 import { DECK, rankHigh, SUITS, suitOf } from '../classic/cards';
 import { trickWinner } from '../classic/tricks';
-import type { SpadesAction, SpadesState, SpadesView } from './rules';
-import { actionText, legalBids, mayBlind, membersOf, partnerOf, playableCards, scoreHand, sideCount, sideOf, spades, TRUMP, tricksWon } from './rules';
+import type { HandResult, SpadesAction, SpadesState, SpadesView } from './rules';
+import { actionText, BAG_LIMIT, BAG_PENALTY, legalBids, mayBlind, membersOf, partnerOf, playableCards, scoreHand, sideCount, sideOf, spades, TRICK_VALUE, TRUMP, tricksWon } from './rules';
 
 export const SPADES_LEVELS: readonly BotLevel[] = [
   { level: 1, rating: 700 },
@@ -46,7 +46,22 @@ const high = (cards: readonly Card[]) => [...cards].sort((a, b) => rankHigh(b) -
 const low = (cards: readonly Card[]) => [...cards].sort((a, b) => rankHigh(a) - rankHigh(b));
 
 /**
- * Likely tricks in a hand, the way the lessons teach the count: aces; kings with a guard; queens
+ * The simple count the lessons teach for a first bid, in whole tricks: one for each ace, one for
+ * each king with at least one more card of its suit, and one for each spade past the third.
+ */
+export function simpleCount(hand: readonly Card[]): number {
+  let n = 0;
+  for (const s of SUITS) {
+    const cards = hand.filter((c) => suitOf(c) === s);
+    if (cards.some((c) => c[0] === 'A')) n++;
+    if (cards.some((c) => c[0] === 'K') && cards.length >= 2) n++;
+    if (s === 's') n += Math.max(0, cards.length - 3);
+  }
+  return n;
+}
+
+/**
+ * Likely tricks in a hand, a finer count than the lessons' first one: aces; kings with a guard; queens
  * with two guards; in spades the top cards with their guards and every spade past the third; and a
  * short side suit when there are spades to trump with.
  */
@@ -201,64 +216,83 @@ export function policyMove(state: SpadesState, seat: Seat, policy: 1 | 2, rng: R
   return { type: 'play', card: heuristicCard(state, seat, state.hands[seat] ?? [], policy, rng) };
 }
 
-/** The hand's value for `seat`'s side: its score for the hand less the best other side's. */
-export function handValue(state: SpadesState, seat: Seat, start: SpadesState): number {
-  let deltas: readonly number[];
-  if (state.handNo !== start.handNo || state.over) deltas = state.results[start.results.length]?.deltas ?? [];
-  else deltas = scoreHand(state.config, state.bids.map((b) => b ?? 0), state.blind, tricksWon(state), state.bagCount).deltas;
+/** What a bag is really worth: its point, less its share of the ten-bag penalty. */
+function bagValue(config: SpadesState['config']): number {
+  return config.bags === 'penalty' ? 1 - BAG_PENALTY / BAG_LIMIT : config.bags === 'minus' ? -1 : 1;
+}
+
+/**
+ * The hand's value for `seat`'s side: its score for the hand less the best other side's. With
+ * `longRun`, bags count at what they really cost (a point now, a tenth of the penalty later)
+ * instead of the point they score this hand.
+ */
+export function handValue(state: SpadesState, seat: Seat, start: SpadesState, longRun = false): number {
+  let result: HandResult | undefined;
+  if (state.handNo !== start.handNo || state.over) result = state.results[start.results.length];
+  else result = scoreHand(state.config, state.bids.map((b) => b ?? 0), state.blind, tricksWon(state), state.bagCount);
+  if (!result) return 0;
+  const found = result;
+  const adjust = (i: number): number => (longRun && state.config.bags === 'penalty' ? (found.penalties[i] ?? 0) * BAG_PENALTY + (found.bags[i] ?? 0) * (bagValue(state.config) - 1) : 0);
+  const deltas = found.deltas.map((d, i) => d + adjust(i));
   const side = sideOf(state.config, seat);
   const mine = deltas[side] ?? 0;
   const others = deltas.filter((_, i) => i !== side);
   return mine - (others.length > 0 ? Math.max(...others) : 0);
 }
 
-function spec(policy: 1 | 2): DeterminizedSpec<SpadesState, SpadesAction, SpadesView> {
+function spec(policy: 1 | 2, longRun: boolean): DeterminizedSpec<SpadesState, SpadesAction, SpadesView> {
   return {
     def: spades,
     policy: (state, seat, rng) => policyMove(state, seat, policy, rng),
     stop: (state, start) => state.handNo !== start.handNo || state.over,
-    value: handValue,
+    value: (state, seat, start) => handValue(state, seat, start, longRun),
     maxPlies: 60,
   };
 }
 
-export function evaluateCards(v: SpadesView, samples: number, policy: 1 | 2, rng: Rng): { action: SpadesAction; value: number }[] {
+export function evaluateCards(v: SpadesView, samples: number, policy: 1 | 2, rng: Rng, longRun = false): { action: SpadesAction; value: number }[] {
   const cards = playableCards(v, v.hand);
-  return determinize(spec(policy), v, v.seat, samples, rng, cards.map((card) => ({ type: 'play' as const, card })));
+  return determinize(spec(policy, longRun), v, v.seat, samples, rng, cards.map((card) => ({ type: 'play' as const, card })));
 }
 
 /**
  * Level 4's bid: deal the unseen cards many times and play each deal out with the level-2
- * heuristics, once with a counted bid and once as a nil; bid the tricks won on average, or nil when
- * it survives most deals.
+ * heuristics; then bid the number with the best average score over those deals, a set costing ten a
+ * trick and a bag what it really costs. Nil only by the rule of thumb: rollouts with rule-of-thumb
+ * opponents do not try to set a nil, so they think nils far safer than they are.
  */
 export function simulatedBid(v: SpadesView, samples: number, rng: Rng): number {
   const legal = legalBids(v, v.seat);
   const counted = chooseBid(v, 2, rng);
-  const tricksWith = (bid: number): number[] => {
-    const out: number[] = [];
-    for (let i = 0; i < samples; i++) {
-      let s = spades.sample?.(v, v.seat, rng) as SpadesState;
-      const hand = s.handNo;
-      for (let guard = 0; guard < 80 && !s.over && s.handNo === hand; guard++) {
-        const seat = spades.turn(s) as number;
-        const action: SpadesAction = s.phase === 'bid' && seat === v.seat ? { type: 'bid', n: bid } : policyMove(s, seat, 2, rng);
-        s = spades.apply(s, action).state;
-      }
-      out.push(s.results[v.results.length]?.tricks[v.seat] ?? 0);
+  if (counted === 0) return 0;
+  const pairs = v.config.partners === 'pairs';
+  const partner = partnerOf(v.seat);
+  const deals: { mine: number; theirs: number; partnerBid: number }[] = [];
+  for (let i = 0; i < samples; i++) {
+    let s = spades.sample?.(v, v.seat, rng) as SpadesState;
+    const hand = s.handNo;
+    for (let guard = 0; guard < 80 && !s.over && s.handNo === hand; guard++) {
+      const seat = spades.turn(s) as number;
+      const action: SpadesAction = s.phase === 'bid' && seat === v.seat ? { type: 'bid', n: counted } : policyMove(s, seat, 2, rng);
+      s = spades.apply(s, action).state;
     }
-    return out;
-  };
-  const tricks = tricksWith(Math.max(1, counted));
-  const mean = tricks.reduce((a, b) => a + b, 0) / Math.max(1, tricks.length);
-  if (legal.includes(0) && (counted === 0 || countTricks(v.hand) < 2.5)) {
-    const nil = tricksWith(0);
-    const survives = nil.filter((n) => n === 0).length / Math.max(1, nil.length);
-    if (survives >= 0.7) return 0;
+    const result = s.results[v.results.length];
+    if (!result) continue;
+    deals.push({ mine: result.tricks[v.seat] ?? 0, theirs: pairs ? (result.tricks[partner] ?? 0) : 0, partnerBid: pairs ? (result.bids[partner] ?? 0) : 0 });
   }
-  const want = Math.max(1, Math.round(mean - 0.25));
+  const bag = bagValue(v.config);
+  const average = (bid: number): number => {
+    let total = 0;
+    for (const d of deals) {
+      const contract = bid + (d.partnerBid > 0 ? d.partnerBid : 0);
+      const made = d.mine + (d.partnerBid > 0 || v.config.nilTricks === 'count' ? d.theirs : 0);
+      total += made >= contract ? TRICK_VALUE * contract + bag * (made - contract) : -TRICK_VALUE * contract;
+    }
+    return total / Math.max(1, deals.length);
+  };
   const pick = legal.filter((n) => n > 0);
-  return pick.reduce((best, n) => (Math.abs(n - want) < Math.abs(best - want) ? n : best), pick[0] ?? 1);
+  if (deals.length === 0 || pick.length === 0) return counted;
+  return pick.reduce((best, n) => (average(n) > average(best) ? n : best), pick[0] as number);
 }
 
 /** Blind nil: taken by the better levels when far behind (at least 200), otherwise look. */
@@ -279,7 +313,7 @@ export function chooseAction(v: SpadesView, level: number, rng: Rng): SpadesActi
   const cards = playableCards(v, v.hand);
   if (cards.length === 1) return { type: 'play', card: cards[0] as Card };
   if (params.samples === 0) return { type: 'play', card: heuristicCard(v, v.seat, v.hand, params.policy, rng) };
-  return bestScored(evaluateCards(v, params.samples, params.policy, rng), rng);
+  return bestScored(evaluateCards(v, params.samples, params.policy, rng, params.bidSamples > 0), rng);
 }
 
 export function tagsFor(v: SpadesView, action: SpadesAction): string[] {
