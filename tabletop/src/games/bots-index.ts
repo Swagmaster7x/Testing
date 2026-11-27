@@ -18,6 +18,7 @@ const loaders: Record<string, Loader> = {
       ([bots, uci, web]) => bots.chessBots(() => new uci.UciEngine(web.stockfishWebTransport(context.assetsBase))) as BotSet<unknown, unknown>,
     ),
   shogi: () => import('./shogi/bots').then((m) => m.shogiBots as BotSet<unknown, unknown>),
+  'chinese-checkers': () => import('./chinese-checkers/bots').then((m) => m.ccBots as unknown as BotSet<unknown, unknown>),
 };
 
 const cache = new Map<string, Promise<BotSet<unknown, unknown>>>();

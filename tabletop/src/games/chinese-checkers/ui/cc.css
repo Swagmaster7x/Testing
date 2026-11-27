@@ -1,0 +1,81 @@
+/* The Chinese Checkers table: the star above a strip of what to do. */
+.cc-surface {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.cc-surface .cc-board {
+  flex: 1;
+  min-height: 0;
+}
+
+.cc-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 34px;
+  padding: 2px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.cc-strip .cc-strip-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-strip .btn {
+  min-height: 32px;
+  padding: 0 var(--sp-3);
+  white-space: nowrap;
+}
+
+/* The race in the rail: one row a player. */
+.cc-race {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px var(--sp-2);
+  align-items: center;
+  font-size: var(--fs-xs);
+}
+
+.cc-race li {
+  display: contents;
+}
+
+.cc-race svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cc-race .bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.08);
+  overflow: hidden;
+}
+
+.cc-race .bar span {
+  display: block;
+  height: 100%;
+  background: var(--brass-2, #c9a25a);
+}
+
+.cc-race .num {
+  text-align: right;
+  color: var(--text-1);
+}
+
+.cc-seat-extra {
+  font-size: var(--fs-2xs);
+  color: var(--text-3);
+}

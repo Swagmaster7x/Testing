@@ -321,6 +321,8 @@ export class CcPosition implements PvsGame {
   readonly board: Int8Array;
   toMove: number;
   winner = -1;
+  /** A seed for a small wobble in the evaluation (a quarter of a row at most), or 0 for none. */
+  noise = 0;
   private lo = 0;
   private hi = 0;
   private readonly winners: number[] = [];
@@ -407,7 +409,8 @@ export class CcPosition implements PvsGame {
   evaluate(): number {
     if (this.winner >= 0) return this.winner === this.toMove ? DECIDED : -DECIDED;
     const me = this.toMove;
-    return seatCost(this.board, 1 - me, this.layout) - seatCost(this.board, me, this.layout) + EVAL.tempo;
+    const wobble = this.noise === 0 ? 0 : ((Math.imul(this.lo ^ this.noise, 0x9e3779b1) >>> 0) % 51) - 25;
+    return seatCost(this.board, 1 - me, this.layout) - seatCost(this.board, me, this.layout) + EVAL.tempo + wobble;
   }
 
   hashLo(): number {

@@ -247,8 +247,9 @@ function rulesText(rules: CcRules): string | null {
 function ruleValue(key: string, raw: Json | undefined): string | number {
   const token = RULE_TOKENS.find((t) => t.key === key);
   if (!token) throw new Error(`Unknown rule "${key}"`);
+  if (typeof raw !== 'string' && typeof raw !== 'number') throw new Error(`${key} must be one of ${token.values.join(', ')}`);
   const value = token.key === 'limit' ? Number(raw) : String(raw);
-  if (!(token.values as readonly (string | number)[]).includes(value)) throw new Error(`${key} must be one of ${token.values.join(', ')}`);
+  if (!token.values.includes(value)) throw new Error(`${key} must be one of ${token.values.join(', ')}`);
   return value;
 }
 
@@ -425,7 +426,7 @@ const configCodec: JsonCodec<CcConfig> = {
     const marbles = Number(json.marbles ?? 10);
     const changes: Record<string, string | number> = {};
     if (isJsonObject(json.rules)) for (const [k, v] of Object.entries(json.rules)) changes[k] = ruleValue(k, v);
-    return makeConfig(players, marbles, changes as Partial<CcRules>);
+    return makeConfig(players, marbles, changes);
   },
 };
 

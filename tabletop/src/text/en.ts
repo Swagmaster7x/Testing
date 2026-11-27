@@ -86,10 +86,10 @@ const base = {
 
   'game.chinese-checkers.name': 'Chinese Checkers',
   'game.chinese-checkers.aka': 'Star halma',
-  'game.chinese-checkers.launch': 'Two, three, four or six players.',
-  'game.chinese-checkers.later': 'The long-jump variant.',
-  'game.chinese-checkers.practice': 'Longest hop chain, race endgames.',
-  'game.chinese-checkers.cpu': 'Search bots.',
+  'game.chinese-checkers.launch': 'Two, three, four or six players, fifteen marbles for two, long jumps, and every house rule about stopping, home and blocking.',
+  'game.chinese-checkers.later': 'Partners, and one person playing two or three colours.',
+  'game.chinese-checkers.practice': 'Longest hop, race endgames, counting the race, and where a marble can go.',
+  'game.chinese-checkers.cpu': 'Six levels, from a beginner who races ahead to a five-move search.',
 
   'game.shogi.name': 'Shogi',
   'game.shogi.aka': 'Japanese chess',
