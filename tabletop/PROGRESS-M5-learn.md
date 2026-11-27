@@ -81,7 +81,7 @@ These notes are for merging into `PROGRESS.md`.
   game id `poker`), so the "lesson files with no suite" check still works.
 - `src/games/lessons.ts`, `src/games/practice.ts`, `src/games/ready.ts`: registration.
 - `src/text/games/poker.ts`: position names, hand phrases, hand classes, practice set, drill and
-  theme names, and the poker blurb for stage 3.
+  theme names, and poker blurbs for stage 3 and the Table-ready track.
 - `src/teach/runner.ts`: a new `asked` field, the position the current step or checkpoint question
   was asked in. `src/shell/learn/LessonScreen.tsx` fills step text from it. Before, a question's
   numbers were re-filled from the position after the move ("Your {equity}% beats the 0% you need"

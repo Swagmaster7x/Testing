@@ -347,6 +347,7 @@ export const enPoker = {
   'ref.poker.levels': 'CPU levels',
 
   'learn.stage.stage-3.blurb.poker': 'Core skills: opening ranges, re-raises, reading players, bet sizing and the big all-in decisions.',
+  'learn.stage.table.blurb.poker': 'What an app does for you that a real table does not: acting in turn, declaring bets, protecting your hand, the blind clock and the house rules.',
   'practice.set.poker.spots': 'Call or fold: all-in, cards up',
   'practice.set.poker.spots.blurb': 'Another player moves all-in with every hand face up. Count your outs, work out the price, then call or fold. Each answer is proved by exact equity.',
   'practice.set.drill-poker-winner': 'Which hand wins',
