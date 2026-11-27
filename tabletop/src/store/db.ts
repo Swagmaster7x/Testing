@@ -23,6 +23,8 @@ export type MotionSetting = 'system' | 'reduced' | 'full';
 export type LookSetting = 'club' | 'daylight';
 /** French cards in two colours, or four (spades black, hearts red, diamonds blue, clubs green). */
 export type DeckSetting = 'two' | 'four';
+/** The interface language (milestone 16). Lessons are written in English. */
+export type LanguageSetting = 'en' | 'es';
 
 export interface ProfileSettings {
   readonly profileId: string;
@@ -32,6 +34,7 @@ export interface ProfileSettings {
   readonly motion: MotionSetting;
   readonly sound: boolean;
   readonly deck: DeckSetting;
+  readonly language: LanguageSetting;
   /** Up to three games being studied now (PLAN.md 1.1, focus games). */
   readonly focus: readonly string[];
   /** The CPU level last chosen for each game. */

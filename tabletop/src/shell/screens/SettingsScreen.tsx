@@ -332,6 +332,31 @@ function AboutCard() {
   );
 }
 
+/** The interface language. Lessons stay in English for now; everything else follows this. */
+function LanguageCard() {
+  const language = useApp((s) => s.settings?.language ?? 'en');
+  const { updateSettings } = useApp.getState();
+  return (
+    <section className="card" aria-labelledby="language-title">
+      <div className="card-title">
+        <h2 id="language-title">{t('settings.language')}</h2>
+      </div>
+      <Segmented
+        label={t('settings.language')}
+        value={language}
+        options={[
+          { value: 'en' as const, label: 'English' },
+          { value: 'es' as const, label: 'Español' },
+        ]}
+        onChange={(value) => void updateSettings({ language: value })}
+      />
+      <p className="setting-detail" style={{ marginTop: 'var(--sp-2)' }}>
+        {t('settings.language.detail')}
+      </p>
+    </section>
+  );
+}
+
 export function SettingsScreen() {
   return (
     <Screen label={t('settings.title')}>
@@ -343,6 +368,7 @@ export function SettingsScreen() {
         <TableCard />
         <BackupCard />
         <LookCard />
+        <LanguageCard />
         <FoundationCard />
         <AboutCard />
       </div>

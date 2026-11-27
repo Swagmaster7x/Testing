@@ -418,6 +418,8 @@ const base = {
   'settings.look.club.detail': 'Dark warm wood, green felt, a brass accent.',
   'settings.look.daylight': 'Daylight',
   'settings.look.daylight.detail': 'Light paper and ink for bright rooms; the tables keep their felt.',
+  'settings.language': 'Language',
+  'settings.language.detail': 'The lessons are written in English; menus, tables, coaching and reference cards follow this choice.',
   'settings.backup': 'Backup',
   'settings.backup.intro': 'Everything on this device in one file: profiles, games, progress and settings.',
   'settings.backup.export': 'Export',

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { catalogGame } from '../games/catalog';
-import { t } from '../text';
+import { currentLanguage, setLanguage, t } from '../text';
 import { Toast } from './components/Toast';
 import { useReducedMotion } from './motion';
 import { NavRail } from './NavRail';
@@ -42,6 +42,9 @@ export function App() {
   const look = useApp((s) => s.settings?.look ?? 'club');
   const motion = useApp((s) => s.settings?.motion ?? 'system');
   const deck = useApp((s) => s.settings?.deck ?? 'two');
+  const language = useApp((s) => s.settings?.language ?? 'en');
+  // Text is read while rendering, so the language is set before anything below renders.
+  if (currentLanguage() !== language) setLanguage(language);
   const reduced = useReducedMotion(motion);
   const route = useRoute();
 
@@ -53,7 +56,8 @@ export function App() {
     document.documentElement.dataset.look = look;
     document.documentElement.dataset.motion = reduced ? 'reduced' : 'full';
     document.documentElement.dataset.deck = deck;
-  }, [look, reduced, deck]);
+    document.documentElement.lang = language;
+  }, [look, reduced, deck, language]);
 
   if (status === 'loading') return <CenterMessage>{t('app.loading')}</CenterMessage>;
   if (status === 'failed') return <CenterMessage>{t('app.failed')}</CenterMessage>;

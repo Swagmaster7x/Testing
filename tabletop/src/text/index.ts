@@ -1,12 +1,30 @@
-/** Looks up interface text. Unknown keys show the key itself, so a gap is visible, not blank. */
+/**
+ * Looks up interface text. Unknown keys show the key itself, so a gap is visible, not blank.
+ * The language is English or Spanish (milestone 16); a Spanish string missing from the Spanish
+ * catalogue falls back to the English one.
+ */
 import type { MessageKey } from './en';
 import { en } from './en';
+import { es } from './es';
 
 export type { MessageKey } from './en';
 
 export type Params = Readonly<Record<string, string | number>>;
+export type Language = 'en' | 'es';
+export const LANGUAGES: readonly Language[] = ['en', 'es'];
 
-const catalogue: Readonly<Record<string, string>> = en;
+let catalogue: Readonly<Record<string, string>> = en;
+let language: Language = 'en';
+
+/** Sets the interface language. Screens read text when they render, so re-render after this. */
+export function setLanguage(next: Language): void {
+  language = next;
+  catalogue = next === 'es' ? { ...en, ...es } : en;
+}
+
+export function currentLanguage(): Language {
+  return language;
+}
 
 export function hasText(key: string): key is MessageKey {
   return Object.prototype.hasOwnProperty.call(catalogue, key);
