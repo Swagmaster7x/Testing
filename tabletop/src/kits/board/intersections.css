@@ -1,0 +1,182 @@
+/* BoardKit intersections: a wooden Go board, slate and shell stones drawn as vectors. */
+.ib {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ib-lines line {
+  stroke: #3d2b18;
+  stroke-width: 3.4;
+  stroke-linecap: square;
+}
+
+.ib-star {
+  fill: #3d2b18;
+}
+
+.ib-coord {
+  fill: #5a4126;
+  font-family: var(--font-sans);
+  font-weight: 650;
+  pointer-events: none;
+}
+
+.ib-stone {
+  pointer-events: none;
+}
+
+.ib-drop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ib-drop var(--dur, 160ms) cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes ib-drop {
+  from {
+    transform: scale(1.18);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.ib-fade {
+  animation: ib-fade var(--dur, 220ms) ease-in forwards;
+}
+
+@keyframes ib-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.ib-dead {
+  opacity: 0.6;
+}
+
+.ib-ghost {
+  opacity: 0.55;
+}
+
+.ib-cross-on-black,
+.ib-cross-on-white {
+  stroke-width: 8;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.ib-cross-on-black {
+  stroke: #f1ebe0;
+}
+
+.ib-cross-on-white {
+  stroke: #2a2118;
+}
+
+.ib-own-black {
+  fill: #1b1814;
+  pointer-events: none;
+}
+
+.ib-own-white {
+  fill: #f6f1e7;
+  stroke: #8c8272;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.ib-atari {
+  fill: none;
+  stroke: #e0563b;
+  stroke-width: 8;
+  stroke-dasharray: 18 10;
+  pointer-events: none;
+}
+
+.ib-last-on-black {
+  fill: none;
+  stroke: #f1ebe0;
+  stroke-width: 7;
+  pointer-events: none;
+}
+
+.ib-last-on-white {
+  fill: none;
+  stroke: #2a2118;
+  stroke-width: 7;
+  pointer-events: none;
+}
+
+.ib-num-on-black,
+.ib-num-on-white,
+.ib-num-on-board {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.ib-num-on-black {
+  fill: #f1ebe0;
+}
+
+.ib-num-on-white {
+  fill: #2a2118;
+}
+
+.ib-num-on-board {
+  fill: #3d2b18;
+}
+
+/* The last stone played, when it carries a number instead of the ring. */
+.ib-num-last {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  fill: #e0563b;
+  pointer-events: none;
+}
+
+.ib-area {
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+.ib-mark {
+  pointer-events: none;
+}
+
+.ib-hit {
+  fill: transparent;
+  outline: none;
+  cursor: default;
+}
+
+.ib-hit[aria-disabled='false'] {
+  cursor: pointer;
+}
+
+.ib-hit:focus-visible {
+  fill: rgb(226 194 127 / 0.28);
+  stroke: var(--brass-1);
+  stroke-width: 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ib-drop,
+  .ib-fade {
+    animation: none;
+  }
+}
+
+:root[data-motion='reduced'] .ib-drop,
+:root[data-motion='reduced'] .ib-fade {
+  animation: none;
+}

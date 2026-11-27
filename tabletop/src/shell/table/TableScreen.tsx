@@ -4,6 +4,7 @@ import type { GameEvent, Seat } from '../../core/contract';
 import { outcomePoints } from '../../core/contract';
 import { EventQueue } from '../../core/events';
 import type { Json } from '../../core/json';
+import { isJsonObject } from '../../core/json';
 import type { GameRecord } from '../../core/record';
 import { canOpen, humanSeats, parseRecord } from '../../core/record';
 import { startState } from '../../core/replay';
@@ -198,8 +199,13 @@ function LiveTable({ ui, record: initial }: { ui: AnyGameUi; record: StoredRecor
   const playAgain = async () => {
     await controller.flush();
     const clock = record.clock ? { initialMs: record.clock.initialMs, incrementMs: record.clock.incrementMs } : null;
-    // Keep the table's rules (a preset or handicap) when the game says which ones to keep.
-    const config = ui.replayConfig ? ui.replayConfig(ui.def.codec.config.fromJSON(record.config)) : undefined;
+    // Play again under the same rules (a preset, a handicap, the board size, the house rules), never from a set-up position.
+    const recorded = isJsonObject(record.config) ? Object.fromEntries(Object.entries(record.config).filter(([key]) => key !== 'start')) : record.config;
+    const config = ui.replayConfig
+      ? ui.replayConfig(ui.def.codec.config.fromJSON(record.config))
+      : ui.rules || ui.options
+        ? ui.def.codec.config.fromJSON(recorded)
+        : undefined;
     const id = await startGame(ui, profileId, { level, side: mySeat, clock, ...(config !== undefined ? { config } : {}) });
     navigate(`/play/${id}`, { replace: true });
   };

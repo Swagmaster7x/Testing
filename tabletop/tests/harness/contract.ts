@@ -11,8 +11,9 @@ import type { GameRecord } from '../../src/core/record';
 import { newRecord, withAction } from '../../src/core/record';
 import { replay } from '../../src/core/replay';
 import { createRng } from '../../src/core/rng';
+import type { Rng } from '../../src/core/rng';
 
-export interface ContractOptions<S> {
+export interface ContractOptions<S, A = unknown> {
   /** Things a seat must not see in its view, written as they would appear in JSON. */
   readonly hidden?: (state: S, seat: Seat) => readonly string[];
   /** Game-specific invariants, such as piece conservation. Throw to fail. */
@@ -20,6 +21,11 @@ export interface ContractOptions<S> {
   readonly maxPlies?: number;
   /** The part of a view to search for leaks, leaving out history already shown to everyone (hands shown at the end of a deal). */
   readonly leakScope?: (view: unknown) => unknown;
+  /**
+   * Picks the random player's action; a uniform pick when absent. Games where uniform play
+   * hardly ever ends (Go needs two passes in a row) bias it, still choosing among legal actions.
+   */
+  readonly choose?: (legal: readonly A[], rng: Rng, state: S) => A;
 }
 
 export interface RandomGame<S, A> {
@@ -34,7 +40,7 @@ export function playRandomGame<S, A, C, V, E extends GameEvent>(
   def: GameDef<S, A, C, V, E>,
   config: C,
   seed: string,
-  options: ContractOptions<S> = {},
+  options: ContractOptions<S, A> = {},
 ): RandomGame<S, A> {
   const rng = createRng(`${seed}/moves`);
   let state = def.setup(config, createRng(seed));
@@ -58,7 +64,7 @@ export function playRandomGame<S, A, C, V, E extends GameEvent>(
     }
     const legal = def.legal(state, seat);
     if (legal.length === 0) throw new Error(`${def.id}: the seat to move has no legal action`);
-    const action = rng.pick(legal);
+    const action = options.choose ? options.choose(legal, rng, state) : rng.pick(legal);
     const roundTrip = def.codec.action.fromJSON(def.codec.action.toJSON(action));
     if (findLegal(def, state, seat, roundTrip) === null) throw new Error(`${def.id}: an action changed through its JSON codec`);
     const text = def.codec.action.toText(action);
@@ -75,7 +81,7 @@ export function playRandomGame<S, A, C, V, E extends GameEvent>(
   return { record, final: state, actions, states };
 }
 
-function checkState<S, A, C, V, E extends GameEvent>(def: GameDef<S, A, C, V, E>, state: S, options: ContractOptions<S>): void {
+function checkState<S, A, C, V, E extends GameEvent>(def: GameDef<S, A, C, V, E>, state: S, options: ContractOptions<S, A>): void {
   options.invariant?.(state);
   const json = def.codec.state.toJSON(state);
   const back = def.codec.state.fromJSON(JSON.parse(JSON.stringify(json)) as Json);

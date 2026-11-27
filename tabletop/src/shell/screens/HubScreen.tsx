@@ -86,6 +86,9 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
   const [side, setSide] = useState<string>(ui.sides[0]?.id ?? '');
   const [clockId, setClockId] = useState<string>(rememberedClock ?? clocks[0]?.id ?? '');
   const [busy, setBusy] = useState(false);
+  // The rules at this table, for games that have options (a link's set-up wins).
+  const [rules, setRules] = useState<unknown>(() => (setup !== undefined ? setup : ui.rules ? ui.def.defaultConfig : undefined));
+  const RulesPicker = ui.rules?.Picker;
   useEscape(onClose);
   const start = async () => {
     setBusy(true);
@@ -100,7 +103,7 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
       level,
       side: choice?.seat ?? 'either',
       ...(seed ? { seed } : {}),
-      ...(setup !== undefined ? { config: setup } : options ? { config } : setupPreset ? { config: setupPreset.config } : {}),
+      ...(setup !== undefined ? { config: setup } : RulesPicker ? { config: rules } : options ? { config } : setupPreset ? { config: setupPreset.config } : {}),
       clock: clock && clock.initialMs > 0 ? { initialMs: clock.initialMs, incrementMs: clock.incrementMs } : null,
     });
     navigate(`/play/${id}`);
@@ -197,6 +200,11 @@ function PlayDialog({ ui, profileId, active, seed, setup, now, rating, onClose }
                   ))}
                 </div>
               ) : null}
+            </div>
+          ) : null}
+          {RulesPicker && setup === undefined ? (
+            <div className="setup-row wide">
+              <RulesPicker value={rules} onChange={setRules} />
             </div>
           ) : null}
           {clocks.length > 0 ? (

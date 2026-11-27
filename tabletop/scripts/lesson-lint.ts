@@ -18,6 +18,8 @@ import { DOMINOES_LESSONS, dominoesLessonGame } from '../src/games/dominoes/lear
 import { dominoesVerifier } from '../src/games/dominoes/learn/verify';
 import { CHESS_LESSONS, chessLessonGame } from '../src/games/chess/learn';
 import { chessVerifier } from '../src/games/chess/learn/verify';
+import { GO_LESSONS, goLessonGame } from '../src/games/go/learn';
+import { goVerifier } from '../src/games/go/learn/verify';
 import { lessonGames } from '../src/games/lessons';
 import { SHOGI_LESSONS, shogiLessonGame } from '../src/games/shogi/learn';
 import type { ClaimCache } from '../src/games/shogi/learn/verify';
@@ -105,6 +107,7 @@ const SUITES: Record<string, Suite> = {
   brisca: { lessons: BRISCA_LESSONS, game: briscaLessonGame, verifier: () => briscaVerifier },
   dominoes: { lessons: DOMINOES_LESSONS, game: dominoesLessonGame, verifier: () => dominoesVerifier },
   shogi: { lessons: SHOGI_LESSONS, game: shogiLessonGame, verifier: () => shogiVerifier(shogiCache) },
+  go: { lessons: GO_LESSONS, game: goLessonGame, verifier: () => goVerifier() },
 };
 
 const problems: string[] = [];

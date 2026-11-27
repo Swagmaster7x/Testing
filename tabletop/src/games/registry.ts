@@ -7,6 +7,7 @@ const loaders: Record<string, () => Promise<AnyGameUi>> = {
   brisca: () => import('./brisca/ui').then((m) => m.briscaUi as unknown as AnyGameUi),
   dominoes: () => import('./dominoes/ui').then((m) => m.dominoesUi as unknown as AnyGameUi),
   shogi: () => import('./shogi/ui').then((m) => m.shogiUi as unknown as AnyGameUi),
+  go: () => import('./go/ui').then((m) => m.goUi as unknown as AnyGameUi),
 };
 
 export function isPlayable(gameId: string): boolean {

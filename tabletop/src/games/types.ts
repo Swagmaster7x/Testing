@@ -182,6 +182,8 @@ export interface GameUi<S, A, C, V, E extends GameEvent> {
   readonly presets?: readonly SetupPreset<C>[];
   /** The options "Play again" keeps from a finished game (presets, not a set-up position); the standard game when absent. */
   replayConfig?(config: C): C;
+  /** "Rules at this table" (PLAN.md 2.3): the game's own picker for a new game's options, presets first. */
+  readonly rules?: { readonly Picker: ComponentType<{ value: C; onChange: (config: C) => void }> };
 }
 
 export type AnyGameUi = GameUi<unknown, unknown, unknown, unknown, GameEvent>;

@@ -40,6 +40,7 @@ const PACKS: Readonly<Record<string, () => Promise<PracticePack>>> = {
   brisca: async () => (await import('./brisca/practice')).loadBriscaPractice(),
   dominoes: async () => (await import('./dominoes/practice')).loadDominoesPractice(),
   shogi: async () => (await import('./shogi/practice')).loadShogiPractice(),
+  go: async () => (await import('./go/practice')).loadGoPractice(),
 };
 
 export function hasPractice(gameId: string): boolean {

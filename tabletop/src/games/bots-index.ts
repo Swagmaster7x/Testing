@@ -12,6 +12,7 @@ const loaders: Record<string, Loader> = {
   noughts: () => import('./noughts/bots').then((m) => m.noughtsBots as BotSet<unknown, unknown>),
   brisca: () => import('./brisca/bots').then((m) => m.briscaBots as unknown as BotSet<unknown, unknown>),
   dominoes: () => import('./dominoes/bots').then((m) => m.dominoesBots as unknown as BotSet<unknown, unknown>),
+  go: () => import('./go/bots').then((m) => m.goBots as BotSet<unknown, unknown>),
   chess: (context) =>
     Promise.all([import('./chess/bots'), import('../ai/uci'), import('../ai/engines/stockfish-web')]).then(
       ([bots, uci, web]) => bots.chessBots(() => new uci.UciEngine(web.stockfishWebTransport(context.assetsBase))) as BotSet<unknown, unknown>,
