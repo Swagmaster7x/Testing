@@ -101,7 +101,7 @@ Built in its own checkout while M5 (Texas Hold'em) was built on the main branch;
 | 6. Coach helps and a tracker a player keeps in their head | Rows to go for every player (the race count), where a marble can go, the slow-move warning, a hint |
 | 7. Review with key moments, reasons, play on | Yes |
 | 8. Save, resume, replay, reference card | Resume and the reference card in e2e; replay in the property tests |
-| 9. End to end at phone landscape; screenshots looked at | See below |
+| 9. End to end at phone landscape; screenshots looked at | `tests/e2e/chinese-checkers.spec.ts` (9 tests: a race to the end with its review and play on from a position, hop chains on the opening board, three players and the board turned for Blue, resuming, a lesson, the free-play race lesson against the computer, a longest-hop problem and a race endgame, both drills, the reference card) and `tests/e2e/pass-and-play.spec.ts` (4 tests: the Brisca cover, Chinese Checkers turning for each person, the chess board flipping, a CPU among three people) pass at 844×390, 1180×820 and 1440×900 (39 runs). The whole suite at the three sizes: 213 passed, 6 skipped by design, none failed (before the last small fixes; the two specs above were run again after them). Every screenshot spec passes (8). The 22 screenshots in `screenshots/m7/` and the table at the two larger sizes were looked at; fixed after looking: the counters overlapping their label with six players, arrows too short to see for one-hole moves in review, a reason that repeated the better move, a review scale that called a one-row slip a mistake, and Brisca's "Cards up: see the CPU's hand" at a table of people |
 | 10. Progress notes | This file |
 
 The ladder (`npm run ladder -- chinese-checkers 30`: two players, default rules, seats alternating,
@@ -124,9 +124,11 @@ within 1.2 rows of the best) cost a lot: depth 4 beat that 40 to 0, which made i
 first chose the longest jump with any marble and level 2 beat it only 0.53 to 0.85 depending on the
 seeds; level 1 now favours its lead marbles, and level 2 beats it 97 to 3 over 100 games.
 
-With more players (one seat at the higher level, the rest at the lower, the seat going round, mean
-share where 0.5 is even): three players, level 3 against level 2 0.833 and level 6 against level 3
-0.875 over 12 games; four players, level 2 against level 1 0.611.
+With more players (one seat at the higher level, every other seat at the lower, the seat going
+round, mean share of the places where 0.5 is even; short runs, 12 games for three players and 6 for
+six): three players, level 2 against level 1 0.917, 3 against 2 0.833, 4 against 3 0.667, 5 against
+4 0.583, 6 against 5 0.625, and 6 against 3 0.875; four players, level 2 against level 1 0.611; six
+players, level 3 against level 2 0.633. Every step is ahead, by less than with two players.
 
 Speed on this machine (a shared four-core box): level 6 takes 0.1 to 0.5 s for a two-player move in
 the middle game (up to 250,000 nodes), levels 1 to 5 under 0.05 s; with six players every level
