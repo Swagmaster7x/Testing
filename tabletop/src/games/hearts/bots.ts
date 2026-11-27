@@ -37,7 +37,7 @@ interface LevelParams {
 export const LEVEL_PARAMS: Readonly<Record<number, LevelParams>> = {
   1: { samples: 0, policy: 1 },
   2: { samples: 0, policy: 2 },
-  3: { samples: 16, policy: 2 },
+  3: { samples: 6, policy: 2 },
   4: { samples: 48, policy: 2 },
 };
 

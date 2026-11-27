@@ -24,8 +24,8 @@ export const enSpades = {
   'spades.hand-over.bags': 'Ten bags: minus 100.',
   'spades.side.us': 'Us',
   'spades.side.them': 'Them',
-  'spades.move.bid': 'bids {n}',
-  'spades.move.look': 'looks',
+  'spades.move.bid': 'Bid {n}',
+  'spades.move.look': 'Look',
 
   'spades.help.tricks': 'Tricks against the bids',
   'spades.help.whatWins': 'Cards that win the trick',

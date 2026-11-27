@@ -18,7 +18,7 @@ export const enHearts = {
   'hearts.received': 'The {n} ringed cards were passed to you.',
   'hearts.moon': '{who} shot the moon!',
   'hearts.hand-over': 'Hand over: points this hand, and totals',
-  'hearts.move.pass': 'passes {cards}',
+  'hearts.move.pass': 'Pass {cards}',
 
   'hearts.help.points': 'Points taken so far',
   'hearts.help.ducks': 'Cards that duck',

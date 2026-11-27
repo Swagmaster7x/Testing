@@ -151,13 +151,13 @@ export function GinSurface({ state, mySeats, canAct, legal, anim, onAction, onSk
     placed.push({ key: up ? card : `back-${i}`, face: up ? face(card) : null, back: BACK, x: cx + (i - (theirs.length - 1) / 2) * tStep, y: gap + (small * 1.5) / 2, z: 20 + i, scale: small / cardW, label: up ? t('gin.their-known', { card: cardName(card) }) : undefined });
   });
 
-  // The stock and the pile.
+  // The stock and the pile. The stock's top card (the one you tap) sits above the backs under it.
   const stockX = cx - cardW * 0.85;
   const pileX = cx + cardW * 0.85;
   const canStock = act && (has('stock') || false);
   const canPile = act && (has('pile') || has('take'));
   for (let i = 0; i < Math.min(5, d.stock); i++) {
-    placed.push({ key: i === 0 ? 'stock' : `stock-${i}`, face: null, back: BACK, x: stockX - i * 0.6, y: midY - i * 0.6, z: 30 + i, label: i === 0 ? t('gin.stock', { n: d.stock }) : undefined, interactive: i === 0 && canStock });
+    placed.push({ key: i === 0 ? 'stock' : `stock-${i}`, face: null, back: BACK, x: stockX - i * 0.6, y: midY - i * 0.6, z: i === 0 ? 36 : 30 + i, label: i === 0 ? t('gin.stock', { n: d.stock }) : undefined, interactive: i === 0 && canStock });
   }
   const shown = d.discard.slice(-4);
   shown.forEach((card, i) => {

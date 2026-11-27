@@ -22,6 +22,7 @@ import type { Lesson, LessonStep } from '../../src/teach/lesson';
 import { lintLesson } from '../../src/teach/lint';
 import type { LessonGame } from '../../src/teach/runner';
 import type { LessonVerifier } from '../../src/teach/lint';
+import { canAdvance, chooseOption, currentQuestion, currentStep, next, startLesson, submitMove, submitNumber, valuesAt } from '../../src/teach/runner';
 import { enBlackjack } from '../../src/text/games/blackjack';
 
 const random = (seed: string) => {
@@ -36,6 +37,32 @@ const SUITES: { name: string; drills: readonly DrillDef[]; game: LessonGame<neve
   { name: 'blackjack', drills: BLACKJACK_DRILLS, game: blackjackLessonGame as never, verifier: blackjackVerifier, lessons: BLACKJACK_LESSONS },
 ];
 
+/** Walks a lesson answering right; returns every number it asked for. */
+function numberAnswers(lesson: Lesson, game: LessonGame<never>): unknown[] {
+  const out: unknown[] = [];
+  let s = startLesson(lesson);
+  for (let guard = 0; guard < 500; guard++) {
+    const step = currentStep(s);
+    if (!step) break;
+    if (canAdvance(s) || step.kind === 'say' || step.kind === 'show') {
+      const before = s;
+      s = next(game, s);
+      if (s === before) break;
+      continue;
+    }
+    const q = currentQuestion(s);
+    if (!q) break;
+    const values = valuesAt(game, s);
+    if (q.kind === 'askMove') s = submitMove(game, s, q.accept[0] as string, values);
+    else if (q.kind === 'askChoice') s = chooseOption(game, s, q.options.findIndex((o) => o.correct), values);
+    else if (q.kind === 'askNumber') {
+      out.push(values[q.answer]);
+      s = submitNumber(game, s, Number(values[q.answer]), values);
+    } else break;
+  }
+  return out;
+}
+
 describe('classic card pack practice', () => {
   for (const suite of SUITES) {
     it(`${suite.name}: at least three kinds of drill, each a sound exercise the lesson linter passes`, async () => {
@@ -48,6 +75,19 @@ describe('classic card pack practice', () => {
         }
       }
     }, 120_000);
+
+    it(`${suite.name}: every number asked for can be typed on the number pad (a whole number, 0 to 999)`, () => {
+      const next = random(`pad/${suite.name}`);
+      const lessons = [...suite.lessons, ...suite.drills.flatMap((d) => Array.from({ length: 30 }, () => d.make(next)))];
+      let asked = 0;
+      for (const lesson of lessons) {
+        for (const n of numberAnswers(lesson, suite.game)) {
+          asked++;
+          expect(Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 999, `${lesson.id}: ${String(n)}`).toBe(true);
+        }
+      }
+      expect(asked).toBeGreaterThan(20);
+    });
 
     it(`${suite.name}: lessons cover stages 0 to 2 and the Table-ready track, and the checklist points at real lessons and drills`, () => {
       for (const stage of ['stage-0', 'stage-1', 'stage-2', 'table'] as const) expect(suite.lessons.some((l) => l.stage === stage), stage).toBe(true);

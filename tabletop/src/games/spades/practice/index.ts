@@ -11,7 +11,7 @@ import { cardShort } from '../../classic/names';
 import type { Play } from '../../classic/tricks';
 import { trickWinner } from '../../classic/tricks';
 import { spadesLessonGame } from '../learn/game';
-import { position, TRUMP } from '../rules';
+import { position, scoreHand, STANDARD, TRUMP } from '../rules';
 
 type Random = () => number;
 
@@ -48,8 +48,18 @@ function scoreDrill(random: Random): Lesson {
   const last = draw(random, 4, DECK.filter((c) => suitOf(c) === 'h'));
   const bagCount = [Math.floor(random() * 10), Math.floor(random() * 10)];
   const start = position({ hands: last.map((c) => [c]), leader: 0, bids, won, bagCount });
+  const score = scoreHand(STANDARD, bids, [false, false, false, false], won, bagCount).deltas[0] ?? 0;
+  if (score === 0) return scoreDrill(random);
   return lesson('score', 'Score the hand', start, [
-    { kind: 'askNumber', text: 'Your side bid {bid:us} and has won {won:us}, with one trick to play, and carries {bags:us} bags. If you lose the last trick, what does your side score for the hand (any ten-bag penalty included)?', answer: 'score:now', success: 'Yes: {score:now}.' },
+    {
+      kind: 'askChoice',
+      text: 'Your side bid {bid:us} and has won {won:us}, with one trick to play, and carries {bags:us} bags. If you lose the last trick, does your side score points for the hand or lose them (any ten-bag penalty included)?',
+      options: [
+        { text: 'It scores points', correct: score > 0, why: score > 0 ? 'Yes: the bid is made.' : 'No: look again at the bid and the bags.' },
+        { text: 'It loses points', correct: score < 0, why: score < 0 ? 'Yes.' : 'No: the bid is made, and no penalty comes.' },
+      ],
+    },
+    { kind: 'askNumber', text: 'How many points?', answer: 'score:size', success: 'Yes: {score:now} for the hand.' },
   ]);
 }
 

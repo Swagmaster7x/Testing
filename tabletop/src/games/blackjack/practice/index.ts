@@ -15,7 +15,7 @@ import { DECK } from '../../classic/cards';
 import { blackjackLessonGame } from '../learn/game';
 import { blackjack, position, STANDARD } from '../rules';
 import { basicFor } from '../bots';
-import { handTotal } from '../strategy';
+import { handTotal, hiLo } from '../strategy';
 
 type Random = () => number;
 
@@ -61,7 +61,15 @@ function countDrill(random: Random): Lesson {
   const up = cards[cards.length - 1] as Card;
   if (handTotal(hand).total === 21) return countDrill(random);
   const start = position({ hand, up, others: rest });
-  return lesson('count', 'Running count', start, [{ kind: 'askNumber', text: 'Count every card on the table: two to six add one, tens, pictures and aces take one away. What is the running count?', answer: 'count:running', success: 'Yes, {count:running}.' }]);
+  const running = [...hand, ...rest.flat(), up].reduce((sum, c) => sum + hiLo(c), 0);
+  const ask = { kind: 'askChoice' as const, text: 'Count every card on the table: two to six add one, tens, pictures and aces take one away. Where does the running count stand?' };
+  const options = [
+    { text: 'Above zero', correct: running > 0, why: running > 0 ? 'Yes: more low cards are gone.' : 'No.' },
+    { text: 'At zero', correct: running === 0, why: running === 0 ? 'Yes: the low and high cards cancel out.' : 'No.' },
+    { text: 'Below zero', correct: running < 0, why: running < 0 ? 'Yes: more high cards are gone.' : 'No.' },
+  ];
+  if (running === 0) return lesson('count', 'Running count', start, [{ ...ask, options }]);
+  return lesson('count', 'Running count', start, [{ ...ask, options }, { kind: 'askNumber', text: running > 0 ? 'How far above zero?' : 'How far below zero?', answer: 'count:size', success: 'Yes: the running count is {count:running}.' }]);
 }
 
 /** What a hand pays. */

@@ -32,7 +32,10 @@ function meldyHand(random: Random, n: number, avoid: ReadonlySet<Card> = new Set
     for (let m = 0; m < melds; m++) {
       if (random() < 0.5) {
         const rank = Math.floor(random() * 13);
-        const suits = [0, 1, 2, 3].sort(() => random() - 0.5).slice(0, 3);
+        // Three of the four suits: leave one out at random (a sort with a random comparator would
+        // depend on the engine, and the drill must be the same everywhere for a seed).
+        const suits = [0, 1, 2, 3];
+        suits.splice(Math.floor(random() * 4), 1);
         for (const s of suits) out.add(cardAt(s, rank));
       } else {
         const suit = Math.floor(random() * 4);

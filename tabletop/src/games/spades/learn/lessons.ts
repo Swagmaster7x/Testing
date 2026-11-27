@@ -101,7 +101,7 @@ export const SPADES_LESSONS: readonly Lesson[] = [
     start: position({ hands: [L(['Ah']), L(['2h']), L(['3h']), L(['4h'])], leader: 0, bids: [4, 3, 2, 4], won: [3, 3, 2, 4] }),
     steps: [
       { kind: 'say', text: 'At the end of a hand a side that took at least its bid scores {trick:value} a trick bid, and one more point for each trick over (a bag). A side short of its bid is set: it loses {trick:value} a trick bid.' },
-      { kind: 'askNumber', text: 'Your side bid {bid:us} and has {won:us} tricks, with one to play. If you lost the last trick, what would your side score?', answer: 'score:now', success: 'Yes: set, {score:now}.' },
+      { kind: 'askNumber', text: 'Your side bid {bid:us} and has {won:us} tricks, with one to play. If you lost the last trick your side would be set: how many points would it lose?', answer: 'score:size', success: 'Yes: set, {score:now}.' },
       { kind: 'askNumber', text: 'Your ace takes the last trick. What does your side score now?', answer: 'score:if-mine', success: 'Yes, {score:if-mine}: one trick made all that difference.' },
     ],
   },

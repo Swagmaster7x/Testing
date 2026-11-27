@@ -42,6 +42,7 @@ export function blackjackComputed(state: BlackjackState): Record<string, number>
   out['cost:insurance'] = bet / 2;
   const c = counts(blackjack.view(state, STUDENT));
   out['count:running'] = c.running;
+  out['count:size'] = Math.abs(c.running);
   out['count:cards'] = state.seen.length;
   return out;
 }

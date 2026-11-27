@@ -32,6 +32,7 @@ export function spadesComputed(state: SpadesState): Record<string, number> {
   out['spades:mine'] = mine.filter((c) => c[1] === 's').length;
   out['score:now'] = scoreHand(state.config, bids, state.blind, won, state.bagCount).deltas[0] ?? 0;
   out['score:if-mine'] = scoreHand(state.config, bids, state.blind, won.map((n, seat) => (seat === STUDENT ? n + 1 : n)), state.bagCount).deltas[0] ?? 0;
+  out['score:size'] = Math.abs(out['score:now']);
   out['score:us'] = state.scores[0] ?? 0;
   out['bags:us'] = state.bagCount[0] ?? 0;
   out['bags:left'] = BAG_LIMIT - (state.bagCount[0] ?? 0);
