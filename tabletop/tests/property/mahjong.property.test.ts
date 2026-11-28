@@ -15,6 +15,8 @@ import { countsOf, kindOf } from '../../src/games/mahjong/core/tiles';
 import { HK_DEFAULTS, HK_PRESETS } from '../../src/games/mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS, RIICHI_PRESETS } from '../../src/games/mahjong/styles/riichi';
 import { CO_DEFAULTS, CO_PRESETS, withoutFlowers } from '../../src/games/mahjong/styles/chinese-official';
+import { TW_DEFAULTS, TW_PRESETS } from '../../src/games/mahjong/styles/taiwanese';
+import { setsIn } from '../../src/games/mahjong/core/engine';
 import { checkReplay, playRandomGame } from '../harness/contract';
 
 /** Everything a seat may not see: other hands (until they are laid down at the end), the wall and the seed. */
@@ -74,7 +76,9 @@ function efficient(legal: readonly MahjongAction[], rng: Rng, state: MahjongStat
   const win = legal.find((a) => a.type === 'win');
   if (win) return win;
   const seat = state.turn;
-  const r = { shapes: { sevenPairs: true, thirteenOrphans: true }, sets: 4 };
+  // The style's own shapes and hand size (five sets for a 16-tile hand).
+  const rules = engine.rules(state.config);
+  const r = { shapes: rules.shapes, sets: setsIn(rules) };
   const melds = (state.melds[seat] ?? []).length;
   const counts = countsOf(state.hands[seat] ?? []);
   if (state.phase === 'claim') {
@@ -114,6 +118,9 @@ const configs: MahjongConfig[] = [
   ...CO_PRESETS.map((p): MahjongConfig => ({ style: 'chinese-official', options: { ...p.options, length: 'hand' } })),
   { style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'east' } },
   { style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'hand', minPoints: 0, robKong: 'off', accountOnce: 'twice', mixedKongs: 'separate', twoConcealedKongs: 8 } },
+  ...TW_PRESETS.map((p): MahjongConfig => ({ style: 'taiwanese', options: { ...p.options, length: 'hand' } })),
+  { style: 'taiwanese', options: { ...TW_DEFAULTS, length: 'east' } },
+  { style: 'taiwanese', options: { ...TW_DEFAULTS, length: 'hand', deadWall: 0, pairsAndPung: 'off', flowerWins: 'off', robKong: 'off', allHonours: 8, base: 300, perTai: 100 } },
 ];
 
 describe('mahjong over random games', () => {
@@ -213,4 +220,21 @@ describe('mahjong over random games', () => {
     }
     expect(wins).toBeGreaterThan(0);
   }, 120_000);
+
+  it('Taiwanese games played toward winning deal sixteen tiles, pay base + tai × per tai, and keep the dealer and streak', () => {
+    let wins = 0;
+    for (let i = 0; i < 16; i++) {
+      const config: MahjongConfig = { style: 'taiwanese', options: { ...TW_DEFAULTS, ...(i % 2 === 0 ? {} : { multipleWinners: 'first', dealerKeeps: 'win' }), length: 'east' } };
+      const game = playRandomGame(mahjong, config, `tw-${i}`, { hidden, invariant, leakScope, choose: efficient, maxPlies: 20_000 });
+      checkReplay(mahjong, game);
+      for (const r of game.final.results) {
+        for (const w of r.wins) {
+          wins++;
+          // Each payer pays the base and 20 a tai; a dealer who pays a non-dealer adds its own tai.
+          if (w.from !== null && r.wins.length === 1 && w.from !== r.dealer) expect(r.deltas[w.seat]).toBe(100 + 20 * w.score.total);
+        }
+      }
+    }
+    expect(wins).toBeGreaterThan(0);
+  }, 180_000);
 });

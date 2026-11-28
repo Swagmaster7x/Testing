@@ -105,4 +105,29 @@ describe('the Mahjong calculator', () => {
       expect(r.belowMinimum).toBe(true);
     });
   });
+
+  describe('a Taiwanese hand of sixteen tiles and the winning one', () => {
+    const tw = STYLES['taiwanese']!;
+    // 1-2-3 and 4-5-6 characters, 7-8-9 dots, 2-3-4 and 5-6-7 bamboo, a pair of 9 dots; the 4 bamboo won it.
+    const hand = [m(1), m(2), m(3), m(4), m(5), m(6), p(7), p(8), p(9), s(2), s(3), s(4), s(5), s(6), s(7), p(9), p(9)];
+    const base = { ...EMPTY_INPUT, hand, winning: 11 };
+
+    it('wants seventeen tiles (and one more for each kong)', () => {
+      expect(tilesWanted({ ...EMPTY_INPUT, hand: hand.slice(0, 13) }, tw.rules(tw.defaults).handSize)).toBe(4);
+      expect(tilesWanted(base, 16)).toBe(0);
+      expect(tilesWanted({ ...EMPTY_INPUT, hand: hand.slice(0, 11), sets: [{ type: 'kong', kind: RED, concealed: true }] }, 16)).toBe(3);
+    });
+
+    it('East self-drawn: concealed and self-drawn and the dealer, base + tai × 20 from each', () => {
+      const r = calculate(tw, tw.defaults, base);
+      expect(r.score?.lines.map((l) => l.id)).toEqual(['tw-concealed-self-drawn', 'tw-dealer']);
+      expect(r.payments).toEqual([540, -180, -180, -180]);
+    });
+
+    it('South wins on the dealer’s discard: the dealer pays its streak too', () => {
+      const r = calculate(tw, tw.defaults, { ...base, seatWind: 1, from: 3, streak: 2 });
+      expect(r.score?.total).toBe(3);
+      expect(r.payments).toEqual([260, 0, 0, -260]);
+    });
+  });
 });

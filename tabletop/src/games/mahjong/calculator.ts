@@ -43,6 +43,8 @@ export interface CalcInput {
   readonly underIndicators: readonly Kind[];
   /** Chinese Official: the winning tile was the last of its kind (the other three face up). */
   readonly lastOfKind?: boolean;
+  /** Taiwanese: how many hands in a row the dealer (East) has kept the deal. */
+  readonly streak?: number;
 }
 
 export const EMPTY_INPUT: CalcInput = { hand: [], winning: -1, sets: [], seatWind: 0, prevailingWind: 0, from: null, bonus: [], lastTile: false, lastDiscard: false, afterKong: false, robbed: false, ready: 0, oneShot: false, redFives: 0, indicators: [], underIndicators: [] };
@@ -125,6 +127,7 @@ export function contextOf(input: CalcInput): WinContext {
     heavenly: false,
     earthly: false,
     shown: input.lastOfKind ? 3 : 0,
+    counter: input.streak ?? 0,
   };
 }
 
@@ -151,6 +154,6 @@ export function calculate(style: Style, options: StyleOptions, input: CalcInput)
   const raw = scored ?? style.score(ctx, lowest);
   if (!scored) return { score: raw, belowMinimum: raw !== null, payments: [] };
   const dealer: Seat = (4 - input.seatWind) % 4;
-  const payments = style.settle({ wins: [{ seat: 0, from: ctx.from, tile: tileId(ctx.tile, 0), score: scored, robbed: ctx.robbed }], dealer, seats: 4 }, options);
+  const payments = style.settle({ wins: [{ seat: 0, from: ctx.from, tile: tileId(ctx.tile, 0), score: scored, robbed: ctx.robbed }], dealer, seats: 4, counter: input.streak ?? 0 }, options);
   return { score: scored, belowMinimum: false, payments };
 }

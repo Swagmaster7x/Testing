@@ -90,6 +90,11 @@ export interface StyleRules {
   readonly startScore?: number;
   readonly ready?: ReadyDeclaration;
   readonly aborts?: AbortRules;
+  /**
+   * Wins made by the bonus tiles alone (Taiwanese): a seat that sets aside all eight wins at once;
+   * a seat holding seven wins when another seat sets aside the eighth, which that seat pays.
+   */
+  readonly flowerWins?: { readonly eight: boolean; readonly robSeventh: boolean };
 }
 
 /** Everything a scorer needs to know about a complete hand and how it was won. */
@@ -135,6 +140,8 @@ export interface WinContext {
   readonly shown?: number;
   /** The counter on the table (repeated deals), for styles that score it. */
   readonly counter?: number;
+  /** A win by the bonus tiles alone (the hand need not be complete): all eight, or seven robbing the eighth. */
+  readonly flowerWin?: 'eight' | 'seven';
 }
 
 /** One scoring pattern in a hand, by id; the text catalogue names it. */
