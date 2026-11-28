@@ -1,11 +1,13 @@
 /**
  * Milestone 14c screenshots: Sichuan Bloody at the table (the exchange, the void, a hand going on
  * after a win, the result), in Learn and Practice, the reference card and the calculator, at 844 ×
- * 390 (twice the pixels), then the table on a tablet and a laptop.
+ * 390 (twice the pixels), then the table on a tablet and a laptop. Then American: the rules, the
+ * Charleston with its vote and courtesy pass, an exposure with jokers, the result, the lessons, the
+ * drill, the card editor, the calculator and the reference card, and the table on a tablet and a laptop.
  */
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { choosePassOrVoid, playOnToEnd, startMahjong } from './mahjong-helpers';
+import { choosePassOrVoid, playOnToEnd, playToEnd, startMahjong } from './mahjong-helpers';
 
 const DIR = 'screenshots/m14c';
 const shot = (page: Page, name: string) => page.screenshot({ path: `${DIR}/${name}.png` });
@@ -89,5 +91,91 @@ test('milestone 14c screens: sichuan on a tablet and a laptop', async ({ page })
     await shot(page, `s20-${name}-void`);
     await choosePassOrVoid(page);
     await sichuanHand(page, `s21-${name}`);
+  }
+});
+
+test('milestone 14c screens: american', async ({ page }) => {
+  test.setTimeout(600_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+
+  await page.goto('/#/games/mahjong?seed=am-1');
+  await page.getByRole('button', { name: /^Play/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('radio', { name: 'American, League table' }).click();
+  await dialog.getByRole('button', { name: 'Change the rules' }).click();
+  await expect(dialog.getByRole('radiogroup', { name: 'Second Charleston' })).toBeVisible();
+  await shot(page, 'a01-rules');
+  await page.keyboard.press('Escape');
+
+  await startMahjong(page, { seed: 'am-1', level: 2, preset: /^American, League/, oneHand: true });
+  await expect(page.locator('.mj-pass-prompt')).toBeVisible({ timeout: 45_000 });
+  await shot(page, 'a02-charleston');
+  const tiles = page.locator('button.mj-tile:not([aria-label="Joker"])');
+  for (const i of [0, 1, 2]) await tiles.nth(i).click();
+  await shot(page, 'a03-charleston-picked');
+  await page.locator('.mj-pass-prompt .mj-call[data-call="pass-tiles"]').click();
+  // On through the Charleston: the vote and the courtesy pass get a shot each.
+  for (let i = 0; i < 12; i++) {
+    const prompt = page.locator('.mj-pass-prompt');
+    await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 45_000 });
+    // The prompt waits for the passing animation; in play, the middle says to throw instead.
+    await expect(page.locator('.mj-prompt, .mj-centre-tip').first()).toBeVisible({ timeout: 15_000 });
+    if (!(await prompt.isVisible())) break;
+    const title = (await prompt.textContent()) ?? '';
+    if (/second Charleston\?/.test(title)) await shot(page, 'a04-vote');
+    if (/Courtesy/.test(title)) await shot(page, 'a05-courtesy');
+    await choosePassOrVoid(page);
+  }
+  await page.getByRole('switch', { name: 'Tiles from ready and useful tiles' }).click();
+  await shot(page, 'a06-table');
+  await playToEnd(page, 'drawn', 400);
+  await expect(page.locator('.mj-result')).toBeVisible();
+  await shot(page, 'a07-result');
+
+  await page.goto('/#/learn/mahjong.4.american-jokers');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await shot(page, 'a08-lesson-expose');
+  await page.locator('.mj-call[data-call="expose"]').first().click();
+  await shot(page, 'a09-lesson-exposed');
+  await page.goto('/#/learn/mahjong.4.american-exchange');
+  await page.getByRole('button', { name: 'Next' }).click();
+  await shot(page, 'a10-lesson-swap');
+  await page.goto('/#/practice/mahjong/drill-mahjong-american-pay?seed=shots');
+  await expect(page.locator('.lesson-text')).toContainText('Which hand');
+  await shot(page, 'a11-drill');
+  await page.goto('/#/tools/mahjong-card');
+  await page.getByRole('button', { name: 'Start from the practice card' }).click();
+  await shot(page, 'a12-card-editor');
+  await page.getByRole('textbox').fill('title: Mine\n## Evens\nFFF 2222a 44b 666c 88a = 25 X\nFFF 2222x 44b = 25 X\n');
+  await shot(page, 'a13-card-errors');
+  await page.goto('/#/tools/mahjong');
+  await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'American' }).click();
+  await page.locator('.calc-card-hand').nth(3).click();
+  await shot(page, 'a14-calculator');
+  await page.locator('.calc-result').scrollIntoViewIfNeeded();
+  await shot(page, 'a14b-calculator-result');
+  await page.goto('/#/games/mahjong/reference');
+  await page.getByRole('heading', { name: 'The practice card' }).scrollIntoViewIfNeeded();
+  await shot(page, 'a15-reference');
+});
+
+test('milestone 14c screens: american on a tablet and a laptop', async ({ page }) => {
+  test.setTimeout(400_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const [name, size] of [
+    ['tablet', { width: 1180, height: 820 }],
+    ['laptop', { width: 1440, height: 900 }],
+  ] as const) {
+    await page.setViewportSize(size);
+    await startMahjong(page, { seed: 'am-1', level: 2, preset: /^American, League/, oneHand: true });
+    await expect(page.locator('.mj-pass-prompt')).toBeVisible({ timeout: 45_000 });
+    await shot(page, `a20-${name}-charleston`);
+    for (let i = 0; i < 12; i++) {
+      await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 45_000 });
+      await expect(page.locator('.mj-prompt, .mj-centre-tip').first()).toBeVisible({ timeout: 15_000 });
+      if (!(await page.locator('.mj-pass-prompt').isVisible())) break;
+      await choosePassOrVoid(page);
+    }
+    await shot(page, `a21-${name}-table`);
   }
 });

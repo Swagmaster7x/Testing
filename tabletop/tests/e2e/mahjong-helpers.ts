@@ -74,7 +74,8 @@ export async function choosePassOrVoid(page: Page): Promise<boolean> {
     return true;
   }
   const title = (await passPrompt.locator('.mj-prompt-title').textContent()) ?? '';
-  if (!/Courtesy/.test(title)) {
+  // The courtesy pass is named above its title; offering nothing is always allowed.
+  if (!/Courtesy/.test((await passPrompt.textContent()) ?? '')) {
     const tiles = page.locator('button.mj-tile:not([aria-label="Joker"])');
     const labels = await tiles.evaluateAll((list) => list.map((b) => b.getAttribute('aria-label') ?? ''));
     let picks = labels.map((_, i) => i).slice(0, 3);

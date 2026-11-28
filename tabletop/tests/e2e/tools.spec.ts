@@ -143,4 +143,21 @@ test.describe('tools', () => {
     await expect(page.locator('.calc-total')).toContainText('4 fan');
     await expect(page.locator('.calc-result')).toContainText('South -16');
   });
+
+  test('the Mahjong calculator takes an American hand: the card hand made, jokerless, who threw', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'American' }).click();
+    await expect(page.locator('.calc-result')).toContainText('Pick the card hand that was made');
+    // The practice card's Evens hand: 25 points.
+    await page.getByRole('button', { name: /^FFF 2222a 44b 666c 88a, 25 points/ }).click();
+    await expect(page.locator('.calc-total')).toHaveText('25 points');
+    // Self-picked: everyone pays double.
+    await expect(page.locator('.calc-result')).toContainText('East (winner) +150');
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On West’s discard' }).click();
+    await expect(page.locator('.calc-result')).toContainText('West -50');
+    await expect(page.locator('.calc-result')).toContainText('South -25');
+    await page.getByRole('button', { name: 'Made without jokers' }).click();
+    await expect(page.locator('.calc-total')).toHaveText('50 points');
+    await expect(page.locator('.calc-result')).toContainText('West -100');
+  });
 });

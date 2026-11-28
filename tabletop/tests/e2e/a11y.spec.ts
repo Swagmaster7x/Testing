@@ -93,5 +93,21 @@ test.describe('accessibility', () => {
     await choosePassOrVoid(page);
     await expect(page.locator('.status-turn')).toHaveText(/Your move|to move|thinking/, { timeout: 60_000 });
     await scan(page, 'sichuan table');
+    // American: the Charleston, the table in play, the card editor.
+    await page.goto('/#/games/mahjong?seed=a11y');
+    await page.getByRole('button', { name: /^Play/ }).click();
+    await page.getByRole('dialog').getByRole('radio', { name: /^American, League/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^(Start|New game)$/ }).click();
+    await expect(page.locator('.mj-pass-prompt')).toBeVisible({ timeout: 60_000 });
+    await scan(page, 'american charleston');
+    for (let i = 0; i < 12 && (await page.locator('.mj-pass-prompt').isVisible()); i++) {
+      await choosePassOrVoid(page);
+      await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 60_000 });
+      await expect(page.locator('.mj-prompt, .mj-centre-tip').first()).toBeVisible({ timeout: 15_000 });
+    }
+    await scan(page, 'american table');
+    await page.goto('/#/tools/mahjong-card');
+    await page.getByRole('button', { name: 'Start from the practice card' }).click();
+    await scan(page, 'american card editor');
   });
 });
