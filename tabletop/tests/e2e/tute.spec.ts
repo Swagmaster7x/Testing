@@ -65,11 +65,11 @@ test.describe('tute', () => {
     await expect(page.getByRole('img', { name: /^Stock, \d+ cards$/ })).toBeVisible();
   });
 
-  test('tute corriente: six cards each, and the stock holds the other twenty-eight', async ({ page }) => {
+  test('tute corriente: six cards each; the stock holds twenty-seven face down, with the turned card under it', async ({ page }) => {
     await startTute(page, 'e2e-corriente', 'Two players (corriente)', null);
     await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 30_000 });
     await expect(page.locator('button.table-card')).toHaveCount(6);
-    await expect(page.getByRole('img', { name: 'Stock, 28 cards' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Stock, 27 cards' })).toBeVisible();
   });
 
   test('an illegal card is refused with the reason, and a legal one is played', async ({ page }) => {

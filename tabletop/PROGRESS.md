@@ -30,6 +30,11 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 Now: **M14b** (Mahjong Chinese Official, then Taiwanese) and **M14c** (Mahjong Sichuan Bloody, then
 American-format) are being built in their own checkouts.
 
+Delivered: **0.11.0** (2026-11-28): Riichi, the Dominoes styles, M15's engines and trainers, the
+Riichi calculator and the Tute options, after a whole end-to-end run (451 passed, 11 skipped by
+design; the 4 failures were a wrong count in a new test and a race in the poker pass-and-play test,
+both fixed and re-run). The APK leaves out Fairy-Stockfish, which Android's web view cannot run.
+
 ### What is left, and how it will be built (plan of 2026-11-27)
 
 Three builders at a time at most (two parallel checkouts and the main branch): the machine has four

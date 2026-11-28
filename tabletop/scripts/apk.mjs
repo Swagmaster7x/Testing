@@ -2,7 +2,7 @@
 // debug APK signed with the fixed key in android/app/signing (so it installs over the last one).
 // Output: out/<name>-<version>-debug.apk
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +26,9 @@ writeFileSync(stringsPath, strings);
 
 console.log('\n3/4 Copying the web app into the Android project');
 run('npx', ['cap', 'sync', 'android']);
+// Fairy-Stockfish (shogi level 8) needs a cross-origin isolated page, which Android's web view
+// cannot give; the app never loads it there, so the APK leaves its 1.7 MB out.
+rmSync(join(android, 'app/src/main/assets/public/engines/fairy-stockfish'), { recursive: true, force: true });
 
 const localProps = join(android, 'local.properties');
 if (!existsSync(localProps)) {

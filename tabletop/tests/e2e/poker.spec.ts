@@ -81,6 +81,8 @@ test.describe('poker', () => {
     const covers = new Set<string>();
     for (let acted = 0; acted < 4; ) {
       const cover = page.locator('.pass-cover h1');
+      // Wait for whichever comes: the cover between people, or this person's betting controls.
+      await expect(page.locator('.pass-cover h1, .bet-call').first()).toBeVisible({ timeout: 30_000 });
       if (await cover.isVisible()) {
         const title = (await cover.textContent()) ?? '';
         covers.add(title);
