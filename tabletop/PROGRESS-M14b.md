@@ -154,3 +154,169 @@ Two more general mechanisms came in with these files and are used by Taiwanese (
 - The reviewer and the hint judge Chinese Official hands with the shared CPU, which steers by the
   hints and the goals; it does not plan the rarer patterns (shifted pungs, all fives, reversible
   tiles) unless the hand falls into them.
+
+### Taiwanese (16-tile)
+
+- [x] **Rules document first** (`docs/rules/mahjong-taiwanese.md`, written before the rules file):
+      144 tiles with flowers; sixteen tiles a hand and seventeen to the dealer; five sets and a pair,
+      and lik gu lik gu (seven pairs and a pung); the last 16 tiles never drawn; the dealer keeping
+      the deal after a win or a drawn hand, with its streak; several winners on one discard; seat
+      flowers and sets of four; eight flowers and seven robbing one; every tai pattern with its
+      value; payments of a base and a stake per tai, the dealer's 1 + 2 × streak tai on its own
+      wins and when it pays; 12 options, 5 presets, an "ask before you sit" list, golden cases,
+      "not implemented" and dated sources.
+- [x] **Rules file** (`src/games/mahjong/styles/taiwanese.ts`), registered in `STYLES`: the tai
+      table `TW_PATTERNS`/`twTai` (one table for the scorer, lessons, drill and reference card), a
+      scorer that reads every arrangement and keeps the best, the minimum (none by default), the
+      payments, the dealer keeping the deal and the streak as the counter, and the CPU's hints (in
+      tai, with the base worth base / per-tai tai, and the feeder paying the whole hand).
+- [x] **16 + 1 tiles everywhere**: the engine already sized hands from `handSize`; checked in the
+      deal, the shapes and readings (five sets), tiles from ready, the CPU, lesson positions (the
+      lesson verifier no longer insists on 13-tile hands; its size check already followed the
+      style), the drill builder (five sets), the table (seventeen tiles fit at 844×390) and the
+      calculator's `tilesWanted` (17 and one more for each kong; unit and e2e cases).
+- [x] **Ladder** `mahjong-taiwanese` (table below): four levels pass; level 5 does not separate.
+- [x] **Golden cases** (`tests/unit/mahjong-taiwanese.test.ts`, 20 tests): the 16-tile shapes and
+      lik gu lik gu with their tiles from ready; concealed, self-drawn and both (3 or 2); flowers
+      taking away all chows, seat flowers and a set of four; the one-tile wait; three, four and five
+      concealed pungs with a pung completed by a discard left out; flushes, dragon and wind pungs,
+      little and big dragons and winds; all honours (16 or 8) without all pungs; lik gu lik gu on
+      and off; the dealer's tai with a streak; the flower wins; a minimum; payments on a discard
+      and a self-draw, at other stakes, a dealer paying with its streak, two winners on one discard;
+      and on the engine, the deal of sixteen, the hand drawn with sixteen tiles left and the dealer
+      keeping the deal with the streak, eight flowers winning at once, seven robbing the eighth
+      paid by the drawer, two winners and the winning dealer keeping the deal.
+- [x] **Property tests**: random games under all five presets and two odd mixes, and sixteen games
+      played toward winning (the strategy now reads the style's own shapes and hand size) checking
+      the payment of every single win; contract, conservation, no leaks, replay.
+- [x] **The table**: the presets and option fields; "Win (hu)" and "Win (zimo, self-drawn)"; the
+      sheet in tai with the dealer and repeat-deal lines; the counters show the dealer's repeat deals
+      and the stakes; the log in tai.
+- [x] **Learn** (`src/games/mahjong/learn/taiwanese.ts`, stage 4 after Chinese Official): what
+      changes, counting tai, the dealer and repeat deals, flowers, paying base and tai. Five lessons;
+      all pass the linter.
+- [x] **Drill** (`src/games/mahjong/practice/taiwanese.ts`): "Count the tai": a 16-tile winning
+      hand, sometimes yours as dealer on repeat deals or paid by a dealer on them, with flowers;
+      count the tai, then what you collect at 100/20.
+- [x] **Calculator**: Taiwanese by itself; "Dealer's repeat deals" (shown only for this style) feeds
+      the dealer's tai; totals in tai. Unit cases and an e2e case.
+- [x] **Reference card**: what changes, the tai by value (from the rules file), payments with the
+      dealer's tai, questions before you sit.
+- [x] **Text** in English and Spanish; the stage 4 blurb names the Taiwanese track.
+- [x] **e2e** (`tests/e2e/mahjong-taiwanese.spec.ts`, 6 tests at 844×390, 1180×820 and 1440×900:
+      18 passed): a 16-tile hand against level 2 to the end with the tai or the drawn hand and the
+      review; an axe scan of the table (nothing serious or critical); the dealer lesson; the drill;
+      the rules dialog; the reference card. The calculator case in `tools.spec.ts` passes at all
+      three sizes.
+- [x] **Screenshots** (`screenshots/m14b/tw-*.png`, 15 shots, among them the table upright, on a
+      tablet and on a laptop), each looked at.
+
+Gate for Taiwanese (2026-11-28): `npm run check` green (typecheck, lint, 838 unit tests in 65
+files, 61 property tests in 11 files, the lesson lint: Mahjong 47 lessons, 17 in stage 4). Every
+Mahjong e2e spec and the tools spec at three sizes after both styles (`mahjong.spec.ts`,
+`mahjong-riichi.spec.ts`, `mahjong-learn.spec.ts`, `mahjong-chinese-official.spec.ts`,
+`mahjong-taiwanese.spec.ts`, `tools.spec.ts`): 102 passed. `screens-m14b.spec.ts`: both styles'
+shots taken again after the last changes and looked at.
+
+The ladder (`npm run ladder -- mahjong-taiwanese 120`: one East round under the common table's
+rules, the dealer keeping the deal through draws, so a game runs up to sixteen hands; paired
+games, side scores, pass at 0.6, as for Chinese Official):
+
+| Rung | Won | Drawn | Lost | Score |
+| --- | --- | --- | --- | --- |
+| Level 1 against random play | 118 | 2 | 0 | 0.992 |
+| Level 2 against level 1 | 85 | 1 | 34 | 0.713 |
+| Level 3 against level 2 | 82 | 1 | 37 | 0.688 |
+| Level 4 against level 3 | 79 | 3 | 38 | 0.671 |
+| (Level 5 against level 4) | 57 | 6 | 57 | 0.500, fails |
+
+Four levels pass; level 5 is left off the Taiwanese rungs (`mahjong-taiwanese` stops at level 4,
+as `mahjong-riichi` does). At this table the base stake (100, against 20 a tai) makes a quick
+cheap win worth nearly as much as a slow big one, so level 5's weighing of value buys little over
+level 4's speed: in the probe, level 5 won every hand of two games but averaged 1.4 tai. Three
+trials of 60 paired games on other seeds (`scripts/mahjong-hint-trial.ts`) with the feeding weight
+at 0.3 (as shipped) and at 1, and with the expected points scaled up threefold, all scored 0.51
+to 0.53. Separating level 5 here would need Taiwanese-specific play (pushing the dealer's repeat
+deals, calling more freely for speed), not just different weights; it is listed under "Not done".
+
+### Changes to the shared core for Taiwanese, and why
+
+1. **Wins by the bonus tiles** (`rules().flowerWins`, `WinContext.flowerWin`, `engine.flowerWin`):
+   all eight set aside win at once, paid as a self-draw; seven held win when another seat sets
+   aside the eighth, which that seat pays. Only the engine sets bonus tiles aside (in the deal and
+   on every draw), so only it can see the moment; the hand need not be complete, so the check
+   cannot go through the shape rules. The style scores the win (`flowerWin` in the context).
+   Seven robbing one is claimed at once (a robber may decline at a real table; nobody does).
+2. **Seven pairs and a pung** (`ShapeRules.pairsAndPung`, in the shape checks, the readings and
+   tiles from ready; it came in with the Chinese Official commit): lik gu lik gu is a closed shape
+   of seventeen tiles that is not sets and a pair.
+3. **The counter in the win context** (`WinContext.counter`; it also came in with the Chinese
+   Official commit): the dealer's streak is the Riichi counter's mechanism (`nextCounter`), but
+   Taiwanese scores it inside the hand (the dealer's tai on its own win), so the scorer needs it.
+   `settle` already received the counter for a dealer who pays.
+
+Outside the core: `learn/verify.ts` no longer refuses lesson positions that are not 13-tile hands
+(its size check already followed the style's hand size); `learn/game.ts` places the flowers a
+lesson names whenever the style's tile set has bonus tiles (it looked for a "flowers on" option,
+which Taiwanese does not have); `practice/build.ts` builds five sets on request; the property
+tests' "toward winning" strategy reads the style's own shapes and hand size (it assumed four sets).
+
+### Decisions for Taiwanese
+
+1. **Defaults are the common table**: 100 a hand and 20 a tai, no minimum, the dealer keeping the
+   deal after a win or a draw, several winners on one discard, concealed-and-self-drawn 3 tai, all
+   honours 16, lik gu lik gu and the flower wins played, robbing a kong allowed, 16 tiles left at
+   the end, one East round. The strict-table preset turns the usual ones the other way.
+2. **The dealer's tai are lines of the hand** when the dealer wins ("Dealer 1", "Repeat deals
+   2 × n"), so the sheet's total is what is paid; a dealer who pays adds 1 + 2 × streak to its own
+   payment only, as the Wikipedia description says.
+3. **Named hands take in their parts**: little and big dragons and winds leave out the dragon and
+   wind pungs they contain; all honours leaves out all pungs; heavenly, earthly and human hands
+   leave out the concealed, self-drawn and wait tai; all melded leaves out the one-tile wait; a set
+   of four flowers holds its seat flower.
+4. **All chows** needs five runs, a suit pair, no flowers, a win on a discard and a wait on more
+   than one tile, as most tai tables describe it.
+5. **Pattern ids carry a `tw-` prefix**, like Chinese Official's `co-`.
+6. **Heavenly 24, earthly 16, human 16** are fixed values (sources range from 8 to 64); the "ask
+   before you sit" list asks about them.
+7. **The interface never says "streak"** (the app's rule against streak counters, which a test
+   enforces on the English catalogue): the dealer's 連莊 reads "repeat deals" on the sheet, the
+   counters, the calculator, the reference card and in the lessons. The rules document and the
+   code keep "streak".
+8. **Lessons vary where the right answer sits** in a choice (both new tracks): the
+   earlier tracks list it first, which a careful student can spot.
+
+### Not done for Taiwanese
+
+- No rule site for Taiwanese was reachable; the values come from Wikipedia's description of the
+  scoring and payments and from search-engine extracts of tai tables, and every disputed one is an
+  option or in "ask before you sit".
+- Kong payments made at once, false-win penalties, declaring ready at the start, and the dealer's
+  streak paid to whoever ends it beyond the 1 + 2 × streak tai (see the rules document).
+- The calculator does not score the flower wins (they need no hand); it scores complete hands.
+- **Level 5 is not stronger than level 4 at a Taiwanese table** (0.500 on the ladder's seeds,
+  0.51 to 0.53 in three trials), so the Taiwanese ladder has four rungs; see the ladder above.
+
+### Shared files touched (for the merge with the Sichuan and American checkout)
+
+Each edit is small and additive: entries appended, no reordering.
+
+- `src/games/mahjong/rules.ts`: two imports and two entries in `STYLES`.
+- `src/games/ladders.ts`: two imports and two ladder keys at the end of `buildLadders`.
+- `src/games/mahjong/learn/index.ts`, `practice/index.ts`: two tracks and two drill lists appended.
+- `src/games/mahjong/ui/index.tsx`: presets appended; one option-prefix map; a counters branch per
+  style; reference sections added before the CPU levels; two helper functions.
+- `src/games/mahjong/ui/Calculator.tsx`: two style flags and their inputs; the total through
+  `valueName`; "Base" only for faan and han.
+- `src/games/mahjong/ui/MahjongSurface.tsx`, `ui/names.ts`: the unit-aware sheet, count prompt and
+  call words (helpers `valueName`, `unitOf`, `mandarin`); "on your discard".
+- Text: blocks appended at the end of `src/text/games/mahjong.ts` and
+  `src/text/es/games/mahjong.ts`; four `tools.calc.*` keys after `tools.calc.style.riichi` in
+  `en.ts` and `es/base.ts`; the stage 4 blurb rewritten in both (it now names the style tracks;
+  the other checkout will want to add its own).
+- Tests: `tools.spec.ts` (two cases appended), `mahjong-helpers.ts` (one regular expression),
+  `mahjong.property.test.ts` (configs appended; the "toward winning" strategy reads each style's
+  shapes), `mahjong-learning.test.ts` (the stage 4 style check maps track prefixes to styles),
+  `mahjong-calculator.test.ts` (cases appended).
+- Core (`core/*.ts`, `strategy.ts`, `learn/game.ts`, `learn/verify.ts`, `practice/build.ts`):
+  described above; every addition is off unless a style asks for it.

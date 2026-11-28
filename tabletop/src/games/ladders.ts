@@ -429,7 +429,9 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     'mahjong-riichi': mahjongLadder({ style: 'riichi', options: RIICHI_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
     // Chinese Official: one round of four hands under the official rules (PROGRESS-M14b.md).
     'mahjong-chinese-official': mahjongLadder({ style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'east' } }) as unknown as Ladder<never, never, never, never, never>,
-    // Taiwanese: one East round under the common table's rules (PROGRESS-M14b.md).
-    'mahjong-taiwanese': mahjongLadder({ style: 'taiwanese', options: TW_DEFAULTS }) as unknown as Ladder<never, never, never, never, never>,
+    // Taiwanese: one East round under the common table's rules. Levels 1 to 4: level 5 scores only
+    // about 0.5 against level 4 at this table, where the base stake makes speed count for more
+    // than value (PROGRESS-M14b.md).
+    'mahjong-taiwanese': mahjongLadder({ style: 'taiwanese', options: TW_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
   };
 }
