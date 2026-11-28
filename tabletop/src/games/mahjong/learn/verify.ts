@@ -16,7 +16,7 @@ import type { LessonVerifier } from '../../../teach/lint';
 import type { FreePlayStep } from '../../../teach/lesson';
 import type { MahjongState } from '../rules';
 import { actionText, engine, mahjong, viewOf } from '../rules';
-import { setsIn, SEATS } from '../core/engine';
+import { SEATS } from '../core/engine';
 import type { Kind } from '../core/tiles';
 import { codeOf, parseKind } from '../core/tiles';
 import { evaluateDiscards, picture, safetyRanking } from '../strategy';
@@ -39,7 +39,6 @@ export function positionProblems(state: MahjongState): string[] {
     const want = r.handSize + (acting ? 1 : 0);
     if (!isOver(state) && size !== want) problems.push(`seat ${seat} holds ${size} tiles, not ${want}`);
   }
-  if (setsIn(r) !== 4) problems.push('lesson positions are 13-tile hands');
   return problems;
 }
 

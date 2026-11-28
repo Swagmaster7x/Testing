@@ -10,6 +10,7 @@
  * `syanten` package.
  */
 import type { ShapeRules } from './shapes';
+import { KNITTED } from './shapes';
 import type { Kind } from './tiles';
 import { ORPHANS, PLAYING_KINDS, SUIT_KINDS } from './tiles';
 
@@ -139,8 +140,13 @@ export function shantenStandard(counts: readonly number[], need: number): number
   return best;
 }
 
-/** Shanten for seven pairs (no melds). */
-export function shantenSevenPairs(counts: readonly number[]): number {
+/** Shanten for seven pairs (no melds); with `fours`, four alike count as two pairs. */
+export function shantenSevenPairs(counts: readonly number[], fours = false): number {
+  if (fours) {
+    let p = 0;
+    for (let k = 0; k < PLAYING_KINDS; k++) p += Math.floor((counts[k] ?? 0) / 2);
+    return 6 - Math.min(7, p);
+  }
   let pairs = 0;
   let kinds = 0;
   for (let k = 0; k < PLAYING_KINDS; k++) {
@@ -163,6 +169,44 @@ export function shantenOrphans(counts: readonly number[]): number {
   return 13 - kinds - pair;
 }
 
+/** Shanten for honours and knitted tiles (no melds): fourteen different tiles from one knitted set and the honours. */
+export function shantenHonoursKnitted(counts: readonly number[]): number {
+  let honours = 0;
+  for (let k = SUIT_KINDS; k < PLAYING_KINDS; k++) if ((counts[k] ?? 0) > 0) honours++;
+  let best = 0;
+  for (const set of KNITTED) best = Math.max(best, honours + set.filter((k) => (counts[k] ?? 0) > 0).length);
+  return 13 - Math.min(14, best);
+}
+
+/** Shanten for a knitted straight with `need` sets to make in the concealed part (three of them the knitted tiles). */
+export function shantenKnittedStraight(counts: readonly number[], need: number): number {
+  let best = 99;
+  for (const set of KNITTED) {
+    const c = [...counts];
+    let missing = 0;
+    for (const k of set) {
+      if ((c[k] ?? 0) > 0) c[k] = (c[k] ?? 0) - 1;
+      else missing++;
+    }
+    best = Math.min(best, shantenStandard(c, need - 3) + missing);
+  }
+  return best;
+}
+
+/** Shanten for seven pairs and a pung (no melds, sixteen tiles and the winning one): the tiles still missing, less one. */
+export function shantenPairsAndPung(counts: readonly number[]): number {
+  let best = 99;
+  for (let p = 0; p < PLAYING_KINDS; p++) {
+    const lack = Math.max(0, 3 - (counts[p] ?? 0));
+    const pairLack: number[] = [];
+    for (let k = 0; k < PLAYING_KINDS; k++) if (k !== p) pairLack.push(Math.max(0, 2 - (counts[k] ?? 0)));
+    pairLack.sort((a, b) => a - b);
+    const missing = lack + pairLack.slice(0, 7).reduce((a, b) => a + b, 0);
+    best = Math.min(best, missing - 1);
+  }
+  return best;
+}
+
 export interface ShantenRules {
   readonly shapes: ShapeRules;
   /** Sets in a complete hand: four for 13 tiles, five for 16. */
@@ -173,9 +217,12 @@ export interface ShantenRules {
 export function shanten(counts: readonly number[], melds: number, rules: ShantenRules): number {
   let s = shantenStandard(counts, rules.sets - melds);
   if (melds === 0 && rules.sets === 4) {
-    if (rules.shapes.sevenPairs) s = Math.min(s, shantenSevenPairs(counts));
+    if (rules.shapes.sevenPairs) s = Math.min(s, shantenSevenPairs(counts, rules.shapes.sevenPairsFours ?? false));
     if (rules.shapes.thirteenOrphans) s = Math.min(s, shantenOrphans(counts));
+    if (rules.shapes.knitted) s = Math.min(s, shantenHonoursKnitted(counts));
   }
+  if (rules.shapes.knitted && rules.sets - melds >= 3) s = Math.min(s, shantenKnittedStraight(counts, rules.sets - melds));
+  if (melds === 0 && rules.sets === 5 && rules.shapes.pairsAndPung) s = Math.min(s, shantenPairsAndPung(counts));
   return s;
 }
 

@@ -87,4 +87,55 @@ describe('the Mahjong calculator', () => {
       expect(new Set(ids).size).toBe(ids.length);
     });
   });
+
+  describe('a Chinese Official hand', () => {
+    const co = STYLES['chinese-official']!;
+
+    it('self-drawn, the all-chows hand just reaches eight points, and each player pays 8 + 8', () => {
+      const r = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13 });
+      expect(r.score?.lines.map((l) => l.id)).toEqual(['co-fully-concealed', 'co-all-chows', 'co-short-straight', 'co-no-honours']);
+      expect(r.score?.total).toBe(8);
+      expect(r.payments).toEqual([48, -16, -16, -16]);
+    });
+
+    it('on a discard it is short of eight; the last tile of its kind lifts it to ten', () => {
+      const short = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2 });
+      expect(short.belowMinimum).toBe(true);
+      expect(short.score?.total).toBe(6);
+      const last = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2, lastOfKind: true });
+      expect(last.score?.total).toBe(10);
+      expect(last.payments).toEqual([34, -8, -18, -8]);
+    });
+
+    it('flowers add to what is paid but never toward the minimum', () => {
+      const r = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2, bonus: [PLUM, PLUM + 1, PLUM + 2] });
+      expect(r.score?.total).toBe(9);
+      expect(r.belowMinimum).toBe(true);
+    });
+  });
+
+  describe('a Taiwanese hand of sixteen tiles and the winning one', () => {
+    const tw = STYLES['taiwanese']!;
+    // 1-2-3 and 4-5-6 characters, 7-8-9 dots, 2-3-4 and 5-6-7 bamboo, a pair of 9 dots; the 4 bamboo won it.
+    const hand = [m(1), m(2), m(3), m(4), m(5), m(6), p(7), p(8), p(9), s(2), s(3), s(4), s(5), s(6), s(7), p(9), p(9)];
+    const base = { ...EMPTY_INPUT, hand, winning: 11 };
+
+    it('wants seventeen tiles (and one more for each kong)', () => {
+      expect(tilesWanted({ ...EMPTY_INPUT, hand: hand.slice(0, 13) }, tw.rules(tw.defaults).handSize)).toBe(4);
+      expect(tilesWanted(base, 16)).toBe(0);
+      expect(tilesWanted({ ...EMPTY_INPUT, hand: hand.slice(0, 11), sets: [{ type: 'kong', kind: RED, concealed: true }] }, 16)).toBe(3);
+    });
+
+    it('East self-drawn: concealed and self-drawn and the dealer, base + tai × 20 from each', () => {
+      const r = calculate(tw, tw.defaults, base);
+      expect(r.score?.lines.map((l) => l.id)).toEqual(['tw-concealed-self-drawn', 'tw-dealer']);
+      expect(r.payments).toEqual([540, -180, -180, -180]);
+    });
+
+    it('South wins on the dealer’s discard: the dealer pays its streak too', () => {
+      const r = calculate(tw, tw.defaults, { ...base, seatWind: 1, from: 3, streak: 2 });
+      expect(r.score?.total).toBe(3);
+      expect(r.payments).toEqual([260, 0, 0, -260]);
+    });
+  });
 });

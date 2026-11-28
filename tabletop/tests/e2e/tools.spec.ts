@@ -121,4 +121,42 @@ test.describe('tools', () => {
     await expect(page.getByRole('button', { name: 'Dora indicator: 4 characters' })).toBeVisible();
     await expect(page.locator('.calc-result')).toContainText('West -12000');
   });
+
+  test('the Mahjong calculator takes a Chinese Official hand: eight points to win, flowers aside, the last of its kind', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'Chinese Official' }).click();
+    const picker = page.getByRole('group', { name: 'Tiles to add' });
+    for (const tile of ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '7 dots', '8 dots', '9 dots', '2 bamboo', '3 bamboo', '4 bamboo', '5 bamboo', '5 bamboo']) {
+      await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+    }
+    // Self-drawn: fully concealed, all chows, a short straight and no honours make eight.
+    await expect(page.locator('.calc-total')).toHaveText('8 points');
+    await expect(page.locator('.calc-result')).toContainText('East (winner) +48');
+    // On a discard it is two points short; the last tile of its kind lifts it to ten.
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On West’s discard' }).click();
+    await expect(page.locator('.calc-result')).toContainText('Below the minimum');
+    await page.getByRole('button', { name: 'The last of its kind' }).click();
+    await expect(page.locator('.calc-total')).toHaveText('10 points');
+    await expect(page.locator('.calc-result')).toContainText('West -18');
+  });
+
+  test('the Mahjong calculator takes a Taiwanese hand of sixteen tiles and the winning one, with the dealer’s repeat deals', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'Taiwanese' }).click();
+    const picker = page.getByRole('group', { name: 'Tiles to add' });
+    for (const tile of ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '7 dots', '8 dots', '9 dots', '2 bamboo', '3 bamboo', '5 bamboo', '6 bamboo', '7 bamboo', '9 dots', '9 dots']) {
+      await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+    }
+    await expect(page.locator('.calc-status')).toHaveText('Add 1 more tiles.');
+    await picker.getByRole('button', { name: 'Add the 4 bamboo', exact: true }).click();
+    // East self-drawn: concealed and self-drawn (3) and the dealer (1); each pays 100 + 4 × 20.
+    await expect(page.locator('.calc-total')).toHaveText('4 tai');
+    await expect(page.locator('.calc-result')).toContainText('East (winner) +540');
+    // South wins on East's discard, East on two repeat deals: East pays its 1 + 2 × 2 tai too.
+    await page.getByRole('radiogroup', { name: 'Winner’s seat' }).getByRole('radio', { name: 'South' }).click();
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On East’s discard' }).click();
+    await page.getByRole('radiogroup', { name: 'Dealer’s repeat deals' }).getByRole('radio', { name: '2' }).click();
+    await expect(page.locator('.calc-total')).toHaveText('3 tai');
+    await expect(page.locator('.calc-result')).toContainText('East -260');
+  });
 });

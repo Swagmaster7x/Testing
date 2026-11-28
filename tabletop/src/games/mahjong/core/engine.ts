@@ -405,6 +405,8 @@ export class MahjongEngine {
       firstDraw: selfDrawn && seat !== s.dealer && s.source === 'wall' && s.calls === 0 && (s.discards[seat] ?? []).length === 0,
       tiles: [...(selfDrawn ? hand : [...hand, tile]), ...(s.melds[seat] ?? []).flatMap((m) => m.tiles)],
       ...this.indicatorContext(s, seat),
+      shown: shownOf(s, kindOf(tile)) - (selfDrawn ? 0 : 1),
+      counter: s.counter,
     };
   }
 
@@ -739,6 +741,7 @@ export class MahjongEngine {
     while (r.replaceBonus && isBonus(kindOf(tile))) {
       (d.bonus[seat] as TileId[]).push(tile);
       events.push({ type: 'bonus', seat, tile });
+      if (this.flowerWin(d, seat, tile, events)) return;
       if (d.wall.length <= r.deadWall) {
         this.endDrawn(d, events);
         return;
@@ -748,6 +751,34 @@ export class MahjongEngine {
     }
     (d.hands[seat] as TileId[]).push(tile);
     d.drawn = tile;
+  }
+
+  /**
+   * A win by the bonus tiles, where the style has one, just after `seat` set aside `tile`: all eight
+   * win for that seat (paid as a self-draw); seven held by another seat win for it, paid by `seat`.
+   */
+  private flowerWin(d: Draft, seat: Seat, tile: TileId, events: MahjongEvent[]): boolean {
+    const fw = this.rules(d.config).flowerWins;
+    if (!fw) return false;
+    let winner: Seat | null = null;
+    let from: Seat | null = null;
+    if (fw.eight && (d.bonus[seat] ?? []).length === 8) winner = seat;
+    else if (fw.robSeventh) {
+      const robber = [1, 2, 3].map((i) => (seat + i) % SEATS).find((s) => (d.bonus[s] ?? []).length === 7);
+      if (robber !== undefined) {
+        winner = robber;
+        from = seat;
+      }
+    }
+    if (winner === null) return false;
+    const s = freeze(d);
+    const base = this.winContext(s, winner, tile, from === null, from, false);
+    const ctx: WinContext = { ...base, selfDrawn: from === null, concealed: (s.hands[winner] ?? []).map(kindOf), tiles: [...(s.hands[winner] ?? []), ...(s.melds[winner] ?? []).flatMap((m) => m.tiles)], flowerWin: from === null ? 'eight' : 'seven' };
+    const score = this.style(d.config).score(ctx, d.config.options);
+    if (!score) return false;
+    d.claim = null;
+    this.endWithWins(d, [{ seat: winner, from, tile, score, robbed: false }], events);
+    return true;
   }
 
   private endWithWins(d: Draft, wins: readonly WinRecord[], events: MahjongEvent[]): void {
@@ -920,6 +951,12 @@ export class MahjongEngine {
       }
     }
     d.drawn = (hands[d.dealer] as TileId[]).includes(last) ? last : ((hands[d.dealer] as TileId[])[(hands[d.dealer] as TileId[]).length - 1] ?? null);
+    // All eight bonus tiles in one opening hand win at once (seven robbing one applies to tiles drawn in play).
+    if (r.flowerWins?.eight) {
+      const seat = order.find((x) => (d.bonus[x] ?? []).length === 8);
+      const lastBonus = seat === undefined ? undefined : (d.bonus[seat] ?? [])[7];
+      if (seat !== undefined && lastBonus) this.flowerWin(d, seat, lastBonus, events);
+    }
   }
 }
 
@@ -935,6 +972,14 @@ export function setsIn(r: Pick<StyleRules, 'handSize'>): number {
 /** A seat's wind (0 East to 3 North) when `dealer` deals. */
 export function seatWind(seat: Seat, dealer: Seat): number {
   return (seat - dealer + SEATS) % SEATS;
+}
+
+/** Copies of a kind face up on the table: discards still lying there and called sets (a concealed kong lies face down). */
+export function shownOf(s: Pick<MahjongState, 'discards' | 'melds'>, kind: Kind): number {
+  let n = 0;
+  for (const list of s.discards) for (const d of list) if (!d.claimed && kindOf(d.tile) === kind) n++;
+  for (const list of s.melds) for (const m of list) if (!m.concealed) for (const t of m.tiles) if (kindOf(t) === kind) n++;
+  return n;
 }
 
 function lastIndexOfKind(hand: readonly TileId[], kind: Kind): number {

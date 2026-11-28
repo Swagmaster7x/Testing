@@ -90,6 +90,11 @@ export interface StyleRules {
   readonly startScore?: number;
   readonly ready?: ReadyDeclaration;
   readonly aborts?: AbortRules;
+  /**
+   * Wins made by the bonus tiles alone (Taiwanese): a seat that sets aside all eight wins at once;
+   * a seat holding seven wins when another seat sets aside the eighth, which that seat pays.
+   */
+  readonly flowerWins?: { readonly eight: boolean; readonly robSeventh: boolean };
 }
 
 /** Everything a scorer needs to know about a complete hand and how it was won. */
@@ -131,6 +136,12 @@ export interface WinContext {
   readonly ready?: number;
   /** Declared ready and winning within a go round of it, with no call in between. */
   readonly oneShot?: boolean;
+  /** Copies of the winning kind lying face up elsewhere on the table: discards and called sets, not the winning tile itself. */
+  readonly shown?: number;
+  /** The counter on the table (repeated deals), for styles that score it. */
+  readonly counter?: number;
+  /** A win by the bonus tiles alone (the hand need not be complete): all eight, or seven robbing the eighth. */
+  readonly flowerWin?: 'eight' | 'seven';
 }
 
 /** One scoring pattern in a hand, by id; the text catalogue names it. */
@@ -267,6 +278,12 @@ export interface ValueHints {
    * times larger, and the tuned weight would have the CPU fold far too often.
    */
   readonly riskScale?: number;
+  /**
+   * Patterns the other hints do not describe, as the tiles they need (a kind listed as often as it
+   * is needed) and what holding all of them is worth: the CPU steers toward the closest (Chinese
+   * Official's mixed triple chow and straights).
+   */
+  readonly goals?: readonly { readonly kinds: readonly Kind[]; readonly value: number }[];
 }
 
 export interface Style {

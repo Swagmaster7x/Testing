@@ -1,7 +1,8 @@
 /**
  * Winning shapes, for every style (docs/rules/mahjong-core.md): n sets and a pair (n is four for
- * 13-tile hands, five for 16), seven pairs and thirteen orphans. Hands are counts of the 34
- * playing kinds; declared melds are counted separately.
+ * 13-tile hands, five for 16), seven pairs and thirteen orphans, and the shapes a style may add:
+ * knitted shapes (Chinese Official) and seven pairs with a pung (Taiwanese). Hands are counts of
+ * the 34 playing kinds; declared melds are counted separately.
  */
 import type { Kind } from './tiles';
 import { isHonour, ORPHANS, PLAYING_KINDS, rankOf, SUIT_KINDS } from './tiles';
@@ -9,7 +10,27 @@ import { isHonour, ORPHANS, PLAYING_KINDS, rankOf, SUIT_KINDS } from './tiles';
 export interface ShapeRules {
   readonly sevenPairs: boolean;
   readonly thirteenOrphans: boolean;
+  /** Seven pairs may use four alike as two pairs (Chinese Official). */
+  readonly sevenPairsFours?: boolean;
+  /**
+   * Knitted shapes (Chinese Official): a knitted straight (1-4-7, 2-5-8 and 3-6-9, one run in each
+   * suit) standing for three sets, and honours and knitted tiles (fourteen different tiles from one
+   * knitted set and the seven honours).
+   */
+  readonly knitted?: boolean;
+  /** Seven pairs and a pung, closed, in a hand of sixteen tiles and the winning one (Taiwanese). */
+  readonly pairsAndPung?: boolean;
 }
+
+/** The six knitted sets: 1-4-7 of one suit, 2-5-8 of another and 3-6-9 of the third. */
+export const KNITTED: readonly (readonly Kind[])[] = [
+  [0, 1, 2],
+  [0, 2, 1],
+  [1, 0, 2],
+  [1, 2, 0],
+  [2, 0, 1],
+  [2, 1, 0],
+].map(([a = 0, b = 0, c = 0]) => [a * 9, a * 9 + 3, a * 9 + 6, b * 9 + 1, b * 9 + 4, b * 9 + 7, c * 9 + 2, c * 9 + 5, c * 9 + 8]);
 
 /** A set found in the concealed part: a chow (by its lowest tile) or a pung. */
 export interface ConcealedSet {
@@ -65,15 +86,49 @@ export function isStandardComplete(counts: readonly number[], sets: number): boo
   return false;
 }
 
-/** Seven different pairs (fourteen concealed tiles). */
-export function isSevenPairs(counts: readonly number[]): boolean {
+/** Seven different pairs (fourteen concealed tiles); with `fours`, four alike count as two pairs. */
+export function isSevenPairs(counts: readonly number[], fours = false): boolean {
   let pairs = 0;
   for (let k = 0; k < PLAYING_KINDS; k++) {
     const n = counts[k] ?? 0;
     if (n === 2) pairs++;
+    else if (n === 4 && fours) pairs += 2;
     else if (n !== 0) return false;
   }
   return pairs === 7;
+}
+
+/** The knitted set an honours-and-knitted hand is drawn from (fourteen different tiles), or null. */
+export function honoursKnittedSet(counts: readonly number[]): readonly Kind[] | null {
+  if (total(counts) !== 14) return null;
+  for (const set of KNITTED) {
+    let ok = true;
+    for (let k = 0; k < PLAYING_KINDS && ok; k++) {
+      const n = counts[k] ?? 0;
+      if (n === 0) continue;
+      if (n > 1 || (!isHonour(k) && !set.includes(k))) ok = false;
+    }
+    if (ok) return set;
+  }
+  return null;
+}
+
+/** The knitted sets a concealed part holds in full (at least one of each of the nine tiles). */
+export function knittedIn(counts: readonly number[]): (readonly Kind[])[] {
+  return KNITTED.filter((set) => set.every((k) => (counts[k] ?? 0) >= 1));
+}
+
+/** Seven different pairs and a pung of another kind (seventeen concealed tiles). */
+export function isPairsAndPung(counts: readonly number[]): boolean {
+  let pairs = 0;
+  let pungs = 0;
+  for (let k = 0; k < PLAYING_KINDS; k++) {
+    const n = counts[k] ?? 0;
+    if (n === 2) pairs++;
+    else if (n === 3) pungs++;
+    else if (n !== 0) return false;
+  }
+  return pairs === 7 && pungs === 1;
 }
 
 /** One of each terminal and honour, and one more of any of them. */
@@ -91,10 +146,20 @@ export function isThirteenOrphans(counts: readonly number[]): boolean {
 /** True when the concealed part, beside `melds` declared sets, is a winning shape. */
 export function isWinningShape(counts: readonly number[], melds: number, shapes: ShapeRules, setsNeeded: number): boolean {
   if (isStandardComplete(counts, setsNeeded - melds)) return true;
-  if (melds === 0 && setsNeeded === 4) {
-    if (shapes.sevenPairs && isSevenPairs(counts)) return true;
-    if (shapes.thirteenOrphans && isThirteenOrphans(counts)) return true;
+  if (shapes.knitted && setsNeeded - melds >= 3) {
+    // A knitted straight stands for three sets; the rest is sets and a pair.
+    for (const set of knittedIn(counts)) {
+      const c = [...counts];
+      for (const k of set) c[k] = (c[k] ?? 0) - 1;
+      if (isStandardComplete(c, setsNeeded - melds - 3)) return true;
+    }
   }
+  if (melds === 0 && setsNeeded === 4) {
+    if (shapes.sevenPairs && isSevenPairs(counts, shapes.sevenPairsFours ?? false)) return true;
+    if (shapes.thirteenOrphans && isThirteenOrphans(counts)) return true;
+    if (shapes.knitted && honoursKnittedSet(counts) !== null) return true;
+  }
+  if (melds === 0 && setsNeeded === 5 && shapes.pairsAndPung && isPairsAndPung(counts)) return true;
   return false;
 }
 

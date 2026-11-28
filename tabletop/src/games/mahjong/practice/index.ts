@@ -29,6 +29,8 @@ import { kindName, patternName } from '../ui/names';
 import type { Complete, Knobs, Random } from './build';
 import { buildComplete, calledMeld, codes, completeKinds, pick, playerPhrase, randomTiles, shuffle } from './build';
 import { RIICHI_DRILLS } from './riichi';
+import { CO_DRILLS } from './chinese-official';
+import { TW_DRILLS } from './taiwanese';
 
 function lesson(id: string, title: string, start: string, steps: LessonStep[]): Lesson {
   return { id: `mahjong.drill.${id}`, gameId: 'mahjong', stage: 'table', title, minutes: 1, start, steps };
@@ -302,6 +304,8 @@ export const MAHJONG_DRILLS: readonly DrillDef[] = [
   { id: 'drill-mahjong-score', make: scoreDrill },
   { id: 'drill-mahjong-safe', make: safeDrill },
   ...RIICHI_DRILLS,
+  ...CO_DRILLS,
+  ...TW_DRILLS,
 ];
 
 interface DiscardFile {

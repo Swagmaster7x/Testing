@@ -19,10 +19,12 @@ import type { Kind, TileId } from './core/tiles';
 import { codeOf, isTileId, kindOf, parseKind, parseKinds, tileId, tileSet } from './core/tiles';
 import { HK_DEFAULTS, hongKong } from './styles/hong-kong';
 import { riichi } from './styles/riichi';
+import { chineseOfficial } from './styles/chinese-official';
+import { taiwanese } from './styles/taiwanese';
 
 export type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase, ReadyMark } from './core/engine';
 
-export const STYLES: Readonly<Record<string, Style>> = { 'hong-kong': hongKong, riichi };
+export const STYLES: Readonly<Record<string, Style>> = { 'hong-kong': hongKong, riichi, 'chinese-official': chineseOfficial, taiwanese };
 export const engine = new MahjongEngine(STYLES);
 
 export const DEFAULT_CONFIG: MahjongConfig = { style: 'hong-kong', options: HK_DEFAULTS };
