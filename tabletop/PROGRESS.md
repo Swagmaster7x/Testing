@@ -49,7 +49,7 @@ says which.
 | 2 | M16, first part: scorepads, the poker blind timer, the light look, the first-run tour | M10 teaching Mahjong (same checkout as M9) | M14a Dominoes: All Fives and Cuban double-nine | M9 for M10 |
 | 3 | M16, second part: the Spanish interface (every interface string; lessons stay English unless time allows), accessibility and performance passes | M11 Riichi (the second rules file; the core changes only with a written reason) | M15 stronger engines: time-boxed trials of Fairy-Stockfish (Shogi) and KataGo (Go), then the opening, castle and joseki trainers | M10 for M11 |
 | 4 | Merge and polish | M14b Mahjong Chinese Official, then Taiwanese | M14c Mahjong Sichuan Bloody, then American (an original practice card) | M11 for M14 Mahjong styles |
-| 5 | M16, last part: Mahjong score calculators for every style, the release APK, optional web hosting | | | M14 |
+| 5 | M16, last part: Mahjong score calculators for every style and the final pass (no release key or hosting for now, by the owner's choice) | | | M14 |
 
 Risks noted now: M15 needs engine and network downloads (a blocked host means the built-in engines
 stay, as the plan allows); the Spanish interface is large (about 2,000 strings), so it is split by
@@ -1025,8 +1025,14 @@ Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in th
       mangan; double riichi with two ura) and an end-to-end test at three sizes. Red fives are one
       per suit present (a hand with two 5 bamboo cannot hold two red ones), drawn red in the hand
       and its sets, and the same helper picks them for the scorer and the picture.
-- [ ] Still to come in M16: calculator inputs for the later Mahjong styles, the release APK,
-      optional web hosting.
+- [ ] Still to come in M16: calculator inputs for the later Mahjong styles, and the final pass.
+- **Decided by the owner (2026-11-28): the app is for one Android phone for now.** No release key
+  and no web hosting: the debug APK, signed with the fixed key in `android/app/signing`, is the
+  build to install, and each version installs over the last. If that changes, a release key needs
+  a certificate name and somewhere outside the repository to keep the key; Google Play needs a
+  developer account; any public copy (Play or the web) needs the GPL question for Stockfish and
+  Fairy-Stockfish settled first (see THIRD-PARTY.md); hosting is what brings shogi level 8, which
+  Android's web view cannot run.
 
 ### Decisions in M16 so far
 
