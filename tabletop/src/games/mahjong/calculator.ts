@@ -41,6 +41,8 @@ export interface CalcInput {
   /** Riichi: the dora indicators turned up, and the ura indicators under them. */
   readonly indicators: readonly Kind[];
   readonly underIndicators: readonly Kind[];
+  /** Chinese Official: the winning tile was the last of its kind (the other three face up). */
+  readonly lastOfKind?: boolean;
 }
 
 export const EMPTY_INPUT: CalcInput = { hand: [], winning: -1, sets: [], seatWind: 0, prevailingWind: 0, from: null, bonus: [], lastTile: false, lastDiscard: false, afterKong: false, robbed: false, ready: 0, oneShot: false, redFives: 0, indicators: [], underIndicators: [] };
@@ -122,6 +124,7 @@ export function contextOf(input: CalcInput): WinContext {
     robbed: !selfDrawn && input.robbed,
     heavenly: false,
     earthly: false,
+    shown: input.lastOfKind ? 3 : 0,
   };
 }
 

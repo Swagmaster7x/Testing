@@ -79,4 +79,30 @@ describe('the Mahjong calculator', () => {
       expect(fivesIn({ ...EMPTY_INPUT, hand: [], sets: [{ type: 'chow', kind: p(3), concealed: false }] })).toBe(1);
     });
   });
+
+  describe('a Chinese Official hand', () => {
+    const co = STYLES['chinese-official']!;
+
+    it('self-drawn, the all-chows hand just reaches eight points, and each player pays 8 + 8', () => {
+      const r = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13 });
+      expect(r.score?.lines.map((l) => l.id)).toEqual(['co-fully-concealed', 'co-all-chows', 'co-short-straight', 'co-no-honours']);
+      expect(r.score?.total).toBe(8);
+      expect(r.payments).toEqual([48, -16, -16, -16]);
+    });
+
+    it('on a discard it is short of eight; the last tile of its kind lifts it to ten', () => {
+      const short = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2 });
+      expect(short.belowMinimum).toBe(true);
+      expect(short.score?.total).toBe(6);
+      const last = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2, lastOfKind: true });
+      expect(last.score?.total).toBe(10);
+      expect(last.payments).toEqual([34, -8, -18, -8]);
+    });
+
+    it('flowers add to what is paid but never toward the minimum', () => {
+      const r = calculate(co, co.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13, from: 2, bonus: [PLUM, PLUM + 1, PLUM + 2] });
+      expect(r.score?.total).toBe(9);
+      expect(r.belowMinimum).toBe(true);
+    });
+  });
 });

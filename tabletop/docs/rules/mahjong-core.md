@@ -95,7 +95,14 @@ hand is worth), and a danger estimate for each tile against each player.
   East-South game with the repeat counter and riichi sticks kept in the state and paid by the
   style's `settle`, and drawn-hand payments through `settleDraw`. Nothing in the Hong Kong file
   changed but one line (`scoreAny`).
-- **Chinese Official**: 81 patterns and an eight-point minimum: a scorer only.
+- **Chinese Official** (milestone 14b, built: `docs/rules/mahjong-chinese-official.md`): 81
+  patterns with the rulebook's principles and an eight-point minimum that flowers never count
+  toward. It needed three general additions, each off unless a style asks: shapes for seven pairs
+  with four alike as two pairs and for knitted tiles (`ShapeRules.sevenPairsFours`, `knitted`: the
+  knitted straight standing for three sets, and honours with knitted tiles, in the shape checks,
+  the readings and tiles from ready); `WinContext.shown`, the copies of the winning kind face up on
+  the table (for "last tile"); and `ValueHints.goals`, patterns given as their tiles for the CPU to
+  steer toward. The deal passing every hand is the style's `dealerKeeps`.
 - **Taiwanese**: 16-tile hands (five sets and a pair), so `rules().handSize` is 16; a dead wall of 16.
 - **Sichuan Bloody**: 108 tiles, no chows, a suit to void chosen before play (a phase before the
   first discard), and play going on after a win, which retires the winner from the turn order.

@@ -131,6 +131,10 @@ export interface WinContext {
   readonly ready?: number;
   /** Declared ready and winning within a go round of it, with no call in between. */
   readonly oneShot?: boolean;
+  /** Copies of the winning kind lying face up elsewhere on the table: discards and called sets, not the winning tile itself. */
+  readonly shown?: number;
+  /** The counter on the table (repeated deals), for styles that score it. */
+  readonly counter?: number;
 }
 
 /** One scoring pattern in a hand, by id; the text catalogue names it. */
@@ -267,6 +271,12 @@ export interface ValueHints {
    * times larger, and the tuned weight would have the CPU fold far too often.
    */
   readonly riskScale?: number;
+  /**
+   * Patterns the other hints do not describe, as the tiles they need (a kind listed as often as it
+   * is needed) and what holding all of them is worth: the CPU steers toward the closest (Chinese
+   * Official's mixed triple chow and straights).
+   */
+  readonly goals?: readonly { readonly kinds: readonly Kind[]; readonly value: number }[];
 }
 
 export interface Style {

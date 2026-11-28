@@ -14,6 +14,7 @@ import { discardChoices, shanten } from '../../src/games/mahjong/core/shanten';
 import { countsOf, kindOf } from '../../src/games/mahjong/core/tiles';
 import { HK_DEFAULTS, HK_PRESETS } from '../../src/games/mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS, RIICHI_PRESETS } from '../../src/games/mahjong/styles/riichi';
+import { CO_DEFAULTS, CO_PRESETS, withoutFlowers } from '../../src/games/mahjong/styles/chinese-official';
 import { checkReplay, playRandomGame } from '../harness/contract';
 
 /** Everything a seat may not see: other hands (until they are laid down at the end), the wall and the seed. */
@@ -110,6 +111,9 @@ const configs: MahjongConfig[] = [
   ...RIICHI_PRESETS.map((p): MahjongConfig => ({ style: 'riichi', options: { ...p.options, length: 'hand' } })),
   { style: 'riichi', options: { ...RIICHI_DEFAULTS, length: 'east' } },
   { style: 'riichi', options: { ...RIICHI_DEFAULTS, length: 'hand', multipleRon: 'triple', kuikae: 'allowed', kanDora: 'immediate', aborts: 'off', nagashi: 'off' } },
+  ...CO_PRESETS.map((p): MahjongConfig => ({ style: 'chinese-official', options: { ...p.options, length: 'hand' } })),
+  { style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'east' } },
+  { style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'hand', minPoints: 0, robKong: 'off', accountOnce: 'twice', mixedKongs: 'separate', twoConcealedKongs: 8 } },
 ];
 
 describe('mahjong over random games', () => {
@@ -190,5 +194,23 @@ describe('mahjong over random games', () => {
     }
     expect(wins).toBeGreaterThan(0);
     for (const kind of ['discard', 'ready', 'pass', 'win']) expect(seen).toContain(kind);
+  }, 120_000);
+
+  it('Chinese Official games played toward winning win only at eight points or more, flowers aside, and keep the contract', () => {
+    let wins = 0;
+    for (let i = 0; i < 16; i++) {
+      const config = one({ ...CO_DEFAULTS, ...(i % 2 === 0 ? {} : { flowers: 'off' }) }, 'chinese-official');
+      const game = playRandomGame(mahjong, config, `co-${i}`, { hidden, invariant, leakScope, choose: efficient, maxPlies: 5000 });
+      checkReplay(mahjong, game);
+      for (const r of game.final.results) {
+        for (const w of r.wins) {
+          wins++;
+          expect(withoutFlowers(w.score)).toBeGreaterThanOrEqual(8);
+          // The winner collects the points plus eight from each other player; the discarder pays the points too.
+          expect(r.deltas[w.seat]).toBe(w.from === null ? 3 * (8 + w.score.total) : 24 + w.score.total);
+        }
+      }
+    }
+    expect(wins).toBeGreaterThan(0);
   }, 120_000);
 });

@@ -405,6 +405,8 @@ export class MahjongEngine {
       firstDraw: selfDrawn && seat !== s.dealer && s.source === 'wall' && s.calls === 0 && (s.discards[seat] ?? []).length === 0,
       tiles: [...(selfDrawn ? hand : [...hand, tile]), ...(s.melds[seat] ?? []).flatMap((m) => m.tiles)],
       ...this.indicatorContext(s, seat),
+      shown: shownOf(s, kindOf(tile)) - (selfDrawn ? 0 : 1),
+      counter: s.counter,
     };
   }
 
@@ -935,6 +937,14 @@ export function setsIn(r: Pick<StyleRules, 'handSize'>): number {
 /** A seat's wind (0 East to 3 North) when `dealer` deals. */
 export function seatWind(seat: Seat, dealer: Seat): number {
   return (seat - dealer + SEATS) % SEATS;
+}
+
+/** Copies of a kind face up on the table: discards still lying there and called sets (a concealed kong lies face down). */
+export function shownOf(s: Pick<MahjongState, 'discards' | 'melds'>, kind: Kind): number {
+  let n = 0;
+  for (const list of s.discards) for (const d of list) if (!d.claimed && kindOf(d.tile) === kind) n++;
+  for (const list of s.melds) for (const m of list) if (!m.concealed) for (const t of m.tiles) if (kindOf(t) === kind) n++;
+  return n;
 }
 
 function lastIndexOfKind(hand: readonly TileId[], kind: Kind): number {

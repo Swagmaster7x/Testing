@@ -109,6 +109,20 @@ export function valueEstimate(p: SeatPicture, counts: readonly number[], melds: 
     const meldOff = melds.some((m) => m.tiles.some((t) => !isSimple(kindOf(t))));
     if (!meldOff) v += simples * (off === 0 ? 1 : off === 1 ? 0.5 : off === 2 ? 0.2 : 0);
   }
+  // Goals (patterns given as their tiles): the closest one, at a discount for each tile missing.
+  if (h.goals && h.goals.length > 0) {
+    const have = [...counts];
+    for (const m of melds) for (const t of m.tiles) have[kindOf(t)] = (have[kindOf(t)] ?? 0) + 1;
+    let best = 0;
+    for (const g of h.goals) {
+      const need = new Map<Kind, number>();
+      for (const k of g.kinds) need.set(k, (need.get(k) ?? 0) + 1);
+      let missing = 0;
+      for (const [k, n] of need) missing += Math.max(0, n - (have[k] ?? 0));
+      best = Math.max(best, g.value * (GOAL_DISCOUNT[missing] ?? 0));
+    }
+    v += best;
+  }
   // Bonus kinds (dora): each one held, at a discount until the hand has a value of its own.
   if (h.bonusKinds && h.bonusKinds.length > 0) {
     let held = 0;
@@ -119,6 +133,9 @@ export function valueEstimate(p: SeatPicture, counts: readonly number[], melds: 
 }
 
 const isSimple = (k: Kind): boolean => isSuited(k) && rankOf(k) !== 1 && rankOf(k) !== 9;
+
+/** What a goal is worth with 0, 1, 2 or 3 of its tiles still missing. */
+const GOAL_DISCOUNT: readonly number[] = [1, 0.5, 0.25, 0.1];
 
 /** The context of a possible win, from a seat's own tiles (no special timing); `ready` for a declared (or declarable) riichi. */
 export function possibleWin(p: SeatPicture, counts: readonly number[], tile: Kind, selfDrawn: boolean, ready = 0): WinContext {
