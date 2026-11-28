@@ -23,7 +23,8 @@ test('milestone 0 screens', async ({ page }) => {
   await shot(page, '01-today');
 
   await page.goto('/#/games');
-  await expect(page.locator('.tile')).toHaveCount(8);
+  // The eight launch games, and every game added since.
+  await expect(page.locator('.tile').nth(7)).toBeVisible();
   await shot(page, '02-games');
 
   await page.goto('/#/games/chess');
