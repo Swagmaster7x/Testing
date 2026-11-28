@@ -5,6 +5,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { choosePassOrVoid } from './mahjong-helpers';
 
 /** Serious and critical findings so far in this test; checked at its end, so one run shows them all. */
 let found: string[] = [];
@@ -49,6 +50,8 @@ test.describe('accessibility', () => {
     ] as const) {
       await page.goto(url);
       await page.waitForTimeout(400);
+      // The progress table loads every game's lessons first: scan it once it is there.
+      if (where === 'progress') await page.locator('button.progress-game').first().waitFor({ timeout: 15_000 });
       await scan(page, where);
     }
   });
@@ -72,5 +75,23 @@ test.describe('accessibility', () => {
     await page.goto('/#/learn/brisca.0.game');
     await page.waitForTimeout(400);
     await scan(page, 'lesson');
+  });
+
+  test('the Mahjong style tables of milestone 14c', async ({ page }) => {
+    test.setTimeout(120_000);
+    // Sichuan: the exchange prompt, then the void prompt, then the table in play.
+    await page.goto('/#/games/mahjong?seed=a11y');
+    await page.getByRole('button', { name: /^Play/ }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('radio', { name: /^Sichuan, online/ }).click();
+    await dialog.getByRole('button', { name: /^(Start|New game)$/ }).click();
+    await expect(page.locator('.mj-pass-prompt')).toBeVisible({ timeout: 60_000 });
+    await scan(page, 'sichuan exchange');
+    await choosePassOrVoid(page);
+    await expect(page.locator('.mj-void-prompt')).toBeVisible({ timeout: 60_000 });
+    await scan(page, 'sichuan void');
+    await choosePassOrVoid(page);
+    await expect(page.locator('.status-turn')).toHaveText(/Your move|to move|thinking/, { timeout: 60_000 });
+    await scan(page, 'sichuan table');
   });
 });
