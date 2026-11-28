@@ -5,7 +5,6 @@
  */
 import type { MessageKey } from './en';
 import { en } from './en';
-import { es } from './es';
 
 export type { MessageKey } from './en';
 
@@ -15,11 +14,27 @@ export const LANGUAGES: readonly Language[] = ['en', 'es'];
 
 let catalogue: Readonly<Record<string, string>> = en;
 let language: Language = 'en';
+/** The Spanish catalogue, once loaded: it is its own download, so English never pays for it. */
+let spanish: Readonly<Record<string, string>> | null = null;
 
-/** Sets the interface language. Screens read text when they render, so re-render after this. */
+/** Loads a language's text, if it is not loaded yet. */
+export async function loadLanguage(next: Language): Promise<void> {
+  if (next === 'es' && !spanish) spanish = (await import('./es')).es;
+}
+
+/** Whether a language's text is loaded, so `setLanguage` can switch to it. */
+export function languageReady(next: Language): boolean {
+  return next === 'en' || spanish !== null;
+}
+
+/**
+ * Sets the interface language, once its text is loaded (`loadLanguage`); until then nothing
+ * changes. Screens read text when they render, so re-render after this.
+ */
 export function setLanguage(next: Language): void {
+  if (!languageReady(next)) return;
   language = next;
-  catalogue = next === 'es' ? { ...en, ...es } : en;
+  catalogue = next === 'es' && spanish ? { ...en, ...spanish } : en;
 }
 
 export function currentLanguage(): Language {

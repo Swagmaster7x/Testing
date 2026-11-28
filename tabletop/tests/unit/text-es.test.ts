@@ -1,6 +1,6 @@
 /** The Spanish catalogue: only real keys, the same placeholders, and how much of each area is done. */
 import { describe, expect, it } from 'vitest';
-import { currentLanguage, setLanguage, t, tDynamic } from '../../src/text';
+import { currentLanguage, languageReady, loadLanguage, setLanguage, t, tDynamic } from '../../src/text';
 import { en } from '../../src/text/en';
 import { enLearn } from '../../src/text/en-learn';
 import { enGames } from '../../src/text/games';
@@ -84,8 +84,10 @@ describe('the Spanish catalogue', () => {
     });
   }
 
-  it('switches language and falls back to English for anything untranslated', () => {
+  it('switches language once its text is loaded, and falls back to English for anything untranslated', async () => {
     const before = currentLanguage();
+    await loadLanguage('es');
+    expect(languageReady('es')).toBe(true);
     setLanguage('es');
     expect(t('nav.games')).toBe('Juegos');
     expect(t('common.level', { n: 3 })).toBe('Nivel 3');

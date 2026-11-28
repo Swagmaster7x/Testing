@@ -1025,6 +1025,15 @@ Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in th
       mangan; double riichi with two ura) and an end-to-end test at three sizes. Red fives are one
       per suit present (a hand with two 5 bamboo cannot hold two red ones), drawn red in the hand
       and its sets, and the same helper picks them for the scorer and the picture.
+- [x] **A lighter start (2026-11-28)**: the Spanish text (245 KB) is its own file, loaded before the
+      first screen only when Spanish is the saved language, and before switching when it is
+      chosen; the startup script went from 1,016 KB back to 772 KB. Offline still has it (the
+      service worker caches every file).
+- **Four-player Brisca levels 2 and 3 (measured 2026-11-28, 600 hands)**: level 3 wins 0.506 of
+  hands against level 2. Not fixable by tuning: one four-player hand is mostly the deal, and even
+  level 4's search wins only 0.582 against level 2 (0.603 against level 3). Two tries (cheaper
+  winners while an opponent can still trump; a small search with the basic policy) moved nothing.
+  The levels differ in play, not in single-hand results.
 - [ ] Still to come in M16: calculator inputs for the later Mahjong styles, and the final pass.
 - **Decided by the owner (2026-11-28): the app is for one Android phone for now.** No release key
   and no web hosting: the debug APK, signed with the fixed key in `android/app/signing`, is the

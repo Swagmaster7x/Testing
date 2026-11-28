@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { catalogGame } from '../games/catalog';
-import { currentLanguage, setLanguage, t } from '../text';
+import { currentLanguage, languageReady, setLanguage, t } from '../text';
 import { Toast } from './components/Toast';
 import { useReducedMotion } from './motion';
 import { NavRail } from './NavRail';
@@ -46,8 +46,9 @@ export function App() {
   const motion = useApp((s) => s.settings?.motion ?? 'system');
   const deck = useApp((s) => s.settings?.deck ?? 'two');
   const language = useApp((s) => s.settings?.language ?? 'en');
-  // Text is read while rendering, so the language is set before anything below renders.
-  if (currentLanguage() !== language) setLanguage(language);
+  // Text is read while rendering, so the language is set before anything below renders (the app
+  // state loads a language's text before it saves or reports the setting).
+  if (currentLanguage() !== language && languageReady(language)) setLanguage(language);
   const reduced = useReducedMotion(motion);
   const route = useRoute();
 

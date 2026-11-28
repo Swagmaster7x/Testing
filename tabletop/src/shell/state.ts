@@ -9,7 +9,7 @@ import type { PersistState } from '../store/persist';
 import { persistenceState, requestPersistence } from '../store/persist';
 import { createProfile, deleteProfile, ensureProfile, listProfiles, renameProfile, setActiveProfileId } from '../store/profiles';
 import { getSettings, saveSettings, toggleFocus } from '../store/settings';
-import { t } from '../text';
+import { loadLanguage, t } from '../text';
 
 export interface Notice {
   readonly id: number;
@@ -52,6 +52,7 @@ export const useApp = create<AppState>()((set, get) => ({
       // Ask the browser to keep our storage once, on the very first run (PLAN.md 2.8).
       const persist = created ? await requestPersistence() : await persistenceState();
       const [profiles, settings] = await Promise.all([listProfiles(db), getSettings(db, profile.id)]);
+      await loadLanguage(settings.language);
       set({ status: 'ready', profile, profiles, settings, persist });
     } catch (err) {
       console.error(err);
@@ -70,7 +71,9 @@ export const useApp = create<AppState>()((set, get) => ({
     const profiles = await listProfiles(db);
     const profile = profiles.find((p) => p.id === id) ?? null;
     if (!profile) return;
-    set({ profile, profiles, settings: await getSettings(db, id) });
+    const settings = await getSettings(db, id);
+    await loadLanguage(settings.language);
+    set({ profile, profiles, settings });
     get().notify(t('settings.profiles.switched', { name: profile.name }));
   },
 
@@ -99,6 +102,7 @@ export const useApp = create<AppState>()((set, get) => ({
     const current = get().settings;
     if (!current) return;
     const next: ProfileSettings = { ...current, ...patch, profileId: current.profileId };
+    if (patch.language) await loadLanguage(patch.language);
     set({ settings: next });
     await saveSettings(appDb(), next);
   },
