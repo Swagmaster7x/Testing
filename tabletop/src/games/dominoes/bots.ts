@@ -53,6 +53,12 @@ export const LEVEL_PARAMS: Readonly<Record<number, LevelParams>> = {
   6: { samples: 400, policy: 3, exactAt: 12 },
 };
 
+/**
+ * Level 4 with the double nine searches more deals: with 16 it lost to level 3 (0.44 in Cuban
+ * matches to 500); with 40 it won 0.57 over 200 matches, and level 5 still beat it 0.63.
+ */
+const NINE_LEVEL4_SAMPLES = 40;
+
 /** How close (in points, with the double six) the search may rate a conventional play to the best and still choose it. */
 const CONVENTION_MARGIN = 1;
 
@@ -471,7 +477,10 @@ export function chooseAction(v: DominoesView, level: number, rng: Rng): Dominoes
   // The lead follows the convention, so a partner can read it.
   if (v.chain.length === 0) return heuristic(v, 3, rng);
   const conventional = heuristic(v, 3, rng);
-  if (v.config.set === 'double-nine') return bestOfPaired(evaluateDetailed(v, params.samples, params.exactAt, rng), conventional, rng, conventionMargin(v));
+  if (v.config.set === 'double-nine') {
+    const samples = level === 4 ? NINE_LEVEL4_SAMPLES : params.samples;
+    return bestOfPaired(evaluateDetailed(v, samples, params.exactAt, rng), conventional, rng, conventionMargin(v));
+  }
   return bestOf(evaluateActions(v, params.samples, params.exactAt, rng), conventional, rng, conventionMargin(v));
 }
 

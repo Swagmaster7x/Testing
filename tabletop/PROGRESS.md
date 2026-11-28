@@ -1021,7 +1021,7 @@ tablet or laptop they run straight up and down from the spinner first.
 | L1 vs random | 0.983 | 0.930 |
 | L2 vs L1 | 0.600 | 0.630 |
 | L3 vs L2 | 0.717 | 0.640 |
-| L4 vs L3 | 0.667 | **0.440 (fails)** |
+| L4 vs L3 | 0.667 | **0.440 (fails)**; 0.570 over 200 after the merge |
 | L5 vs L4 | 0.650 | 0.630 |
 | L6 vs L5 | 0.600 | **0.580 (fails)** |
 
@@ -1042,6 +1042,10 @@ All Fives passes every rung. Cuban needed work and one rung is still open:
   0.59. So the gap from 3 to 4 is open. Level 5 beats level 4 by 0.63, and level 6 beats level 5
   by 0.58, just under the margin: with the double nine more sampled deals buy less than with the
   double six. Each Cuban rung to 500 takes about five minutes (level 6 about half an hour).
+- **After the merge (2026-11-28):** level 4 with the double nine now searches 40 deals instead of
+  16. Against level 3 it won 0.64 over 100 matches and 0.57 over 200 (114 to 86), where it had
+  lost 0.44; level 5 still beats it 0.63. The rung is still just under the margin, but level 4 is
+  no longer weaker than level 3.
 
 ### Decisions
 
