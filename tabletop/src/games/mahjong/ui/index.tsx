@@ -10,6 +10,7 @@ import { kindOf } from '../core/tiles';
 import { HK_OPTIONS, HK_PRESETS } from '../styles/hong-kong';
 import { basePoints as riichiBase, COUNTER_VALUE, doraOf, NOTEN_POOL, payments as riichiPayments, RIICHI_PRESETS, STAKE, YAKU_HAN } from '../styles/riichi';
 import { CO_BASE, CO_PATTERNS, CO_PRESETS, coFan } from '../styles/chinese-official';
+import { TW_DEFAULTS, TW_PATTERNS, TW_PRESETS, twTai } from '../styles/taiwanese';
 import { MahjongCoachPanel } from './CoachPanel';
 import { MahjongSeatMark, MahjongSurface } from './MahjongSurface';
 import { kindName, moveName, runName, seatName, tileName, valueName, whoName, windName } from './names';
@@ -37,6 +38,7 @@ export const mahjongOptions: GameOptions<MahjongConfig> = {
     ...HK_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'hong-kong', options: p.options } })),
     ...RIICHI_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'riichi', options: p.options } })),
     ...CO_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'chinese-official', options: p.options } })),
+    ...TW_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'taiwanese', options: p.options } })),
   ],
   fields: [STYLE_FIELD, ...fieldsOf('hong-kong')],
   fieldsFor: (config) => [STYLE_FIELD, ...fieldsOf(config.style)],
@@ -178,6 +180,17 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
         ...order.map((s) => ({ label: seatName(s, m), value: String(state.scores[s] ?? 0) })),
       ];
     }
+    if (state.config.style === 'taiwanese') {
+      return [
+        { label: t('mahjong.counter.round'), value: t('mahjong.counter.round.value', { wind: windName(state.round), n: state.passes + 1 }) },
+        { label: t('mahjong.counter.seat'), value: windName(seatWind(m, state.dealer)) },
+        { label: t('mahjong.counter.dealer'), value: seatName(state.dealer, m) },
+        { label: t('mahjong.counter.streak'), value: String(state.counter) },
+        { label: t('mahjong.counter.wall'), value: String(Math.max(0, state.wall.length - engine.rules(state.config).deadWall)) },
+        { label: t('mahjong.counter.scores'), value: order.map((s) => String(state.scores[s] ?? 0)).join(' · ') },
+        { label: t('mahjong.counter.stakes'), value: t('mahjong.counter.stakes.value', { base: Number(options.base ?? TW_DEFAULTS.base), perTai: Number(options.perTai ?? TW_DEFAULTS.perTai) }) },
+      ];
+    }
     if (state.config.style === 'chinese-official') {
       return [
         { label: t('mahjong.counter.round'), value: t('mahjong.counter.round.value', { wind: windName(state.round), n: state.passes + 1 }) },
@@ -218,6 +231,10 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       { title: 'ref.mahjong.cofan', items: coFanLines() },
       { title: 'ref.mahjong.copay', items: [t('ref.mahjong.copay.1', { base: CO_BASE }), t('ref.mahjong.copay.2', { base: CO_BASE })] },
       { title: 'ref.mahjong.coask', items: lines('ref.mahjong.coask', 5) },
+      { title: 'ref.mahjong.tw', items: lines('ref.mahjong.tw', 5) },
+      { title: 'ref.mahjong.twtai', items: twTaiLines() },
+      { title: 'ref.mahjong.twpay', items: [t('ref.mahjong.twpay.1', { base: Number(TW_DEFAULTS.base), perTai: Number(TW_DEFAULTS.perTai) }), t('ref.mahjong.twpay.2', { dealer: twTai('tw-dealer'), repeat: twTai('tw-streak') })] },
+      { title: 'ref.mahjong.twask', items: lines('ref.mahjong.twask', 5) },
       { title: 'ref.mahjong.levels', items: MAHJONG_LEVELS.map((l) => `${t('common.level', { n: l.level })} (${t('mahjong.rating', { n: l.rating })}): ${tDynamic(`mahjong.level.${l.level}`)}`) },
     ];
   },
@@ -258,6 +275,17 @@ function coFanLines(): string[] {
   const byValue = new Map<number, string[]>();
   for (const id of CO_PATTERNS) {
     const v = coFan(id);
+    byValue.set(v, [...(byValue.get(v) ?? []), tDynamic(`mahjong.pattern.${id}`)]);
+  }
+  return [...byValue.entries()].sort((a, b) => b[0] - a[0]).map(([n, names]) => t('ref.mahjong.cofan.line', { n, list: names.join('; ') }));
+}
+
+/** The Taiwanese tai by value, from the rules file (the dealer's tai have their own line under payments). */
+function twTaiLines(): string[] {
+  const byValue = new Map<number, string[]>();
+  for (const id of TW_PATTERNS) {
+    if (id === 'tw-dealer' || id === 'tw-streak') continue;
+    const v = twTai(id);
     byValue.set(v, [...(byValue.get(v) ?? []), tDynamic(`mahjong.pattern.${id}`)]);
   }
   return [...byValue.entries()].sort((a, b) => b[0] - a[0]).map(([n, names]) => t('ref.mahjong.cofan.line', { n, list: names.join('; ') }));

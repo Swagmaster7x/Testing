@@ -67,6 +67,8 @@ export function MahjongCalculator() {
   const riichi = style.id === 'riichi';
   // Chinese Official's own input: the winning tile was the last of its kind.
   const official = style.id === 'chinese-official';
+  // Taiwanese's own input: the dealer's streak of kept deals.
+  const taiwanese = style.id === 'taiwanese';
   const add = (kind: Kind) => {
     if (mode === 'dora' || mode === 'ura') {
       const key = mode === 'dora' ? 'indicators' : 'underIndicators';
@@ -203,6 +205,11 @@ export function MahjongCalculator() {
           <Labelled label={t('tools.calc.how')}>
             <Segmented label={t('tools.calc.how')} value={input.from ?? 'self'} options={fromOptions} onChange={(v) => update({ from: v === 'self' ? null : v })} />
           </Labelled>
+          {taiwanese ? (
+            <Labelled label={t('tools.calc.streak')}>
+              <Segmented label={t('tools.calc.streak')} value={input.streak ?? 0} options={[0, 1, 2, 3, 4].map((n) => ({ value: n, label: String(n) }))} onChange={(streak) => update({ streak })} />
+            </Labelled>
+          ) : null}
           {riichi ? (
             <>
               <Labelled label={t('tools.calc.riichi')}>

@@ -44,6 +44,7 @@ import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS } from './mahjong/styles/riichi';
 import { CO_DEFAULTS } from './mahjong/styles/chinese-official';
+import { TW_DEFAULTS } from './mahjong/styles/taiwanese';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
 import { tuteBots } from './tute/bots';
@@ -428,5 +429,7 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     'mahjong-riichi': mahjongLadder({ style: 'riichi', options: RIICHI_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
     // Chinese Official: one round of four hands under the official rules (PROGRESS-M14b.md).
     'mahjong-chinese-official': mahjongLadder({ style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'east' } }) as unknown as Ladder<never, never, never, never, never>,
+    // Taiwanese: one East round under the common table's rules (PROGRESS-M14b.md).
+    'mahjong-taiwanese': mahjongLadder({ style: 'taiwanese', options: TW_DEFAULTS }) as unknown as Ladder<never, never, never, never, never>,
   };
 }

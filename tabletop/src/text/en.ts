@@ -303,6 +303,8 @@ const base = {
   'tools.calc.style.riichi': 'Riichi',
   'tools.calc.style.chinese-official': 'Chinese Official',
   'tools.calc.lastOfKind': 'The last of its kind',
+  'tools.calc.style.taiwanese': 'Taiwanese',
+  'tools.calc.streak': 'Dealer’s repeat deals',
   'tools.calc.rules': 'Rules',
   'tools.calc.hand': 'The winning hand',
   'tools.calc.in-hand': 'Tiles written down',

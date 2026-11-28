@@ -292,6 +292,8 @@ export const esBase: Partial<Record<MessageKey, string>> = {
   'tools.calc.style.riichi': 'Riichi',
   'tools.calc.style.chinese-official': 'Chino oficial',
   'tools.calc.lastOfKind': 'La última de su clase',
+  'tools.calc.style.taiwanese': 'Taiwanés',
+  'tools.calc.streak': 'Manos repetidas de quien reparte',
   'tools.calc.rules': 'Reglas',
   'tools.calc.hand': 'La mano ganadora',
   'tools.calc.in-hand': 'Fichas anotadas',
