@@ -28,6 +28,7 @@ import type { Kind } from '../core/tiles';
 import { codeOf, copiesOf, countsOf, FLOWER_1, isBonus, isDragon, isFlower, isHonour, isSeason, isTerminalOrHonour, isWind, kindOf, parseKind, parseKinds, PLAYING_KINDS, SUIT_KINDS, SUIT_LETTERS, tileSet } from '../core/tiles';
 import { basePoints, HK_DEFAULTS, HK_LIMIT_HANDS, HK_OPTIONS, HK_PATTERNS, hkFaan, hkScoreAny, POINT_TABLES } from '../styles/hong-kong';
 import { basePoints as riichiBase, COUNTER_VALUE, doraOf, FU, NOTEN_POOL, payments, RIICHI_DEFAULTS, RIICHI_TARGET, STAKE, YAKU_HAN } from '../styles/riichi';
+import { CO_BASE, CO_DEFAULTS, CO_PATTERNS, coFan, withoutFlowers } from '../styles/chinese-official';
 import { evaluateDiscards, handShanten, picture, readyInfo } from '../strategy';
 import { kindName, runName, seatName, windName } from '../ui/names';
 
@@ -41,6 +42,8 @@ export const BASIC: StyleOptions = { flowers: 'off', minFaan: 0, length: 'hand' 
 export const HK: StyleOptions = { length: 'hand' };
 /** The Riichi track: the common online table (red fives, open tanyao), a one-hand game. */
 export const RIICHI: StyleOptions = { length: 'hand' };
+/** The Chinese Official track: the official table (eight points, flowers), a one-hand game. */
+export const CO: StyleOptions = { length: 'hand' };
 
 /** A tile's name from its code: "5 dots", "Red dragon". */
 export function nameOf(code: string): string {
@@ -83,8 +86,8 @@ export interface LessonSpec {
   /** The seed for the dealt tiles. A seed starting "safety" marks a safe-tile question for the verifier. */
   readonly seed?: string;
   readonly scores?: readonly number[];
-  /** The rules family: Hong Kong unless it says "riichi". */
-  readonly style?: 'hong-kong' | 'riichi';
+  /** The rules family (a style id): Hong Kong unless it says otherwise. */
+  readonly style?: string;
   /** Riichi: the dora indicators turned up (one by default; the rest are dealt from the seed). */
   readonly indicators?: string;
   /** Riichi: the tiles under the indicators (ura dora). */
@@ -365,8 +368,24 @@ const FIXED: Readonly<Record<string, number | string>> = (() => {
   out['pay:self:total'] = pay.selfDrawn * (SEATS - 1);
   out['pay:discard:total'] = pay.discarder + pay.others * (SEATS - 2);
   Object.assign(out, riichiFixed());
+  Object.assign(out, coFixed());
   return out;
 })();
+
+/** The Chinese Official table: the set, the minimum, the base every player pays, the game's length and each pattern's points. */
+function coFixed(): Record<string, number> {
+  const out: Record<string, number> = {};
+  const config: MahjongConfig = { style: 'chinese-official', options: CO_DEFAULTS };
+  const rules = engine.rules(config);
+  out['co:tiles'] = tileSet(rules.tiles).length;
+  out['co:min'] = Number(CO_DEFAULTS.minPoints);
+  out['co:base'] = CO_BASE;
+  out['co:hands'] = rules.rounds * rules.handsPerRound;
+  out['co:round'] = rules.handsPerRound;
+  out['co:patterns'] = CO_PATTERNS.length;
+  for (const id of CO_PATTERNS) out[`pts:${id.replace(/^co-/, '')}`] = coFan(id, CO_DEFAULTS);
+  return out;
+}
 
 /** The Riichi table: the set, the sticks, each yaku's han, the fu, the bands and the payment table. */
 function riichiFixed(): Record<string, number> {
@@ -500,7 +519,9 @@ function computeAll(state: MahjongState): Record<string, number | string> {
   out['wind:round'] = windName(state.round);
   out['flower:seat'] = seatWind(STUDENT, state.dealer) + 1;
   const riichi = state.config.style === 'riichi';
-  if (!riichi) {
+  const co = state.config.style === 'chinese-official';
+  if (co) out['min'] = Number(o.minPoints);
+  else if (!riichi) {
     out['min'] = Number(o.minFaan);
     out['limit'] = Number(o.limit);
   }
@@ -581,7 +602,12 @@ function computeAll(state: MahjongState): Record<string, number | string> {
     out['win:raw'] = score.raw;
     out['win:base'] = score.base;
     out['win:lines'] = score.lines.length;
-    if (!riichi) {
+    if (co) {
+      // Flowers add to what is paid but never toward the minimum.
+      out['win:flowerless'] = withoutFlowers(score);
+      out['win:ok'] = withoutFlowers(score) >= Number(o.minPoints) ? 1 : 0;
+      out['win:short'] = Math.max(0, Number(o.minPoints) - withoutFlowers(score));
+    } else if (!riichi) {
       out['win:ok'] = score.total >= Number(o.minFaan) ? 1 : 0;
       out['win:short'] = Math.max(0, Number(o.minFaan) - score.total);
     }

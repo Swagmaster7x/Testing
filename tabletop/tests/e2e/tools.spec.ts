@@ -121,4 +121,22 @@ test.describe('tools', () => {
     await expect(page.getByRole('button', { name: 'Dora indicator: 4 characters' })).toBeVisible();
     await expect(page.locator('.calc-result')).toContainText('West -12000');
   });
+
+  test('the Mahjong calculator takes a Chinese Official hand: eight points to win, flowers aside, the last of its kind', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'Chinese Official' }).click();
+    const picker = page.getByRole('group', { name: 'Tiles to add' });
+    for (const tile of ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '7 dots', '8 dots', '9 dots', '2 bamboo', '3 bamboo', '4 bamboo', '5 bamboo', '5 bamboo']) {
+      await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+    }
+    // Self-drawn: fully concealed, all chows, a short straight and no honours make eight.
+    await expect(page.locator('.calc-total')).toHaveText('8 points');
+    await expect(page.locator('.calc-result')).toContainText('East (winner) +48');
+    // On a discard it is two points short; the last tile of its kind lifts it to ten.
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On West’s discard' }).click();
+    await expect(page.locator('.calc-result')).toContainText('Below the minimum');
+    await page.getByRole('button', { name: 'The last of its kind' }).click();
+    await expect(page.locator('.calc-total')).toHaveText('10 points');
+    await expect(page.locator('.calc-result')).toContainText('West -18');
+  });
 });
