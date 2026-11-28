@@ -65,6 +65,8 @@ export function MahjongCalculator() {
 
   // Riichi's own inputs: the declaration, ippatsu, red fives and the indicators.
   const riichi = style.id === 'riichi';
+  // Sichuan's: suits only, no chows or flowers, and a win on a kong's throw.
+  const sichuan = style.id === 'sichuan';
   const add = (kind: Kind) => {
     if (mode === 'dora' || mode === 'ura') {
       const key = mode === 'dora' ? 'indicators' : 'underIndicators';
@@ -151,12 +153,12 @@ export function MahjongCalculator() {
             <Segmented
               label={t('tools.calc.add-to')}
               value={mode}
-              options={(riichi ? (['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'dora', 'ura'] as const) : (['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'flower'] as const)).map((m) => ({ value: m, label: tDynamic(`tools.calc.mode.${m}`) }))}
+              options={(riichi ? (['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'dora', 'ura'] as const) : sichuan ? (['hand', 'pung', 'kong', 'concealed-kong'] as const) : (['hand', 'chow', 'pung', 'kong', 'concealed-kong', 'flower'] as const)).map((m) => ({ value: m, label: tDynamic(`tools.calc.mode.${m}`) }))}
               onChange={setMode}
             />
           </Labelled>
           <div className="calc-picker" role="group" aria-label={t('tools.calc.picker')}>
-            {(mode === 'flower' ? FLOWERS : KINDS).map((k) => (
+            {(mode === 'flower' ? FLOWERS : sichuan ? KINDS.filter((k) => k < 27) : KINDS).map((k) => (
               <Tile key={k} kind={k} label={t('tools.calc.add', { tile: kindName(k) })} selected={isBonus(k) && input.bonus.includes(k)} onClick={() => add(k)} />
             ))}
           </div>
@@ -196,9 +198,11 @@ export function MahjongCalculator() {
           <Labelled label={t('tools.calc.seat')}>
             <Segmented label={t('tools.calc.seat')} value={input.seatWind} options={[0, 1, 2, 3].map((w) => ({ value: w, label: windName(w) }))} onChange={(seatWind) => update({ seatWind })} />
           </Labelled>
-          <Labelled label={t('tools.calc.round')}>
-            <Segmented label={t('tools.calc.round')} value={input.prevailingWind} options={[0, 1, 2, 3].map((w) => ({ value: w, label: windName(w) }))} onChange={(prevailingWind) => update({ prevailingWind })} />
-          </Labelled>
+          {sichuan ? null : (
+            <Labelled label={t('tools.calc.round')}>
+              <Segmented label={t('tools.calc.round')} value={input.prevailingWind} options={[0, 1, 2, 3].map((w) => ({ value: w, label: windName(w) }))} onChange={(prevailingWind) => update({ prevailingWind })} />
+            </Labelled>
+          )}
           <Labelled label={t('tools.calc.how')}>
             <Segmented label={t('tools.calc.how')} value={input.from ?? 'self'} options={fromOptions} onChange={(v) => update({ from: v === 'self' ? null : v })} />
           </Labelled>
@@ -225,6 +229,11 @@ export function MahjongCalculator() {
                 {tDynamic(`tools.calc.${key}`)}
               </button>
             ))}
+            {sichuan && input.from !== null ? (
+              <button type="button" className="btn btn-small" aria-pressed={input.kongDiscard === true} data-on={input.kongDiscard === true} onClick={() => update({ kongDiscard: !input.kongDiscard })}>
+                {t('tools.calc.kongDiscard')}
+              </button>
+            ) : null}
           </div>
         </section>
       </div>

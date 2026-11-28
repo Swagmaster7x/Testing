@@ -139,16 +139,17 @@ export function shantenStandard(counts: readonly number[], need: number): number
   return best;
 }
 
-/** Shanten for seven pairs (no melds). */
-export function shantenSevenPairs(counts: readonly number[]): number {
+/** Shanten for seven pairs (no melds); with `four`, four of a kind counts as two pairs. */
+export function shantenSevenPairs(counts: readonly number[], four = false): number {
   let pairs = 0;
   let kinds = 0;
   for (let k = 0; k < PLAYING_KINDS; k++) {
     const n = counts[k] ?? 0;
     if (n >= 1) kinds++;
-    if (n >= 2) pairs++;
+    if (four) pairs += Math.floor(n / 2);
+    else if (n >= 2) pairs++;
   }
-  return 6 - pairs + Math.max(0, 7 - kinds);
+  return four ? 6 - pairs : 6 - pairs + Math.max(0, 7 - kinds);
 }
 
 /** Shanten for thirteen orphans (no melds). */
@@ -173,7 +174,7 @@ export interface ShantenRules {
 export function shanten(counts: readonly number[], melds: number, rules: ShantenRules): number {
   let s = shantenStandard(counts, rules.sets - melds);
   if (melds === 0 && rules.sets === 4) {
-    if (rules.shapes.sevenPairs) s = Math.min(s, shantenSevenPairs(counts));
+    if (rules.shapes.sevenPairs) s = Math.min(s, shantenSevenPairs(counts, rules.shapes.sevenPairsFour === true));
     if (rules.shapes.thirteenOrphans) s = Math.min(s, shantenOrphans(counts));
   }
   return s;

@@ -26,7 +26,7 @@ import type { Kind, TileId } from '../core/tiles';
 import { codeOf, kindOf, sortTiles } from '../core/tiles';
 import { evaluateDiscards, picture } from '../strategy';
 import { engine, isRedFive, viewOf } from '../rules';
-import { kindName, patternName, relative, runName, seatName, tileName, whoName, windName } from './names';
+import { directionName, kindName, patternName, relative, runName, seatName, suitName, tileName, whoName, windName } from './names';
 import { TileBack, TileFace } from './tiles';
 import './mahjong.css';
 
@@ -273,6 +273,77 @@ function OwnTurnButtons({ legal, counts, onAction, riichi, readyMode, setReadyMo
   );
 }
 
+// Before play: the void suit and passing tiles
+
+/** Choosing the suit to void: three buttons, each with how many of that suit you hold. */
+function VoidPrompt({ counts, onAction }: { counts: readonly number[]; onAction: (a: MahjongAction) => void }) {
+  return (
+    <div className="mj-prompt mj-void-prompt" role="group" aria-label={t('mahjong.void.title')}>
+      <p className="mj-prompt-title">{t('mahjong.void.title')}</p>
+      <p className="mj-prompt-detail">{t('mahjong.void.detail')}</p>
+      <div className="mj-prompt-row">
+        {[0, 1, 2].map((suit) => (
+          <button key={suit} type="button" className="btn btn-small mj-call" data-call="void" onClick={() => onAction({ type: 'void', suit })}>
+            <MiniTile kind={suit * 9 + 4} width={16} />
+            {t('mahjong.void.button', { suit: suitName(suit), n: counts[suit] ?? 0 })}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A passing round: tap the tiles to pass (they lift), then Pass. A vote round asks whether to play
+ * the passes that follow; a blind round lets you pass on tiles you receive without looking.
+ */
+function PassPrompt({ state, legal, picked, blind, setBlind, onAction }: { state: MahjongState; legal: readonly MahjongAction[]; picked: readonly Kind[]; blind: number; setBlind: (n: number) => void; onAction: (a: MahjongAction) => void }) {
+  const round = engine.passRound(state);
+  const p = state.passing;
+  if (!round || !p) return null;
+  if (p.voting) {
+    return (
+      <div className="mj-prompt mj-pass-prompt" role="group" aria-label={t('mahjong.pass.vote')}>
+        <p className="mj-prompt-title">{t('mahjong.pass.vote')}</p>
+        <div className="mj-prompt-row">
+          <button type="button" className="btn btn-small btn-primary mj-call" data-call="vote-yes" onClick={() => onAction({ type: 'vote', yes: true })}>
+            {t('mahjong.pass.vote-yes')}
+          </button>
+          <button type="button" className="btn btn-small mj-call" data-call="vote-no" onClick={() => onAction({ type: 'vote', yes: false })}>
+            {t('mahjong.pass.vote-no')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  const dir = round.dir === 0 ? p.dice : round.dir;
+  const sorted = [...picked].sort((a, b) => a - b).join('.');
+  const choice = legal.find((a) => a.type === 'pass-tiles' && [...a.tiles].sort((x, y) => x - y).join('.') === sorted && a.blind === (round.blind ? blind : 0));
+  const want = round.courtesy ? 0 : round.count - picked.length - (round.blind ? blind : 0);
+  const title = round.courtesy ? t('mahjong.pass.courtesy', { n: round.count }) : round.sameSuit ? t('mahjong.pass.title', { dir: directionName(dir) }) : t('mahjong.pass.title-any', { n: round.count, dir: directionName(dir) });
+  return (
+    <div className="mj-prompt mj-pass-prompt" role="group" aria-label={title}>
+      <p className="mj-prompt-title">{title}</p>
+      <div className="mj-prompt-row">
+        {round.blind ? (
+          <span className="mj-blind" role="group" aria-label={t('mahjong.pass.blind')}>
+            <span>{t('mahjong.pass.blind')}</span>
+            {Array.from({ length: round.count + 1 }, (_, n) => (
+              <button key={n} type="button" className="btn btn-small btn-quiet" aria-pressed={blind === n} data-on={blind === n} onClick={() => setBlind(n)}>
+                {n}
+              </button>
+            ))}
+          </span>
+        ) : null}
+        <span className="mj-pass-count">{want > 0 ? t('mahjong.pass.pick', { n: want }) : want < 0 ? t('mahjong.pass.fewer', { n: -want }) : t('mahjong.pass.ready')}</span>
+        <button type="button" className="btn btn-small btn-primary mj-call" data-call="pass-tiles" disabled={!choice} onClick={() => choice && onAction(choice)}>
+          {t('mahjong.pass.button')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // The end of a hand
 
 /**
@@ -311,7 +382,13 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
   const first = wins[0];
   return (
     <div className="mj-result" role="status" aria-label={t('mahjong.result.payments')}>
-      {wins.length === 0 ? <h2>{result.reason && result.reason !== 'exhausted' ? tDynamic(`mahjong.result.abort.${result.reason}`) : t(result.ready ? 'mahjong.result.draw.riichi' : 'mahjong.result.draw')}</h2> : null}
+      {wins.length === 0 ? <h2>{result.reason && result.reason !== 'exhausted' ? tDynamic(`mahjong.result.abort.${result.reason}`) : t(result.status ? 'mahjong.result.wall-out' : result.ready ? 'mahjong.result.draw.riichi' : 'mahjong.result.draw')}</h2> : null}
+      {wins.length > 0 && result.reason === 'exhausted' ? <p className="mj-result-ready">{t('mahjong.result.wall-out')}</p> : null}
+      {result.status ? (
+        <p className="mj-result-ready mj-result-status">
+          {t('mahjong.result.checks', { list: result.status.flatMap((st, seat) => (st === 'won' ? [] : [`${seatName(seat, me)} ${tDynamic(`mahjong.status.${st}`)}`])).join(', ') })}
+        </p>
+      ) : null}
       {wins.length === 0 && result.ready ? (
         <p className="mj-result-ready">{result.ready.some(Boolean) ? t('mahjong.result.ready', { list: result.ready.flatMap((r, seat) => (r ? [seatName(seat, me)] : [])).join(', ') }) : t('mahjong.result.ready.none')}</p>
       ) : null}
@@ -351,7 +428,7 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
             ) : null}
             {asking ? null : (
             <ul className="mj-faan">
-              {w.score.lines.length === 0 ? <li>{t('mahjong.result.chicken')}</li> : null}
+              {w.score.lines.length === 0 ? <li>{t(w.score.unit === 'fan' ? 'mahjong.result.chicken.fan' : 'mahjong.result.chicken')}</li> : null}
               {w.score.lines.map((l) => (
                 <li key={l.id}>
                   <span>
@@ -365,6 +442,11 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
                 <li className="mj-faan-total">
                   <span>{w.score.yakuman ? tDynamic(`mahjong.band.${w.score.band ?? 'yakuman'}`) : t('mahjong.result.han-fu', { han: w.score.total, fu: w.score.fu ?? 0 })}{!w.score.yakuman && w.score.band ? ` · ${tDynamic(`mahjong.band.${w.score.band}`)}` : ''}</span>
                   <span className="num">{t('mahjong.result.collects', { n: result.deltas[w.seat] ?? 0 })}</span>
+                </li>
+              ) : w.score.unit === 'fan' ? (
+                <li className="mj-faan-total">
+                  <span>{t('mahjong.won-fan', { n: w.score.total })}</span>
+                  <span className="num">{t('mahjong.result.points', { n: w.score.base })}</span>
                 </li>
               ) : (
                 <li className="mj-faan-total">
@@ -426,6 +508,8 @@ const WHERE: readonly Where[] = ['bottom', 'right', 'top', 'left'];
 export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, onSkip, helps, overlay }: SurfaceProps<MahjongState, MahjongAction, MahjongEvent>) {
   const [ref, size] = useSize<HTMLDivElement>();
   const [selected, setSelected] = useState<TileId | null>(null);
+  // Tiles picked to pass, for the passing round under way (keyed so a new round starts empty).
+  const [picks, setPicks] = useState<{ key: string; ids: TileId[]; blind: number }>({ key: '', ids: [], blind: 0 });
   const me: Seat = mySeats[0] ?? 0;
   const learner = helps.learner !== false;
   const riichi = state.config.style === 'riichi';
@@ -447,6 +531,16 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   const acting = canAct && !busy;
   const myTurn = acting && state.phase === 'act' && state.turn === me;
   const claiming = acting && (state.phase === 'claim' || state.phase === 'rob');
+  const voiding = acting && state.phase === 'void' && state.turn === me;
+  const passing = acting && state.phase === 'pass' && state.turn === me && state.passing !== null && !state.passing.voting;
+  const passKey = `${state.handNo}:${state.passing?.round ?? -1}`;
+  const picked = picks.key === passKey ? picks.ids : [];
+  const blindPicked = picks.key === passKey ? picks.blind : 0;
+  const passRule = state.phase === 'pass' ? engine.passRound(state) : null;
+  const keepKinds = new Set(tableRules.passes?.keep ?? []);
+  const myVoid = state.voids[me] ?? null;
+  const mustVoid = myTurn ? engine.voidKinds(state, me) : [];
+  const received = new Set(state.phase === 'pass' || state.phase === 'void' || (state.discards[me] ?? []).length === 0 ? (state.received[me] ?? []) : []);
 
   // Sizes: your hand as large as the width allows; everything else scaled from the space left.
   const myHand = sortTiles((d.hands[me] ?? []).filter((x) => x !== d.drawn || state.turn !== me));
@@ -520,7 +614,8 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
     if (seat === me) continue;
     const where = WHERE[relative(seat, me)] as Where;
     const hand = d.hands[seat] ?? [];
-    const open = showAll;
+    // A player who has won and left the hand lays it down face up.
+    const open = showAll || engine.isOut(state, seat);
     const melds = d.melds[seat] ?? [];
     const bonus = d.bonus[seat] ?? [];
     const mw = bw * 1.0;
@@ -579,7 +674,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   x += myBonus.length * bonusW + (myBonus.length ? hw * 0.4 : 0);
   const mine = (tile: TileId, i: number, px: number) => {
     const kind = kindOf(tile);
-    const can = playable.has(kind);
+    const can = passing ? !keepKinds.has(kind) : playable.has(kind);
     const note = efficiency?.get(kind);
     placed.push({
       key: tile,
@@ -591,9 +686,9 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
       label: tileName(tile),
       interactive: can,
       // Choosing the riichi tile: the throws that leave the hand ready stay bright.
-      dim: readyMode && !can,
-      selected: can && selected === tile,
-      tone: hintKinds.has(codeOf(kind)) || note?.best ? 'hint' : null,
+      dim: (readyMode && !can) || (passing && !can),
+      selected: can && (passing ? picked.includes(tile) : selected === tile),
+      tone: hintKinds.has(codeOf(kind)) || note?.best ? 'hint' : received.has(tile) ? 'last' : null,
       ...(note ? { note: note.text } : {}),
     });
   };
@@ -610,6 +705,12 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
   });
 
   const onTile = (key: string) => {
+    if (passing) {
+      // Passing: a tap picks a tile or puts it back; never more than the round passes.
+      const ids = picked.includes(key) ? picked.filter((x) => x !== key) : picked.length < (passRule?.count ?? 3) ? [...picked, key] : picked;
+      setPicks({ key: passKey, ids, blind: Math.min(blindPicked, (passRule?.count ?? 3) - ids.length) });
+      return;
+    }
     if (!myTurn) return;
     const kind = kindOf(key);
     if (!playable.has(kind)) return;
@@ -630,7 +731,10 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
 
   // Seat tags: name, wind, dealer, score. On a narrow table the tag across would cover that
   // player's rack, so it moves just below it (a rough width from its text is enough).
-  const tagWidth = (seat: number) => `${seatName(seat, me)} ${windName(seatWind(seat, state.dealer))} ${state.scores[seat] ?? 0}`.length * 6.5 + 26 + (seat === state.dealer ? 52 : 0) + (state.ready[seat] ? 50 : 0);
+  const voidShown = (seat: number) => (seat === me || state.phase !== 'void' ? (state.voids[seat] ?? null) : null);
+  const compactTags = W < 1000;
+  const wonWith = (seat: number) => state.won.find((w) => w.seat === seat) ?? null;
+  const tagWidth = (seat: number) => `${seatName(seat, me)} ${windName(seatWind(seat, state.dealer))} ${state.scores[seat] ?? 0}`.length * 6.5 + 26 + (seat === state.dealer ? 52 : 0) + (state.ready[seat] ? 50 : 0) + (voidShown(seat) !== null ? (compactTags ? 30 : 70) : 0) + (wonWith(seat) ? 70 : 0);
   const acrossLow = topRight + 6 > W - sideW - 4 - tagWidth((me + 2) % 4);
   const tags = [0, 1, 2, 3].map((seat) => {
     const where = WHERE[relative(seat, me)] as Where;
@@ -649,6 +753,13 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
         <span className="mj-seat-wind">{wind}</span>
         {seat === state.dealer ? <span className="mj-dealer" title={t('mahjong.dealer')}>{t('mahjong.dealer')}</span> : null}
         {state.ready[seat] ? <span className="mj-riichi-mark">{t('mahjong.riichi-mark')}</span> : null}
+        {voidShown(seat) !== null ? (
+          // On a small table the mark is the suit's letter struck out, as on the tiles ("✕B"); its name says it in full.
+          <span className="mj-void-mark" data-suit={voidShown(seat)} role="img" aria-label={t('mahjong.void.mark', { suit: suitName(voidShown(seat) ?? 0) })} title={t('mahjong.void.mark', { suit: suitName(voidShown(seat) ?? 0) })}>
+            {compactTags ? `✕${'CDB'[voidShown(seat) ?? 0] ?? ''}` : t('mahjong.void.mark', { suit: suitName(voidShown(seat) ?? 0) })}
+          </span>
+        ) : null}
+        {wonWith(seat) ? <span className="mj-won-mark">{`${t('mahjong.won-mark')} · ${t('mahjong.won-fan', { n: wonWith(seat)?.score.total ?? 0 })}`}</span> : null}
         {seat === me && riichi && state.phase !== 'scored' && engine.furiten(state, me) && (state.hands[me] ?? []).length % 3 === 1 ? <span className="mj-furiten">{t('mahjong.furiten')}</span> : null}
         <span className="num mj-seat-score">{state.scores[seat] ?? 0}</span>
       </div>
@@ -674,14 +785,20 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
           ) : null}
           {myTurn && !claiming ? (
             <span className="mj-centre-tip">
-              {readyMode ? t(narrow ? 'mahjong.riichi-tip-short' : 'mahjong.riichi-tip') : selected && playable.has(kindOf(selected)) ? t(narrow ? 'mahjong.tap-again-short' : 'mahjong.tap-again') : state.claimed ? t('mahjong.after-call') : t(narrow ? 'mahjong.your-discard-short' : 'mahjong.your-discard')}
+              {readyMode ? t(narrow ? 'mahjong.riichi-tip-short' : 'mahjong.riichi-tip') : selected && playable.has(kindOf(selected)) ? t(narrow ? 'mahjong.tap-again-short' : 'mahjong.tap-again') : mustVoid.length > 0 && myVoid !== null ? t(narrow ? 'mahjong.void.tip-short' : 'mahjong.void.tip', { suit: suitName(myVoid) }) : state.claimed ? t('mahjong.after-call') : t(narrow ? 'mahjong.your-discard-short' : 'mahjong.your-discard')}
             </span>
           ) : null}
+          {state.phase === 'void' && !voiding ? <span className="mj-centre-tip">{t('mahjong.void.waiting')}</span> : null}
+          {state.phase === 'pass' && state.turn !== me ? <span className="mj-centre-tip">{t('mahjong.pass.waiting')}</span> : null}
         </div>
       ) : null}
       {W > 0 ? <TileLayer tiles={placed} duration={duration} learner={learner} onTile={onTile} reds={reds} /> : null}
       {W > 0 ? tags : null}
       {claiming ? <ClaimPrompt state={state} me={me} legal={legal} learner={learner} onAction={onAction} /> : null}
+      {voiding ? <VoidPrompt counts={[0, 1, 2].map((suit) => (state.hands[me] ?? []).filter((id) => Math.floor(kindOf(id) / 9) === suit && kindOf(id) < 27).length)} onAction={onAction} /> : null}
+      {acting && state.phase === 'pass' && state.turn === me ? (
+        <PassPrompt state={state} legal={legal} picked={picked.map(kindOf)} blind={blindPicked} setBlind={(n) => setPicks({ key: passKey, ids: picked.slice(0, Math.max(0, (passRule?.count ?? 3) - n)), blind: n })} onAction={(a) => (setPicks({ key: '', ids: [], blind: 0 }), onAction(a))} />
+      ) : null}
       {myTurn ? (
         <OwnTurnButtons
           legal={legal}

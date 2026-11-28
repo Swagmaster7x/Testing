@@ -60,10 +60,10 @@ export function winShapes(ctx: WinContext, shapes: ShapeRules, setsNeeded: numbe
     if (a.pair === ctx.tile) add({ shape: 'standard', sets: base, pair: a.pair, pairs: [], winIn: -1 });
   }
   if (ctx.melds.length === 0 && setsNeeded === 4) {
-    if (shapes.sevenPairs && isSevenPairs(counts)) {
+    if (shapes.sevenPairs && isSevenPairs(counts, shapes.sevenPairsFour === true)) {
       const pairs: Kind[] = [];
       counts.forEach((n, k) => {
-        if (n === 2) pairs.push(k);
+        for (let i = 0; i < Math.floor(n / 2); i++) pairs.push(k);
       });
       add({ shape: 'seven-pairs', sets: [], pair: null, pairs, winIn: -2 });
     }

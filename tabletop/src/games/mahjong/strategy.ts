@@ -30,9 +30,9 @@ export interface SeatPicture {
   readonly unseen: readonly number[];
 }
 
-/** Copies of each kind a seat can see: its hand, every meld and every discard still lying. */
-export function visibleCounts(v: Pick<MahjongView, 'hand' | 'melds' | 'discards'>): number[] {
-  const ids: TileId[] = [...v.hand, ...v.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...v.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile))];
+/** Copies of each kind a seat can see: its hand, every meld, every discard still lying, and hands laid down after a win. */
+export function visibleCounts(v: Pick<MahjongView, 'hand' | 'melds' | 'discards'> & { readonly shown?: MahjongView['shown'] }): number[] {
+  const ids: TileId[] = [...v.hand, ...v.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...v.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...(v.shown ?? []).flatMap((h) => h ?? [])];
   return countsOf(ids);
 }
 
@@ -42,16 +42,20 @@ export function picture(view: MahjongView): SeatPicture {
   const seat = view.seat;
   const melds = view.melds[seat] ?? [];
   const seen = visibleCounts(view);
+  const hints = style.hints({ seatWind: seatWind(seat, view.dealer), prevailingWind: view.round % 4, bonus: (view.bonus[seat] ?? []).map(kindOf), indicators: view.indicators.map(kindOf), voidSuit: view.voids[seat] ?? null }, view.config.options);
+  const unseen = seen.map((n) => Math.max(0, 4 - n));
+  // Kinds that can never help (a void suit) count as gone, so no discard keeps them for their own sake.
+  for (const k of hints.dead ?? []) unseen[k] = 0;
   return {
     view,
     seat,
     rules,
     shapes: { shapes: rules.shapes, sets: setsIn(rules) },
-    hints: style.hints({ seatWind: seatWind(seat, view.dealer), prevailingWind: view.round % 4, bonus: (view.bonus[seat] ?? []).map(kindOf), indicators: view.indicators.map(kindOf) }, view.config.options),
+    hints,
     counts: countsOf(view.hand),
     melds,
     concealed: melds.every((m) => m.concealed),
-    unseen: seen.map((n) => Math.max(0, 4 - n)),
+    unseen,
   };
 }
 
@@ -146,6 +150,7 @@ export function possibleWin(p: SeatPicture, counts: readonly number[], tile: Kin
     // The dora turned up so far count toward the value (red fives and ura dora are left out).
     ...(p.view.indicators.length > 0 ? { indicators: p.view.indicators.map(kindOf) } : {}),
     ...(ready > 0 ? { ready, oneShot: false } : {}),
+    ...(p.rules.declareVoid ? { voidSuit: p.view.voids[p.seat] ?? null } : {}),
   };
 }
 
@@ -343,7 +348,8 @@ export type Threats = readonly Threat[];
 export function readThreats(view: MahjongView): Threats {
   const out: Threat[] = [];
   for (let s = 0; s < 4; s++) {
-    if (s === view.seat) continue;
+    // A seat that has won and left the hand is no threat.
+    if (s === view.seat || view.shown[s]) continue;
     const melds = (view.melds[s] ?? []).filter((m) => !m.concealed);
     const kongs = (view.melds[s] ?? []).filter((m) => m.concealed).length;
     const thrown = (view.discards[s] ?? []).length;

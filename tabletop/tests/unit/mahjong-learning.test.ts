@@ -10,7 +10,7 @@ import { BASIC, lessonPosition, lessonState, mahjongComputed, mahjongLessonGame 
 import { YAKU_HAN } from '../../src/games/mahjong/styles/riichi';
 import { efficiencyProblems, mahjongVerifier, positionProblems, safetyProblems } from '../../src/games/mahjong/learn/verify';
 import { loadMahjongPractice, MAHJONG_DRILLS, provedDiscards } from '../../src/games/mahjong/practice';
-import { engine, mahjong, viewOf } from '../../src/games/mahjong/rules';
+import { engine, mahjong, STYLES, viewOf } from '../../src/games/mahjong/rules';
 import { waitsOf } from '../../src/games/mahjong/core/shapes';
 import { setsIn } from '../../src/games/mahjong/core/engine';
 import { codeOf, countsOf, parseKind } from '../../src/games/mahjong/core/tiles';
@@ -157,8 +157,8 @@ describe('lessons', () => {
     const count = (stage: string) => MAHJONG_LESSONS.filter((l) => l.stage === stage).length;
     expect(count('stage-0')).toBeGreaterThanOrEqual(2);
     for (const stage of ['stage-1', 'stage-2', 'stage-3', 'stage-4', 'table']) expect(count(stage), stage).toBeGreaterThanOrEqual(6);
-    // The Riichi track sits on Riichi tables only.
-    for (const l of MAHJONG_LESSONS.filter((x) => x.stage === 'stage-4')) expect(g.position(l.start).config.style, l.id).toBe('riichi');
+    // Stage 4 holds the later styles' tracks, each on its own tables: a lesson named for a style (mahjong.4.sichuan-...) plays it, the rest are Riichi.
+    for (const l of MAHJONG_LESSONS.filter((x) => x.stage === 'stage-4')) expect(g.position(l.start).config.style, l.id).toBe(Object.keys(STYLES).find((id) => l.id.startsWith(`mahjong.4.${id}`)) ?? 'riichi');
     const stages = MAHJONG_LESSONS.map((l) => l.stage);
     expect(stages).toEqual([...stages].sort((a, b) => STAGES.indexOf(a) - STAGES.indexOf(b)));
     const ids = new Set(MAHJONG_LESSONS.map((l) => l.id));

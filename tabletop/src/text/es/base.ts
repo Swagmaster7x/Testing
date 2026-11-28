@@ -290,6 +290,8 @@ export const esBase: Partial<Record<MessageKey, string>> = {
   'tools.calc.style': 'Estilo',
   'tools.calc.style.hong-kong': 'Hong Kong',
   'tools.calc.style.riichi': 'Riichi',
+  'tools.calc.style.sichuan': 'Sichuan',
+  'tools.calc.kongDiscard': 'Con el descarte de un kong',
   'tools.calc.rules': 'Reglas',
   'tools.calc.hand': 'La mano ganadora',
   'tools.calc.in-hand': 'Fichas anotadas',

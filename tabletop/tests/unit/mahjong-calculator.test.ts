@@ -79,4 +79,37 @@ describe('the Mahjong calculator', () => {
       expect(fivesIn({ ...EMPTY_INPUT, hand: [], sets: [{ type: 'chow', kind: p(3), concealed: false }] })).toBe(1);
     });
   });
+
+  describe('Sichuan', () => {
+    const sichuan = STYLES['sichuan']!;
+    // Characters and dots only.
+    const TWO_SUITS = [m(1), m(2), m(3), m(4), m(5), m(6), p(7), p(8), p(9), p(2), p(3), p(4), m(5), m(5)];
+
+    it('a basic hand on a discard: 1 point from the thrower alone', () => {
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: TWO_SUITS, winning: 13, from: 2 });
+      expect(r.score?.total).toBe(0);
+      expect(r.payments).toEqual([1, 0, -1, 0]);
+    });
+
+    it('self-drawn: each of the three pays the points and 1 more', () => {
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: TWO_SUITS, winning: 13 });
+      expect(r.payments).toEqual([6, -2, -2, -2]);
+    });
+
+    it('one suit with a kong: 2 fan and a root, 8 points; on a kong’s throw, 4 fan, capped at 16', () => {
+      const hand = [m(1), m(2), m(3), m(4), m(5), m(6), m(6), m(7), m(8), m(5), m(5)];
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand, winning: 10, from: 1, sets: [{ type: 'kong', kind: m(9), concealed: true }] });
+      expect(r.score?.lines.map((l) => l.id)).toEqual(['sc-pure-suit', 'sc-root']);
+      expect(r.payments).toEqual([8, -8, 0, 0]);
+      const k = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand, winning: 10, from: 1, kongDiscard: true, sets: [{ type: 'kong', kind: m(9), concealed: true }] });
+      expect(k.score?.total).toBe(4);
+      expect(k.payments).toEqual([16, -16, 0, 0]);
+    });
+
+    it('a hand of three suits is no Sichuan hand', () => {
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13 });
+      expect(r.score).toBeNull();
+      expect(r.belowMinimum).toBe(false);
+    });
+  });
 });

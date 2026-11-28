@@ -9,6 +9,8 @@ import { isHonour, ORPHANS, PLAYING_KINDS, rankOf, SUIT_KINDS } from './tiles';
 export interface ShapeRules {
   readonly sevenPairs: boolean;
   readonly thirteenOrphans: boolean;
+  /** Seven pairs may hold four of a kind as two pairs (Sichuan's "dragon" seven pairs). */
+  readonly sevenPairsFour?: boolean;
 }
 
 /** A set found in the concealed part: a chow (by its lowest tile) or a pung. */
@@ -65,12 +67,13 @@ export function isStandardComplete(counts: readonly number[], sets: number): boo
   return false;
 }
 
-/** Seven different pairs (fourteen concealed tiles). */
-export function isSevenPairs(counts: readonly number[]): boolean {
+/** Seven different pairs (fourteen concealed tiles); with `four`, four of a kind counts as two pairs. */
+export function isSevenPairs(counts: readonly number[], four = false): boolean {
   let pairs = 0;
   for (let k = 0; k < PLAYING_KINDS; k++) {
     const n = counts[k] ?? 0;
     if (n === 2) pairs++;
+    else if (four && n === 4) pairs += 2;
     else if (n !== 0) return false;
   }
   return pairs === 7;
@@ -92,7 +95,7 @@ export function isThirteenOrphans(counts: readonly number[]): boolean {
 export function isWinningShape(counts: readonly number[], melds: number, shapes: ShapeRules, setsNeeded: number): boolean {
   if (isStandardComplete(counts, setsNeeded - melds)) return true;
   if (melds === 0 && setsNeeded === 4) {
-    if (shapes.sevenPairs && isSevenPairs(counts)) return true;
+    if (shapes.sevenPairs && isSevenPairs(counts, shapes.sevenPairsFour === true)) return true;
     if (shapes.thirteenOrphans && isThirteenOrphans(counts)) return true;
   }
   return false;

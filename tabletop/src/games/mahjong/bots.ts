@@ -25,8 +25,8 @@ import { isJsonObject } from '../../core/json';
 import type { Rng } from '../../core/rng';
 import { acceptance, bestReading, shanten } from './core/shanten';
 import type { Meld } from './core/style';
-import type { Kind } from './core/tiles';
-import { codeOf, isHonour, isSuited, isTerminal, kindOf, PLAYING_KINDS, rankOf } from './core/tiles';
+import type { Kind, TileId } from './core/tiles';
+import { codeOf, countsOf, isHonour, isSuited, isTerminal, kindOf, PLAYING_KINDS, rankOf } from './core/tiles';
 import { setsIn } from './core/engine';
 import type { MahjongAction, MahjongView } from './rules';
 import { actionText, engine, mahjong } from './rules';
@@ -167,9 +167,11 @@ function scoreDiscards(p: SeatPicture, params: LevelParams, style: PlayStyle, th
   const sh = (e: DiscardEval) => (params.readyCheck && e.ready && e.ready.winnable === 0 ? e.shanten + 1 : e.shanten);
   return evals.map((e) => {
     let score = -1000 * sh(e) + params.accept * (e.ready && params.readyCheck ? e.ready.winnable * 1.5 : e.accept);
-    if (params.value > 0) {
+    // A style can lighten the steer toward value (Sichuan: the race to win first matters more than the fan).
+    const valueWeight = params.value * (p.hints.valueSteer ?? 1);
+    if (valueWeight > 0) {
       const deficit = Math.max(0, p.hints.minimum - e.value);
-      score += params.value * (e.value * 14 - deficit * 90);
+      score += valueWeight * (e.value * 14 - deficit * 90);
       if (e.ready && params.readyCheck) score += e.ready.best * 6;
     }
     if (params.honourLove > 0 && (isHonour(e.kind) || isTerminal(e.kind))) score -= params.honourLove;
@@ -364,7 +366,8 @@ function claimByValue(p: SeatPicture, options: readonly MahjongAction[], style: 
 
 function chooseClaim(p: SeatPicture, options: readonly MahjongAction[], params: LevelParams, style: PlayStyle): Decision {
   if (options.some((a) => a.type === 'win')) return { action: { type: 'win' }, tags: ['mj-win'] };
-  if (params.evCalls) return claimByValue(p, options, style);
+  // Where speed pays most (a hand that goes on after a win), calls are judged by speed, as the rules of thumb do.
+  if (params.evCalls && !p.hints.callsBySpeed) return claimByValue(p, options, style);
   const pass: Decision = { action: { type: 'pass' }, tags: [] };
   const claim = p.view.claim;
   if (!claim) return pass;
@@ -391,6 +394,59 @@ function chooseClaim(p: SeatPicture, options: readonly MahjongAction[], params: 
   return { action: best.action, tags: [best.valuePung ? 'mj-call-value' : 'mj-call-speed'] };
 }
 
+// Before play: the void suit and passing tiles
+
+/** Tiles of each suit in a hand, and how many of them sit in pairs or next to a neighbour. */
+function suitShape(hand: readonly TileId[]): { count: number; kept: number }[] {
+  const c = countsOf(hand);
+  return [0, 1, 2].map((suit) => {
+    let count = 0;
+    let kept = 0;
+    for (let r = 0; r < 9; r++) {
+      const n = c[suit * 9 + r] ?? 0;
+      count += n;
+      const near = (c[suit * 9 + r - 1] ?? 0) > 0 && r > 0 ? 1 : (c[suit * 9 + r + 1] ?? 0) > 0 && r < 8 ? 1 : 0;
+      if (n >= 2 || near) kept += n;
+    }
+    return { count, kept };
+  });
+}
+
+/** The suit to void: the fewest tiles, then the fewest in pairs and runs. A novice sometimes takes the next best. */
+function chooseVoid(view: MahjongView, level: number, rng: Rng): Decision {
+  const shape = suitShape(view.hand);
+  const order = [0, 1, 2].sort((a, b) => (shape[a]?.count ?? 0) - (shape[b]?.count ?? 0) || (shape[a]?.kept ?? 0) - (shape[b]?.kept ?? 0) || a - b);
+  const slip = level === 1 && rng.next() < 0.3;
+  return { action: { type: 'void', suit: (slip ? order[1] : order[0]) ?? 0 }, tags: [] };
+}
+
+/**
+ * Passing tiles (Sichuan's exchange of three): from the suit it means to void when it can, the
+ * tiles that leave the rest of the hand closest to ready. A vote goes on while the hand is far
+ * from anything.
+ */
+function choosePass(view: MahjongView, level: number, rng: Rng): Decision {
+  const options = view.options;
+  const vote = options.find((a) => a.type === 'vote');
+  if (vote) return { action: { type: 'vote', yes: rng.next() < 0.5 }, tags: [] };
+  const shape = suitShape(view.hand);
+  const rules = engine.rules(view.config);
+  const sets = setsIn(rules);
+  const counts = countsOf(view.hand);
+  let best: { action: MahjongAction; score: number } | null = null;
+  for (const a of options) {
+    if (a.type !== 'pass-tiles') continue;
+    const c = [...counts];
+    for (const k of a.tiles) c[k] = (c[k] ?? 0) - 1;
+    const suit = a.tiles[0] === undefined ? 0 : Math.floor(a.tiles[0] / 9);
+    // Fewer tiles left in that suit makes it the natural one to void.
+    const left = (shape[suit]?.count ?? 0) - a.tiles.length;
+    const score = -40 * shanten(c, 0, { shapes: rules.shapes, sets }) - 12 * left + (level === 1 ? rng.next() * 60 : 0);
+    if (!best || score > best.score) best = { action: a, score };
+  }
+  return { action: best?.action ?? (options[0] as MahjongAction), tags: [] };
+}
+
 // The bot
 
 export function decide(view: MahjongView, level: number, rng: Rng): Decision {
@@ -400,6 +456,8 @@ export function decide(view: MahjongView, level: number, rng: Rng): Decision {
   if (options.length === 0) throw new Error('Mahjong: nothing to do');
   if (options.length === 1) return { action: options[0] as MahjongAction, tags: options[0]?.type === 'win' ? ['mj-win'] : [] };
   const style = playStyleOf(view.table, view.seat);
+  if (view.phase === 'void') return chooseVoid(view, level, rng);
+  if (view.phase === 'pass') return choosePass(view, level, rng);
   const p = picture(view);
   if (view.phase === 'claim' || view.phase === 'rob') return chooseClaim(p, options, params, style);
   if (options.some((a) => a.type === 'win')) return { action: { type: 'win' }, tags: ['mj-win'] };

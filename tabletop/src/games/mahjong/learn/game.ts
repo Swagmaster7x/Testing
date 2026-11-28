@@ -28,6 +28,7 @@ import type { Kind } from '../core/tiles';
 import { codeOf, copiesOf, countsOf, FLOWER_1, isBonus, isDragon, isFlower, isHonour, isSeason, isTerminalOrHonour, isWind, kindOf, parseKind, parseKinds, PLAYING_KINDS, SUIT_KINDS, SUIT_LETTERS, tileSet } from '../core/tiles';
 import { basePoints, HK_DEFAULTS, HK_LIMIT_HANDS, HK_OPTIONS, HK_PATTERNS, hkFaan, hkScoreAny, POINT_TABLES } from '../styles/hong-kong';
 import { basePoints as riichiBase, COUNTER_VALUE, doraOf, FU, NOTEN_POOL, payments, RIICHI_DEFAULTS, RIICHI_TARGET, STAKE, YAKU_HAN } from '../styles/riichi';
+import { KONG_PAY, PIG_FIXED, SICHUAN_DEFAULTS, SICHUAN_FAN, sichuanPoints } from '../styles/sichuan';
 import { evaluateDiscards, handShanten, picture, readyInfo } from '../strategy';
 import { kindName, runName, seatName, windName } from '../ui/names';
 
@@ -41,6 +42,8 @@ export const BASIC: StyleOptions = { flowers: 'off', minFaan: 0, length: 'hand' 
 export const HK: StyleOptions = { length: 'hand' };
 /** The Riichi track: the common online table (red fives, open tanyao), a one-hand game. */
 export const RIICHI: StyleOptions = { length: 'hand' };
+/** The Sichuan track: the Chengdu table, a one-hand game. */
+export const SICHUAN: StyleOptions = { length: 'hand' };
 
 /** A tile's name from its code: "5 dots", "Red dragon". */
 export function nameOf(code: string): string {
@@ -83,8 +86,10 @@ export interface LessonSpec {
   /** The seed for the dealt tiles. A seed starting "safety" marks a safe-tile question for the verifier. */
   readonly seed?: string;
   readonly scores?: readonly number[];
-  /** The rules family: Hong Kong unless it says "riichi". */
-  readonly style?: 'hong-kong' | 'riichi';
+  /** The rules family: Hong Kong unless it names another style. */
+  readonly style?: 'hong-kong' | 'riichi' | 'sichuan';
+  /** Sichuan: each seat's void suit (0 characters, 1 dots, 2 bamboo). */
+  readonly voids?: readonly (number | null)[];
   /** Riichi: the dora indicators turned up (one by default; the rest are dealt from the seed). */
   readonly indicators?: string;
   /** Riichi: the tiles under the indicators (ura dora). */
@@ -228,6 +233,7 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
     ...(spec.indicators ? { indicators: spec.indicators } : {}),
     ...(spec.under ? { under: spec.under } : {}),
     ...(spec.counter ? { counter: spec.counter } : {}),
+    ...(spec.voids ? { voids: spec.voids } : {}),
   };
   if (spec.ready) {
     // Each seat that declared has paid its stake to the table.
@@ -365,8 +371,30 @@ const FIXED: Readonly<Record<string, number | string>> = (() => {
   out['pay:self:total'] = pay.selfDrawn * (SEATS - 1);
   out['pay:discard:total'] = pay.discarder + pay.others * (SEATS - 2);
   Object.assign(out, riichiFixed());
+  Object.assign(out, sichuanFixed());
   return out;
 })();
+
+/** The Sichuan table: the set, each pattern's fan, the cap, points and the kong and flower-pig payments. */
+function sichuanFixed(): Record<string, number> {
+  const out: Record<string, number> = {};
+  const o = SICHUAN_DEFAULTS;
+  const rules = engine.rules({ style: 'sichuan', options: o });
+  out['sc:tiles'] = tileSet(rules.tiles).length;
+  out['sc:suits'] = SUIT_LETTERS.length;
+  out['sc:winners'] = rules.playOn?.winners ?? 0;
+  out['sc:cap'] = Number(o.cap);
+  out['sc:cap:points'] = sichuanPoints(Number(o.cap), o);
+  for (const [id, fan] of Object.entries(SICHUAN_FAN)) out[`sfan:${id}`] = fan;
+  for (let f = 0; f <= 6; f++) out[`sc:points:${f}`] = 2 ** f;
+  out['sc:kong:exposed'] = KONG_PAY.exposed;
+  out['sc:kong:added'] = KONG_PAY.added;
+  out['sc:kong:concealed'] = KONG_PAY.concealed;
+  out['sc:kong:concealed:all'] = KONG_PAY.concealed * (SEATS - 1);
+  out['sc:pig:fixed'] = PIG_FIXED;
+  out['sc:self-extra'] = 1;
+  return out;
+}
 
 /** The Riichi table: the set, the sticks, each yaku's han, the fu, the bands and the payment table. */
 function riichiFixed(): Record<string, number> {
@@ -500,7 +528,9 @@ function computeAll(state: MahjongState): Record<string, number | string> {
   out['wind:round'] = windName(state.round);
   out['flower:seat'] = seatWind(STUDENT, state.dealer) + 1;
   const riichi = state.config.style === 'riichi';
-  if (!riichi) {
+  // The minimum and the limit are Hong Kong's.
+  const hk = state.config.style === 'hong-kong';
+  if (hk) {
     out['min'] = Number(o.minFaan);
     out['limit'] = Number(o.limit);
   }
@@ -581,7 +611,7 @@ function computeAll(state: MahjongState): Record<string, number | string> {
     out['win:raw'] = score.raw;
     out['win:base'] = score.base;
     out['win:lines'] = score.lines.length;
-    if (!riichi) {
+    if (hk) {
       out['win:ok'] = score.total >= Number(o.minFaan) ? 1 : 0;
       out['win:short'] = Math.max(0, Number(o.minFaan) - score.total);
     }

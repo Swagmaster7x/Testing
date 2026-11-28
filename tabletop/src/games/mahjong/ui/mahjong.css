@@ -508,3 +508,57 @@ button.mj-tile:focus-visible {
   font-size: var(--fs-xs, 0.85rem);
   font-weight: 600;
 }
+
+/* Milestone 14c: void suits, seats that have won, passing tiles. */
+.mj-void-mark,
+.mj-won-mark {
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+
+.mj-void-mark {
+  background: #e3d7b8;
+  color: #3a2f1c;
+}
+
+.mj-won-mark {
+  background: #1f5d3a;
+  color: #fff;
+}
+
+.mj-prompt-detail {
+  margin: -2px 0 5px;
+  max-width: 34em;
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  white-space: normal;
+}
+
+.mj-pass-count {
+  align-self: center;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.mj-blind {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.mj-blind .btn[data-on='true'] {
+  background: var(--brass-1);
+  color: var(--ivory-ink, #1d1a14);
+}
+
+.mj-result-status {
+  color: #5a3d17;
+}
+
+.mj-void-prompt .mj-call {
+  text-transform: capitalize;
+}

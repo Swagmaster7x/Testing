@@ -43,6 +43,7 @@ import type { MahjongAction, MahjongConfig, MahjongEvent, MahjongState, MahjongV
 import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS } from './mahjong/styles/riichi';
+import { SICHUAN_DEFAULTS } from './mahjong/styles/sichuan';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
 import { tuteBots } from './tute/bots';
@@ -425,5 +426,8 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     // Riichi default; a single East round leaves too much to the tiles). Levels 1 to 4: level 5
     // scores only about 0.61 against level 4 at this table, short of the margin (PROGRESS-M11.md).
     'mahjong-riichi': mahjongLadder({ style: 'riichi', options: RIICHI_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
+    // Sichuan Bloody: four-hand games on the Chengdu table. Levels 1 to 4: level 5 scores only about
+    // 0.56 against level 4 here, short of the margin (PROGRESS-M14c.md has the figures).
+    'mahjong-sichuan': mahjongLadder({ style: 'sichuan', options: SICHUAN_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
   };
 }
