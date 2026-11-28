@@ -301,6 +301,8 @@ const base = {
   'tools.calc.style': 'Style',
   'tools.calc.style.hong-kong': 'Hong Kong',
   'tools.calc.style.riichi': 'Riichi',
+  'tools.calc.style.chinese-official': 'Chinese Official',
+  'tools.calc.lastOfKind': 'The last of its kind',
   'tools.calc.rules': 'Rules',
   'tools.calc.hand': 'The winning hand',
   'tools.calc.in-hand': 'Tiles written down',

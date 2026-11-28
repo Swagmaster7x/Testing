@@ -26,7 +26,7 @@ import type { Kind, TileId } from '../core/tiles';
 import { codeOf, kindOf, sortTiles } from '../core/tiles';
 import { evaluateDiscards, picture } from '../strategy';
 import { engine, isRedFive, viewOf } from '../rules';
-import { kindName, patternName, relative, runName, seatName, tileName, whoName, windName } from './names';
+import { kindName, mandarin, patternName, relative, runName, seatName, tileName, valueName, whoName, windName } from './names';
 import { TileBack, TileFace } from './tiles';
 import './mahjong.css';
 
@@ -207,6 +207,7 @@ function ClaimPrompt({ state, me, legal, learner, onAction }: { state: MahjongSt
   const claim = state.claim;
   if (!claim) return null;
   const riichi = state.config.style === 'riichi';
+  const hu = mandarin(state.config.style);
   const tile = kindOf(claim.tile);
   const rob = claim.kind === 'rob';
   return (
@@ -218,7 +219,7 @@ function ClaimPrompt({ state, me, legal, learner, onAction }: { state: MahjongSt
       <div className="mj-prompt-row">
         {legal.map((a) => {
           if (a.type === 'pass') return null;
-          const label = a.type === 'win' ? t(rob ? 'mahjong.claim.rob-win' : riichi ? 'mahjong.claim.ron' : 'mahjong.claim.win') : a.type === 'chow' ? `${t(riichi ? 'mahjong.claim.chi' : 'mahjong.claim.chow')} ${runName(a.start)}` : t(a.type === 'pung' ? (riichi ? 'mahjong.claim.pon' : 'mahjong.claim.pung') : 'mahjong.claim.kong');
+          const label = a.type === 'win' ? t(rob ? 'mahjong.claim.rob-win' : riichi ? 'mahjong.claim.ron' : hu ? 'mahjong.claim.hu' : 'mahjong.claim.win') : a.type === 'chow' ? `${t(riichi ? 'mahjong.claim.chi' : 'mahjong.claim.chow')} ${runName(a.start)}` : t(a.type === 'pung' ? (riichi ? 'mahjong.claim.pon' : 'mahjong.claim.pung') : 'mahjong.claim.kong');
           const detail = a.type === 'win' ? t('mahjong.claim.win.detail') : a.type === 'chow' ? t('mahjong.claim.chow.detail') : t(a.type === 'pung' ? 'mahjong.claim.pung.detail' : 'mahjong.claim.kong.detail');
           return (
             <button key={a.type === 'chow' ? `chow${a.start}` : a.type} type="button" className="btn btn-small mj-call" data-call={a.type} aria-label={label} title={detail} onClick={() => onAction(a)}>
@@ -241,7 +242,7 @@ function ClaimPrompt({ state, me, legal, learner, onAction }: { state: MahjongSt
   );
 }
 
-function OwnTurnButtons({ legal, counts, onAction, riichi, readyMode, setReadyMode, bottom }: { legal: readonly MahjongAction[]; counts: readonly number[]; onAction: (a: MahjongAction) => void; riichi: boolean; readyMode: boolean; setReadyMode: (on: boolean) => void; bottom: number | null }) {
+function OwnTurnButtons({ legal, counts, onAction, riichi, hu = false, readyMode, setReadyMode, bottom }: { legal: readonly MahjongAction[]; counts: readonly number[]; onAction: (a: MahjongAction) => void; riichi: boolean; hu?: boolean; readyMode: boolean; setReadyMode: (on: boolean) => void; bottom: number | null }) {
   const win = legal.find((a) => a.type === 'win');
   const kongs = legal.filter((a): a is { type: 'kong'; tile: Kind } => a.type === 'kong' && a.tile !== undefined);
   const canReady = legal.some((a) => a.type === 'ready');
@@ -251,7 +252,7 @@ function OwnTurnButtons({ legal, counts, onAction, riichi, readyMode, setReadyMo
     <div className="mj-own" style={bottom === null ? undefined : { bottom: `${bottom}px` }}>
       {win ? (
         <button type="button" className="btn btn-small btn-primary" onClick={() => onAction(win)}>
-          {t(riichi ? 'mahjong.act.tsumo' : 'mahjong.act.win')}
+          {t(riichi ? 'mahjong.act.tsumo' : hu ? 'mahjong.act.zimo' : 'mahjong.act.win')}
         </button>
       ) : null}
       {canReady ? (
@@ -279,7 +280,9 @@ function OwnTurnButtons({ legal, counts, onAction, riichi, readyMode, setReadyMo
  * With "Score hands for me" off, a won hand asks you for its faan before the sheet shows, as you
  * would count it at a real table.
  */
-function CountYourself({ faan, han, onDone }: { faan: number; han: boolean; onDone: (guess: number | null) => void }) {
+function CountYourself({ faan, han, unit = han ? 'han' : 'faan', onDone }: { faan: number; han: boolean; unit?: string; onDone: (guess: number | null) => void }) {
+  // Hong Kong and Riichi keep their own keys; other units name theirs ("points", "tai").
+  const own = unit === 'faan' || unit === 'han';
   const [entry, setEntry] = useState('');
   const guess = entry.trim() === '' ? null : Number(entry);
   return (
@@ -290,8 +293,8 @@ function CountYourself({ faan, han, onDone }: { faan: number; han: boolean; onDo
         if (guess !== null && Number.isFinite(guess)) onDone(guess);
       }}
     >
-      <span className="mj-count-ask">{t(han ? 'mahjong.self.ask.han' : 'mahjong.self.ask')}</span>
-      <input className="mj-count-input num" type="number" inputMode="numeric" min={0} max={99} aria-label={t(han ? 'mahjong.self.label.han' : 'mahjong.self.label')} value={entry} onChange={(e) => setEntry(e.target.value)} />
+      <span className="mj-count-ask">{own ? t(han ? 'mahjong.self.ask.han' : 'mahjong.self.ask') : tDynamic(`mahjong.self.ask.${unit}`)}</span>
+      <input className="mj-count-input num" type="number" inputMode="numeric" min={0} max={999} aria-label={own ? t(han ? 'mahjong.self.label.han' : 'mahjong.self.label') : tDynamic(`mahjong.self.label.${unit}`)} value={entry} onChange={(e) => setEntry(e.target.value)} />
       <button type="submit" className="btn btn-primary btn-small" disabled={guess === null || !Number.isFinite(guess)}>
         {t('mahjong.self.check')}
       </button>
@@ -316,7 +319,8 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
         <p className="mj-result-ready">{result.ready.some(Boolean) ? t('mahjong.result.ready', { list: result.ready.flatMap((r, seat) => (r ? [seatName(seat, me)] : [])).join(', ') }) : t('mahjong.result.ready.none')}</p>
       ) : null}
       {wins.map((w) => {
-        const how = w.from === null ? t('mahjong.result.self') : w.robbed ? t('mahjong.result.robbed', { from: whoName(w.from, me) }) : t('mahjong.result.discard', { from: whoName(w.from, me) });
+        // Your own discard reads "on your discard", not "on You’s discard".
+        const how = w.from === null ? t('mahjong.result.self') : w.from === me ? t(w.robbed ? 'mahjong.result.robbed.you' : 'mahjong.result.discard.you') : w.robbed ? t('mahjong.result.robbed', { from: whoName(w.from, me) }) : t('mahjong.result.discard', { from: whoName(w.from, me) });
         const hand = result.hands[w.seat] ?? [];
         const concealed = sortTiles(hand.includes(w.tile) ? hand : [...hand, w.tile]);
         return (
@@ -343,10 +347,10 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
                 </span>
               ) : null}
             </div>
-            {asking && w === first ? <CountYourself faan={w.score.total} han={w.score.unit === 'han'} onDone={setCounted} /> : null}
+            {asking && w === first ? <CountYourself faan={w.score.total} han={w.score.unit === 'han'} unit={w.score.unit} onDone={setCounted} /> : null}
             {selfScore && w === first && counted !== undefined && counted !== null ? (
               <p className="mj-count-verdict" data-right={counted === w.score.total}>
-                {counted === w.score.total ? t(w.score.unit === 'han' ? 'mahjong.self.right.han' : 'mahjong.self.right', { n: w.score.total }) : t('mahjong.self.wrong', { guess: counted, n: w.score.total })}
+                {counted === w.score.total ? (w.score.unit === 'han' || w.score.unit === 'faan' ? t(w.score.unit === 'han' ? 'mahjong.self.right.han' : 'mahjong.self.right', { n: w.score.total }) : t('mahjong.self.right.value', { value: valueName(w.score.unit, w.score.total) })) : t('mahjong.self.wrong', { guess: counted, n: w.score.total })}
               </p>
             ) : null}
             {asking ? null : (
@@ -361,7 +365,12 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
                   <span className="num">{w.score.yakuman ? t(l.value > 1 ? 'mahjong.result.double-yakuman' : 'mahjong.result.yakuman') : l.value}</span>
                 </li>
               ))}
-              {w.score.unit === 'han' ? (
+              {w.score.unit === 'fan' || w.score.unit === 'tai' ? (
+                <li className="mj-faan-total">
+                  <span>{valueName(w.score.unit, w.score.total)}</span>
+                  <span className="num">{t('mahjong.result.collects', { n: result.deltas[w.seat] ?? 0 })}</span>
+                </li>
+              ) : w.score.unit === 'han' ? (
                 <li className="mj-faan-total">
                   <span>{w.score.yakuman ? tDynamic(`mahjong.band.${w.score.band ?? 'yakuman'}`) : t('mahjong.result.han-fu', { han: w.score.total, fu: w.score.fu ?? 0 })}{!w.score.yakuman && w.score.band ? ` · ${tDynamic(`mahjong.band.${w.score.band}`)}` : ''}</span>
                   <span className="num">{t('mahjong.result.collects', { n: result.deltas[w.seat] ?? 0 })}</span>
@@ -691,6 +700,7 @@ export function MahjongSurface({ state, mySeats, canAct, legal, anim, onAction, 
           }, new Array<number>(34).fill(0))}
           onAction={onAction}
           riichi={riichi}
+          hu={mandarin(state.config.style)}
           bottom={ownBottom}
           readyMode={readyMode}
           setReadyMode={(on) => {

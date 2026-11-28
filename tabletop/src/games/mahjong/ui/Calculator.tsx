@@ -13,7 +13,7 @@ import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, setKinds, tilesWant
 import type { Kind } from '../core/tiles';
 import { FLOWER_1, isBonus, PLAYING_KINDS } from '../core/tiles';
 import { STYLES } from '../rules';
-import { kindName, patternName, windName } from './names';
+import { kindName, patternName, valueName, windName } from './names';
 import { TileFace } from './tiles';
 
 type AddMode = 'hand' | 'chow' | 'pung' | 'kong' | 'concealed-kong' | 'flower' | 'dora' | 'ura';
@@ -65,6 +65,8 @@ export function MahjongCalculator() {
 
   // Riichi's own inputs: the declaration, ippatsu, red fives and the indicators.
   const riichi = style.id === 'riichi';
+  // Chinese Official's own input: the winning tile was the last of its kind.
+  const official = style.id === 'chinese-official';
   const add = (kind: Kind) => {
     if (mode === 'dora' || mode === 'ura') {
       const key = mode === 'dora' ? 'indicators' : 'underIndicators';
@@ -178,15 +180,14 @@ export function MahjongCalculator() {
                   ))}
                 </ul>
                 <p className="calc-total">
-                  {t('tools.calc.total', { n: result.score.total, unit: result.score.unit })}
+                  {valueName(result.score.unit, result.score.total)}
                   {result.score.limit ? ` · ${t('tools.calc.limit')}` : ''}
                 </p>
                 {result.belowMinimum ? (
                   <p className="form-error">{t('tools.calc.below')}</p>
                 ) : (
                   <p className="num">
-                    {t('tools.calc.base', { n: result.score.base })}
-                    {' · '}
+                    {result.score.unit === 'faan' || result.score.unit === 'han' ? `${t('tools.calc.base', { n: result.score.base })} · ` : ''}
                     {result.payments.map((x, i) => `${windName((input.seatWind + i) % 4)}${i === 0 ? ` (${t('tools.calc.winner')})` : ''} ${x > 0 ? '+' : ''}${x}`).join(' · ')}
                   </p>
                 )}
@@ -225,6 +226,11 @@ export function MahjongCalculator() {
                 {tDynamic(`tools.calc.${key}`)}
               </button>
             ))}
+            {official ? (
+              <button type="button" className="btn btn-small" aria-pressed={input.lastOfKind === true} data-on={input.lastOfKind === true} onClick={() => update({ lastOfKind: !input.lastOfKind })}>
+                {t('tools.calc.lastOfKind')}
+              </button>
+            ) : null}
           </div>
         </section>
       </div>

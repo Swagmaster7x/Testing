@@ -43,6 +43,7 @@ import type { MahjongAction, MahjongConfig, MahjongEvent, MahjongState, MahjongV
 import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS } from './mahjong/styles/riichi';
+import { CO_DEFAULTS } from './mahjong/styles/chinese-official';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
 import { tuteBots } from './tute/bots';
@@ -425,5 +426,7 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     // Riichi default; a single East round leaves too much to the tiles). Levels 1 to 4: level 5
     // scores only about 0.61 against level 4 at this table, short of the margin (PROGRESS-M11.md).
     'mahjong-riichi': mahjongLadder({ style: 'riichi', options: RIICHI_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
+    // Chinese Official: one round of four hands under the official rules (PROGRESS-M14b.md).
+    'mahjong-chinese-official': mahjongLadder({ style: 'chinese-official', options: { ...CO_DEFAULTS, length: 'east' } }) as unknown as Ladder<never, never, never, never, never>,
   };
 }
