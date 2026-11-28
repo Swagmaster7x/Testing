@@ -1,6 +1,6 @@
 /** The Mahjong score calculator in Tools: the same scorer and payments as the table. */
 import { describe, expect, it } from 'vitest';
-import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
+import { calculate, calculateCardHand, EMPTY_INPUT, fivesIn, overused, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
 import { STYLES } from '../../src/games/mahjong/rules';
 import { HK_DEFAULTS, hongKong } from '../../src/games/mahjong/styles/hong-kong';
 
@@ -110,6 +110,30 @@ describe('the Mahjong calculator', () => {
       const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13 });
       expect(r.score).toBeNull();
       expect(r.belowMinimum).toBe(false);
+    });
+  });
+
+  describe('American', () => {
+    const american = STYLES['american']!;
+
+    it('a 25-point hand on a discard: the thrower pays 50, the other two 25', () => {
+      const r = calculateCardHand(american, american.defaults, 25, false, 2);
+      expect(r.value).toBe(25);
+      expect(r.payments).toEqual([100, -25, -50, -25]);
+    });
+
+    it('self-picked: everyone pays double; jokerless doubles the value', () => {
+      expect(calculateCardHand(american, american.defaults, 25, false, null).payments).toEqual([150, -50, -50, -50]);
+      const j = calculateCardHand(american, american.defaults, 25, true, 1);
+      expect(j.value).toBe(50);
+      expect(j.payments).toEqual([200, -100, -50, -50]);
+    });
+
+    it('the flat table: everyone pays the value; with no jokerless bonus the value stands', () => {
+      const flat = { ...american.defaults, payment: 'flat', jokerless: 'off' };
+      const r = calculateCardHand(american, flat, 30, true, 3);
+      expect(r.value).toBe(30);
+      expect(r.payments).toEqual([90, -30, -30, -30]);
     });
   });
 });

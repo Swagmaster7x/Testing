@@ -25,10 +25,12 @@ import { seatWind, setsIn, SEATS } from '../core/engine';
 import { bestReading, shanten } from '../core/shanten';
 import type { HandScore, StyleOptions, WinContext } from '../core/style';
 import type { Kind } from '../core/tiles';
-import { codeOf, copiesOf, countsOf, FLOWER_1, isBonus, isDragon, isFlower, isHonour, isSeason, isTerminalOrHonour, isWind, kindOf, parseKind, parseKinds, PLAYING_KINDS, SUIT_KINDS, SUIT_LETTERS, tileSet } from '../core/tiles';
+import { codeOf, copiesOf, countsOf, FLOWER_1, isBonus, KIND_COUNT, isDragon, isFlower, isHonour, isSeason, isTerminalOrHonour, isWind, kindOf, parseKind, parseKinds, PLAYING_KINDS, SUIT_KINDS, SUIT_LETTERS, tileSet } from '../core/tiles';
 import { basePoints, HK_DEFAULTS, HK_LIMIT_HANDS, HK_OPTIONS, HK_PATTERNS, hkFaan, hkScoreAny, POINT_TABLES } from '../styles/hong-kong';
 import { basePoints as riichiBase, COUNTER_VALUE, doraOf, FU, NOTEN_POOL, payments, RIICHI_DEFAULTS, RIICHI_TARGET, STAKE, YAKU_HAN } from '../styles/riichi';
 import { KONG_PAY, PIG_FIXED, SICHUAN_DEFAULTS, SICHUAN_FAN, sichuanPoints } from '../styles/sichuan';
+import { AMERICAN_DEFAULTS, charleston, PRACTICE } from '../styles/american';
+import { HAND_TILES, JOKERS } from '../american/card';
 import { evaluateDiscards, handShanten, picture, readyInfo } from '../strategy';
 import { kindName, runName, seatName, windName } from '../ui/names';
 
@@ -44,6 +46,8 @@ export const HK: StyleOptions = { length: 'hand' };
 export const RIICHI: StyleOptions = { length: 'hand' };
 /** The Sichuan track: the Chengdu table, a one-hand game. */
 export const SICHUAN: StyleOptions = { length: 'hand' };
+/** The American track: the League table and the practice card, a one-hand game. */
+export const AMERICAN: StyleOptions = { length: 'hand' };
 
 /** A tile's name from its code: "5 dots", "Red dragon". */
 export function nameOf(code: string): string {
@@ -87,7 +91,7 @@ export interface LessonSpec {
   readonly seed?: string;
   readonly scores?: readonly number[];
   /** The rules family: Hong Kong unless it names another style. */
-  readonly style?: 'hong-kong' | 'riichi' | 'sichuan';
+  readonly style?: 'hong-kong' | 'riichi' | 'sichuan' | 'american';
   /** Sichuan: each seat's void suit (0 characters, 1 dots, 2 bamboo). */
   readonly voids?: readonly (number | null)[];
   /** Riichi: the dora indicators turned up (one by default; the rest are dealt from the seed). */
@@ -119,15 +123,17 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
   const options: StyleOptions = { ...(STYLES[styleId]?.defaults ?? HK_DEFAULTS), ...spec.options };
   const config: MahjongConfig = { style: styleId, options };
   const rules = engine.rules(config);
-  const left = new Array<number>(PLAYING_KINDS).fill(0);
+  // Flowers set aside are dealt as bonus tiles; where a style keeps them in the hand (American), they and the jokers are tiles like any other.
+  const inHand = (k: Kind) => k < PLAYING_KINDS || !rules.replaceBonus;
+  const left = new Array<number>(KIND_COUNT).fill(0);
   for (const t of tileSet(rules.tiles)) {
     const k = kindOf(t);
-    if (k < PLAYING_KINDS) left[k] = (left[k] ?? 0) + 1;
+    if (inHand(k)) left[k] = (left[k] ?? 0) + 1;
   }
   const take = (text: string | null | undefined) => {
     // Written as a position writes them: "0p" is the red five.
     for (const k of text ? parseTiles(text).map((x) => x.kind) : []) {
-      if (isBonus(k)) continue;
+      if (!inHand(k)) continue;
       if ((left[k] ?? 0) <= 0) throw new Error(`Mahjong lesson: no ${codeOf(k)} left for "${text ?? ''}"`);
       left[k] = (left[k] ?? 0) - 1;
     }
@@ -372,8 +378,33 @@ const FIXED: Readonly<Record<string, number | string>> = (() => {
   out['pay:discard:total'] = pay.discarder + pay.others * (SEATS - 2);
   Object.assign(out, riichiFixed());
   Object.assign(out, sichuanFixed());
+  Object.assign(out, americanFixed());
   return out;
 })();
+
+/** The American table: the set, the hand, the Charleston and the payments, and the practice card's values. */
+function americanFixed(): Record<string, number> {
+  const out: Record<string, number> = {};
+  const o = AMERICAN_DEFAULTS;
+  const rules = engine.rules({ style: 'american', options: o });
+  const rounds = charleston(o);
+  out['am:tiles'] = tileSet(rules.tiles).length;
+  out['am:jokers'] = JOKERS;
+  out['am:flowers'] = tileSet(rules.tiles).filter((t) => isBonus(kindOf(t))).length;
+  out['am:hand'] = HAND_TILES;
+  out['am:pass'] = rounds[0]?.count ?? 0;
+  out['am:first'] = rounds.filter((r) => r.group === 1).length;
+  out['am:courtesy'] = rounds.find((r) => r.courtesy)?.count ?? 0;
+  out['am:set:min'] = 3;
+  out['am:min'] = Math.min(...PRACTICE.hands.map((h) => h.points));
+  out['am:max'] = Math.max(...PRACTICE.hands.map((h) => h.points));
+  out['am:hands'] = PRACTICE.hands.length;
+  out['am:pay:discarder'] = 2;
+  out['am:pay:others'] = 1;
+  out['am:pay:self'] = 2;
+  out['am:jokerless'] = 2;
+  return out;
+}
 
 /** The Sichuan table: the set, each pattern's fan, the cap, points and the kong and flower-pig payments. */
 function sichuanFixed(): Record<string, number> {
@@ -649,7 +680,10 @@ export function stripMahjongNotation(text: string): string {
     .replace(/\b(?:flower|season)\s[1-4]\b/gi, ' ')
     .replace(/\b[1-9]{1,4}[mps]\b/g, ' ')
     .replace(/\b[1-9][CDB]\b/g, ' ')
-    .replace(/\b[FS][1-4]\b/g, ' ');
+    .replace(/\b[FS][1-4]\b/g, ' ')
+    // An American card's groups ("2222a", "13579b", "000") are notation too.
+    .replace(/\b\d{1,6}[abc]\b/g, ' ')
+    .replace(/\b0{2,6}\b/g, ' ');
 }
 
 export const mahjongLessonGame: LessonGame<MahjongState> = {

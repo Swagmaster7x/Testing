@@ -10,7 +10,8 @@ import type { Kind, TileId, TileSetSpec } from './tiles';
 
 /** A set laid on the table: called from a discard, or a concealed kong. */
 export interface Meld {
-  readonly type: 'chow' | 'pung' | 'kong';
+  /** A quint (5) or sextet (6) only where jokers make them (American). */
+  readonly type: 'chow' | 'pung' | 'kong' | 'quint' | 'sextet';
   /** In order (a chow from low to high); for an added kong the added tile is last. */
   readonly tiles: readonly TileId[];
   /** The discard it took, or null for a concealed kong. */
@@ -21,6 +22,8 @@ export interface Meld {
   readonly concealed: boolean;
   /** A pung made into a kong by adding the fourth tile. */
   readonly added: boolean;
+  /** The kind the set stands for, when jokers are in it (American exposures). */
+  readonly kind?: Kind;
 }
 
 export interface CallRules {
@@ -43,6 +46,14 @@ export interface CallRules {
   readonly furiten?: boolean;
   /** After a chow or pung you may not throw the called kind (nor, for a chow, the other end). */
   readonly noSwapCall?: boolean;
+  /**
+   * Calling a discard for an exposure of these sizes, jokers standing in (American): the called
+   * tile and tiles of its kind or jokers from the hand; no replacement draw. A discarded joker can
+   * never be called. With `refuseDead`, an exposure that would leave a hand no way to win is not offered.
+   */
+  readonly expose?: { readonly sizes: readonly number[]; readonly refuseDead?: boolean };
+  /** On your turn a joker in any live exposure may be taken by putting in the tile it stands for. */
+  readonly jokerSwap?: boolean;
 }
 
 /** One round of passing tiles before play (Sichuan's exchange of three, American's Charleston). */
@@ -200,6 +211,8 @@ export interface ScoreLine {
   readonly id: string;
   /** Its value in the style's unit (faan in Hong Kong); for a limit hand, the limit. */
   readonly value: number;
+  /** How to show the line when its id has no name in the catalogue (a hand from a card typed in). */
+  readonly label?: string;
   /** How many times it counted (two dragon pungs), when more than once. */
   readonly times?: number;
 }
@@ -377,6 +390,8 @@ export interface Style {
   kongPayment?(kong: KongInput, options: StyleOptions): number[];
   /** Each seat's standing when the wall ran out ("won", "ready", "not-ready", or a style's own word), shown with the result. */
   seatStatus?(hand: DrawInput, options: StyleOptions): readonly string[];
+  /** Whether a seat's exposures can still make a winning hand (none: the hand is dead). */
+  exposuresFit?(melds: readonly Meld[], options: StyleOptions): boolean;
 }
 
 /** Reads a style's options from JSON, keeping only known values (defaults for the rest). */

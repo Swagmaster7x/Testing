@@ -44,6 +44,7 @@ import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS } from './mahjong/styles/riichi';
 import { SICHUAN_DEFAULTS } from './mahjong/styles/sichuan';
+import { AMERICAN_DEFAULTS } from './mahjong/styles/american';
 import { noughtsBots } from './noughts/bots';
 import { shogiBots } from './shogi/bots';
 import { tuteBots } from './tute/bots';
@@ -429,5 +430,7 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     // Sichuan Bloody: four-hand games on the Chengdu table. Levels 1 to 4: level 5 scores only about
     // 0.56 against level 4 here, short of the margin (PROGRESS-M14c.md has the figures).
     'mahjong-sichuan': mahjongLadder({ style: 'sichuan', options: SICHUAN_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
+    // American: four-hand games from the practice card, with the Charleston; the card player has four levels.
+    'mahjong-american': mahjongLadder({ style: 'american', options: AMERICAN_DEFAULTS }, 4) as unknown as Ladder<never, never, never, never, never>,
   };
 }

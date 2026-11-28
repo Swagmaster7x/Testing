@@ -81,7 +81,8 @@ function LogLines({ log, ui, record, viewSeats, names }: { log: readonly LogEntr
   }, [log.length]);
   if (log.length === 0) return <p className="empty-note">{t('rail.log.none')}</p>;
   return (
-    <ul className="log" ref={list}>
+    // Focusable, so the list can be scrolled from the keyboard once it grows past its height.
+    <ul className="log" ref={list} tabIndex={0} aria-label={t('rail.log')}>
       {log.map((entry, i) => {
         const text = ui.describeEvent(entry.event, viewSeats, record.players.length, names);
         if (!text) return null;

@@ -71,7 +71,16 @@ export function moveName(action: MahjongAction): string {
       return t(action.yes ? 'mahjong.move.vote-yes' : 'mahjong.move.vote-no');
     case 'void':
       return t('mahjong.move.void', { suit: suitName(action.suit) });
+    case 'expose':
+      return action.jokers > 1 ? t('mahjong.move.expose-jokers', { set: setName(action.size), n: action.jokers }) : action.jokers === 1 ? t('mahjong.move.expose-joker', { set: setName(action.size) }) : t('mahjong.move.expose', { set: setName(action.size) });
+    case 'swap':
+      return t('mahjong.move.swap');
   }
+}
+
+/** A set by its size: "pung", "kong", "quint", "sextet". */
+export function setName(size: number): string {
+  return tDynamic(`mahjong.set.${Math.max(3, Math.min(6, size))}`);
 }
 
 /** A suit by number: "characters", "dots", "bamboo". */

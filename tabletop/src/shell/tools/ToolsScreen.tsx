@@ -75,6 +75,9 @@ export function ToolsScreen() {
           <p className="muted">{t('tools.calculators.body')}</p>
           <a className="btn btn-small btn-primary" href={href('/tools/mahjong')}>
             {t('tools.calc.open')}
+          </a>{' '}
+          <a className="btn btn-small" href={href('/tools/mahjong-card')}>
+            {t('tools.card.open')}
           </a>
         </section>
       </div>

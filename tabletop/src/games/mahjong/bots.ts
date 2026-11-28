@@ -28,6 +28,7 @@ import type { Meld } from './core/style';
 import type { Kind, TileId } from './core/tiles';
 import { codeOf, countsOf, isHonour, isSuited, isTerminal, kindOf, PLAYING_KINDS, rankOf } from './core/tiles';
 import { setsIn } from './core/engine';
+import { americanDecide, discardWorths, handsInReach } from './american/bot';
 import type { MahjongAction, MahjongView } from './rules';
 import { actionText, engine, mahjong } from './rules';
 import type { DiscardEval, SeatPicture, Threats } from './strategy';
@@ -455,6 +456,8 @@ export function decide(view: MahjongView, level: number, rng: Rng): Decision {
   const options = view.options;
   if (options.length === 0) throw new Error('Mahjong: nothing to do');
   if (options.length === 1) return { action: options[0] as MahjongAction, tags: options[0]?.type === 'win' ? ['mj-win'] : [] };
+  // American hands come from a card: its own player (american/bot.ts).
+  if (engine.rules(view.config).customShape) return americanDecide(view, level, rng);
   const style = playStyleOf(view.table, view.seat);
   if (view.phase === 'void') return chooseVoid(view, level, rng);
   if (view.phase === 'pass') return choosePass(view, level, rng);
@@ -541,7 +544,42 @@ function analyseAnswer(view: MahjongView, rng: Rng): Json {
   return { kind: view.phase, best: actionText(decision.action), tags: [...decision.tags], moves: view.options.map((a) => ({ action: actionText(a) })) };
 }
 
+/** The coach's questions at an American table, answered by the card player. */
+function adviseAmerican(view: MahjongView, query: Json, rng: Rng): Json {
+  if (!isJsonObject(query)) throw new Error('A coach question must be an object');
+  switch (query.type) {
+    case 'hint':
+    case 'best': {
+      const d = americanDecide(view, 4, rng);
+      return { action: actionText(d.action), tags: [...d.tags] };
+    }
+    case 'efficiency':
+      return { hands: handsInReach(view).map((h) => ({ id: h.id, need: h.need, points: h.points })) };
+    case 'safety':
+      return safetyAnswer(view);
+    case 'analyse': {
+      if (view.phase === 'act' && view.options.some((a) => a.type === 'discard')) {
+        // On the scale of the other styles' answers: about a thousand for each tile further from a hand.
+        const moves = discardWorths(view).map((m) => ({ ...m, score: m.worth * 10 }));
+        const top = Math.max(...moves.map((m) => m.score));
+        const best = [...moves].sort((a, b) => b.score - a.score)[0];
+        return {
+          kind: 'discard',
+          fold: false,
+          best: best ? codeOf(best.kind) : null,
+          moves: moves.map((m) => ({ action: codeOf(m.kind), score: Math.round(m.score), loss: Math.round((top - m.score) * 10) / 10, shanten: m.distance, accept: 0, bestAccept: 0, danger: 0, value: 0, winnable: null, tags: [] })),
+        };
+      }
+      const d = americanDecide(view, 4, rng);
+      return { kind: view.phase, best: actionText(d.action), tags: [...d.tags], moves: view.options.map((a) => ({ action: actionText(a) })) };
+    }
+    default:
+      throw new Error(`Unknown coach question: ${JSON.stringify(query.type ?? null)}`);
+  }
+}
+
 function advise(view: MahjongView, query: Json, rng: Rng): Json {
+  if (engine.rules(view.config).customShape) return adviseAmerican(view, query, rng);
   if (!isJsonObject(query)) throw new Error('A coach question must be an object');
   switch (query.type) {
     case 'hint':
@@ -564,7 +602,7 @@ function advise(view: MahjongView, query: Json, rng: Rng): Json {
  * Reasons a CPU seat may show at the table: only those everyone can see for themselves. "Ready
  * to win", "folding" or "a lone tile" would tell the others what is in a hidden hand.
  */
-const PUBLIC_TAGS: ReadonlySet<string> = new Set(['mj-win', 'mj-kong', 'mj-call-value', 'mj-call-speed']);
+const PUBLIC_TAGS: ReadonlySet<string> = new Set(['mj-win', 'mj-kong', 'mj-call-value', 'mj-call-speed', 'mj-swap']);
 
 export const mahjongBots: BotSet<MahjongView, MahjongAction> = {
   gameId: 'mahjong',

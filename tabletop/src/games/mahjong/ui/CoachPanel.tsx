@@ -13,12 +13,15 @@ import { setsIn } from '../core/engine';
 import { bestReading, shanten } from '../core/shanten';
 import type { Kind } from '../core/tiles';
 import { codeOf, PLAYING_KINDS } from '../core/tiles';
-import type { MahjongState } from '../rules';
-import { parseAction, viewOf } from '../rules';
+import type { MahjongState, MahjongView } from '../rules';
+import { engine, parseAction, viewOf } from '../rules';
 import type { SeatPicture } from '../strategy';
 import { evaluateDiscards, handShanten, picture, readThreats, readyInfo, safetyRanking } from '../strategy';
 import { MiniTile } from './MahjongSurface';
 import { kindName, moveName, whoName } from './names';
+import { handsInReach } from '../american/bot';
+import { cardOf } from '../styles/american';
+import { CardHandTiles } from './CardHand';
 
 interface Hint {
   readonly key: string;
@@ -155,6 +158,29 @@ function Safety({ p, learner }: { p: SeatPicture; learner: boolean }) {
   );
 }
 
+/** American: the nearest hands on the card for your tiles, and how many tiles each still needs. */
+function InReach({ view, learner }: { view: MahjongView; learner: boolean }) {
+  const reach = handsInReach(view, 4);
+  const card = cardOf(view.config.options);
+  if (reach.length === 0) return <p className="mj-coach-note">{t('mahjong.coach.reach.none')}</p>;
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      <p className="mj-coach-note">{t('mahjong.coach.reach.note')}</p>
+      <ul className="plain-list mj-reach" style={{ margin: 0, paddingLeft: 0, listStyle: 'none' }}>
+        {reach.map((r) => {
+          const hand = card.hands.find((h) => h.id === r.id);
+          return hand ? (
+            <li key={r.id} className="mj-reach-item">
+              <span className="eyebrow">{r.need === 0 ? t('mahjong.coach.reach.done') : t('mahjong.coach.reach.need', { n: r.need })}</span>
+              <CardHandTiles hand={hand} width={12} learner={learner} />
+            </li>
+          ) : null;
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export function MahjongCoachPanel({ state, seat, helps, ask, setOverlay, markTraining }: CoachPanelProps<MahjongState>) {
   const [hint, setHint] = useState<Hint | null>(null);
   const [busy, setBusy] = useState(false);
@@ -210,7 +236,12 @@ export function MahjongCoachPanel({ state, seat, helps, ask, setOverlay, markTra
           ) : null}
         </>
       )}
-      {helps.efficiency ? (
+      {helps.efficiency && engine.rules(state.config).customShape ? (
+        <section aria-label={t('mahjong.coach.reach.title')}>
+          <h3 className="eyebrow">{t('mahjong.coach.reach.title')}</h3>
+          <InReach view={view} learner={learner} />
+        </section>
+      ) : helps.efficiency ? (
         <section aria-label={t('mahjong.coach.eff.title')}>
           <h3 className="eyebrow">{t('mahjong.coach.eff.title')}</h3>
           <Efficiency p={p} learner={learner} />

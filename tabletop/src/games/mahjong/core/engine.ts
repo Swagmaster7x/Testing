@@ -13,7 +13,7 @@ import { createRng } from '../../../core/rng';
 import { isThirteenOrphans, isWinningShape, waitsOf } from './shapes';
 import type { DrawInput, DrawReason, HandEnd, HandScore, Meld, PassRound, Payment, Style, StyleOptions, StyleRules, WinContext, WinRecord } from './style';
 import type { Kind, TileId } from './tiles';
-import { countsOf, isBonus, isSuited, isTerminalOrHonour, isWind, kindOf, ORPHANS, rankOf, suitOf, tileSet } from './tiles';
+import { codeOf, countsOf, FLOWER_1, isBonus, isSuited, isTerminalOrHonour, isWind, JOKER, kindOf, ORPHANS, rankOf, suitOf, tileSet } from './tiles';
 
 export const SEATS = 4;
 
@@ -25,7 +25,7 @@ export interface MahjongConfig {
 }
 
 export type Phase = 'act' | 'claim' | 'rob' | 'scored' | 'pass' | 'void';
-export type CallType = 'win' | 'kong' | 'pung' | 'chow';
+export type CallType = 'win' | 'kong' | 'pung' | 'chow' | 'expose';
 
 export interface Discard {
   readonly tile: TileId;
@@ -39,6 +39,9 @@ export interface Declaration {
   readonly call: CallType;
   /** A chow's lowest kind. */
   readonly start?: Kind;
+  /** An exposure's size and the jokers it takes from the hand. */
+  readonly size?: number;
+  readonly jokers?: number;
 }
 
 export interface ClaimWindow {
@@ -187,6 +190,8 @@ export interface MahjongState {
   readonly passing: PassState | null;
   /** The tiles each seat received in the last pass (shown only to that seat). */
   readonly received: readonly (readonly TileId[])[];
+  /** Dead hands (American): exposures that fit no hand. A dead seat may not call or win. */
+  readonly dead: readonly boolean[];
 }
 
 export type MahjongAction =
@@ -207,7 +212,11 @@ export type MahjongAction =
   /** Vote to play (or skip) the passing rounds that follow. */
   | { readonly type: 'vote'; readonly yes: boolean }
   /** Declare a suit void: 0 characters, 1 dots, 2 bamboo. */
-  | { readonly type: 'void'; readonly suit: number };
+  | { readonly type: 'void'; readonly suit: number }
+  /** Call a discard for an exposure of `size` tiles, `jokers` of them jokers from the hand. */
+  | { readonly type: 'expose'; readonly size: number; readonly jokers: number }
+  /** Take a joker from a seat's exposure by putting in the tile it stands for. */
+  | { readonly type: 'swap'; readonly seat: Seat; readonly meld: number };
 
 export type MahjongEvent =
   | { readonly type: 'deal'; readonly handNo: number; readonly round: number; readonly dealer: Seat; readonly wall: number }
@@ -226,6 +235,8 @@ export type MahjongEvent =
   | { readonly type: 'vote-result'; readonly round: number; readonly yes: boolean }
   | { readonly type: 'voids'; readonly voids: readonly (number | null)[] }
   | { readonly type: 'pay'; readonly reason: string; readonly seat: Seat; readonly deltas: readonly number[] }
+  | { readonly type: 'swap'; readonly seat: Seat; readonly from: Seat; readonly tile: TileId; readonly joker: TileId }
+  | { readonly type: 'dead'; readonly seat: Seat }
   | { readonly type: 'hand-end'; readonly result: HandResult; readonly scores: readonly number[] }
   | { readonly type: 'game-end'; readonly scores: readonly number[] };
 
@@ -295,6 +306,7 @@ export class MahjongEngine {
       ledger: [],
       passing: null,
       received: [[], [], [], []],
+      dead: [false, false, false, false],
     };
     this.deal(blank, []);
     return freeze(blank);
@@ -343,6 +355,40 @@ export class MahjongEngine {
     return [...new Set((s.hands[seat] ?? []).map(kindOf).filter((k) => isSuited(k) && suitOf(k) === v))].sort((a, b) => a - b);
   }
 
+  /** Exposures a seat may call on a discard of `k`: each size, with each number of jokers its hand allows. */
+  private exposeOptions(s: MahjongState, seat: Seat, k: Kind): MahjongAction[] {
+    const r = this.rules(s.config);
+    const style = this.style(s.config);
+    const hand = s.hands[seat] ?? [];
+    const same = (t: TileId) => kindOf(t) === k || (isBonus(k) && isBonus(kindOf(t)));
+    const naturals = hand.filter(same).length;
+    const jokers = hand.filter((t) => kindOf(t) === JOKER).length;
+    const out: MahjongAction[] = [];
+    for (const size of r.calls.expose?.sizes ?? []) {
+      for (let j = 0; j <= Math.min(jokers, size - 1); j++) {
+        if (size - 1 - j > naturals) continue;
+        if (r.calls.expose?.refuseDead && style.exposuresFit && !style.exposuresFit([...(s.melds[seat] ?? []), sampleExposure(k, size, j)], s.config.options)) continue;
+        out.push({ type: 'expose', size, jokers: j });
+      }
+    }
+    return out;
+  }
+
+  /** Joker exchanges open to a seat: a joker in a live exposure whose kind the seat holds. */
+  private swapOptions(s: MahjongState, seat: Seat): MahjongAction[] {
+    const out: MahjongAction[] = [];
+    const hand = s.hands[seat] ?? [];
+    for (let t = 0; t < SEATS; t++) {
+      if (s.dead[t]) continue;
+      (s.melds[t] ?? []).forEach((m, i) => {
+        if (m.kind === undefined || !m.tiles.some((x) => kindOf(x) === JOKER)) return;
+        const k = m.kind;
+        if (hand.some((x) => kindOf(x) === k || (isBonus(k) && isBonus(kindOf(x))))) out.push({ type: 'swap', seat: t, meld: i });
+      });
+    }
+    return out;
+  }
+
   /** The pass round under way. */
   passRound(s: Pick<MahjongState, 'config' | 'passing'>): PassRound | null {
     const p = s.passing;
@@ -383,7 +429,8 @@ export class MahjongEngine {
       return allowed.length > 0 ? allowed : discards;
     }
     const out: MahjongAction[] = [];
-    if (this.canWinSelf(s)) out.push({ type: 'win' });
+    if (!s.dead[seat] && this.canWinSelf(s)) out.push({ type: 'win' });
+    if (r.calls.jokerSwap) out.push(...this.swapOptions(s, seat));
     const melds = s.melds[seat] ?? [];
     const kongsOnTable = s.melds.reduce((n, list) => n + list.filter((m) => m.type === 'kong').length, 0);
     const kongRoom = s.wall.length > r.deadWall && !(r.aborts?.fourKongs && kongsOnTable >= 4);
@@ -443,9 +490,11 @@ export class MahjongEngine {
 
   private claimOptions(s: MahjongState, seat: Seat): MahjongAction[] {
     const w = s.claim;
-    if (!w || w.from === seat) return [];
+    if (!w || w.from === seat || s.dead[seat]) return [];
     const r = this.rules(s.config);
     const k = kindOf(w.tile);
+    // Where exposures take jokers, a discarded joker is dead: nobody may call it.
+    if (r.calls.expose && k === JOKER) return [];
     const anyWin = w.declared.some((x) => x.call === 'win');
     const best = Math.max(0, ...w.declared.map((x) => PRIORITY[x.call]));
     const out: MahjongAction[] = [];
@@ -462,6 +511,7 @@ export class MahjongEngine {
         if (r.calls.kong && n >= 3 && s.wall.length > r.deadWall && !(r.aborts?.fourKongs && kongsOnTable >= 4)) out.push({ type: 'kong' });
         if (r.calls.pung && n >= 2) out.push({ type: 'pung' });
       }
+      if (best < 2 && r.calls.expose) out.push(...this.exposeOptions(s, seat, k));
       if (best < 1 && r.calls.chow && seat === (w.from + 1) % SEATS && isSuited(k)) {
         const rank = rankOf(k);
         for (const start of [k - 2, k - 1, k]) {
@@ -605,6 +655,21 @@ export class MahjongEngine {
       this.endAbortive(d, 'nine-terminals', seat, events);
       return;
     }
+    if (action.type === 'swap') {
+      // Your tile goes into the exposure in the joker's place; the joker comes to your hand.
+      const melds = d.melds[action.seat] as Meld[];
+      const m = melds[action.meld] as Meld;
+      const k = m.kind as Kind;
+      const hand = d.hands[seat] as TileId[];
+      const i = hand.findIndex((x) => kindOf(x) === k || (isBonus(k) && isBonus(kindOf(x))));
+      const tile = hand[i] as TileId;
+      const joker = m.tiles.find((x) => kindOf(x) === JOKER) as TileId;
+      hand.splice(i, 1, joker);
+      melds[action.meld] = { ...m, tiles: m.tiles.map((x) => (x === joker ? tile : x)) };
+      if (d.drawn === tile) d.drawn = joker;
+      events.push({ type: 'swap', seat, from: action.seat, tile, joker });
+      return;
+    }
     if (action.type === 'ready') {
       const own = d.discards[seat] as Discard[];
       d.ready = d.ready.map((m, i) => (i === seat ? { at: own.length, first: d.calls === 0 && own.length === 0, oneShot: true, paid: false } : m));
@@ -696,7 +761,9 @@ export class MahjongEngine {
       d.missed = d.missed.map((m, i) => (i === seat ? (d.ready[seat] ? 'hand' : 'turn') : m));
     }
     const declared: Declaration[] =
-      action.type === 'win' || action.type === 'kong' || action.type === 'pung' || action.type === 'chow' ? [...w.declared, { seat, call: action.type, ...(action.type === 'chow' ? { start: action.start } : {}) }] : [...w.declared];
+      action.type === 'win' || action.type === 'kong' || action.type === 'pung' || action.type === 'chow' || action.type === 'expose'
+        ? [...w.declared, { seat, call: action.type, ...(action.type === 'chow' ? { start: action.start } : {}), ...(action.type === 'expose' ? { size: action.size, jokers: action.jokers } : {}) }]
+        : [...w.declared];
     d.claim = { ...w, waiting: w.waiting.filter((x) => x !== seat), declared };
     this.advanceWindow(d, events);
   }
@@ -771,7 +838,7 @@ export class MahjongEngine {
         }
       }
     }
-    const call = w.declared.find((x) => x.call === 'kong' || x.call === 'pung') ?? w.declared.find((x) => x.call === 'chow');
+    const call = w.declared.find((x) => x.call === 'kong' || x.call === 'pung' || x.call === 'expose') ?? w.declared.find((x) => x.call === 'chow');
     if (call) {
       this.makeCall(d, call, w, events);
       return;
@@ -780,6 +847,10 @@ export class MahjongEngine {
   }
 
   private makeCall(d: Draft, call: Declaration, w: ClaimWindow, events: MahjongEvent[]): void {
+    if (call.call === 'expose') {
+      this.makeExposure(d, call, w, events);
+      return;
+    }
     const seat = call.seat;
     const hand = d.hands[seat] as TileId[];
     const k = kindOf(w.tile);
@@ -821,6 +892,41 @@ export class MahjongEngine {
       d.kongs = 0;
       d.source = 'call';
       d.forbidden = r.calls.noSwapCall ? swapForbidden(type, call.start, k) : [];
+    }
+  }
+
+  /**
+   * An exposure with jokers (American): the called tile, natural tiles of its kind and the jokers
+   * named, laid face up; then the caller throws. A hand whose exposures fit nothing is dead.
+   */
+  private makeExposure(d: Draft, call: Declaration, w: ClaimWindow, events: MahjongEvent[]): void {
+    const seat = call.seat;
+    const hand = d.hands[seat] as TileId[];
+    const k = kindOf(w.tile);
+    const size = call.size ?? 3;
+    const jokers = call.jokers ?? 0;
+    markClaimed(d, w.from, w.tile);
+    const same = (t: TileId) => kindOf(t) === k || (isBonus(k) && isBonus(kindOf(t)));
+    const naturals = hand.filter(same).slice(-(size - 1 - jokers));
+    const usedJokers = hand.filter((t) => kindOf(t) === JOKER).slice(-jokers);
+    const fromHand = [...(size - 1 - jokers > 0 ? naturals : []), ...(jokers > 0 ? usedJokers : [])];
+    for (const t of fromHand) hand.splice(hand.indexOf(t), 1);
+    const meld: Meld = { type: exposeType(size), tiles: [...fromHand, w.tile], claimed: w.tile, from: w.from, concealed: false, added: false, kind: isBonus(k) ? FLOWER_1 : k };
+    (d.melds[seat] as Meld[]).push(meld);
+    events.push({ type: 'call', seat, call: size >= 4 ? 'kong' : 'pung', tile: w.tile, from: w.from, meld });
+    d.calls++;
+    d.claim = null;
+    d.turn = seat;
+    d.phase = 'act';
+    d.drawn = null;
+    d.claimed = true;
+    d.kongs = 0;
+    d.source = 'call';
+    d.forbidden = [];
+    const style = this.style(d.config);
+    if (style.exposuresFit && !d.dead[seat] && !style.exposuresFit(d.melds[seat] as Meld[], d.config.options)) {
+      d.dead = d.dead.map((x, i) => (i === seat ? true : x));
+      events.push({ type: 'dead', seat });
     }
   }
 
@@ -1229,6 +1335,7 @@ export class MahjongEngine {
     d.ledger = [];
     d.passing = null;
     d.received = [[], [], [], []];
+    d.dead = [false, false, false, false];
     d.wall = wall;
     d.hands = hands;
     d.melds = [[], [], [], []];
@@ -1267,7 +1374,7 @@ export class MahjongEngine {
 
 // Helpers
 
-export const PRIORITY: Readonly<Record<CallType, number>> = { win: 3, kong: 2, pung: 2, chow: 1 };
+export const PRIORITY: Readonly<Record<CallType, number>> = { win: 3, kong: 2, pung: 2, chow: 1, expose: 2 };
 
 /** Sets in a complete hand: four for 13 tiles, five for 16. */
 export function setsIn(r: Pick<StyleRules, 'handSize'>): number {
@@ -1306,9 +1413,25 @@ export function actionKey(a: MahjongAction): string {
       return a.yes ? 'vote-yes' : 'vote-no';
     case 'void':
       return `void${a.suit}`;
+    case 'expose':
+      return `expose${a.size}/${a.jokers}`;
+    case 'swap':
+      return `swap${a.seat}/${a.meld}`;
     default:
       return a.type;
   }
+}
+
+/** The meld type of an exposure of `size` tiles. */
+export function exposeType(size: number): Meld['type'] {
+  return size >= 6 ? 'sextet' : size === 5 ? 'quint' : size === 4 ? 'kong' : 'pung';
+}
+
+/** An exposure of `size` tiles of kind `k`, `jokers` of them jokers, for asking whether it would fit. */
+function sampleExposure(k: Kind, size: number, jokers: number): Meld {
+  const natural = Array.from({ length: size - jokers }, (_, i) => `${codeOf(k)}.${i % 4}`);
+  const joker = Array.from({ length: jokers }, (_, i) => `J.${i}`);
+  return { type: exposeType(size), tiles: [...natural, ...joker], claimed: null, from: null, concealed: false, added: false, kind: isBonus(k) ? FLOWER_1 : k };
 }
 
 /** Kinds a seat may not throw just after a call, when swap calling is forbidden. */
@@ -1360,6 +1483,7 @@ interface Draft {
   ledger: readonly Payment[];
   passing: PassState | null;
   received: readonly (readonly TileId[])[];
+  dead: readonly boolean[];
 }
 
 function draft(s: MahjongState): Draft {

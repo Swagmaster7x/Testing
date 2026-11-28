@@ -15,6 +15,9 @@ import { countsOf, kindOf } from '../../src/games/mahjong/core/tiles';
 import { HK_DEFAULTS, HK_PRESETS } from '../../src/games/mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS, RIICHI_PRESETS } from '../../src/games/mahjong/styles/riichi';
 import { SICHUAN_DEFAULTS, SICHUAN_PRESETS } from '../../src/games/mahjong/styles/sichuan';
+import { AMERICAN_DEFAULTS, AMERICAN_PRESETS } from '../../src/games/mahjong/styles/american';
+import { PRACTICE_CARD } from '../../src/games/mahjong/american/practice-card';
+import { decide } from '../../src/games/mahjong/bots';
 import { checkReplay, playRandomGame } from '../harness/contract';
 
 /** Everything a seat may not see: other hands (until they are laid down at the end), the wall and the seed. */
@@ -118,6 +121,10 @@ const configs: MahjongConfig[] = [
   { style: 'sichuan', options: { ...SICHUAN_DEFAULTS, length: 'four', exchange: 'left' } },
   { style: 'sichuan', options: { ...SICHUAN_DEFAULTS, length: 'hand', multipleWin: 'first', kongShoot: 'return', pig: 16, refund: 'off', exchange: 'across', heavenly: 'off', bonusFan: 'off' } },
   { style: 'sichuan', options: { ...SICHUAN_DEFAULTS, length: 'hand', checks: 'off', kongPay: 'off', selfDraw: 'none', cap: 3 } },
+  ...AMERICAN_PRESETS.map((p): MahjongConfig => ({ style: 'american', options: { ...p.options, length: 'hand' } })),
+  { style: 'american', options: { ...AMERICAN_DEFAULTS, length: 'hand', secondCharleston: 'always', blind: 'off', jokers: 10, payment: 'flat', jokerless: 'off' } },
+  // A card typed in (here the practice card's own text, under "my card").
+  { style: 'american', options: { ...AMERICAN_DEFAULTS, length: 'hand', card: 'mine', cardText: PRACTICE_CARD, deadHand: 'learner' } },
 ];
 
 describe('mahjong over random games', () => {
@@ -206,6 +213,23 @@ describe('mahjong over random games', () => {
     for (const kind of ['discard', 'void', 'pung', 'pass', 'win']) expect(seen).toContain(kind);
     expect(seen.has('chow')).toBe(false);
   }, 180_000);
+
+  it('American games played by the CPU pass tiles, expose with jokers, win from the card, and keep the contract', () => {
+    let wins = 0;
+    const seen = new Set<string>();
+    for (let i = 0; i < 8; i++) {
+      const config = one({ ...AMERICAN_DEFAULTS, ...(i % 2 === 0 ? {} : { secondCharleston: 'always' }) }, 'american');
+      const game = playRandomGame(mahjong, config, `american-${i}`, { hidden, invariant, leakScope, choose: (_legal, rng, state) => decide(viewOf(state, state.turn), 2 + (i % 3), rng).action, maxPlies: 6000 });
+      checkReplay(mahjong, game);
+      for (const a of game.actions) seen.add(a.type);
+      for (const r of game.final.results) {
+        wins += r.wins.length;
+        for (const w of r.wins) expect(w.score.lines[0]?.id).toBe('am-hand');
+      }
+    }
+    expect(wins).toBeGreaterThan(0);
+    for (const kind of ['pass-tiles', 'vote', 'discard', 'expose', 'pass', 'win']) expect(seen).toContain(kind);
+  }, 240_000);
 
   it('Riichi games played toward winning declare riichi, win with yaku, and keep the contract', () => {
     let wins = 0;

@@ -34,7 +34,9 @@ export function positionProblems(state: MahjongState): string[] {
   const r = engine.rules(state.config);
   for (let seat = 0; seat < SEATS; seat++) {
     const melds = state.melds[seat] ?? [];
-    const size = (state.hands[seat] ?? []).length + 3 * melds.length;
+    // A kong counts as three (its fourth tile brings a replacement), except in a card style, where
+    // an exposure of any size takes no replacement and every tile in it counts.
+    const size = (state.hands[seat] ?? []).length + melds.reduce((n, m) => n + (r.customShape ? m.tiles.length : 3), 0);
     const acting = state.phase === 'act' && state.turn === seat;
     const want = r.handSize + (acting ? 1 : 0);
     if (!isOver(state) && size !== want) problems.push(`seat ${seat} holds ${size} tiles, not ${want}`);

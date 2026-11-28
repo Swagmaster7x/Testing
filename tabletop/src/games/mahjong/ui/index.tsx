@@ -10,6 +10,8 @@ import { kindOf } from '../core/tiles';
 import { HK_OPTIONS, HK_PRESETS } from '../styles/hong-kong';
 import { basePoints as riichiBase, COUNTER_VALUE, doraOf, NOTEN_POOL, payments as riichiPayments, RIICHI_PRESETS, STAKE, YAKU_HAN } from '../styles/riichi';
 import { KONG_PAY, SICHUAN_DEFAULTS, SICHUAN_FAN, SICHUAN_PRESETS, sichuanPoints } from '../styles/sichuan';
+import { AMERICAN_PRESETS, cardOf, PRACTICE } from '../styles/american';
+import { loadCard } from '../american/card-store';
 import { MahjongCoachPanel } from './CoachPanel';
 import { MahjongSeatMark, MahjongSurface } from './MahjongSurface';
 import { directionName, kindName, moveName, runName, seatName, suitName, tileName, whoName, windName } from './names';
@@ -39,6 +41,7 @@ export const mahjongOptions: GameOptions<MahjongConfig> = {
     ...HK_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'hong-kong', options: p.options } })),
     ...RIICHI_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'riichi', options: p.options } })),
     ...SICHUAN_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'sichuan', options: p.options } })),
+    ...AMERICAN_PRESETS.map((p) => ({ id: p.id, label: tDynamic(`mahjong.preset.${p.id}`), config: { style: 'american', options: p.options } })),
   ],
   fields: [STYLE_FIELD, ...fieldsOf('hong-kong')],
   fieldsFor: (config) => [STYLE_FIELD, ...fieldsOf(config.style)],
@@ -48,11 +51,15 @@ export const mahjongOptions: GameOptions<MahjongConfig> = {
       const style = STYLES[String(value)];
       return style ? { style: String(value), options: style.defaults } : config;
     }
+    // Playing "my card" copies the card typed in (Tools) into the rules, so the game's record keeps it.
+    if (config.style === 'american' && key === 'card') return { style: config.style, options: { ...config.options, card: value, cardText: value === 'mine' ? loadCard() : '' } };
     return { style: config.style, options: { ...config.options, [key]: value } };
   },
 };
 
 const me = (mySeats: readonly Seat[] | undefined): Seat => (mySeats ?? [0])[0] ?? 0;
+/** A card's title cut to fit a counter's value. */
+const shortTitle = (title: string): string => (title.length > 18 ? `${title.slice(0, 17).trimEnd()}…` : title);
 
 export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, MahjongView, MahjongEvent> = {
   def: mahjong,
@@ -71,6 +78,8 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
     if (action.type === 'pass' || action.type === 'next') return false;
     // Tiles passed, votes and void suits are chosen in secret; the table shows them when all have chosen.
     if (action.type === 'pass-tiles' || action.type === 'vote' || action.type === 'void') return mySeats.includes(seat);
+    // An exposure call is secret until the claim window closes, like a pung.
+    if (action.type === 'expose') return mySeats.includes(seat);
     if (action.type === 'pung' || action.type === 'chow' || (action.type === 'kong' && action.tile === undefined)) return mySeats.includes(seat);
     return true;
   },
@@ -82,6 +91,8 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       case 'kong':
       case 'bonus':
       case 'draw':
+      case 'swap':
+      case 'dead':
         return event.seat;
       case 'win':
         return event.win.seat;
@@ -165,6 +176,10 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
         return t(event.yes ? 'mahjong.log.vote.yes' : 'mahjong.log.vote.no');
       case 'voids':
         return t('mahjong.log.voids', { list: event.voids.map((v, seat) => `${seatName(seat, m)} ${v === null ? '' : suitName(v)}`).join(', ') });
+      case 'swap':
+        return t('mahjong.log.swap', { tile: tileName(event.tile), from: whoName(event.from, m) });
+      case 'dead':
+        return t('mahjong.log.dead');
       case 'pay': {
         // A win's payments are on the sheet; the log names what a kong collected at once.
         if (!event.reason.startsWith('kong-')) return null;
@@ -191,6 +206,19 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
         { label: t('mahjong.counter.minimum'), value: t('mahjong.counter.minimum.yaku') },
         // Five-figure scores do not fit four to a line, so each seat has its own row.
         ...order.map((s) => ({ label: seatName(s, m), value: String(state.scores[s] ?? 0) })),
+      ];
+    }
+    if (state.config.style === 'american') {
+      const hands = { hand: 1, four: 4, eight: 8, sixteen: 16 }[String(options.length ?? 'four')] ?? 4;
+      const jokers = [...(state.hands[m] ?? []), ...state.melds.flat().flatMap((x) => x.tiles), ...state.discards.flat().filter((x) => !x.claimed).map((x) => x.tile)].filter((id) => kindOf(id) === 42).length;
+      return [
+        { label: t('mahjong.counter.hand'), value: t('mahjong.counter.hand.value', { n: state.handNo + 1, total: hands }) },
+        { label: t('mahjong.counter.dealer'), value: seatName(state.dealer, m) },
+        { label: t('mahjong.counter.wall'), value: String(state.wall.length) },
+        // Short, so the labels keep their line: the practice card by kind, yours by its title.
+        { label: t('mahjong.counter.card'), value: options.card === 'mine' ? shortTitle(cardOf(options).title) || t('mahjong.counter.card.mine') : t('mahjong.counter.card.practice') },
+        { label: t('mahjong.counter.jokers'), value: String(jokers) },
+        { label: t('mahjong.counter.scores'), value: order.map((s) => String(state.scores[s] ?? 0)).join(' · ') },
       ];
     }
     if (state.config.style === 'sichuan') {
@@ -240,6 +268,10 @@ export const mahjongUi: GameUi<MahjongState, MahjongAction, MahjongConfig, Mahjo
       { title: 'ref.mahjong.sfan', items: sichuanFanLines() },
       { title: 'ref.mahjong.spay', items: [t('ref.mahjong.spay.1'), t('ref.mahjong.spay.2', { exposed: KONG_PAY.exposed, added: KONG_PAY.added, concealed: KONG_PAY.concealed }), t('ref.mahjong.spay.3')] },
       { title: 'ref.mahjong.sask', items: lines('ref.mahjong.sask', 5) },
+      { title: 'ref.mahjong.american', items: lines('ref.mahjong.american', 6) },
+      { title: 'ref.mahjong.apay', items: lines('ref.mahjong.apay', 2) },
+      { title: 'ref.mahjong.acard', items: [t('ref.mahjong.acard.note'), ...PRACTICE.hands.map((h) => t('ref.mahjong.acard.line', { section: h.section, text: h.text, points: h.points, mark: h.concealed ? 'C' : 'X' }))] },
+      { title: 'ref.mahjong.aask', items: lines('ref.mahjong.aask', 5) },
       { title: 'ref.mahjong.levels', items: MAHJONG_LEVELS.map((l) => `${t('common.level', { n: l.level })} (${t('mahjong.rating', { n: l.rating })}): ${tDynamic(`mahjong.level.${l.level}`)}`) },
     ];
   },

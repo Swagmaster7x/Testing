@@ -9,7 +9,12 @@ import { t, tDynamic } from '../../../text';
 import { Segmented } from '../../../shell/components/Segmented';
 import { BackLink, Screen } from '../../../shell/screens/common';
 import type { CalcInput, CalcSet } from '../calculator';
-import { calculate, EMPTY_INPUT, fivesIn, overused, setFits, setKinds, tilesWanted } from '../calculator';
+import { calculate, calculateCardHand, EMPTY_INPUT, fivesIn, overused, setFits, setKinds, tilesWanted } from '../calculator';
+import type { Card } from '../american/card';
+import { parseCard, takesJokers } from '../american/card';
+import { loadCard } from '../american/card-store';
+import { cardOf } from '../styles/american';
+import { CardHandTiles } from './CardHand';
 import type { Kind } from '../core/tiles';
 import { FLOWER_1, isBonus, PLAYING_KINDS } from '../core/tiles';
 import { STYLES } from '../rules';
@@ -49,6 +54,35 @@ function Tile({ kind, label, onClick, selected = false }: { kind: Kind; label: s
   );
 }
 
+/** American: the card's hands to pick from, and whether the hand was made without jokers. */
+function AmericanHands({ card, handId, setHandId, jokerless, setJokerless, which, setWhich }: { card: Card; handId: string | null; setHandId: (id: string) => void; jokerless: boolean; setJokerless: (on: boolean) => void; which: 'practice' | 'mine'; setWhich: (w: 'practice' | 'mine') => void }) {
+  // Your own card is offered once one typed in reads without errors.
+  const mine = parseCard(loadCard()).card !== null;
+  return (
+    <>
+      <h2 className="calc-head">{t('tools.calc.am.hand')}</h2>
+      {mine ? (
+        <Labelled label={tDynamic('mahjong.american.option.card')}>
+          <Segmented label={tDynamic('mahjong.american.option.card')} value={which} options={(['practice', 'mine'] as const).map((v) => ({ value: v, label: tDynamic(`mahjong.american.option.card.${v}`) }))} onChange={setWhich} />
+        </Labelled>
+      ) : null}
+      <p className="muted">{t('tools.calc.am.card', { title: card.title })}</p>
+      <div className="calc-card-hands" role="group" aria-label={t('tools.calc.am.pick')}>
+        {card.hands.map((h) => (
+          <button key={h.id} type="button" className="calc-card-hand" aria-pressed={h.id === handId} data-selected={h.id === handId} onClick={() => setHandId(h.id)}>
+            <CardHandTiles hand={h} width={13} />
+          </button>
+        ))}
+      </div>
+      <div className="tool-buttons">
+        <button type="button" className="btn btn-small" aria-pressed={jokerless} data-on={jokerless} onClick={() => setJokerless(!jokerless)}>
+          {t('tools.calc.am.jokerless')}
+        </button>
+      </div>
+    </>
+  );
+}
+
 export function MahjongCalculator() {
   const styleIds = Object.keys(STYLES);
   const [styleId, setStyleId] = useState(styleIds[0] ?? 'hong-kong');
@@ -56,6 +90,9 @@ export function MahjongCalculator() {
   const [presetId, setPresetId] = useState(style?.presets[0]?.id ?? '');
   const [mode, setMode] = useState<AddMode>('hand');
   const [input, setInput] = useState<CalcInput>(EMPTY_INPUT);
+  const [amHand, setAmHand] = useState<string | null>(null);
+  const [amJokerless, setAmJokerless] = useState(false);
+  const [amCard, setAmCard] = useState<'practice' | 'mine'>('practice');
   if (!style) return null;
   const options = style.presets.find((p) => p.id === presetId)?.options ?? style.defaults;
   const size = style.rules(options).handSize;
@@ -67,6 +104,13 @@ export function MahjongCalculator() {
   const riichi = style.id === 'riichi';
   // Sichuan's: suits only, no chows or flowers, and a win on a kong's throw.
   const sichuan = style.id === 'sichuan';
+  // American's: the hand made on the card (practice or your own), jokerless, and who threw.
+  const american = style.id === 'american';
+  const cardOptions = { ...options, card: amCard, cardText: amCard === 'mine' ? loadCard() : '' };
+  const card = cardOf(cardOptions);
+  const amPoints = card.hands.find((h) => h.id === amHand)?.points ?? null;
+  const amTakes = card.hands.find((h) => h.id === amHand);
+  const amResult = american && amPoints !== null ? calculateCardHand(style, cardOptions, amPoints, amJokerless && amTakes !== undefined && takesJokers(amTakes), input.from) : null;
   const add = (kind: Kind) => {
     if (mode === 'dora' || mode === 'ura') {
       const key = mode === 'dora' ? 'indicators' : 'underIndicators';
@@ -109,6 +153,10 @@ export function MahjongCalculator() {
               ))}
             </select>
           </label>
+          {american ? (
+            <AmericanHands card={card} handId={amHand} setHandId={setAmHand} jokerless={amJokerless} setJokerless={setAmJokerless} which={amCard} setWhich={(w) => (setAmCard(w), setAmHand(null))} />
+          ) : (
+            <>
           <h2 className="calc-head">{t('tools.calc.hand')}</h2>
           <div className="calc-row" aria-label={t('tools.calc.in-hand')}>
             {input.hand.map((k, i) => (
@@ -162,8 +210,22 @@ export function MahjongCalculator() {
               <Tile key={k} kind={k} label={t('tools.calc.add', { tile: kindName(k) })} selected={isBonus(k) && input.bonus.includes(k)} onClick={() => add(k)} />
             ))}
           </div>
+            </>
+          )}
         </section>
         <section className="card" aria-label={t('tools.calc.how')}>
+          {american ? (
+            <div className="calc-result calc-result-top" aria-live="polite">
+              {amResult ? (
+                <>
+                  <p className="calc-total">{t('tools.calc.total', { n: amResult.value, unit: 'points' })}</p>
+                  <p className="num">{amResult.payments.map((x, i) => `${windName((input.seatWind + i) % 4)}${i === 0 ? ` (${t('tools.calc.winner')})` : ''} ${x > 0 ? '+' : ''}${x}`).join(' · ')}</p>
+                </>
+              ) : (
+                <p className="muted">{t('tools.calc.am.pick')}</p>
+              )}
+            </div>
+          ) : (
           <div className="calc-result calc-result-top" aria-live="polite">
             {!complete ? (
               <p className="muted">{t('tools.calc.waiting')}</p>
@@ -195,10 +257,11 @@ export function MahjongCalculator() {
               </>
             )}
           </div>
+          )}
           <Labelled label={t('tools.calc.seat')}>
             <Segmented label={t('tools.calc.seat')} value={input.seatWind} options={[0, 1, 2, 3].map((w) => ({ value: w, label: windName(w) }))} onChange={(seatWind) => update({ seatWind })} />
           </Labelled>
-          {sichuan ? null : (
+          {sichuan || american ? null : (
             <Labelled label={t('tools.calc.round')}>
               <Segmented label={t('tools.calc.round')} value={input.prevailingWind} options={[0, 1, 2, 3].map((w) => ({ value: w, label: windName(w) }))} onChange={(prevailingWind) => update({ prevailingWind })} />
             </Labelled>
@@ -224,7 +287,7 @@ export function MahjongCalculator() {
                 {t('tools.calc.oneShot')}
               </button>
             ) : null}
-            {(input.from === null ? (['lastTile', 'afterKong'] as const) : (['lastDiscard', 'robbed'] as const)).map((key) => (
+            {(american ? [] : input.from === null ? (['lastTile', 'afterKong'] as const) : (['lastDiscard', 'robbed'] as const)).map((key) => (
               <button key={key} type="button" className="btn btn-small" aria-pressed={input[key]} data-on={input[key]} onClick={() => update({ [key]: !input[key] })}>
                 {tDynamic(`tools.calc.${key}`)}
               </button>

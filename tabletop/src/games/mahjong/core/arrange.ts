@@ -32,7 +32,8 @@ export interface WinShape {
 
 export function meldSet(meld: Meld): HandSet {
   const kinds = meld.tiles.map(kindOf);
-  return { type: meld.type, kind: Math.min(...kinds), concealed: meld.concealed, melded: true };
+  // Quints and sextets (American) never reach a set-based scorer; read as kongs should one ever do.
+  return { type: meld.type === 'quint' || meld.type === 'sextet' ? 'kong' : meld.type, kind: Math.min(...kinds), concealed: meld.concealed, melded: true };
 }
 
 /** Every reading of the winning hand under the style's shapes (empty when it is not complete). */

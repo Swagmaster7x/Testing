@@ -137,6 +137,16 @@ export interface Calculation {
   readonly payments: readonly number[];
 }
 
+/**
+ * American (milestone 14c): a hand from a card is scored by its line on the card, so the
+ * calculator asks which hand was made, whether without jokers, and who threw (null: self-picked).
+ */
+export function calculateCardHand(style: Style, options: StyleOptions, points: number, jokerless: boolean, from: 1 | 2 | 3 | null): { value: number; payments: number[] } {
+  const value = points * (jokerless && options.jokerless !== 'off' ? 2 : 1);
+  const score: HandScore = { lines: [], raw: value, total: value, limit: false, unit: 'points', base: value };
+  return { value, payments: style.settle({ wins: [{ seat: 0, from, tile: tileId(0, 0), score, robbed: false }], dealer: 0, seats: 4 }, options) };
+}
+
 /** Scores and settles a complete hand under a style's options. */
 export function calculate(style: Style, options: StyleOptions, input: CalcInput): Calculation {
   const ctx = contextOf(input);
