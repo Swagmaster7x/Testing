@@ -224,7 +224,7 @@ export function MahjongCalculator() {
             <div className="calc-result calc-result-top" aria-live="polite">
               {amResult ? (
                 <>
-                  <p className="calc-total">{t('tools.calc.total', { n: amResult.value, unit: 'points' })}</p>
+                  <p className="calc-total">{valueName('points', amResult.value)}</p>
                   <p className="num">{amResult.payments.map((x, i) => `${windName((input.seatWind + i) % 4)}${i === 0 ? ` (${t('tools.calc.winner')})` : ''} ${x > 0 ? '+' : ''}${x}`).join(' · ')}</p>
                 </>
               ) : (

@@ -618,7 +618,7 @@ function scoreReading(shape: WinShape, ctx: WinContext, o: StyleOptions, uniqueW
   const flowers = o.flowers !== 'off' ? ctx.bonus.length : 0;
   if (flowers > 0) push('co-flowers', flowers);
   const total = lines.reduce((sum, l) => sum + l.value, 0);
-  return { lines, raw: total, total, limit: false, unit: 'fan', base: total };
+  return { lines, raw: total, total, limit: false, unit: 'mcr', base: total };
 }
 
 /** The hand's points without its flowers: what the minimum is measured against. */

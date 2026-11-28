@@ -25,10 +25,24 @@ after M2. Feedback is still welcome at any point and will be applied to the temp
 - [x] **M13. Classic card pack**: Blackjack, Hearts, Spades and Gin Rummy (2026-11-27, built in its own checkout)
 - [x] **M14. More tile styles**: Dominoes All Fives and Cuban double-nine; Mahjong Chinese Official, Taiwanese, Sichuan Bloody and American-format (2026-11-28, each style in its own sitting, built in parallel checkouts)
 - [x] **M15. Stronger engines**: Fairy-Stockfish level 8 for shogi where the page is isolated, a KataGo network in Go review, and the opening, castle and joseki trainers (2026-11-28, built in its own checkout)
-- [ ] M16. Table tools, polish, release: scorepads, the blind timer, the daylight look and the first-run tour done
+- [x] **M16. Table tools, polish, release**: scorepads, the blind timer, the daylight look, the first-run tour, the Spanish interface, accessibility and performance passes, the Mahjong calculator for all six styles; the release is the debug APK, by the owner's choice (2026-11-28). **Every milestone in the plan is done.**
 
-Now: the final pass of M16 (a whole end-to-end run, screenshots, speed across the six Mahjong
-styles, the 1.0.0 APK).
+Delivered: **1.0.0** (2026-11-28), the plan complete. The whole end-to-end suite on the fully
+merged tree: 533 passed, 11 skipped by design, 6 failed, all Sichuan, from one merge fault (both
+Mahjong checkouts had named their score unit "fan": Chinese Official's points are now "mcr", and a
+0.12.0 record of a Chinese Official hand still reads as points); after the fix every Mahjong spec
+and the tools spec pass at all three sizes (135), and `npm run check` passes (953 unit, 63
+property, every lesson). The slowest CPU decision in any Mahjong style at level 5 takes 0.11 s on
+the build machine (Taiwanese; Hong Kong 0.03, Riichi 0.02, Chinese Official 0.06, Sichuan 0.02,
+American 0.05).
+
+**Open after 1.0.0, none of them part of the plan's definition of done:** nothing has run on a real
+phone; lessons are in English only; shogi level 8 needs a hosted web copy; Go's CPU levels still
+use the built-in engine (KataGo reads positions in review); some CPU levels are close in games where
+the deal decides most hands (four-player Brisca 2 and 3; Tute 5 and 6 against 4; Hearts and Spades
+2 and 3; Omaha hi-lo; Cuban dominoes 4 against 3 at 0.57 and 6 against 5 at 0.58); Taiwanese,
+Riichi, Sichuan and American stop at level 4; the Chinese Official and Taiwanese rules come from
+secondary sources (the official rulebooks could not be fetched).
 
 Delivered: **0.11.0** (2026-11-28): Riichi, the Dominoes styles, M15's engines and trainers, the
 Riichi calculator and the Tute options, after a whole end-to-end run (451 passed, 11 skipped by
@@ -1704,7 +1718,7 @@ at nothing; Riichi's start at a stack each).
   (the wall, the deal, calls, scoring a hand, etiquette) are met through the shared and Hong Kong
   lessons.
 
-## M16, first part. Table tools, the daylight look, the first-run tour (under way)
+## M16. Table tools, the daylight look, the first-run tour, Spanish, the calculator, the final pass
 
 Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in their own checkouts.
 
@@ -1765,7 +1779,8 @@ Built on the main branch on 2026-11-27, while M11, M13 and Tute were built in th
   level 4's search wins only 0.582 against level 2 (0.603 against level 3). Two tries (cheaper
   winners while an opponent can still trump; a small search with the basic policy) moved nothing.
   The levels differ in play, not in single-hand results.
-- [ ] Still to come in M16: calculator inputs for the later Mahjong styles, and the final pass.
+- [x] **The calculator for every style** (2026-11-28): each Mahjong style adds its own inputs (Chinese Official the last tile of its kind, Taiwanese the dealer's repeat deals, Sichuan a win on a kong's throw and suits only, American the card hand made, jokerless and who threw).
+- [x] **The final pass** (2026-11-28): see "Delivered: 1.0.0" at the top.
 - **Decided by the owner (2026-11-28): the app is for one Android phone for now.** No release key
   and no web hosting: the debug APK, signed with the fixed key in `android/app/signing`, is the
   build to install, and each version installs over the last. If that changes, a release key needs

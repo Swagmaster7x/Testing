@@ -370,7 +370,8 @@ function scoreFrom(j: Json | undefined): HandScore {
     raw: numberIn(j.raw, 'a score'),
     total: numberIn(j.total, 'a score'),
     limit: j.limit === true,
-    unit: typeof j.unit === 'string' ? j.unit : 'faan',
+    // Chinese Official counted in "fan" in 0.12.0; its points are "mcr" now that Sichuan's fan are "fan".
+    unit: typeof j.unit !== 'string' ? 'faan' : j.unit === 'fan' && lines.some((l) => l.id.startsWith('co-')) ? 'mcr' : j.unit,
     base: numberIn(j.base, 'a score'),
     ...(typeof j.fu === 'number' ? { fu: j.fu } : {}),
     ...(typeof j.yakuman === 'number' ? { yakuman: j.yakuman } : {}),

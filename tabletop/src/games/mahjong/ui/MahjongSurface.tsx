@@ -460,7 +460,7 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
             ) : null}
             {asking ? null : (
             <ul className="mj-faan">
-              {w.score.lines.length === 0 ? <li>{t(w.score.unit === 'fan' ? 'mahjong.result.chicken.fan' : 'mahjong.result.chicken')}</li> : null}
+              {w.score.lines.length === 0 ? <li>{t(w.score.unit === 'mcr' || w.score.unit === 'fan' ? 'mahjong.result.chicken.fan' : 'mahjong.result.chicken')}</li> : null}
               {w.score.lines.map((l) => (
                 <li key={l.id}>
                   <span>
@@ -470,7 +470,7 @@ function ResultPanel({ result, me, learner, canNext, over, onNext, selfScore, re
                   <span className="num">{w.score.yakuman ? t(l.value > 1 ? 'mahjong.result.double-yakuman' : 'mahjong.result.yakuman') : l.value}</span>
                 </li>
               ))}
-              {w.score.unit === 'fan' || w.score.unit === 'tai' ? (
+              {w.score.unit === 'mcr' || w.score.unit === 'tai' ? (
                 <li className="mj-faan-total">
                   <span>{valueName(w.score.unit, w.score.total)}</span>
                   <span className="num">{t('mahjong.result.collects', { n: result.deltas[w.seat] ?? 0 })}</span>

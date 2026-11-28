@@ -51,7 +51,7 @@ export function valueName(unit: string, n: number): string {
 
 /** The unit a style counts hands in (its scorer's `unit`), for screens that have no score at hand. */
 export function unitOf(style: string): string {
-  return ({ riichi: 'han', 'chinese-official': 'fan', taiwanese: 'tai' } as Record<string, string>)[style] ?? 'faan';
+  return ({ riichi: 'han', 'chinese-official': 'mcr', taiwanese: 'tai', sichuan: 'fan', american: 'points' } as Record<string, string>)[style] ?? 'faan';
 }
 
 /** Styles whose table words are Mandarin (hú, zìmō) rather than Cantonese or Japanese. */
