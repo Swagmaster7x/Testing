@@ -11,6 +11,8 @@
  * - Marking dead stones: the CPU marks what its playouts say is dead, chain by chain, then says
  *   done. It accepts your marking when it gives the same winner as its own. The estimate is
  *   seeded from the position, so every level (and both sides) sees the same dead stones.
+ * - The review's score and ownership map (M15) come from a small KataGo network (net/), one
+ *   evaluation per position, when the bots are given a way to load it (`goBotsWith`).
  */
 import type { AdviseInput, BotChoice, BotInput, BotSet } from '../../ai/bot';
 import type { MctsResult } from '../../ai/mcts';
@@ -28,6 +30,8 @@ import { GO_LEVELS } from './levels';
 import type { GoAction, GoResult, GoState, GoView } from './rules';
 import { boardOf, colorOf, countState, go, legalPoints, pointName, sgfName, winnerOf } from './rules';
 import { compensationFor } from './score';
+import type { Network } from './net';
+import { evaluate } from './net';
 
 interface LevelParams {
   /** Playouts on 9×9; bigger boards use fewer (see `scaled`). */
@@ -415,3 +419,46 @@ export const goBots: BotSet<GoView, GoAction> = {
   advise: ({ view, query, rng }: AdviseInput<GoView>) => advise(view, query, rng),
   encode: (action) => go.codec.action.toJSON(action),
 };
+
+/** The network's view of a position: score, chances and ownership from Black's side (rounded). */
+export function netAnswer(net: Network, view: GoView, recent: readonly number[] | null): Json {
+  const komi = view.rules.komi + (view.rules.scoring === 'area' ? compensationFor(view.rules.compensation, view.handicap) : 0);
+  const e = evaluate(net, {
+    size: view.size,
+    board: view.board,
+    toMove: view.toMove === 0 ? 'X' : 'O',
+    ko: view.ko,
+    recent: recent ?? (view.last >= -1 ? [view.last] : []),
+    komi,
+    preset: view.preset,
+  });
+  return {
+    blackWins: Math.round(e.blackWins * 1000) / 10,
+    blackLead: Math.round(e.blackLead * 10) / 10,
+    ownership: Array.from(e.ownership, (v) => Math.round(v * 100) / 100),
+    best: e.policy.slice(0, 3).map((p) => ({ point: p.point < 0 ? 'pass' : pointName(p.point, view.size), share: Math.round(p.share * 100) })),
+  };
+}
+
+/**
+ * The Go bots with the review's network: the coach question "net" (with `recent`, the last moves
+ * as points, -1 for a pass) answers from it. The network loads on first use and stays loaded.
+ */
+export function goBotsWith(loadNet: () => Promise<Network>): BotSet<GoView, GoAction> {
+  let net: Promise<Network> | null = null;
+  return {
+    ...goBots,
+    async advise(input: AdviseInput<GoView>): Promise<Json> {
+      const { view, query } = input;
+      if (isJsonObject(query) && query.type === 'net') {
+        net ??= loadNet().catch((err: unknown) => {
+          net = null;
+          throw err;
+        });
+        const recent = Array.isArray(query.recent) ? query.recent.filter((m): m is number => typeof m === 'number') : null;
+        return netAnswer(await net, view, recent);
+      }
+      return advise(view, query, input.rng);
+    },
+  };
+}

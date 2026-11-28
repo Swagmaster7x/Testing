@@ -2,12 +2,17 @@
  * Shogi practice (PLAN.md 2.6): mate problems in one, three and five plies, generated from the
  * engine's own games and proved by mate search with a single first move
  * (scripts/shogi-problems.ts); and three generated drills on the lesson runner: drops, castles,
- * and counting impasse points the way you will at a real table.
+ * and counting impasse points the way you will at a real table. The castle trainer (M15) adds nine
+ * castles to build from the starting position from memory, each coming back on the review
+ * schedule, and a "next move of this castle" drill.
  */
 import type { Lesson } from '../../../teach/lesson';
 import type { Problem } from '../../../teach/problem';
 import { solverPosition } from '../../../teach/problem';
+import { lineDrill, lineProblem } from '../../../teach/lines';
 import type { DrillDef, PracticePack, PracticeSetDef } from '../../practice';
+import { CASTLES as CASTLE_LINES } from '../castles';
+import { SHOGI_SIDES } from '../learn/castles';
 import type { Color } from '../core';
 import { colorOfCode, HAND_LETTER, parseSfen, pieceCode, positionProblems, squareIndex, START_SFEN, typeOfCode } from '../core';
 import { shogiLessonGame } from '../learn/game';
@@ -23,7 +28,14 @@ export const SHOGI_SETS: readonly PracticeSetDef[] = [
   { id: 'shogi-mate1', themes: ['shogi-mate1'], chips: ['shogi-drop', 'shogi-promotion'] },
   { id: 'shogi-mate3', themes: ['shogi-mate3'], chips: ['shogi-sacrifice', 'shogi-drop'] },
   { id: 'shogi-mate5', themes: ['shogi-mate5'], chips: ['shogi-sacrifice'] },
+  // The castle trainer: every castle you finish joins your review queue; it moves no rating.
+  { id: 'shogi-castles', themes: ['line'], chips: ['castle-ranging', 'castle-static'], review: 'auto', rated: false },
 ];
+
+/** The castles as problems: Black builds the castle from the starting position, White answers. */
+export function castleProblems(): Problem[] {
+  return CASTLE_LINES.map((c) => lineProblem(shogiLessonGame, c, [`castle-${c.group}`]));
+}
 
 const THEME_ORDER: readonly string[] = ['shogi-mate1', 'shogi-mate3', 'shogi-mate5', 'shogi-sacrifice', 'shogi-drop', 'shogi-promotion'];
 
@@ -193,9 +205,10 @@ export async function loadShogiPractice(): Promise<PracticePack> {
   const drills: DrillDef[] = [
     { id: 'drill-shogi-drops', make: dropDrill(problems) },
     { id: 'drill-shogi-castles', make: castleDrill },
+    lineDrill('drill-shogi-build', shogiLessonGame, CASTLE_LINES, SHOGI_SIDES, { gameId: 'shogi', stage: 'stage-4' }),
     { id: 'drill-shogi-points', make: pointsDrill(problems) },
   ];
-  return { problems, sets: SHOGI_SETS, drills, attribution: 'practice.shogi.generated', game: shogiLessonGame, themeOrder: THEME_ORDER };
+  return { problems: [...problems, ...castleProblems()], sets: SHOGI_SETS, drills, attribution: 'practice.shogi.generated', game: shogiLessonGame, themeOrder: THEME_ORDER };
 }
 
 /** For tests: the side to move in a problem after its setup move. */

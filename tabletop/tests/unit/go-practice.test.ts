@@ -23,8 +23,9 @@ function sample(list: readonly Problem[], n: number): Problem[] {
 
 describe('go practice', () => {
   it('has three problem sets of generated problems, with ids unique', () => {
-    expect(GO_SETS.map((s) => s.id)).toEqual(['go-capture', 'go-ladders', 'go-life']);
-    for (const set of GO_SETS) expect(pack.problems.filter((p) => inSet(p, set)).length, set.id).toBeGreaterThanOrEqual(100);
+    // Plus the joseki trainer (M15): lines learnt by heart, reviewed on a schedule, not generated.
+    expect(GO_SETS.map((s) => s.id)).toEqual(['go-capture', 'go-ladders', 'go-life', 'go-joseki']);
+    for (const set of GO_SETS.filter((s) => s.review !== 'auto')) expect(pack.problems.filter((p) => inSet(p, set)).length, set.id).toBeGreaterThanOrEqual(100);
     expect(new Set(pack.problems.map((p) => p.id)).size).toBe(pack.problems.length);
   });
 

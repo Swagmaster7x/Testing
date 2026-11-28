@@ -20,6 +20,10 @@ export interface Problem {
   readonly themes: readonly string[];
   /** Card games: show the other hand face up (in endgames it can be worked out anyway). */
   readonly openHand?: boolean;
+  /** A named line to play from memory (M15, src/teach/lines.ts): its name, shown while solving... */
+  readonly title?: string;
+  /** ...and its idea, shown once it is solved or shown. */
+  readonly note?: string;
 }
 
 export type ProblemPhase = 'setup' | 'solving' | 'reply' | 'solved' | 'failed' | 'shown';

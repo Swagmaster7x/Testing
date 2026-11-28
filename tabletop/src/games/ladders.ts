@@ -44,7 +44,7 @@ import { mahjong } from './mahjong/rules';
 import { HK_DEFAULTS } from './mahjong/styles/hong-kong';
 import { RIICHI_DEFAULTS } from './mahjong/styles/riichi';
 import { noughtsBots } from './noughts/bots';
-import { shogiBots } from './shogi/bots';
+import { shogiBots, shogiBotsWith } from './shogi/bots';
 import { tuteBots } from './tute/bots';
 import type { TuteAction, TuteConfig, TuteEvent, TuteState, TuteView } from './tute/rules';
 import { SPAIN_PAIRS, tute } from './tute/rules';
@@ -71,6 +71,8 @@ export interface Ladder<S = unknown, A = unknown, C = unknown, V = unknown, E ex
 export interface LadderDeps {
   /** Makes a chess engine (Node's Stockfish in scripts and tests). */
   readonly chessEngine: () => Engine;
+  /** Fairy-Stockfish for shogi level 8 (M15); without it the shogi ladder stops at level 7. */
+  readonly shogiStrong?: () => Engine;
 }
 
 function noughtsLadder(): Ladder<NoughtsState, NoughtsAction, NoughtsConfig, NoughtsView, NoughtsEvent> {
@@ -170,19 +172,22 @@ function dominoesStyleLadder(preset: 'all-fives' | 'cuban', games: number, targe
   return { ...base, spec: { ...base.spec, config: target ? { ...config, target } : config }, games };
 }
 
-function shogiLadder(): Ladder<ShogiState, ShogiAction, ShogiConfig, ShogiView, ShogiEvent> {
+function shogiLadder(deps: LadderDeps): Ladder<ShogiState, ShogiAction, ShogiConfig, ShogiView, ShogiEvent> {
+  let engine: Engine | null = null;
+  const bots = deps.shogiStrong ? shogiBotsWith(() => (engine ??= (deps.shogiStrong as () => Engine)())) : shogiBots;
   return {
     spec: {
       def: shogi,
       // Games between programs always end: a draw at the computer-shogi move limit.
       config: { moveLimit: LADDER_MOVE_LIMIT },
-      levels: shogiBots.levels.map((l) => l.level),
+      levels: bots.levels.map((l) => l.level),
       bot: (level) => ({
         name: `L${level}`,
-        choose: async (view, seat, rng) => (await shogiBots.choose({ view, seat, level, rng })).action,
+        choose: async (view, seat, rng) => (await bots.choose({ view, seat, level, rng })).action,
       }),
       margin: 0.6,
     },
+    close: () => engine?.terminate(),
     random: { name: 'random', choose: (view, seat, rng) => randomChoice(shogi, view, seat, rng) },
     games: 20,
   };
@@ -424,7 +429,7 @@ export function buildLadders(deps: LadderDeps): Record<string, Ladder<never, nev
     dominoes: dominoesLadder() as unknown as Ladder<never, never, never, never, never>,
     'dominoes-all-fives': dominoesStyleLadder('all-fives', 60) as unknown as Ladder<never, never, never, never, never>,
     'dominoes-cuban': dominoesStyleLadder('cuban', 60, 500) as unknown as Ladder<never, never, never, never, never>,
-    shogi: shogiLadder() as unknown as Ladder<never, never, never, never, never>,
+    shogi: shogiLadder(deps) as unknown as Ladder<never, never, never, never, never>,
     go: goLadder() as unknown as Ladder<never, never, never, never, never>,
     poker: pokerLadder() as unknown as Ladder<never, never, never, never, never>,
     'chinese-checkers': chineseCheckersLadder() as unknown as Ladder<never, never, never, never, never>,

@@ -30,7 +30,8 @@ describe('shogi mate problems', () => {
 
   it('every problem is proved: the mate holds, nothing shorter works, and the attacker has one move at every turn', async () => {
     const pack = await loadShogiPractice();
-    for (const problem of pack.problems) {
+    // The castle trainer's lines (M15) are not mate problems.
+    for (const problem of pack.problems.filter((p) => !p.id.startsWith('line:'))) {
       const start = solverPosition(shogiLessonGame, problem);
       const p = parseSfen(start);
       const plies = problem.line.length;

@@ -98,6 +98,7 @@ export const enLearn = {
   'practice.problem.rated': 'Problem rated {rating}',
   'practice.watch': 'Watch your opponent’s move.',
   'practice.find': 'Your move. Find the best move for {side}.',
+  'practice.line.find': 'Play {side}’s moves of this line from memory, one at a time.',
   'practice.find.play': 'Your turn. Find the best play.',
   'practice.good-reply': 'Good. Your opponent answers…',
   'practice.solved': 'Solved!',
@@ -159,6 +160,7 @@ export const enLearn = {
   'door.practice.rating': 'Problem rating {rating}',
 
   'review.moments': 'Key moments',
+  'review.insight': 'Position',
   'review.lens.up': 'Cards up: show every hand',
   'review.lens.knew': 'Back to what you knew',
   'result.side-wins': '{side} wins',

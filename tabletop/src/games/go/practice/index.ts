@@ -2,11 +2,16 @@
  * Go practice (PLAN.md 2.6): three sets of generated problems, each proved by a solver
  * (generate.ts, written to problems.json by scripts/go-problems.ts): capturing, ladders and nets,
  * and life and death. Plus a drill: count a finished board yourself, by area or by territory.
+ * Joseki basics (M15) add the corner sequences to play from memory, each coming back on the review
+ * schedule, and a "next move of this joseki" drill.
  */
 import type { Lesson } from '../../../teach/lesson';
 import type { Problem } from '../../../teach/problem';
+import { lineDrill, lineProblem } from '../../../teach/lines';
 import type { DrillDef, PracticePack, PracticeSetDef } from '../../practice';
+import { josekiLines } from '../joseki';
 import { goLessonGame } from '../learn/game';
+import { GO_SIDES } from '../learn/joseki';
 
 interface ProblemFile {
   readonly problems: readonly (readonly [string, string, string, number, string])[];
@@ -16,7 +21,14 @@ export const GO_SETS: readonly PracticeSetDef[] = [
   { id: 'go-capture', themes: ['go-capture'], exclude: ['go-ladder', 'go-net'], chips: ['go-atari', 'go-double-atari', 'go-snapback'] },
   { id: 'go-ladders', themes: ['go-ladder', 'go-net'], chips: ['go-ladder', 'go-net'] },
   { id: 'go-life', themes: ['go-live', 'go-kill'], chips: ['go-live', 'go-kill'] },
+  // Joseki basics: every sequence you finish joins your review queue; it moves no rating.
+  { id: 'go-joseki', themes: ['line'], chips: ['joseki-4-4', 'joseki-3-4'], review: 'auto', rated: false },
 ];
+
+/** The joseki as problems for the trainer's set. */
+export function josekiProblems(): Problem[] {
+  return josekiLines().map((j) => lineProblem(goLessonGame, j, [`joseki-${j.group}`]));
+}
 
 /** Themes in the order hints name them, most telling first. */
 export const GO_THEME_ORDER: readonly string[] = ['go-snapback', 'go-double-atari', 'go-net', 'go-ladder', 'go-atari', 'go-live', 'go-kill', 'go-eye', 'go-capture'];
@@ -99,9 +111,12 @@ function countDrill(random: () => number): Lesson {
   };
 }
 
-export const GO_DRILLS: readonly DrillDef[] = [{ id: 'drill-go-count', make: countDrill }];
+export const GO_DRILLS: readonly DrillDef[] = [
+  { id: 'drill-go-count', make: countDrill },
+  lineDrill('drill-go-joseki', goLessonGame, josekiLines(), GO_SIDES, { gameId: 'go', stage: 'stage-4' }),
+];
 
 export async function loadGoPractice(): Promise<PracticePack> {
   const file = (await import('./problems.json')).default as unknown as ProblemFile;
-  return { problems: file.problems.map(toProblem), sets: GO_SETS, drills: GO_DRILLS, attribution: null, game: goLessonGame, themeOrder: GO_THEME_ORDER };
+  return { problems: [...file.problems.map(toProblem), ...josekiProblems()], sets: GO_SETS, drills: GO_DRILLS, attribution: null, game: goLessonGame, themeOrder: GO_THEME_ORDER };
 }

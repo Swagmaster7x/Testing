@@ -125,11 +125,26 @@ export interface GameOptions<C> {
   set(config: C, key: string, value: string | number): C;
 }
 
+/** What a game's review panel gets (see GameReviewSupport.Insight). */
+export interface ReviewInsightProps<S> {
+  /** Every position of the game, the start first: `states[ply]` is on the board. */
+  readonly states: readonly S[];
+  readonly ply: number;
+  /** Asks the coach about a position. */
+  readonly ask: AskCoach;
+  /** What the panel draws on the board (it is added to the review's own arrows). */
+  readonly setOverlay: (overlay: SurfaceOverlay) => void;
+  /** Moves the review to another position. */
+  readonly go: (ply: number) => void;
+}
+
 /** Game review support: engine analysis of a finished game and "play on from here". */
 export interface GameReviewSupport<S, C> {
   analyse(record: GameRecord, ask: AskCoach, onProgress: (done: number, total: number) => void, cancelled: () => boolean): Promise<GameAnalysis | null>;
   /** The options for a new game that starts from this position. */
   configAt(state: S): C;
+  /** A panel about the position on the board, in the review's rail (Go: score and ownership, M15). */
+  readonly Insight?: ComponentType<ReviewInsightProps<S>>;
 }
 
 /** A named set of options for the New game dialog ("Rules at this table", PLAN.md 2.3). */

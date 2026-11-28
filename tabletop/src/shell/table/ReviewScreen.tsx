@@ -2,7 +2,7 @@
  * Review: replays a finished game from its record. Every position has its own link
  * (#/review/<id>/<move>), and stepping forward animates the move from the same event queue.
  */
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Json } from '../../core/json';
 import type { GameEvent } from '../../core/contract';
 import { EventQueue } from '../../core/events';
@@ -55,7 +55,18 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(initial);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [insightOverlay, setInsightOverlay] = useState<SurfaceOverlay>(NO_OVERLAY);
   const profileId = useApp((s) => s.profile?.id ?? '');
+  // For a game's review panel: every position, and a coach that answers about any of them.
+  const positions = useMemo(() => [start, ...steps.map((s) => s.state)], [start, steps]);
+  const askAbout: AskCoach = useCallback(
+    (query: Json, position?: unknown) => {
+      const at = position ?? start;
+      const seat = ui.def.turn(at) ?? 0;
+      return botHost().advise({ gameId: ui.def.id, view: ui.def.view(at, seat), seat, query, seed: `${record.seed}/review` });
+    },
+    [ui, start, record.seed],
+  );
 
   // Analyse a finished game once, in the bot worker, and keep the result.
   useEffect(() => {
@@ -108,6 +119,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
   });
 
   const state = current === 0 ? start : (steps[current - 1]?.state ?? start);
+  const Insight = ui.review?.Insight;
   const lastAction = current === 0 ? null : (steps[current - 1]?.action ?? null);
   const mySeats = humanSeats(record);
   const bot = record.players.find((p) => p.kind === 'bot');
@@ -125,7 +137,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
     .map(({ s, i }) => ({ ply: s.ply, seat: s.seat, text: `${ui.moveText ? ui.moveText(s.action) : ui.def.codec.action.toText(s.action)}${MARK[verdictAt.get(i)?.verdict ?? ''] ?? ''}` }));
   const here = verdictAt.get(current);
   const flagged = here && (here.verdict === 'inaccuracy' || here.verdict === 'mistake' || here.verdict === 'blunder') ? here : null;
-  const overlay: SurfaceOverlay = flagged
+  const flaggedOverlay: SurfaceOverlay = flagged
     ? {
         arrows: [
           ...(flagged.bestMove ? [{ from: flagged.bestMove.slice(0, 2), to: flagged.bestMove.slice(2, 4), tone: 'hint' as const }] : []),
@@ -134,6 +146,7 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
         marks: [],
       }
     : NO_OVERLAY;
+  const overlay: SurfaceOverlay = Insight ? { arrows: [...flaggedOverlay.arrows, ...insightOverlay.arrows], marks: [...flaggedOverlay.marks, ...insightOverlay.marks] } : flaggedOverlay;
   const humanSeat = mySeats[0] ?? 0;
   const pnp = isPassAndPlay(record);
   const playOn = async () => {
@@ -327,6 +340,11 @@ function Review({ ui, record, ply, initial }: { ui: AnyGameUi; record: StoredRec
             ) : null}
             <KeyMoments analysis={analysis} progress={progress} error={analysisError} ui={ui} record={record} supported={ui.review !== undefined} />
           </RailSection>
+          {Insight ? (
+            <RailSection title={t('review.insight')}>
+              <Insight states={positions} ply={current} ask={askAbout} setOverlay={setInsightOverlay} go={go} />
+            </RailSection>
+          ) : null}
           <RailSection title={t('rail.moves')}>
             <MoveList moves={moves} seatNames={seatNames} current={current} linkFor={(n) => `/review/${record.id}/${n}`} />
           </RailSection>

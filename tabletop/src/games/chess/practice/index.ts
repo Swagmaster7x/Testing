@@ -1,12 +1,17 @@
 /**
  * Chess practice (PLAN.md 2.6): rated problems from the Lichess puzzle database (CC0), grouped
  * by theme, and two generated drills: basic mates against the computer and counting material.
+ * The opening trainer (M15) adds the openings as lines to play from memory, each one coming back on
+ * the review schedule, and a "next move of this opening" drill.
  */
 import type { Lesson } from '../../../teach/lesson';
 import type { Problem } from '../../../teach/problem';
 import { solverPosition } from '../../../teach/problem';
+import { lineDrill, lineProblem } from '../../../teach/lines';
 import type { DrillDef, PracticePack, PracticeSetDef } from '../../practice';
 import { chessLessonGame } from '../learn/game';
+import { CHESS_SIDES } from '../learn/openings';
+import { chessOpenings } from '../openings';
 import { chessAt, FIFTY_MOVE_RULE } from '../rules';
 
 interface PuzzleFile {
@@ -17,7 +22,14 @@ export const CHESS_SETS: readonly PracticeSetDef[] = [
   { id: 'tactics', themes: ['fork', 'pin', 'skewer', 'discoveredAttack', 'doubleCheck', 'hangingPiece', 'trappedPiece', 'deflection', 'attraction', 'sacrifice', 'promotion', 'advantage', 'crushing'], exclude: ['mate'], chips: ['fork', 'pin', 'skewer', 'discoveredAttack', 'hangingPiece', 'sacrifice'] },
   { id: 'mates', themes: ['mate'], chips: ['mateIn1', 'mateIn2', 'mateIn3', 'backRankMate'] },
   { id: 'endgames', themes: ['endgame'], exclude: ['mate'], chips: ['pawnEndgame', 'rookEndgame'] },
+  // The opening trainer: every opening you finish joins your review queue; it moves no rating.
+  { id: 'openings', themes: ['line'], chips: ['opening-open', 'opening-semi-open', 'opening-closed', 'opening-flank'], review: 'auto', rated: false },
 ];
+
+/** The openings as problems for the trainer's set. */
+export function openingProblems(): Problem[] {
+  return chessOpenings().map((o) => lineProblem(chessLessonGame, o, [`opening-${o.group}`]));
+}
 
 /** Themes worth naming in a hint, most telling first. Broad tags such as "endgame" come last. */
 const THEME_ORDER: readonly string[] = [
@@ -119,10 +131,11 @@ function countDrill(problems: readonly Problem[]): (random: () => number) => Les
 
 export async function loadChessPractice(): Promise<PracticePack> {
   const file = (await import('./lichess-puzzles.json')).default as unknown as PuzzleFile;
-  const problems = file.puzzles.map(toProblem);
+  const puzzles = file.puzzles.map(toProblem);
   const drills: DrillDef[] = [
     { id: 'drill-mates', make: mateDrill },
-    { id: 'drill-count', make: countDrill(problems) },
+    { id: 'drill-count', make: countDrill(puzzles) },
+    lineDrill('drill-openings', chessLessonGame, chessOpenings(), CHESS_SIDES, { gameId: 'chess', stage: 'stage-4' }),
   ];
-  return { problems, sets: CHESS_SETS, drills, attribution: 'practice.chess.attribution', game: chessLessonGame, themeOrder: THEME_ORDER };
+  return { problems: [...puzzles, ...openingProblems()], sets: CHESS_SETS, drills, attribution: 'practice.chess.attribution', game: chessLessonGame, themeOrder: THEME_ORDER };
 }

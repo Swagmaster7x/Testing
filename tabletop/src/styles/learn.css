@@ -163,6 +163,22 @@
   line-height: var(--lh-body);
 }
 
+/* A named line to play from memory (M15): its name while solving, its idea once done. */
+.problem-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--fs-lg);
+  line-height: 1.2;
+}
+
+.problem-note {
+  margin: 0;
+  padding-left: var(--sp-3);
+  border-left: 2px solid var(--brass-2);
+  color: var(--text-2);
+  line-height: var(--lh-body);
+}
+
 .lesson-feedback {
   margin: 0;
   padding: var(--sp-2) var(--sp-3);

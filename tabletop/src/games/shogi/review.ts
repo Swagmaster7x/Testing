@@ -84,8 +84,12 @@ function reasonFor(before: ShogiState, after: ShogiState, played: string, lines:
   return { key: 'why.better', params: { move: bestText } };
 }
 
-/** Analyses a finished game. `ask` sends a coach question about a position to the bot worker. */
-export async function analyseShogiGame(record: GameRecord, ask: AskCoach, onProgress: (done: number, total: number) => void, cancelled: () => boolean): Promise<GameAnalysis | null> {
+/**
+ * Analyses a finished game. `ask` sends a coach question about a position to the bot worker. With
+ * `strong`, positions on the standard board are searched by Fairy-Stockfish (M15); the worker falls
+ * back to the built-in engine if it cannot run it.
+ */
+export async function analyseShogiGame(record: GameRecord, ask: AskCoach, onProgress: (done: number, total: number) => void, cancelled: () => boolean, strong = false): Promise<GameAnalysis | null> {
   const start = startState(shogi, record);
   const { steps, state: final } = replay(shogi, record);
   const positions: ShogiState[] = [start, ...steps.map((s) => s.state)];
@@ -94,7 +98,7 @@ export async function analyseShogiGame(record: GameRecord, ask: AskCoach, onProg
   for (let i = 0; i < total; i++) {
     if (cancelled()) return null;
     const position = positions[i] as ShogiState;
-    evals.push(position.result ? [] : readLines(await ask({ type: 'analyse', nodes: REVIEW_NODES, multiPv: 2 }, position)));
+    evals.push(position.result ? [] : readLines(await ask({ type: 'analyse', nodes: REVIEW_NODES, multiPv: 2, ...(strong ? { engine: 'strong' } : {}) }, position)));
     onProgress(i + 1, total);
   }
   const moves: MoveVerdict[] = steps.map((step, i) => {

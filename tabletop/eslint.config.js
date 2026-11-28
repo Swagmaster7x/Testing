@@ -64,6 +64,11 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    // Engine hosts are classic workers copied into the build as they are (M15).
+    files: ['scripts/engines/*.js'],
+    languageOptions: { globals: { ...globals.worker, Stockfish: 'readonly' } },
+  },
+  {
     files: ['scripts/sw-template.js'],
     languageOptions: { globals: { ...globals.serviceworker, __ASSETS__: 'readonly' } },
   },

@@ -13,6 +13,7 @@ import { compensationFor } from '../score';
 import { readSgf, writeSgf } from '../sgf';
 import { GoCoachPanel } from './CoachPanel';
 import { GoSeatExtra, GoSeatMark, GoSurface, marginText } from './GoSurface';
+import { GoReviewInsight } from './ReviewInsight';
 import { GoRulesPicker, rulesSummary } from './RulesPicker';
 
 function lastLiberties(state: GoState): string {
@@ -130,7 +131,7 @@ export const goUi: GameUi<GoState, GoAction, GoConfig, GoView, GoEvent> = {
     return { reason: 'timeout', results: [{ seat: other, place: 1, score: 1 }, { seat, place: 2, score: 0 }] };
   },
   exportRecord: { extension: 'sgf', mime: 'application/x-go-sgf', write: (record, names) => writeSgf(record, names) },
-  review: { analyse: analyseGoGame, configAt },
+  review: { analyse: analyseGoGame, configAt, Insight: GoReviewInsight },
   moveSquares: (action) => (action.type === 'play' ? { from: action.at, to: action.at } : null),
   importRecord: { accept: '.sgf,application/x-go-sgf,text/plain', read: readSgf },
   rules: { Picker: GoRulesPicker },

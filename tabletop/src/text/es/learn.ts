@@ -97,6 +97,7 @@ export const esLearn: Partial<Record<MessageKey, string>> = {
   'practice.problem.rated': 'Problema de {rating}',
   'practice.watch': 'Mira la jugada de tu rival.',
   'practice.find': 'Te toca. Encuentra la mejor jugada para {side}.',
+  'practice.line.find': 'Juega de memoria las jugadas de {side} en esta línea, una a una.',
   'practice.find.play': 'Te toca. Encuentra la mejor jugada.',
   'practice.good-reply': 'Bien. Tu rival contesta…',
   'practice.solved': '¡Resuelto!',
@@ -158,6 +159,7 @@ export const esLearn: Partial<Record<MessageKey, string>> = {
   'door.practice.rating': 'Puntuación de problemas {rating}',
 
   'review.moments': 'Momentos clave',
+  'review.insight': 'Posición',
   'review.lens.up': 'Cartas arriba: ver todas las manos',
   'review.lens.knew': 'Volver a lo que sabías',
   'result.side-wins': 'Gana {side}',

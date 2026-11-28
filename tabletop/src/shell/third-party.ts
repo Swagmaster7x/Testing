@@ -8,9 +8,12 @@ export const SHIPPED: readonly { name: string; licence: string; use: string }[] 
   { name: 'Stockfish 19 (lite)', licence: 'GPL-3.0', use: 'Chess engine' },
   { name: 'ts-fsrs', licence: 'MIT', use: 'Spaced-review schedule' },
   { name: 'Lichess puzzle database', licence: 'CC0 1.0', use: 'Chess problems (lichess.org)' },
+  { name: 'Lichess opening names', licence: 'CC0 1.0', use: 'Chess opening trainer (lichess.org)' },
   { name: 'Inter', licence: 'SIL OFL 1.1', use: 'Text font' },
   { name: 'Fraunces', licence: 'SIL OFL 1.1', use: 'Heading font' },
   { name: 'tsshogi', licence: 'MIT', use: 'Shogi game files (KIF, CSA)' },
   { name: 'Shippori Mincho B1 (kanji outlines)', licence: 'SIL OFL 1.1', use: 'Shogi piece lettering' },
   { name: 'LXGW WenKai TC (character outlines)', licence: 'SIL OFL 1.1', use: 'Mahjong tile characters' },
+  { name: 'Fairy-Stockfish', licence: 'GPL-3.0', use: 'Strong shogi engine, where the browser allows it' },
+  { name: 'KataGo network (b6c96)', licence: 'MIT', use: 'Go review: score and ownership' },
 ];
