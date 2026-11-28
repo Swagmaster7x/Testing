@@ -45,8 +45,8 @@ export interface Complete {
 
 export const setKinds = (s: HandSet): Kind[] => (s.type === 'pung' ? [s.kind, s.kind, s.kind] : [s.kind, s.kind + 1, s.kind + 2]);
 
-/** A complete hand of four sets and a pair, or null when the knobs leave no room. */
-export function buildComplete(random: Random, knobs: Knobs): Complete | null {
+/** A complete hand of four sets and a pair (five for a 16-tile hand), or null when the knobs leave no room. */
+export function buildComplete(random: Random, knobs: Knobs, setCount = 4): Complete | null {
   const counts = new Array<number>(PLAYING_KINDS).fill(0);
   const room = (kinds: readonly Kind[]) => {
     const c = [...counts];
@@ -58,7 +58,7 @@ export function buildComplete(random: Random, knobs: Knobs): Complete | null {
   };
   const suitOf = () => knobs.suit ?? Math.floor(random() * 3);
   const sets: HandSet[] = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < setCount; i++) {
     let done = false;
     for (let t = 0; t < 40 && !done; t++) {
       let s: HandSet;

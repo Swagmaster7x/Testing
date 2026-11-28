@@ -111,3 +111,83 @@ test('milestone 14b screens: chinese official', async ({ page }) => {
     await shot(page, name);
   }
 });
+
+test('milestone 14b screens: taiwanese', async ({ page }) => {
+  test.setTimeout(600_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+
+  // The play dialog: the presets and their rules.
+  await page.goto('/#/games/mahjong?seed=shots-tw');
+  await page.getByRole('button', { name: /^Play/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('radio', { name: 'Taiwanese, common table (100/20)' }).click();
+  await shot(page, 'tw-01-play-presets');
+  await dialog.getByRole('button', { name: 'Change the rules' }).click();
+  await dialog.getByRole('radiogroup', { name: 'Stake for each tai' }).scrollIntoViewIfNeeded();
+  await shot(page, 'tw-02-rules');
+
+  // A 16-tile hand at the table, then its end.
+  await page.keyboard.press('Escape');
+  await page.goto('/#/games');
+  await startMahjong(page, { seed: 'shots-tw', level: 2, preset: /^Taiwanese, one hand/ });
+  await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 45_000 });
+  await shot(page, 'tw-03-table');
+  await playToEnd(page, 'efficient', 120);
+  await expect(page.locator('.mj-result')).toBeVisible();
+  await shot(page, 'tw-04-table-result');
+
+  // The lessons.
+  await page.goto('/#/learn/mahjong.4.tw-changes');
+  await next(page);
+  await next(page);
+  await shot(page, 'tw-05-lesson-changes');
+  await page.goto('/#/learn/mahjong.4.tw-tai');
+  await next(page);
+  await next(page);
+  await shot(page, 'tw-06-lesson-tai');
+  await page.goto('/#/learn/mahjong.4.tw-dealer');
+  await next(page);
+  await next(page);
+  await typeNumber(page, 8);
+  await next(page);
+  await typeNumber(page, 260);
+  await next(page);
+  await page.locator('.mj-prompt .mj-call[data-call="win"]').click();
+  await expect(page.locator('.mj-result')).toBeVisible();
+  await shot(page, 'tw-07-lesson-dealer-sheet');
+  await page.goto('/#/learn/mahjong.4.tw-flowers');
+  await next(page);
+  await next(page);
+  await shot(page, 'tw-08-lesson-flowers');
+
+  // The drill.
+  await page.goto('/#/practice/mahjong/drill-mahjong-tw-tai?seed=shots');
+  await expect(page.locator('.lesson-text')).toBeVisible();
+  await shot(page, 'tw-09-drill');
+
+  // The calculator.
+  await page.goto('/#/tools/mahjong');
+  await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'Taiwanese' }).click();
+  await addTiles(page, ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '7 dots', '8 dots', '9 dots', '2 bamboo', '3 bamboo', '4 bamboo', '5 bamboo', '6 bamboo', '7 bamboo', '9 dots', '9 dots']);
+  await expect(page.locator('.calc-total')).toBeVisible();
+  await shot(page, 'tw-10-calculator');
+  await page.getByRole('radiogroup', { name: 'Dealer’s repeat deals' }).scrollIntoViewIfNeeded();
+  await shot(page, 'tw-11-calculator-streak');
+
+  // The reference card.
+  await page.goto('/#/games/mahjong/reference');
+  await page.getByRole('heading', { name: 'Taiwanese tai (common table)' }).scrollIntoViewIfNeeded();
+  await shot(page, 'tw-12-reference');
+
+  // The table upright on a phone, and on a laptop and a tablet.
+  for (const [width, height, name] of [
+    [390, 844, 'tw-13-table-portrait'],
+    [1440, 900, 'tw-14-table-laptop'],
+    [1180, 820, 'tw-15-table-tablet'],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    await startMahjong(page, { seed: 'shots-tw', level: 2, preset: /^Taiwanese, common table/ });
+    await expect(page.locator('.status-turn')).toHaveText(/Your move/, { timeout: 45_000 });
+    await shot(page, name);
+  }
+});

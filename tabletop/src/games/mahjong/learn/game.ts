@@ -29,6 +29,7 @@ import { codeOf, copiesOf, countsOf, FLOWER_1, isBonus, isDragon, isFlower, isHo
 import { basePoints, HK_DEFAULTS, HK_LIMIT_HANDS, HK_OPTIONS, HK_PATTERNS, hkFaan, hkScoreAny, POINT_TABLES } from '../styles/hong-kong';
 import { basePoints as riichiBase, COUNTER_VALUE, doraOf, FU, NOTEN_POOL, payments, RIICHI_DEFAULTS, RIICHI_TARGET, STAKE, YAKU_HAN } from '../styles/riichi';
 import { CO_BASE, CO_DEFAULTS, CO_PATTERNS, coFan, withoutFlowers } from '../styles/chinese-official';
+import { dealerTai, TW_DEFAULTS, TW_PATTERNS, twTai } from '../styles/taiwanese';
 import { evaluateDiscards, handShanten, picture, readyInfo } from '../strategy';
 import { kindName, runName, seatName, windName } from '../ui/names';
 
@@ -44,6 +45,8 @@ export const HK: StyleOptions = { length: 'hand' };
 export const RIICHI: StyleOptions = { length: 'hand' };
 /** The Chinese Official track: the official table (eight points, flowers), a one-hand game. */
 export const CO: StyleOptions = { length: 'hand' };
+/** The Taiwanese track: the common table (100/20, flowers, no minimum), a one-hand game. */
+export const TW: StyleOptions = { length: 'hand' };
 
 /** A tile's name from its code: "5 dots", "Red dragon". */
 export function nameOf(code: string): string {
@@ -202,7 +205,8 @@ function dealLesson(spec: LessonSpec, attempt: number): MahjongState {
   // Bonus tiles: those a lesson names, the rest shared among the other seats it leaves out.
   let bonus: string[] | null = null;
   const given = spec.bonus;
-  if (given && options.flowers === 'on') {
+  // Whenever the style plays with bonus tiles (Hong Kong with flowers on, Chinese Official, Taiwanese).
+  if (given && rules.tiles.bonus) {
     const named = given.flatMap((b) => (b ? parseKinds(b) : []));
     const rest = Array.from({ length: 8 }, (_, i) => FLOWER_1 + i).filter((k) => !named.includes(k));
     const left = [1, 2, 3].filter((seat) => given[seat] === undefined);
@@ -369,8 +373,25 @@ const FIXED: Readonly<Record<string, number | string>> = (() => {
   out['pay:discard:total'] = pay.discarder + pay.others * (SEATS - 2);
   Object.assign(out, riichiFixed());
   Object.assign(out, coFixed());
+  Object.assign(out, twFixed());
   return out;
 })();
+
+/** The Taiwanese table: the hand, the set, the stakes, each pattern's tai and the dealer's. */
+function twFixed(): Record<string, number> {
+  const out: Record<string, number> = {};
+  const config: MahjongConfig = { style: 'taiwanese', options: TW_DEFAULTS };
+  const rules = engine.rules(config);
+  out['tw:tiles'] = tileSet(rules.tiles).length;
+  out['tw:hand'] = rules.handSize;
+  out['tw:sets'] = setsIn(rules);
+  out['tw:win'] = rules.handSize + 1;
+  out['tw:dead-wall'] = rules.deadWall;
+  out['tw:base'] = Number(TW_DEFAULTS.base);
+  out['tw:per-tai'] = Number(TW_DEFAULTS.perTai);
+  for (const id of TW_PATTERNS) out[`tai:${id.replace(/^tw-/, '')}`] = twTai(id, TW_DEFAULTS);
+  return out;
+}
 
 /** The Chinese Official table: the set, the minimum, the base every player pays, the game's length and each pattern's points. */
 function coFixed(): Record<string, number> {
@@ -520,7 +541,14 @@ function computeAll(state: MahjongState): Record<string, number | string> {
   out['flower:seat'] = seatWind(STUDENT, state.dealer) + 1;
   const riichi = state.config.style === 'riichi';
   const co = state.config.style === 'chinese-official';
+  const tw = state.config.style === 'taiwanese';
   if (co) out['min'] = Number(o.minPoints);
+  else if (tw) {
+    out['min'] = Number(o.minTai);
+    // The dealer's streak, and the tai a dealer adds to a payment with it.
+    out['tw:streak'] = state.counter;
+    out['tw:dealer-extra'] = dealerTai(state.counter);
+  }
   else if (!riichi) {
     out['min'] = Number(o.minFaan);
     out['limit'] = Number(o.limit);
@@ -607,6 +635,8 @@ function computeAll(state: MahjongState): Record<string, number | string> {
       out['win:flowerless'] = withoutFlowers(score);
       out['win:ok'] = withoutFlowers(score) >= Number(o.minPoints) ? 1 : 0;
       out['win:short'] = Math.max(0, Number(o.minPoints) - withoutFlowers(score));
+    } else if (tw) {
+      out['win:ok'] = score.total >= Number(o.minTai) ? 1 : 0;
     } else if (!riichi) {
       out['win:ok'] = score.total >= Number(o.minFaan) ? 1 : 0;
       out['win:short'] = Math.max(0, Number(o.minFaan) - score.total);

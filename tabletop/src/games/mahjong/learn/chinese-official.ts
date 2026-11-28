@@ -53,8 +53,8 @@ export const CO_LESSONS: readonly Lesson[] = [
       kind: 'askChoice',
       text: `You drew the ${N('8m')}: three called pungs, a pung in your hand and a pair of East. That is ${P('all-pungs').toLowerCase()} ({pts:all-pungs}) and ${P('self-drawn').toLowerCase()} ({pts:self-drawn}), with your flower {win:faan}. May you win?`,
       options: [
-        { text: 'No: without the flower it is only {win:flowerless}', correct: true, why: 'Right: flowers add to what is paid, never to the minimum. The hand is {win:short} short.' },
         { text: 'Yes: with the flower it reaches the minimum', why: 'Flowers never count toward the {co:min}: without it the hand is {win:flowerless}.' },
+        { text: 'No: without the flower it is only {win:flowerless}', correct: true, why: 'Right: flowers add to what is paid, never to the minimum. The hand is {win:short} short.' },
         { text: 'Yes: any complete hand may win', why: 'Not at this table: a hand needs {co:min} points, flowers aside.' },
       ],
     },
@@ -71,9 +71,9 @@ export const CO_LESSONS: readonly Lesson[] = [
           kind: 'askChoice',
           text: 'The 1-2-3 characters, 1-2-3 dots and 1-2-3 bamboo, then the 4-5-6 characters and a pair. Which pattern carries it?',
           options: [
-            { text: P('mixed-triple-chow'), correct: true, why: 'Right: {pts:mixed-triple-chow} on its own.' },
             { text: P('mixed-straight'), why: 'A mixed straight needs a low, a middle and a high run, one in each suit.' },
             { text: P('pure-straight'), why: 'A pure straight needs the three runs in one suit.' },
+            { text: P('mixed-triple-chow'), correct: true, why: 'Right: {pts:mixed-triple-chow} on its own.' },
           ],
         },
         {
@@ -91,9 +91,9 @@ export const CO_LESSONS: readonly Lesson[] = [
           position: PUNGS,
           text: 'Four pungs and a pair. Which pattern carries it?',
           options: [
-            { text: P('all-pungs'), correct: true, why: 'Right: {pts:all-pungs}, and the pungs in your hand count again as concealed pungs.' },
             { text: P('all-chows'), why: 'All chows needs four runs.' },
             { text: P('seven-pairs'), why: 'Seven pairs has no pungs at all.' },
+            { text: P('all-pungs'), correct: true, why: 'Right: {pts:all-pungs}, and the pungs in your hand count again as concealed pungs.' },
           ],
         },
       ],
@@ -109,8 +109,8 @@ export const CO_LESSONS: readonly Lesson[] = [
       kind: 'askChoice',
       text: `Why does ${P('no-honours').toLowerCase()} not score here?`,
       options: [
-        { text: `${P('full-flush')} implies it`, correct: true, why: 'Right: one suit means no honours, so it is counted once, inside the flush.' },
         { text: 'It is only for hands with calls', why: 'It counts for any hand without honours, unless a bigger pattern implies it.' },
+        { text: `${P('full-flush')} implies it`, correct: true, why: 'Right: one suit means no honours, so it is counted once, inside the flush.' },
         { text: 'It needs a self-drawn win', why: 'How the hand is won does not matter for no honours.' },
       ],
     },
