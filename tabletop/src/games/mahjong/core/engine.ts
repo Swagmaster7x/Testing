@@ -11,9 +11,9 @@
 import type { Seat } from '../../../core/contract';
 import { createRng } from '../../../core/rng';
 import { isThirteenOrphans, isWinningShape, waitsOf } from './shapes';
-import type { DrawReason, HandEnd, HandScore, Meld, Style, StyleOptions, StyleRules, WinContext, WinRecord } from './style';
+import type { DrawInput, DrawReason, HandEnd, HandScore, Meld, PassRound, Payment, Style, StyleOptions, StyleRules, WinContext, WinRecord } from './style';
 import type { Kind, TileId } from './tiles';
-import { countsOf, isBonus, isSuited, isTerminalOrHonour, isWind, kindOf, ORPHANS, rankOf, suitOf, tileSet } from './tiles';
+import { codeOf, countsOf, FLOWER_1, isBonus, isSuited, isTerminalOrHonour, isWind, JOKER, kindOf, ORPHANS, rankOf, suitOf, tileSet } from './tiles';
 
 export const SEATS = 4;
 
@@ -24,8 +24,8 @@ export interface MahjongConfig {
   readonly start?: string;
 }
 
-export type Phase = 'act' | 'claim' | 'rob' | 'scored';
-export type CallType = 'win' | 'kong' | 'pung' | 'chow';
+export type Phase = 'act' | 'claim' | 'rob' | 'scored' | 'pass' | 'void';
+export type CallType = 'win' | 'kong' | 'pung' | 'chow' | 'expose';
 
 export interface Discard {
   readonly tile: TileId;
@@ -39,6 +39,9 @@ export interface Declaration {
   readonly call: CallType;
   /** A chow's lowest kind. */
   readonly start?: Kind;
+  /** An exposure's size and the jokers it takes from the hand. */
+  readonly size?: number;
+  readonly jokers?: number;
 }
 
 export interface ClaimWindow {
@@ -53,6 +56,25 @@ export interface ClaimWindow {
   readonly meld: number;
   /** Discard: made when no tile was left to draw (only a win may be called). */
   readonly last: boolean;
+  /** Discard: thrown right after the thrower's own kong. */
+  readonly afterKong?: boolean;
+}
+
+/** Tiles being passed before play (styles with passes): the round under way and the choices so far. */
+export interface PassState {
+  /** Index into the style's pass rounds. */
+  readonly round: number;
+  /** The direction of a round set by the dice (1 right, 2 across, 3 left). */
+  readonly dice: number;
+  /** This round opens with a vote on playing its group. */
+  readonly voting: boolean;
+  /** Seats still to choose, in turn order from the dealer; the first is the seat to act. */
+  readonly waiting: readonly Seat[];
+  /** Each seat's tiles to pass (kinds), hidden from the others until the round is done. */
+  readonly chosen: readonly (readonly Kind[] | null)[];
+  /** How many tiles each seat passes on unseen (a blind pass). */
+  readonly blind: readonly number[];
+  readonly votes: readonly (boolean | null)[];
 }
 
 export interface HandResult {
@@ -77,6 +99,12 @@ export interface HandResult {
   /** The counters and stakes on the table when the hand ended. */
   readonly counter?: number;
   readonly stakes?: number;
+  /** Styles that report it: each seat's standing when the wall ran out ("won", "ready", "not-ready", "pig"). */
+  readonly status?: readonly string[];
+  /** Payments made during the hand (kongs, wins in a hand that went on), in order. */
+  readonly payments?: readonly Payment[];
+  /** Void suits declared this hand. */
+  readonly voids?: readonly (number | null)[];
 }
 
 /** Indicator tiles set aside at the deal (styles with indicators): turned up one by one. */
@@ -150,6 +178,20 @@ export interface MahjongState {
   readonly missed: readonly ('turn' | 'hand' | null)[];
   /** Kinds the seat to act may not throw (after a call, when swap calling is forbidden). */
   readonly forbidden: readonly Kind[];
+  /** Each seat's declared void suit this hand (styles with a void declaration). */
+  readonly voids: readonly (number | null)[];
+  /** Wins so far in a hand that goes on after a win; those seats are out of the hand. */
+  readonly won: readonly WinRecord[];
+  /** Each seat's gain or loss so far in this hand (kongs paid at once, wins in a hand that goes on). */
+  readonly paid: readonly number[];
+  /** The payments behind `paid`, in order. */
+  readonly ledger: readonly Payment[];
+  /** Tiles being passed before play, or null. */
+  readonly passing: PassState | null;
+  /** The tiles each seat received in the last pass (shown only to that seat). */
+  readonly received: readonly (readonly TileId[])[];
+  /** Dead hands (American): exposures that fit no hand. A dead seat may not call or win. */
+  readonly dead: readonly boolean[];
 }
 
 export type MahjongAction =
@@ -164,7 +206,17 @@ export type MahjongAction =
   /** Throw this tile and declare the hand ready (riichi), with a stake. */
   | { readonly type: 'ready'; readonly tile: Kind }
   /** End the hand at once, where the style allows it (nine terminals on the first draw). */
-  | { readonly type: 'abort' };
+  | { readonly type: 'abort' }
+  /** Pass these tiles (kinds) in a passing round, and `blind` more of those received, unseen. */
+  | { readonly type: 'pass-tiles'; readonly tiles: readonly Kind[]; readonly blind: number }
+  /** Vote to play (or skip) the passing rounds that follow. */
+  | { readonly type: 'vote'; readonly yes: boolean }
+  /** Declare a suit void: 0 characters, 1 dots, 2 bamboo. */
+  | { readonly type: 'void'; readonly suit: number }
+  /** Call a discard for an exposure of `size` tiles, `jokers` of them jokers from the hand. */
+  | { readonly type: 'expose'; readonly size: number; readonly jokers: number }
+  /** Take a joker from a seat's exposure by putting in the tile it stands for. */
+  | { readonly type: 'swap'; readonly seat: Seat; readonly meld: number };
 
 export type MahjongEvent =
   | { readonly type: 'deal'; readonly handNo: number; readonly round: number; readonly dealer: Seat; readonly wall: number }
@@ -179,6 +231,12 @@ export type MahjongEvent =
   | { readonly type: 'stake'; readonly seat: Seat; readonly amount: number }
   | { readonly type: 'indicator'; readonly tile: TileId }
   | { readonly type: 'abort'; readonly reason: DrawReason; readonly seat: Seat | null }
+  | { readonly type: 'passed'; readonly round: number; readonly dir: number; readonly counts: readonly number[] }
+  | { readonly type: 'vote-result'; readonly round: number; readonly yes: boolean }
+  | { readonly type: 'voids'; readonly voids: readonly (number | null)[] }
+  | { readonly type: 'pay'; readonly reason: string; readonly seat: Seat; readonly deltas: readonly number[] }
+  | { readonly type: 'swap'; readonly seat: Seat; readonly from: Seat; readonly tile: TileId; readonly joker: TileId }
+  | { readonly type: 'dead'; readonly seat: Seat }
   | { readonly type: 'hand-end'; readonly result: HandResult; readonly scores: readonly number[] }
   | { readonly type: 'game-end'; readonly scores: readonly number[] };
 
@@ -242,6 +300,13 @@ export class MahjongEngine {
       counter: 0,
       missed: [null, null, null, null],
       forbidden: [],
+      voids: [null, null, null, null],
+      won: [],
+      paid: [0, 0, 0, 0],
+      ledger: [],
+      passing: null,
+      received: [[], [], [], []],
+      dead: [false, false, false, false],
     };
     this.deal(blank, []);
     return freeze(blank);
@@ -257,7 +322,77 @@ export class MahjongEngine {
       case 'claim':
       case 'rob':
         return this.claimOptions(s, seat);
+      case 'pass':
+        return this.passOptions(s, seat);
+      case 'void':
+        return [0, 1, 2].map((suit): MahjongAction => ({ type: 'void', suit }));
     }
+  }
+
+  /** Whether a seat has won and left a hand that goes on after a win. */
+  isOut(s: Pick<MahjongState, 'won'>, seat: Seat): boolean {
+    return s.won.some((w) => w.seat === seat);
+  }
+
+  /** The next seat in turn after `seat` still in the hand. */
+  private nextIn(s: Pick<MahjongState, 'won'>, seat: Seat): Seat {
+    for (let i = 1; i <= SEATS; i++) {
+      const t = (seat + i) % SEATS;
+      if (!this.isOut(s, t)) return t;
+    }
+    return (seat + 1) % SEATS;
+  }
+
+  /** The other seats still in the hand, in turn order after `seat`. */
+  private othersIn(s: Pick<MahjongState, 'won'>, seat: Seat): Seat[] {
+    return [1, 2, 3].map((i) => (seat + i) % SEATS).filter((t) => !this.isOut(s, t));
+  }
+
+  /** The kinds a seat must throw first: tiles of its void suit still in its hand. */
+  voidKinds(s: Pick<MahjongState, 'voids' | 'hands'>, seat: Seat): Kind[] {
+    const v = s.voids[seat];
+    if (v === null || v === undefined) return [];
+    return [...new Set((s.hands[seat] ?? []).map(kindOf).filter((k) => isSuited(k) && suitOf(k) === v))].sort((a, b) => a - b);
+  }
+
+  /** Exposures a seat may call on a discard of `k`: each size, with each number of jokers its hand allows. */
+  private exposeOptions(s: MahjongState, seat: Seat, k: Kind): MahjongAction[] {
+    const r = this.rules(s.config);
+    const style = this.style(s.config);
+    const hand = s.hands[seat] ?? [];
+    const same = (t: TileId) => kindOf(t) === k || (isBonus(k) && isBonus(kindOf(t)));
+    const naturals = hand.filter(same).length;
+    const jokers = hand.filter((t) => kindOf(t) === JOKER).length;
+    const out: MahjongAction[] = [];
+    for (const size of r.calls.expose?.sizes ?? []) {
+      for (let j = 0; j <= Math.min(jokers, size - 1); j++) {
+        if (size - 1 - j > naturals) continue;
+        if (r.calls.expose?.refuseDead && style.exposuresFit && !style.exposuresFit([...(s.melds[seat] ?? []), sampleExposure(k, size, j)], s.config.options)) continue;
+        out.push({ type: 'expose', size, jokers: j });
+      }
+    }
+    return out;
+  }
+
+  /** Joker exchanges open to a seat: a joker in a live exposure whose kind the seat holds. */
+  private swapOptions(s: MahjongState, seat: Seat): MahjongAction[] {
+    const out: MahjongAction[] = [];
+    const hand = s.hands[seat] ?? [];
+    for (let t = 0; t < SEATS; t++) {
+      if (s.dead[t]) continue;
+      (s.melds[t] ?? []).forEach((m, i) => {
+        if (m.kind === undefined || !m.tiles.some((x) => kindOf(x) === JOKER)) return;
+        const k = m.kind;
+        if (hand.some((x) => kindOf(x) === k || (isBonus(k) && isBonus(kindOf(x))))) out.push({ type: 'swap', seat: t, meld: i });
+      });
+    }
+    return out;
+  }
+
+  /** The pass round under way. */
+  passRound(s: Pick<MahjongState, 'config' | 'passing'>): PassRound | null {
+    const p = s.passing;
+    return p ? (this.rules(s.config).passes?.rounds[p.round] ?? null) : null;
   }
 
   apply(s: MahjongState, action: MahjongAction): { state: MahjongState; events: MahjongEvent[] } {
@@ -269,6 +404,8 @@ export class MahjongEngine {
     const events: MahjongEvent[] = [];
     if (s.phase === 'scored') this.nextHand(d, events);
     else if (s.phase === 'act') this.act(d, seat, action, events);
+    else if (s.phase === 'pass') this.passChoice(d, seat, action, events);
+    else if (s.phase === 'void') this.voidChoice(d, seat, action, events);
     else this.declare(d, seat, action, events);
     return { state: freeze(d), events };
   }
@@ -281,14 +418,19 @@ export class MahjongEngine {
     const hand = s.hands[seat] ?? [];
     const counts = countsOf(hand);
     const kinds = [...new Set(hand.map(kindOf))].sort((a, b) => a - b);
-    const discards: MahjongAction[] = kinds.map((tile) => ({ type: 'discard', tile }));
+    // A void suit still in the hand is thrown first.
+    const voidFirst = this.voidKinds(s, seat);
+    const discards: MahjongAction[] = (voidFirst.length > 0 ? voidFirst : kinds).map((tile) => ({ type: 'discard', tile }));
+    const voidSuit = s.voids[seat] ?? null;
+    const notVoid = (k: Kind) => voidSuit === null || !isSuited(k) || suitOf(k) !== voidSuit;
     if (s.claimed) {
       // Swap calling: the called kind (and a chow's other end) may not be thrown, unless nothing else is left.
       const allowed = discards.filter((a) => a.type === 'discard' && !s.forbidden.includes(a.tile));
       return allowed.length > 0 ? allowed : discards;
     }
     const out: MahjongAction[] = [];
-    if (this.canWinSelf(s)) out.push({ type: 'win' });
+    if (!s.dead[seat] && this.canWinSelf(s)) out.push({ type: 'win' });
+    if (r.calls.jokerSwap) out.push(...this.swapOptions(s, seat));
     const melds = s.melds[seat] ?? [];
     const kongsOnTable = s.melds.reduce((n, list) => n + list.filter((m) => m.type === 'kong').length, 0);
     const kongRoom = s.wall.length > r.deadWall && !(r.aborts?.fourKongs && kongsOnTable >= 4);
@@ -312,7 +454,7 @@ export class MahjongEngine {
       return [...out, { type: 'discard', tile: k }];
     }
     if (kongRoom) {
-      if (r.calls.concealedKong) for (const k of kinds) if ((counts[k] ?? 0) === 4) out.push({ type: 'kong', tile: k });
+      if (r.calls.concealedKong) for (const k of kinds) if ((counts[k] ?? 0) === 4 && notVoid(k)) out.push({ type: 'kong', tile: k });
       if (r.calls.addedKong) {
         for (const m of melds) {
           if (m.type !== 'pung') continue;
@@ -348,9 +490,11 @@ export class MahjongEngine {
 
   private claimOptions(s: MahjongState, seat: Seat): MahjongAction[] {
     const w = s.claim;
-    if (!w || w.from === seat) return [];
+    if (!w || w.from === seat || s.dead[seat]) return [];
     const r = this.rules(s.config);
     const k = kindOf(w.tile);
+    // Where exposures take jokers, a discarded joker is dead: nobody may call it.
+    if (r.calls.expose && k === JOKER) return [];
     const anyWin = w.declared.some((x) => x.call === 'win');
     const best = Math.max(0, ...w.declared.map((x) => PRIORITY[x.call]));
     const out: MahjongAction[] = [];
@@ -362,10 +506,12 @@ export class MahjongEngine {
       const counts = countsOf(hand);
       const n = counts[k] ?? 0;
       const kongsOnTable = s.melds.reduce((m, list) => m + list.filter((x) => x.type === 'kong').length, 0);
-      if (best < 2) {
+      const voidSuit = s.voids[seat] ?? null;
+      if (best < 2 && (voidSuit === null || !isSuited(k) || suitOf(k) !== voidSuit)) {
         if (r.calls.kong && n >= 3 && s.wall.length > r.deadWall && !(r.aborts?.fourKongs && kongsOnTable >= 4)) out.push({ type: 'kong' });
         if (r.calls.pung && n >= 2) out.push({ type: 'pung' });
       }
+      if (best < 2 && r.calls.expose) out.push(...this.exposeOptions(s, seat, k));
       if (best < 1 && r.calls.chow && seat === (w.from + 1) % SEATS && isSuited(k)) {
         const rank = rankOf(k);
         for (const start of [k - 2, k - 1, k]) {
@@ -377,6 +523,41 @@ export class MahjongEngine {
       }
     }
     return out.length > 0 ? [...out, { type: 'pass' }] : [];
+  }
+
+  /** A seat's choices in a passing round: a vote, or every set of tiles it may pass. */
+  private passOptions(s: MahjongState, seat: Seat): MahjongAction[] {
+    const p = s.passing;
+    const round = this.passRound(s);
+    if (!p || !round || p.waiting[0] !== seat) return [];
+    if (p.voting) return [{ type: 'vote', yes: true }, { type: 'vote', yes: false }];
+    const keep = new Set(this.rules(s.config).passes?.keep ?? []);
+    const counts = new Map<Kind, number>();
+    for (const t of s.hands[seat] ?? []) {
+      const k = kindOf(t);
+      if (!keep.has(k)) counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    const kinds = [...counts.keys()].sort((a, b) => a - b);
+    const out: MahjongAction[] = [];
+    const pick = (n: number, from: number, acc: Kind[], blind: number) => {
+      if (acc.length === n) {
+        if (round.sameSuit && acc.length > 0 && !acc.every((k) => isSuited(k) && suitOf(k) === suitOf(acc[0] as Kind))) return;
+        out.push({ type: 'pass-tiles', tiles: [...acc], blind });
+        return;
+      }
+      for (let i = from; i < kinds.length; i++) {
+        const k = kinds[i] as Kind;
+        const used = acc.filter((x) => x === k).length;
+        if (used >= (counts.get(k) ?? 0)) continue;
+        acc.push(k);
+        pick(n, i, acc, blind);
+        acc.pop();
+      }
+    };
+    if (round.courtesy) for (let n = 0; n <= round.count; n++) pick(n, 0, [], 0);
+    else if (round.blind) for (let n = round.count; n >= 0; n--) pick(n, 0, [], round.count - n);
+    else pick(round.count, 0, [], 0);
+    return out;
   }
 
   /** The context of a win for the style's scorer. */
@@ -407,6 +588,8 @@ export class MahjongEngine {
       ...this.indicatorContext(s, seat),
       shown: shownOf(s, kindOf(tile)) - (selfDrawn ? 0 : 1),
       counter: s.counter,
+      ...(r.declareVoid ? { voidSuit: s.voids[seat] ?? null } : {}),
+      ...(!selfDrawn && !robbed && s.claim?.afterKong ? { kongDiscard: true } : {}),
     };
   }
 
@@ -429,7 +612,7 @@ export class MahjongEngine {
     const r = this.rules(s.config);
     const seat = s.turn;
     const hand = s.hands[seat] ?? [];
-    if (!isWinningShape(countsOf(hand), (s.melds[seat] ?? []).length, r.shapes, setsIn(r))) return null;
+    if (!r.customShape && !isWinningShape(countsOf(hand), (s.melds[seat] ?? []).length, r.shapes, setsIn(r))) return null;
     return this.style(s.config).score(this.winContext(s, seat, s.drawn, true, null, false), s.config.options);
   }
 
@@ -448,7 +631,7 @@ export class MahjongEngine {
     if (w.kind === 'rob' && w.meld < 0) {
       // A concealed kong may be robbed only to complete thirteen orphans.
       if (!(melds === 0 && isThirteenOrphans(counts))) return null;
-    } else if (!isWinningShape(counts, melds, r.shapes, setsIn(r))) return null;
+    } else if (!r.customShape && !isWinningShape(counts, melds, r.shapes, setsIn(r))) return null;
     return this.style(s.config).score(this.winContext(s, seat, w.tile, false, w.from, w.kind === 'rob'), s.config.options);
   }
 
@@ -474,6 +657,21 @@ export class MahjongEngine {
       this.endAbortive(d, 'nine-terminals', seat, events);
       return;
     }
+    if (action.type === 'swap') {
+      // Your tile goes into the exposure in the joker's place; the joker comes to your hand.
+      const melds = d.melds[action.seat] as Meld[];
+      const m = melds[action.meld] as Meld;
+      const k = m.kind as Kind;
+      const hand = d.hands[seat] as TileId[];
+      const i = hand.findIndex((x) => kindOf(x) === k || (isBonus(k) && isBonus(kindOf(x))));
+      const tile = hand[i] as TileId;
+      const joker = m.tiles.find((x) => kindOf(x) === JOKER) as TileId;
+      hand.splice(i, 1, joker);
+      melds[action.meld] = { ...m, tiles: m.tiles.map((x) => (x === joker ? tile : x)) };
+      if (d.drawn === tile) d.drawn = joker;
+      events.push({ type: 'swap', seat, from: action.seat, tile, joker });
+      return;
+    }
     if (action.type === 'ready') {
       const own = d.discards[seat] as Discard[];
       d.ready = d.ready.map((m, i) => (i === seat ? { at: own.length, first: d.calls === 0 && own.length === 0, oneShot: true, paid: false } : m));
@@ -497,6 +695,7 @@ export class MahjongEngine {
     d.lastDiscard = tile;
     events.push({ type: 'discard', seat, tile });
     const r = this.rules(d.config);
+    const afterKong = d.kongs > 0;
     d.drawn = null;
     d.kongs = 0;
     d.claimed = false;
@@ -508,7 +707,7 @@ export class MahjongEngine {
     if (mark && mark.oneShot && mark.at !== own.length - 1) d.ready = d.ready.map((m, i) => (i === seat && m ? { ...m, oneShot: false } : m));
     // Indicators owed by an exposed or added kong are turned now.
     if (d.indicators && d.indicators.pending > 0) this.turnIndicators(d, d.indicators.pending, events);
-    d.claim = { kind: 'discard', tile, from: seat, waiting: [1, 2, 3].map((i2) => (seat + i2) % SEATS), declared: [], meld: -1, last: d.wall.length <= r.deadWall };
+    d.claim = { kind: 'discard', tile, from: seat, waiting: this.othersIn(d, seat), declared: [], meld: -1, last: d.wall.length <= r.deadWall, ...(afterKong ? { afterKong: true } : {}) };
     d.phase = 'claim';
     this.advanceWindow(d, events);
   }
@@ -548,11 +747,12 @@ export class MahjongEngine {
     }
     // Robbing: an added kong, or a concealed kong by thirteen orphans when the style allows it.
     if ((added && r.calls.robKong) || (!added && r.calls.robConcealedWithOrphans)) {
-      d.claim = { kind: 'rob', tile, from: seat, waiting: [1, 2, 3].map((i) => (seat + i) % SEATS), declared: [], meld: added ? meldIndex : -1 - meldIndex, last: false };
+      d.claim = { kind: 'rob', tile, from: seat, waiting: this.othersIn(d, seat), declared: [], meld: added ? meldIndex : -1 - meldIndex, last: false };
       d.phase = 'rob';
       this.advanceWindow(d, events);
       return;
     }
+    this.payKong(d, seat, added ? 'added' : 'concealed', null, events);
     this.replacement(d, seat, events);
   }
 
@@ -563,7 +763,9 @@ export class MahjongEngine {
       d.missed = d.missed.map((m, i) => (i === seat ? (d.ready[seat] ? 'hand' : 'turn') : m));
     }
     const declared: Declaration[] =
-      action.type === 'win' || action.type === 'kong' || action.type === 'pung' || action.type === 'chow' ? [...w.declared, { seat, call: action.type, ...(action.type === 'chow' ? { start: action.start } : {}) }] : [...w.declared];
+      action.type === 'win' || action.type === 'kong' || action.type === 'pung' || action.type === 'chow' || action.type === 'expose'
+        ? [...w.declared, { seat, call: action.type, ...(action.type === 'chow' ? { start: action.start } : {}), ...(action.type === 'expose' ? { size: action.size, jokers: action.jokers } : {}) }]
+        : [...w.declared];
     d.claim = { ...w, waiting: w.waiting.filter((x) => x !== seat), declared };
     this.advanceWindow(d, events);
   }
@@ -603,6 +805,8 @@ export class MahjongEngine {
       d.claim = null;
       d.phase = 'act';
       d.turn = w.from;
+      // Nobody robbed it: the kong stands, and is paid where the style pays kongs at once.
+      this.payKong(d, w.from, w.meld >= 0 ? 'added' : 'concealed', null, events);
       this.replacement(d, w.from, events);
       return;
     }
@@ -636,15 +840,19 @@ export class MahjongEngine {
         }
       }
     }
-    const call = w.declared.find((x) => x.call === 'kong' || x.call === 'pung') ?? w.declared.find((x) => x.call === 'chow');
+    const call = w.declared.find((x) => x.call === 'kong' || x.call === 'pung' || x.call === 'expose') ?? w.declared.find((x) => x.call === 'chow');
     if (call) {
       this.makeCall(d, call, w, events);
       return;
     }
-    this.nextTurn(d, (w.from + 1) % SEATS, events);
+    this.nextTurn(d, this.nextIn(d, w.from), events);
   }
 
   private makeCall(d: Draft, call: Declaration, w: ClaimWindow, events: MahjongEvent[]): void {
+    if (call.call === 'expose') {
+      this.makeExposure(d, call, w, events);
+      return;
+    }
     const seat = call.seat;
     const hand = d.hands[seat] as TileId[];
     const k = kindOf(w.tile);
@@ -675,6 +883,7 @@ export class MahjongEngine {
     if (type === 'kong') {
       d.claimed = false;
       d.kongs = 1;
+      this.payKong(d, seat, 'exposed', w.from, events);
       if (d.indicators) {
         if (r.kongIndicator === 'late') d.indicators = { ...d.indicators, pending: d.indicators.pending + 1 };
         else this.turnIndicators(d, 1, events);
@@ -686,6 +895,203 @@ export class MahjongEngine {
       d.source = 'call';
       d.forbidden = r.calls.noSwapCall ? swapForbidden(type, call.start, k) : [];
     }
+  }
+
+  /**
+   * An exposure with jokers (American): the called tile, natural tiles of its kind and the jokers
+   * named, laid face up; then the caller throws. A hand whose exposures fit nothing is dead.
+   */
+  private makeExposure(d: Draft, call: Declaration, w: ClaimWindow, events: MahjongEvent[]): void {
+    const seat = call.seat;
+    const hand = d.hands[seat] as TileId[];
+    const k = kindOf(w.tile);
+    const size = call.size ?? 3;
+    const jokers = call.jokers ?? 0;
+    markClaimed(d, w.from, w.tile);
+    const same = (t: TileId) => kindOf(t) === k || (isBonus(k) && isBonus(kindOf(t)));
+    const naturals = hand.filter(same).slice(-(size - 1 - jokers));
+    const usedJokers = hand.filter((t) => kindOf(t) === JOKER).slice(-jokers);
+    const fromHand = [...(size - 1 - jokers > 0 ? naturals : []), ...(jokers > 0 ? usedJokers : [])];
+    for (const t of fromHand) hand.splice(hand.indexOf(t), 1);
+    const meld: Meld = { type: exposeType(size), tiles: [...fromHand, w.tile], claimed: w.tile, from: w.from, concealed: false, added: false, kind: isBonus(k) ? FLOWER_1 : k };
+    (d.melds[seat] as Meld[]).push(meld);
+    events.push({ type: 'call', seat, call: size >= 4 ? 'kong' : 'pung', tile: w.tile, from: w.from, meld });
+    d.calls++;
+    d.claim = null;
+    d.turn = seat;
+    d.phase = 'act';
+    d.drawn = null;
+    d.claimed = true;
+    d.kongs = 0;
+    d.source = 'call';
+    d.forbidden = [];
+    const style = this.style(d.config);
+    if (style.exposuresFit && !d.dead[seat] && !style.exposuresFit(d.melds[seat] as Meld[], d.config.options)) {
+      d.dead = d.dead.map((x, i) => (i === seat ? true : x));
+      events.push({ type: 'dead', seat });
+    }
+  }
+
+  /** A kong paid at once, where the style says so: moved now, kept in the hand's ledger. */
+  private payKong(d: Draft, seat: Seat, kind: 'exposed' | 'added' | 'concealed', from: Seat | null, events: MahjongEvent[]): void {
+    const style = this.style(d.config);
+    if (!style.kongPayment) return;
+    const deltas = style.kongPayment({ seat, kind, from, out: [0, 1, 2, 3].map((t) => this.isOut(d, t)), seats: SEATS }, d.config.options);
+    if (deltas.every((x) => x === 0)) return;
+    this.pay(d, { reason: `kong-${kind}`, seat, from, deltas }, events);
+  }
+
+  /** Moves points during a hand: the scores change now, the hand keeps the payment. */
+  private pay(d: Draft, payment: Payment, events: MahjongEvent[]): void {
+    d.scores = d.scores.map((v, i) => v + (payment.deltas[i] ?? 0));
+    d.paid = d.paid.map((v, i) => v + (payment.deltas[i] ?? 0));
+    d.ledger = [...d.ledger, payment];
+    events.push({ type: 'pay', reason: payment.reason, seat: payment.seat, deltas: payment.deltas });
+  }
+
+  /** The start of play after the deal: passing rounds, then the void declaration, then the dealer's first throw. */
+  private beginPlay(d: Draft, events: MahjongEvent[]): void {
+    const r = this.rules(d.config);
+    if (r.passes && r.passes.rounds.length > 0) {
+      const dice = 1 + createRng(`${d.seed}/hand/${d.handNo}/dice`).int(3);
+      d.passing = this.passStart(d, 0, dice);
+      if (d.passing) {
+        d.phase = 'pass';
+        d.turn = d.dealer;
+        return;
+      }
+    }
+    this.afterPasses(d, events);
+  }
+
+  /** A pass round's opening state, from `round` on (skipping nothing); null when no rounds are left. */
+  private passStart(d: Draft, round: number, dice: number): PassState | null {
+    const rounds = this.rules(d.config).passes?.rounds ?? [];
+    if (round >= rounds.length) return null;
+    return { round, dice, voting: rounds[round]?.vote === true, waiting: [0, 1, 2, 3].map((i) => (d.dealer + i) % SEATS), chosen: [null, null, null, null], blind: [0, 0, 0, 0], votes: [null, null, null, null] };
+  }
+
+  private afterPasses(d: Draft, events: MahjongEvent[]): void {
+    d.passing = null;
+    const hand = d.hands[d.dealer] as TileId[];
+    if (d.drawn === null || !hand.includes(d.drawn)) d.drawn = hand[hand.length - 1] ?? null;
+    d.turn = d.dealer;
+    if (this.rules(d.config).declareVoid) {
+      d.phase = 'void';
+      return;
+    }
+    d.phase = 'act';
+    void events;
+  }
+
+  private voidChoice(d: Draft, seat: Seat, action: MahjongAction, events: MahjongEvent[]): void {
+    if (action.type !== 'void') return;
+    d.voids = d.voids.map((v, i) => (i === seat ? action.suit : v));
+    const next = [1, 2, 3].map((i) => (seat + i) % SEATS).find((t) => d.voids[t] === null);
+    if (next !== undefined) {
+      d.turn = next;
+      return;
+    }
+    events.push({ type: 'voids', voids: d.voids });
+    d.phase = 'act';
+    d.turn = d.dealer;
+  }
+
+  private passChoice(d: Draft, seat: Seat, action: MahjongAction, events: MahjongEvent[]): void {
+    const p = d.passing as PassState;
+    const rounds = this.rules(d.config).passes?.rounds ?? [];
+    const waiting = p.waiting.slice(1);
+    if (action.type === 'vote') {
+      const votes = p.votes.map((v, i) => (i === seat ? action.yes : v));
+      if (waiting.length > 0) {
+        d.passing = { ...p, waiting, votes };
+        d.turn = waiting[0] as Seat;
+        return;
+      }
+      const yes = votes.every((v) => v === true);
+      events.push({ type: 'vote-result', round: p.round, yes });
+      if (yes) {
+        d.passing = { ...p, voting: false, waiting: [0, 1, 2, 3].map((i) => (d.dealer + i) % SEATS), votes };
+        d.turn = d.dealer;
+        return;
+      }
+      // Skip the whole group.
+      const group = rounds[p.round]?.group;
+      let next = p.round + 1;
+      while (next < rounds.length && group !== undefined && rounds[next]?.group === group) next++;
+      this.nextPassRound(d, next, p.dice, events);
+      return;
+    }
+    if (action.type !== 'pass-tiles') return;
+    const chosen = p.chosen.map((c, i) => (i === seat ? [...action.tiles] : c));
+    const blind = p.blind.map((b, i) => (i === seat ? action.blind : b));
+    if (waiting.length > 0) {
+      d.passing = { ...p, waiting, chosen, blind };
+      d.turn = waiting[0] as Seat;
+      return;
+    }
+    this.resolvePass(d, { ...p, waiting, chosen, blind }, events);
+    this.nextPassRound(d, p.round + 1, p.dice, events);
+  }
+
+  private nextPassRound(d: Draft, round: number, dice: number, events: MahjongEvent[]): void {
+    const next = this.passStart(d, round, dice);
+    if (!next) {
+      this.afterPasses(d, events);
+      return;
+    }
+    d.passing = next;
+    d.turn = d.dealer;
+  }
+
+  /**
+   * Every seat's choice is in: the tiles change hands at once. A courtesy round exchanges the lower
+   * number with the seat across. In a blind round a seat passes on, unseen, the first tiles it
+   * receives; tiles travel on until they reach a seat that keeps them, so every seat ends with as
+   * many tiles as it started with.
+   */
+  private resolvePass(d: Draft, p: PassState, events: MahjongEvent[]): void {
+    const round = this.rules(d.config).passes?.rounds[p.round] as PassRound;
+    const dir = round.dir === 0 ? p.dice : round.dir;
+    const order = [0, 1, 2, 3].map((i) => (d.dealer + i) % SEATS);
+    const take = (seat: Seat, kinds: readonly Kind[]): TileId[] => {
+      const hand = d.hands[seat] as TileId[];
+      return kinds.map((k) => {
+        const i = lastIndexOfKind(hand, k);
+        return hand.splice(i, 1)[0] as TileId;
+      });
+    };
+    const inbox: TileId[][] = [[], [], [], []];
+    const counts = [0, 0, 0, 0];
+    if (round.courtesy) {
+      for (const seat of order) {
+        const across = (seat + 2) % SEATS;
+        const n = Math.min(p.chosen[seat]?.length ?? 0, p.chosen[across]?.length ?? 0);
+        counts[seat] = n;
+        (inbox[across] as TileId[]).push(...take(seat, (p.chosen[seat] ?? []).slice(0, n)));
+      }
+    } else {
+      for (const seat of order) {
+        const own = p.chosen[seat] ?? [];
+        counts[seat] = own.length + (p.blind[seat] ?? 0);
+        (inbox[(seat + dir) % SEATS] as TileId[]).push(...take(seat, own));
+      }
+      const quota = [...p.blind];
+      for (let moved = true; moved; ) {
+        moved = false;
+        for (const seat of order) {
+          const box = inbox[seat] as TileId[];
+          const n = Math.min(quota[seat] ?? 0, box.length);
+          if (n === 0) continue;
+          quota[seat] = (quota[seat] ?? 0) - n;
+          (inbox[(seat + dir) % SEATS] as TileId[]).push(...box.splice(0, n));
+          moved = true;
+        }
+      }
+    }
+    for (const seat of order) (d.hands[seat] as TileId[]).push(...(inbox[seat] as TileId[]));
+    d.received = inbox.map((box) => [...box]);
+    events.push({ type: 'passed', round: p.round, dir: round.courtesy ? 2 : dir, counts });
   }
 
   /** Any call or kong ends every seat's one-shot chance. */
@@ -800,7 +1206,25 @@ export class MahjongEngine {
       }
       (d.hands[first.seat] as TileId[]).push(w.tile);
     }
-    const deltas = this.style(d.config).settle({ wins, dealer: d.dealer, seats: SEATS, counter: d.counter, stakes: d.stakes }, d.config.options);
+    const r = this.rules(d.config);
+    const out = [0, 1, 2, 3].map((t) => this.isOut(d, t));
+    const kongDiscard = w !== null && w.kind === 'discard' && w.afterKong === true && wins.some((x) => x.from !== null);
+    const deltas = this.style(d.config).settle({ wins, dealer: d.dealer, seats: SEATS, counter: d.counter, stakes: d.stakes, ...(r.playOn ? { out, ledger: d.ledger } : {}), ...(kongDiscard ? { kongDiscard: true } : {}) }, d.config.options);
+    if (r.playOn) {
+      // The hand goes on: the wins are paid now and the winners leave it.
+      const winner = wins[wins.length - 1] as WinRecord;
+      this.pay(d, { reason: 'win', seat: (wins[0] as WinRecord).seat, from: winner.from, deltas }, events);
+      d.won = [...d.won, ...wins];
+      d.claim = null;
+      const left = [0, 1, 2, 3].filter((t) => !this.isOut(d, t));
+      if (d.won.length >= r.playOn.winners || left.length <= 1) {
+        this.finishHand(d, [], [0, 0, 0, 0], events);
+        return;
+      }
+      // The next to draw is the player after the winner (after the last of several, in turn from the thrower).
+      this.nextTurn(d, this.nextIn(d, winner.seat), events);
+      return;
+    }
     const st = d.indicators;
     const readyWinner = wins.some((x) => d.ready[x.seat]);
     const extra = st ? { indicators: st.tiles.slice(0, st.shown), ...(readyWinner ? { under: st.tiles.slice(st.tiles.length / 2, st.tiles.length / 2 + st.shown) } : {}) } : {};
@@ -815,8 +1239,18 @@ export class MahjongEngine {
     const style = this.style(d.config);
     const ready = d.hands.map((h, seat) => waitsOf(countsOf(h), (d.melds[seat] ?? []).length, r.shapes, setsIn(r)).length > 0);
     const allTerminalDiscards = d.discards.flatMap((list, seat) => (list.length > 0 && list.every((x) => !x.claimed && isTerminalOrHonour(kindOf(x.tile))) ? [seat] : []));
-    const deltas = style.settleDraw ? style.settleDraw({ dealer: d.dealer, seats: SEATS, reason: 'exhausted', ready, allTerminalDiscards, counter: d.counter }, d.config.options) : [0, 0, 0, 0];
-    this.finishHand(d, [], deltas, events, { reason: 'exhausted', ...(style.settleDraw ? { ready } : {}), ...(d.indicators ? { indicators: d.indicators.tiles.slice(0, d.indicators.shown) } : {}) });
+    const input: DrawInput = {
+      dealer: d.dealer,
+      seats: SEATS,
+      reason: 'exhausted',
+      ready,
+      allTerminalDiscards,
+      counter: d.counter,
+      ...(r.playOn || r.declareVoid || style.seatStatus ? { hands: d.hands, melds: d.melds, voids: d.voids, out: [0, 1, 2, 3].map((t) => this.isOut(d, t)), ledger: d.ledger } : {}),
+    };
+    const deltas = style.settleDraw ? style.settleDraw(input, d.config.options) : [0, 0, 0, 0];
+    const status = style.seatStatus ? style.seatStatus(input, d.config.options) : null;
+    this.finishHand(d, [], deltas, events, { reason: 'exhausted', ...(style.settleDraw && !status ? { ready } : {}), ...(status ? { status } : {}), ...(d.indicators ? { indicators: d.indicators.tiles.slice(0, d.indicators.shown) } : {}) });
   }
 
   /** A hand abandoned by an abortive-draw rule: nobody pays, and the stakes stay on the table. */
@@ -826,14 +1260,19 @@ export class MahjongEngine {
   }
 
   private finishHand(d: Draft, wins: readonly WinRecord[], deltas: readonly number[], events: MahjongEvent[], extra: Partial<HandResult> = {}): void {
+    // Payments made during the hand (kongs, earlier wins) are already in the scores; the result shows the whole hand.
+    const total = deltas.map((x, i) => x + (d.paid[i] ?? 0));
+    const r = this.rules(d.config);
     const result: HandResult = {
       ...extra,
-      ...(this.rules(d.config).ready || d.counter > 0 || d.stakes > 0 ? { counter: d.counter, stakes: d.stakes } : {}),
+      ...(r.ready || d.counter > 0 || d.stakes > 0 ? { counter: d.counter, stakes: d.stakes } : {}),
+      ...(d.ledger.length > 0 ? { payments: d.ledger } : {}),
+      ...(r.declareVoid ? { voids: d.voids } : {}),
       handNo: d.handNo,
       round: d.round,
       dealer: d.dealer,
-      wins,
-      deltas,
+      wins: [...d.won, ...wins],
+      deltas: total,
       hands: d.hands.map((h) => [...h]),
       melds: d.melds.map((m) => [...m]),
       bonus: d.bonus.map((b) => [...b]),
@@ -841,6 +1280,8 @@ export class MahjongEngine {
     };
     d.scores = d.scores.map((v, i) => v + (deltas[i] ?? 0));
     d.results = [...d.results, result];
+    // The hand's payments now live in its result.
+    d.paid = [0, 0, 0, 0];
     events.push({ type: 'hand-end', result, scores: d.scores });
     d.claim = null;
     d.phase = 'scored';
@@ -919,6 +1360,13 @@ export class MahjongEngine {
     d.ready = [null, null, null, null];
     d.missed = [null, null, null, null];
     d.forbidden = [];
+    d.voids = [null, null, null, null];
+    d.won = [];
+    d.paid = [0, 0, 0, 0];
+    d.ledger = [];
+    d.passing = null;
+    d.received = [[], [], [], []];
+    d.dead = [false, false, false, false];
     d.wall = wall;
     d.hands = hands;
     d.melds = [[], [], [], []];
@@ -955,14 +1403,15 @@ export class MahjongEngine {
     if (r.flowerWins?.eight) {
       const seat = order.find((x) => (d.bonus[x] ?? []).length === 8);
       const lastBonus = seat === undefined ? undefined : (d.bonus[seat] ?? [])[7];
-      if (seat !== undefined && lastBonus) this.flowerWin(d, seat, lastBonus, events);
+      if (seat !== undefined && lastBonus && this.flowerWin(d, seat, lastBonus, events)) return;
     }
+    this.beginPlay(d, events);
   }
 }
 
 // Helpers
 
-export const PRIORITY: Readonly<Record<CallType, number>> = { win: 3, kong: 2, pung: 2, chow: 1 };
+export const PRIORITY: Readonly<Record<CallType, number>> = { win: 3, kong: 2, pung: 2, chow: 1, expose: 2 };
 
 /** Sets in a complete hand: four for 13 tiles, five for 16. */
 export function setsIn(r: Pick<StyleRules, 'handSize'>): number {
@@ -1003,9 +1452,31 @@ export function actionKey(a: MahjongAction): string {
       return `chow${a.start}`;
     case 'ready':
       return `ready${a.tile}`;
+    case 'pass-tiles':
+      return `pass${[...a.tiles].sort((x, y) => x - y).join('.')}/${a.blind}`;
+    case 'vote':
+      return a.yes ? 'vote-yes' : 'vote-no';
+    case 'void':
+      return `void${a.suit}`;
+    case 'expose':
+      return `expose${a.size}/${a.jokers}`;
+    case 'swap':
+      return `swap${a.seat}/${a.meld}`;
     default:
       return a.type;
   }
+}
+
+/** The meld type of an exposure of `size` tiles. */
+export function exposeType(size: number): Meld['type'] {
+  return size >= 6 ? 'sextet' : size === 5 ? 'quint' : size === 4 ? 'kong' : 'pung';
+}
+
+/** An exposure of `size` tiles of kind `k`, `jokers` of them jokers, for asking whether it would fit. */
+function sampleExposure(k: Kind, size: number, jokers: number): Meld {
+  const natural = Array.from({ length: size - jokers }, (_, i) => `${codeOf(k)}.${i % 4}`);
+  const joker = Array.from({ length: jokers }, (_, i) => `J.${i}`);
+  return { type: exposeType(size), tiles: [...natural, ...joker], claimed: null, from: null, concealed: false, added: false, kind: isBonus(k) ? FLOWER_1 : k };
 }
 
 /** Kinds a seat may not throw just after a call, when swap calling is forbidden. */
@@ -1051,6 +1522,13 @@ interface Draft {
   counter: number;
   missed: readonly ('turn' | 'hand' | null)[];
   forbidden: readonly Kind[];
+  voids: readonly (number | null)[];
+  won: readonly WinRecord[];
+  paid: readonly number[];
+  ledger: readonly Payment[];
+  passing: PassState | null;
+  received: readonly (readonly TileId[])[];
+  dead: readonly boolean[];
 }
 
 function draft(s: MahjongState): Draft {

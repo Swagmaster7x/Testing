@@ -31,6 +31,8 @@ import { buildComplete, calledMeld, codes, completeKinds, pick, playerPhrase, ra
 import { RIICHI_DRILLS } from './riichi';
 import { CO_DRILLS } from './chinese-official';
 import { TW_DRILLS } from './taiwanese';
+import { SICHUAN_DRILLS } from './sichuan';
+import { AMERICAN_DRILLS } from './american';
 
 function lesson(id: string, title: string, start: string, steps: LessonStep[]): Lesson {
   return { id: `mahjong.drill.${id}`, gameId: 'mahjong', stage: 'table', title, minutes: 1, start, steps };
@@ -306,6 +308,8 @@ export const MAHJONG_DRILLS: readonly DrillDef[] = [
   ...RIICHI_DRILLS,
   ...CO_DRILLS,
   ...TW_DRILLS,
+  ...SICHUAN_DRILLS,
+  ...AMERICAN_DRILLS,
 ];
 
 interface DiscardFile {

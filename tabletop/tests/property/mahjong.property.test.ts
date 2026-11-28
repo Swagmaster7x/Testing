@@ -17,11 +17,16 @@ import { RIICHI_DEFAULTS, RIICHI_PRESETS } from '../../src/games/mahjong/styles/
 import { CO_DEFAULTS, CO_PRESETS, withoutFlowers } from '../../src/games/mahjong/styles/chinese-official';
 import { TW_DEFAULTS, TW_PRESETS } from '../../src/games/mahjong/styles/taiwanese';
 import { setsIn } from '../../src/games/mahjong/core/engine';
+import { SICHUAN_DEFAULTS, SICHUAN_PRESETS } from '../../src/games/mahjong/styles/sichuan';
+import { AMERICAN_DEFAULTS, AMERICAN_PRESETS } from '../../src/games/mahjong/styles/american';
+import { PRACTICE_CARD } from '../../src/games/mahjong/american/practice-card';
+import { decide } from '../../src/games/mahjong/bots';
 import { checkReplay, playRandomGame } from '../harness/contract';
 
 /** Everything a seat may not see: other hands (until they are laid down at the end), the wall and the seed. */
 function hidden(s: MahjongState, seat: number): string[] {
-  const others = s.phase === 'scored' ? [] : s.hands.flatMap((h, i) => (i === seat ? [] : h));
+  // A hand laid down after a win (Sichuan) is seen by everyone.
+  const others = s.phase === 'scored' ? [] : s.hands.flatMap((h, i) => (i === seat || engine.isOut(s, i) ? [] : h));
   // Indicators not yet turned up, and the tiles under them (until a hand ends).
   const st = s.indicators;
   const unturned = st && s.phase !== 'scored' ? [...st.tiles.slice(st.shown, st.tiles.length / 2), ...st.tiles.slice(st.tiles.length / 2)] : [];
@@ -44,8 +49,10 @@ function invariant(s: MahjongState): void {
   if (total !== 4 * start) throw new Error(`scores and stakes add up to ${total}`);
   if (!rules.ready) {
     for (const r of s.results) if (r.deltas.reduce((a, b) => a + b, 0) !== 0) throw new Error('a hand paid more than it took');
-    const fromResults = [0, 1, 2, 3].map((seat) => s.results.reduce((sum, r) => sum + (r.deltas[seat] ?? 0), 0));
+    // Payments made during the hand under way (kongs, wins in a hand that goes on) are in the scores already.
+    const fromResults = [0, 1, 2, 3].map((seat) => s.results.reduce((sum, r) => sum + (r.deltas[seat] ?? 0), 0) + (s.paid[seat] ?? 0));
     if (fromResults.join() !== s.scores.join()) throw new Error('scores do not match the hands');
+    if (s.paid.reduce((a, b) => a + b, 0) !== 0) throw new Error('a payment in the hand does not add up');
   } else {
     // A hand's payments add up to the stakes its winner collected (none at a draw).
     for (const r of s.results) if (r.deltas.reduce((a, b) => a + b, 0) !== (r.wins.length > 0 ? (r.stakes ?? 0) * stake : 0)) throw new Error('a hand paid more than it took');
@@ -121,6 +128,14 @@ const configs: MahjongConfig[] = [
   ...TW_PRESETS.map((p): MahjongConfig => ({ style: 'taiwanese', options: { ...p.options, length: 'hand' } })),
   { style: 'taiwanese', options: { ...TW_DEFAULTS, length: 'east' } },
   { style: 'taiwanese', options: { ...TW_DEFAULTS, length: 'hand', deadWall: 0, pairsAndPung: 'off', flowerWins: 'off', robKong: 'off', allHonours: 8, base: 300, perTai: 100 } },
+  ...SICHUAN_PRESETS.map((p): MahjongConfig => ({ style: 'sichuan', options: { ...p.options, length: 'hand' } })),
+  { style: 'sichuan', options: { ...SICHUAN_DEFAULTS, length: 'four', exchange: 'left' } },
+  { style: 'sichuan', options: { ...SICHUAN_DEFAULTS, length: 'hand', multipleWin: 'first', kongShoot: 'return', pig: 16, refund: 'off', exchange: 'across', heavenly: 'off', bonusFan: 'off' } },
+  { style: 'sichuan', options: { ...SICHUAN_DEFAULTS, length: 'hand', checks: 'off', kongPay: 'off', selfDraw: 'none', cap: 3 } },
+  ...AMERICAN_PRESETS.map((p): MahjongConfig => ({ style: 'american', options: { ...p.options, length: 'hand' } })),
+  { style: 'american', options: { ...AMERICAN_DEFAULTS, length: 'hand', secondCharleston: 'always', blind: 'off', jokers: 10, payment: 'flat', jokerless: 'off' } },
+  // A card typed in (here the practice card's own text, under "my card").
+  { style: 'american', options: { ...AMERICAN_DEFAULTS, length: 'hand', card: 'mine', cardText: PRACTICE_CARD, deadHand: 'learner' } },
 ];
 
 describe('mahjong over random games', () => {
@@ -182,6 +197,50 @@ describe('mahjong over random games', () => {
     expect(drawn).toBeGreaterThanOrEqual(0);
     for (const kind of ['discard', 'pung', 'chow', 'pass', 'win']) expect(seen).toContain(kind);
   }, 120_000);
+
+  it('Sichuan games played toward winning go on after wins, pay kongs at once, and keep the contract', () => {
+    let wins = 0;
+    let goneOn = 0;
+    const seen = new Set<string>();
+    for (let i = 0; i < 16; i++) {
+      const config = one({ ...SICHUAN_DEFAULTS, ...(i % 2 === 0 ? {} : { exchange: 'random', multipleWin: 'first' }) }, 'sichuan');
+      const game = playRandomGame(mahjong, config, `sichuan-${i}`, { hidden, invariant, leakScope, choose: efficient, maxPlies: 6000 });
+      checkReplay(mahjong, game);
+      for (const a of game.actions) seen.add(a.type === 'kong' ? (a.tile === undefined ? 'kong-call' : 'kong-own') : a.type);
+      for (const r of game.final.results) {
+        wins += r.wins.length;
+        if (r.wins.length > 1) goneOn++;
+        // Every winning hand keeps to two suits and never holds its void suit.
+        for (const w of r.wins) {
+          const kinds = [...(r.hands[w.seat] ?? []), w.tile, ...(r.melds[w.seat] ?? []).flatMap((m) => m.tiles)].map(kindOf);
+          const suits = new Set(kinds.map((k) => Math.floor(k / 9)));
+          expect(suits.size).toBeLessThanOrEqual(2);
+          expect(suits.has(r.voids?.[w.seat] ?? -1)).toBe(false);
+        }
+      }
+    }
+    expect(wins).toBeGreaterThan(0);
+    expect(goneOn).toBeGreaterThan(0);
+    for (const kind of ['discard', 'void', 'pung', 'pass', 'win']) expect(seen).toContain(kind);
+    expect(seen.has('chow')).toBe(false);
+  }, 180_000);
+
+  it('American games played by the CPU pass tiles, expose with jokers, win from the card, and keep the contract', () => {
+    let wins = 0;
+    const seen = new Set<string>();
+    for (let i = 0; i < 8; i++) {
+      const config = one({ ...AMERICAN_DEFAULTS, ...(i % 2 === 0 ? {} : { secondCharleston: 'always' }) }, 'american');
+      const game = playRandomGame(mahjong, config, `american-${i}`, { hidden, invariant, leakScope, choose: (_legal, rng, state) => decide(viewOf(state, state.turn), 2 + (i % 3), rng).action, maxPlies: 6000 });
+      checkReplay(mahjong, game);
+      for (const a of game.actions) seen.add(a.type);
+      for (const r of game.final.results) {
+        wins += r.wins.length;
+        for (const w of r.wins) expect(w.score.lines[0]?.id).toBe('am-hand');
+      }
+    }
+    expect(wins).toBeGreaterThan(0);
+    for (const kind of ['pass-tiles', 'vote', 'discard', 'expose', 'pass', 'win']) expect(seen).toContain(kind);
+  }, 240_000);
 
   it('Riichi games played toward winning declare riichi, win with yaku, and keep the contract', () => {
     let wins = 0;

@@ -39,6 +39,7 @@ function NotFound() {
 
 /** The Mahjong calculator brings the Mahjong rules with it, so it loads only when opened. */
 const MahjongCalculator = lazy(() => import('../games/mahjong/ui/Calculator').then((m) => ({ default: m.MahjongCalculator })));
+const MahjongCardEditor = lazy(() => import('../games/mahjong/ui/CardEditor').then((m) => ({ default: m.MahjongCardEditor })));
 
 export function App() {
   const status = useApp((s) => s.status);
@@ -134,6 +135,7 @@ export function App() {
       if (second === 'pad' && third) screen = <PadScreen key={third} padId={third} />;
       else if (second === 'timer') screen = <BlindTimerScreen />;
       else if (second === 'mahjong') screen = <Suspense fallback={<CenterMessage>{t('common.loading')}</CenterMessage>}><MahjongCalculator /></Suspense>;
+      else if (second === 'mahjong-card') screen = <Suspense fallback={<CenterMessage>{t('common.loading')}</CenterMessage>}><MahjongCardEditor /></Suspense>;
       else if (!second) screen = <ToolsScreen />;
       else screen = <NotFound />;
       break;

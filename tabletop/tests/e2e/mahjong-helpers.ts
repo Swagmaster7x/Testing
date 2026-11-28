@@ -27,6 +27,7 @@ export async function takeTurn(page: Page, policy: Policy = 'drawn'): Promise<bo
   const turn = page.locator('.status-turn');
   await expect(turn).toHaveText(/Your move|Game over/, { timeout: 45_000 });
   if ((await turn.textContent())?.includes('Game over')) return false;
+  if (await choosePassOrVoid(page)) return true;
   const prompt = page.locator('.mj-prompt');
   if (await prompt.isVisible()) {
     const win = prompt.locator('.mj-call[data-call="win"]');
@@ -49,6 +50,65 @@ export async function takeTurn(page: Page, policy: Policy = 'drawn'): Promise<bo
   await tile.click();
   await tile.click();
   return true;
+}
+
+/**
+ * Before play (milestone 14c): the void suit (the suit with the fewest tiles) and passing tiles
+ * (three of one suit for Sichuan's exchange; any three but a joker in a Charleston; nothing in a
+ * courtesy pass; "go on" in a vote). Returns false when neither prompt is up.
+ */
+export async function choosePassOrVoid(page: Page): Promise<boolean> {
+  const voidPrompt = page.locator('.mj-void-prompt');
+  if (await voidPrompt.isVisible()) {
+    const buttons = voidPrompt.locator('button');
+    const texts = await buttons.allTextContents();
+    const counts = texts.map((x) => Number(/(\d+)\s*$/.exec(x)?.[1] ?? 99));
+    await buttons.nth(counts.indexOf(Math.min(...counts))).click();
+    return true;
+  }
+  const passPrompt = page.locator('.mj-pass-prompt');
+  if (!(await passPrompt.isVisible())) return false;
+  const vote = passPrompt.locator('.mj-call[data-call="vote-yes"]');
+  if (await vote.count()) {
+    await vote.click();
+    return true;
+  }
+  const title = (await passPrompt.locator('.mj-prompt-title').textContent()) ?? '';
+  // The courtesy pass is named above its title; offering nothing is always allowed.
+  if (!/Courtesy/.test((await passPrompt.textContent()) ?? '')) {
+    const tiles = page.locator('button.mj-tile:not([aria-label="Joker"])');
+    const labels = await tiles.evaluateAll((list) => list.map((b) => b.getAttribute('aria-label') ?? ''));
+    let picks = labels.map((_, i) => i).slice(0, 3);
+    if (/one suit/.test(title)) {
+      const bySuit = new Map<string, number[]>();
+      labels.forEach((l, i) => bySuit.set(l.split(' ').pop() ?? '', [...(bySuit.get(l.split(' ').pop() ?? '') ?? []), i]));
+      const groups = [...bySuit.values()].filter((g) => g.length >= 3).sort((a, b) => a.length - b.length);
+      picks = (groups[0] ?? []).slice(0, 3);
+    }
+    for (const i of picks) await tiles.nth(i).click();
+  }
+  await passPrompt.locator('.mj-call[data-call="pass-tiles"]').click();
+  return true;
+}
+
+/**
+ * Plays a Sichuan game to its end, and says whether play went on after a win: at some point it was
+ * your move again in a hand where a player had already won. `onPlayedOn` runs at that moment.
+ */
+export async function playOnToEnd(page: Page, onPlayedOn?: () => Promise<void>): Promise<boolean> {
+  let playedOn = false;
+  const turn = page.locator('.status-turn');
+  for (let i = 0; i < 300; i++) {
+    await expect(turn).toHaveText(/Your move|Game over/, { timeout: 45_000 });
+    if ((await turn.textContent())?.includes('Game over')) return playedOn;
+    if (!playedOn && (await page.locator('.mj-won-mark').count()) > 0 && !(await page.locator('.mj-result').isVisible())) {
+      playedOn = true;
+      await onPlayedOn?.();
+    }
+    await takeTurn(page);
+    await page.waitForTimeout(40);
+  }
+  throw new Error('The game did not end');
 }
 
 /** Plays until the game is over (or the move budget runs out). */

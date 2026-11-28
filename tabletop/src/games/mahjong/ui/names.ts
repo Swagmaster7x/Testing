@@ -80,5 +80,30 @@ export function moveName(action: MahjongAction): string {
       return t('mahjong.move.ready', { tile: kindName(action.tile) });
     case 'abort':
       return t('mahjong.move.abort');
+    case 'pass-tiles':
+      return action.blind > 0 ? t('mahjong.move.pass-blind', { n: action.tiles.length, blind: action.blind }) : t('mahjong.move.pass-tiles', { n: action.tiles.length });
+    case 'vote':
+      return t(action.yes ? 'mahjong.move.vote-yes' : 'mahjong.move.vote-no');
+    case 'void':
+      return t('mahjong.move.void', { suit: suitName(action.suit) });
+    case 'expose':
+      return action.jokers > 1 ? t('mahjong.move.expose-jokers', { set: setName(action.size), n: action.jokers }) : action.jokers === 1 ? t('mahjong.move.expose-joker', { set: setName(action.size) }) : t('mahjong.move.expose', { set: setName(action.size) });
+    case 'swap':
+      return t('mahjong.move.swap');
   }
+}
+
+/** A set by its size: "pung", "kong", "quint", "sextet". */
+export function setName(size: number): string {
+  return tDynamic(`mahjong.set.${Math.max(3, Math.min(6, size))}`);
+}
+
+/** A suit by number: "characters", "dots", "bamboo". */
+export function suitName(suit: number): string {
+  return tDynamic(`mahjong.suit-name.${suit}`);
+}
+
+/** A direction tiles are passed in, from the passer: 1 right, 2 across, 3 left. */
+export function directionName(dir: number): string {
+  return tDynamic(`mahjong.dir.${dir}`);
 }

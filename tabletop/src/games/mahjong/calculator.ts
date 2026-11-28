@@ -45,6 +45,8 @@ export interface CalcInput {
   readonly lastOfKind?: boolean;
   /** Taiwanese: how many hands in a row the dealer (East) has kept the deal. */
   readonly streak?: number;
+  /** Sichuan: won on the discard a player made right after a kong. */
+  readonly kongDiscard?: boolean;
 }
 
 export const EMPTY_INPUT: CalcInput = { hand: [], winning: -1, sets: [], seatWind: 0, prevailingWind: 0, from: null, bonus: [], lastTile: false, lastDiscard: false, afterKong: false, robbed: false, ready: 0, oneShot: false, redFives: 0, indicators: [], underIndicators: [] };
@@ -143,6 +145,7 @@ export function contextOf(input: CalcInput): WinContext {
     earthly: false,
     shown: input.lastOfKind ? 3 : 0,
     counter: input.streak ?? 0,
+    ...(!selfDrawn && input.kongDiscard ? { kongDiscard: true } : {}),
   };
 }
 
@@ -153,6 +156,16 @@ export interface Calculation {
   readonly belowMinimum: boolean;
   /** Each seat's gain or loss, counted from the winner (0) in turn order; empty when it cannot win. */
   readonly payments: readonly number[];
+}
+
+/**
+ * American (milestone 14c): a hand from a card is scored by its line on the card, so the
+ * calculator asks which hand was made, whether without jokers, and who threw (null: self-picked).
+ */
+export function calculateCardHand(style: Style, options: StyleOptions, points: number, jokerless: boolean, from: 1 | 2 | 3 | null): { value: number; payments: number[] } {
+  const value = points * (jokerless && options.jokerless !== 'off' ? 2 : 1);
+  const score: HandScore = { lines: [], raw: value, total: value, limit: false, unit: 'points', base: value };
+  return { value, payments: style.settle({ wins: [{ seat: 0, from, tile: tileId(0, 0), score, robbed: false }], dealer: 0, seats: 4 }, options) };
 }
 
 /** Scores and settles a complete hand under a style's options. */

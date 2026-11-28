@@ -159,4 +159,43 @@ test.describe('tools', () => {
     await expect(page.locator('.calc-total')).toHaveText('3 tai');
     await expect(page.locator('.calc-result')).toContainText('East -260');
   });
+
+  test('the Mahjong calculator takes a Sichuan hand: suits only, a kong, and a win on a kong’s throw', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'Sichuan' }).click();
+    const picker = page.getByRole('group', { name: 'Tiles to add' });
+    // Suits only: no winds or dragons to pick, and no chows.
+    await expect(picker.getByRole('button', { name: 'Add the East wind', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('radiogroup', { name: 'Add', exact: true }).getByRole('radio', { name: /Chow/ })).toHaveCount(0);
+    for (const tile of ['1 characters', '2 characters', '3 characters', '4 characters', '5 characters', '6 characters', '6 characters', '7 characters', '8 characters', '5 characters', '5 characters']) {
+      await picker.getByRole('button', { name: `Add the ${tile}`, exact: true }).click();
+    }
+    await page.getByRole('radiogroup', { name: 'Add', exact: true }).getByRole('radio', { name: /Concealed kong/ }).click();
+    await picker.getByRole('button', { name: 'Add the 9 characters', exact: true }).click();
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On South’s discard' }).click();
+    await expect(page.locator('.calc-lines')).toContainText('One suit');
+    await expect(page.locator('.calc-lines')).toContainText('Root');
+    await expect(page.locator('.calc-total')).toHaveText('3 fan');
+    await expect(page.locator('.calc-result')).toContainText('South -8');
+    await page.getByRole('button', { name: 'On a kong’s throw' }).click();
+    await expect(page.locator('.calc-total')).toContainText('4 fan');
+    await expect(page.locator('.calc-result')).toContainText('South -16');
+  });
+
+  test('the Mahjong calculator takes an American hand: the card hand made, jokerless, who threw', async ({ page }) => {
+    await page.goto('/#/tools/mahjong');
+    await page.getByRole('radiogroup', { name: 'Style' }).getByRole('radio', { name: 'American' }).click();
+    await expect(page.locator('.calc-result')).toContainText('Pick the card hand that was made');
+    // The practice card's Evens hand: 25 points.
+    await page.getByRole('button', { name: /^FFF 2222a 44b 666c 88a, 25 points/ }).click();
+    await expect(page.locator('.calc-total')).toHaveText('25 points');
+    // Self-picked: everyone pays double.
+    await expect(page.locator('.calc-result')).toContainText('East (winner) +150');
+    await page.getByRole('radiogroup', { name: 'How it was won' }).getByRole('radio', { name: 'On West’s discard' }).click();
+    await expect(page.locator('.calc-result')).toContainText('West -50');
+    await expect(page.locator('.calc-result')).toContainText('South -25');
+    await page.getByRole('button', { name: 'Made without jokers' }).click();
+    await expect(page.locator('.calc-total')).toHaveText('50 points');
+    await expect(page.locator('.calc-result')).toContainText('West -100');
+  });
 });

@@ -1,6 +1,6 @@
 /** The Mahjong score calculator in Tools: the same scorer and payments as the table. */
 import { describe, expect, it } from 'vitest';
-import { calculate, contextOf, EMPTY_INPUT, fivesIn, overused, redPlaces, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
+import { calculate, calculateCardHand, contextOf, EMPTY_INPUT, fivesIn, overused, redPlaces, setFits, tilesWanted } from '../../src/games/mahjong/calculator';
 import { STYLES } from '../../src/games/mahjong/rules';
 import { HK_DEFAULTS, hongKong } from '../../src/games/mahjong/styles/hong-kong';
 
@@ -136,6 +136,63 @@ describe('the Mahjong calculator', () => {
       const r = calculate(tw, tw.defaults, { ...base, seatWind: 1, from: 3, streak: 2 });
       expect(r.score?.total).toBe(3);
       expect(r.payments).toEqual([260, 0, 0, -260]);
+    });
+  });
+
+  describe('Sichuan', () => {
+    const sichuan = STYLES['sichuan']!;
+    // Characters and dots only.
+    const TWO_SUITS = [m(1), m(2), m(3), m(4), m(5), m(6), p(7), p(8), p(9), p(2), p(3), p(4), m(5), m(5)];
+
+    it('a basic hand on a discard: 1 point from the thrower alone', () => {
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: TWO_SUITS, winning: 13, from: 2 });
+      expect(r.score?.total).toBe(0);
+      expect(r.payments).toEqual([1, 0, -1, 0]);
+    });
+
+    it('self-drawn: each of the three pays the points and 1 more', () => {
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: TWO_SUITS, winning: 13 });
+      expect(r.payments).toEqual([6, -2, -2, -2]);
+    });
+
+    it('one suit with a kong: 2 fan and a root, 8 points; on a kong’s throw, 4 fan, capped at 16', () => {
+      const hand = [m(1), m(2), m(3), m(4), m(5), m(6), m(6), m(7), m(8), m(5), m(5)];
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand, winning: 10, from: 1, sets: [{ type: 'kong', kind: m(9), concealed: true }] });
+      expect(r.score?.lines.map((l) => l.id)).toEqual(['sc-pure-suit', 'sc-root']);
+      expect(r.payments).toEqual([8, -8, 0, 0]);
+      const k = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand, winning: 10, from: 1, kongDiscard: true, sets: [{ type: 'kong', kind: m(9), concealed: true }] });
+      expect(k.score?.total).toBe(4);
+      expect(k.payments).toEqual([16, -16, 0, 0]);
+    });
+
+    it('a hand of three suits is no Sichuan hand', () => {
+      const r = calculate(sichuan, sichuan.defaults, { ...EMPTY_INPUT, hand: ALL_CHOWS, winning: 13 });
+      expect(r.score).toBeNull();
+      expect(r.belowMinimum).toBe(false);
+    });
+  });
+
+  describe('American', () => {
+    const american = STYLES['american']!;
+
+    it('a 25-point hand on a discard: the thrower pays 50, the other two 25', () => {
+      const r = calculateCardHand(american, american.defaults, 25, false, 2);
+      expect(r.value).toBe(25);
+      expect(r.payments).toEqual([100, -25, -50, -25]);
+    });
+
+    it('self-picked: everyone pays double; jokerless doubles the value', () => {
+      expect(calculateCardHand(american, american.defaults, 25, false, null).payments).toEqual([150, -50, -50, -50]);
+      const j = calculateCardHand(american, american.defaults, 25, true, 1);
+      expect(j.value).toBe(50);
+      expect(j.payments).toEqual([200, -100, -50, -50]);
+    });
+
+    it('the flat table: everyone pays the value; with no jokerless bonus the value stands', () => {
+      const flat = { ...american.defaults, payment: 'flat', jokerless: 'off' };
+      const r = calculateCardHand(american, flat, 30, true, 3);
+      expect(r.value).toBe(30);
+      expect(r.payments).toEqual([90, -30, -30, -30]);
     });
   });
 });

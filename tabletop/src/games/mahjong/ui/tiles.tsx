@@ -5,7 +5,7 @@
  * The learner overlay adds a small badge with the tile's number and suit letter, or its letters.
  */
 import type { Kind } from '../core/tiles';
-import { isBonus, isFlower, rankOf, suitOf, WHITE, GREEN, RED } from '../core/tiles';
+import { isBonus, isFlower, JOKER, rankOf, suitOf, WHITE, GREEN, RED } from '../core/tiles';
 import { GLYPHS } from './glyphs';
 
 const INK = '#1f2340';
@@ -282,11 +282,29 @@ function Blossom({ x, y, r, colour }: { x: number; y: number; r: number; colour:
   );
 }
 
+/**
+ * The joker (American): unlike every other face, a deep plum ground with a gold star and the word
+ * JOKER down it, so it reads as a joker at a glance and at any size.
+ */
+function Joker() {
+  return (
+    <g>
+      <rect x={6} y={6} width={48} height={64} rx={5} fill="#5b1f5e" />
+      <rect x={9} y={9} width={42} height={58} rx={4} fill="none" stroke="#e0b84a" strokeWidth={1.6} />
+      <path d="M30 13 L33.2 22.6 L43.2 22.6 L35.1 28.5 L38.2 38.1 L30 32.2 L21.8 38.1 L24.9 28.5 L16.8 22.6 L26.8 22.6 Z" fill="#e0b84a" />
+      <text x={30} y={51} textAnchor="middle" fontSize={10.5} fontWeight={800} fill="#f7f1e3" fontFamily="Inter Variable, Inter, sans-serif" letterSpacing={0.4}>
+        JOKER
+      </text>
+    </g>
+  );
+}
+
 /** The short code shown by the learner overlay: "3C", "5D", "7B", "E", "Rd", "F1", "S1". */
 export function learnerCode(kind: Kind): string {
   const suit = suitOf(kind);
   if (suit < 3) return `${rankOf(kind)}${'CDB'[suit] ?? ''}`;
   if (isBonus(kind)) return `${isFlower(kind) ? 'F' : 'S'}${rankOf(kind)}`;
+  if (kind === JOKER) return 'J';
   if (kind === WHITE) return 'Wd';
   if (kind === GREEN) return 'Gd';
   if (kind === RED) return 'Rd';
@@ -317,6 +335,7 @@ function Art({ kind, red = false }: { kind: Kind; red?: boolean }) {
       </g>
     );
   }
+  if (kind === JOKER) return <Joker />;
   if (isBonus(kind)) {
     const flower = isFlower(kind);
     const colour = flower ? '#8a2f5f' : '#1f5f7a';

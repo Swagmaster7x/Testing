@@ -10,7 +10,8 @@ import type { Kind, TileId, TileSetSpec } from './tiles';
 
 /** A set laid on the table: called from a discard, or a concealed kong. */
 export interface Meld {
-  readonly type: 'chow' | 'pung' | 'kong';
+  /** A quint (5) or sextet (6) only where jokers make them (American). */
+  readonly type: 'chow' | 'pung' | 'kong' | 'quint' | 'sextet';
   /** In order (a chow from low to high); for an added kong the added tile is last. */
   readonly tiles: readonly TileId[];
   /** The discard it took, or null for a concealed kong. */
@@ -21,6 +22,8 @@ export interface Meld {
   readonly concealed: boolean;
   /** A pung made into a kong by adding the fourth tile. */
   readonly added: boolean;
+  /** The kind the set stands for, when jokers are in it (American exposures). */
+  readonly kind?: Kind;
 }
 
 export interface CallRules {
@@ -43,6 +46,61 @@ export interface CallRules {
   readonly furiten?: boolean;
   /** After a chow or pung you may not throw the called kind (nor, for a chow, the other end). */
   readonly noSwapCall?: boolean;
+  /**
+   * Calling a discard for an exposure of these sizes, jokers standing in (American): the called
+   * tile and tiles of its kind or jokers from the hand; no replacement draw. A discarded joker can
+   * never be called. With `refuseDead`, an exposure that would leave a hand no way to win is not offered.
+   */
+  readonly expose?: { readonly sizes: readonly number[]; readonly refuseDead?: boolean };
+  /** On your turn a joker in any live exposure may be taken by putting in the tile it stands for. */
+  readonly jokerSwap?: boolean;
+}
+
+/** One round of passing tiles before play (Sichuan's exchange of three, American's Charleston). */
+export interface PassRound {
+  /** 1 to the right (the next player), 2 across, 3 to the left; 0 by the dice, a fresh direction each hand. */
+  readonly dir: 0 | 1 | 2 | 3;
+  /** Tiles each seat passes. */
+  readonly count: number;
+  /** The tiles passed must all be of one suit. */
+  readonly sameSuit?: boolean;
+  /** A seat may pass on, unseen, some of the tiles it receives in this round instead of its own. */
+  readonly blind?: boolean;
+  /** Each seat offers 0 to `count` tiles; with the seat across, the lower number changes hands. */
+  readonly courtesy?: boolean;
+  /** Rounds with the same group are played or skipped together. */
+  readonly group?: number;
+  /** A vote opens this round's group: one "no" skips the whole group. */
+  readonly vote?: boolean;
+}
+
+/** Passing tiles before play, in rounds. */
+export interface PassRules {
+  readonly rounds: readonly PassRound[];
+  /** Kinds that may never be passed (jokers). */
+  readonly keep?: readonly Kind[];
+}
+
+/** A payment made during a hand (a kong paid at once, a win in a hand that goes on), kept for later rules. */
+export interface Payment {
+  /** "win", "kong-exposed", "kong-added", "kong-concealed", or a style's own reason. */
+  readonly reason: string;
+  /** The seat that made it happen (the winner, the kong's owner). */
+  readonly seat: Seat;
+  /** The discarder, for an exposed kong or a win on a discard. */
+  readonly from?: Seat | null;
+  readonly deltas: readonly number[];
+}
+
+/** A kong just made, for a style that pays kongs at once. */
+export interface KongInput {
+  readonly seat: Seat;
+  readonly kind: 'exposed' | 'added' | 'concealed';
+  /** The discarder of an exposed kong's tile. */
+  readonly from: Seat | null;
+  /** Seats that have already won in a hand that goes on after a win. */
+  readonly out: readonly boolean[];
+  readonly seats: number;
 }
 
 /** A declaration of a ready hand with a stake on the table (riichi), when the style has one. */
@@ -95,6 +153,17 @@ export interface StyleRules {
    * a seat holding seven wins when another seat sets aside the eighth, which that seat pays.
    */
   readonly flowerWins?: { readonly eight: boolean; readonly robSeventh: boolean };
+  /** Passing tiles before play (and before the void is declared). */
+  readonly passes?: PassRules;
+  /** Each seat declares a suit to void before play: thrown first, never called, never in a winning hand. */
+  readonly declareVoid?: boolean;
+  /** The hand goes on after a win, the winners leaving it, until this many have won or the wall is empty. */
+  readonly playOn?: { readonly winners: number };
+  /**
+   * The style's scorer alone decides whether a hand is complete (American hands come from a card,
+   * not from sets and a pair): the core's shape check is skipped and `score` returning null means no win.
+   */
+  readonly customShape?: boolean;
 }
 
 /** Everything a scorer needs to know about a complete hand and how it was won. */
@@ -142,6 +211,10 @@ export interface WinContext {
   readonly counter?: number;
   /** A win by the bonus tiles alone (the hand need not be complete): all eight, or seven robbing the eighth. */
   readonly flowerWin?: 'eight' | 'seven';
+  /** The suit the winner declared void (styles with a void declaration). */
+  readonly voidSuit?: number | null;
+  /** Won on a discard the thrower made right after its own kong. */
+  readonly kongDiscard?: boolean;
 }
 
 /** One scoring pattern in a hand, by id; the text catalogue names it. */
@@ -149,6 +222,8 @@ export interface ScoreLine {
   readonly id: string;
   /** Its value in the style's unit (faan in Hong Kong); for a limit hand, the limit. */
   readonly value: number;
+  /** How to show the line when its id has no name in the catalogue (a hand from a card typed in). */
+  readonly label?: string;
   /** How many times it counted (two dragon pungs), when more than once. */
   readonly times?: number;
 }
@@ -190,6 +265,12 @@ export interface SettleInput {
   readonly counter?: number;
   /** Stakes on the table, collected by the winner (the first in turn after the thrower). */
   readonly stakes?: number;
+  /** In a hand that goes on after a win: the seats that won before these wins (they neither pay nor collect). */
+  readonly out?: readonly boolean[];
+  /** Payments already made in this hand. */
+  readonly ledger?: readonly Payment[];
+  /** The winning tile was thrown right after the thrower's own kong. */
+  readonly kongDiscard?: boolean;
 }
 
 /** A hand that ended without a winner, for styles that pay something at a draw. */
@@ -203,6 +284,12 @@ export interface DrawInput {
   /** Seats whose discards were all terminals and honours, none of them called. */
   readonly allTerminalDiscards: readonly Seat[];
   readonly counter: number;
+  /** Each seat's tiles and melds at the end, its void suit, whether it had won already, and the payments made in the hand. */
+  readonly hands?: readonly (readonly TileId[])[];
+  readonly melds?: readonly (readonly Meld[])[];
+  readonly voids?: readonly (number | null)[];
+  readonly out?: readonly boolean[];
+  readonly ledger?: readonly Payment[];
 }
 
 export type DrawReason = 'exhausted' | 'nine-terminals' | 'four-winds' | 'four-ready' | 'four-kongs' | 'too-many-winners';
@@ -236,6 +323,8 @@ export interface GameStanding {
 export interface OptionSpec {
   readonly key: string;
   readonly values: readonly (string | number)[];
+  /** Any text is kept (a card typed in by the player); `values` then lists none. */
+  readonly text?: boolean;
 }
 
 export type StyleOptions = Readonly<Record<string, string | number>>;
@@ -261,6 +350,12 @@ export interface ValueHints {
   readonly bonus: number;
   /** The most a hand can score. */
   readonly limit: number;
+  /** Kinds that can never help this seat (its void suit): the CPU treats them as unseen-and-gone. */
+  readonly dead?: readonly Kind[];
+  /** How strongly the CPU steers toward value, against the Hong Kong table its weights were tuned on (1). */
+  readonly valueSteer?: number;
+  /** Calls judged by speed alone: where the first to win gains most (a hand that goes on after a win). */
+  readonly callsBySpeed?: boolean;
   /** Base points for each value from 0 to the limit. */
   readonly points: readonly number[];
   /** What each loser pays, in base points: on a self-draw, the discarder, and the others on a discard win. */
@@ -289,7 +384,7 @@ export interface ValueHints {
 export interface Style {
   readonly id: string;
   /** Rough values of a seat's prospects, for bots and the coach. */
-  hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[]; readonly indicators?: readonly Kind[] }, options: StyleOptions): ValueHints;
+  hints(seat: { readonly seatWind: number; readonly prevailingWind: number; readonly bonus: readonly Kind[]; readonly indicators?: readonly Kind[]; readonly voidSuit?: number | null }, options: StyleOptions): ValueHints;
   readonly options: readonly OptionSpec[];
   readonly defaults: StyleOptions;
   readonly presets: readonly { readonly id: string; readonly options: StyleOptions }[];
@@ -308,6 +403,12 @@ export interface Style {
   nextCounter?(hand: HandEnd, counter: number, options: StyleOptions): number;
   /** Whether the game is over after a hand; null leaves it to the rounds. */
   gameOver?(standing: GameStanding, options: StyleOptions): boolean | null;
+  /** What each seat pays at once for a kong (none when absent). Adds up to zero. */
+  kongPayment?(kong: KongInput, options: StyleOptions): number[];
+  /** Each seat's standing when the wall ran out ("won", "ready", "not-ready", or a style's own word), shown with the result. */
+  seatStatus?(hand: DrawInput, options: StyleOptions): readonly string[];
+  /** Whether a seat's exposures can still make a winning hand (none: the hand is dead). */
+  exposuresFit?(melds: readonly Meld[], options: StyleOptions): boolean;
 }
 
 /** Reads a style's options from JSON, keeping only known values (defaults for the rest). */
@@ -316,7 +417,8 @@ export function readOptions(style: Style, json: Json | undefined): StyleOptions 
   const src = json && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, Json>) : {};
   for (const spec of style.options) {
     const value = src[spec.key];
-    out[spec.key] = (typeof value === 'string' || typeof value === 'number') && spec.values.includes(value) ? value : (style.defaults[spec.key] as string | number);
+    if (spec.text) out[spec.key] = typeof value === 'string' ? value : (style.defaults[spec.key] as string | number);
+    else out[spec.key] = (typeof value === 'string' || typeof value === 'number') && spec.values.includes(value) ? value : (style.defaults[spec.key] as string | number);
   }
   return out;
 }

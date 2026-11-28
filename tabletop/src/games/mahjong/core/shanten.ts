@@ -140,21 +140,17 @@ export function shantenStandard(counts: readonly number[], need: number): number
   return best;
 }
 
-/** Shanten for seven pairs (no melds); with `fours`, four alike count as two pairs. */
-export function shantenSevenPairs(counts: readonly number[], fours = false): number {
-  if (fours) {
-    let p = 0;
-    for (let k = 0; k < PLAYING_KINDS; k++) p += Math.floor((counts[k] ?? 0) / 2);
-    return 6 - Math.min(7, p);
-  }
+/** Shanten for seven pairs (no melds); with `four`, four of a kind counts as two pairs. */
+export function shantenSevenPairs(counts: readonly number[], four = false): number {
   let pairs = 0;
   let kinds = 0;
   for (let k = 0; k < PLAYING_KINDS; k++) {
     const n = counts[k] ?? 0;
     if (n >= 1) kinds++;
-    if (n >= 2) pairs++;
+    if (four) pairs += Math.floor(n / 2);
+    else if (n >= 2) pairs++;
   }
-  return 6 - pairs + Math.max(0, 7 - kinds);
+  return four ? 6 - pairs : 6 - pairs + Math.max(0, 7 - kinds);
 }
 
 /** Shanten for thirteen orphans (no melds). */

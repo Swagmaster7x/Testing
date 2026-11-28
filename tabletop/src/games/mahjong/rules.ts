@@ -11,9 +11,9 @@ import type { Codec, GameDef, GameEvent, JsonCodec, Outcome, Seat } from '../../
 import type { Json } from '../../core/json';
 import { isJsonObject, stableStringify } from '../../core/json';
 import type { Rng } from '../../core/rng';
-import type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase, ReadyMark } from './core/engine';
+import type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, PassState, Phase, ReadyMark } from './core/engine';
 import { MahjongEngine, SEATS } from './core/engine';
-import type { DrawReason, HandScore, Meld, ScoreLine, Style, StyleOptions, WinRecord } from './core/style';
+import type { DrawReason, HandScore, Meld, Payment, ScoreLine, Style, StyleOptions, WinRecord } from './core/style';
 import { readOptions } from './core/style';
 import type { Kind, TileId } from './core/tiles';
 import { codeOf, isTileId, kindOf, parseKind, parseKinds, tileId, tileSet } from './core/tiles';
@@ -21,10 +21,12 @@ import { HK_DEFAULTS, hongKong } from './styles/hong-kong';
 import { riichi } from './styles/riichi';
 import { chineseOfficial } from './styles/chinese-official';
 import { taiwanese } from './styles/taiwanese';
+import { sichuan } from './styles/sichuan';
+import { american } from './styles/american';
 
-export type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, Phase, ReadyMark } from './core/engine';
+export type { ClaimWindow, Declaration, Discard, HandResult, IndicatorStacks, MahjongAction, MahjongConfig, MahjongEvent, MahjongState, PassState, Phase, ReadyMark } from './core/engine';
 
-export const STYLES: Readonly<Record<string, Style>> = { 'hong-kong': hongKong, riichi, 'chinese-official': chineseOfficial, taiwanese };
+export const STYLES: Readonly<Record<string, Style>> = { 'hong-kong': hongKong, riichi, 'chinese-official': chineseOfficial, taiwanese, sichuan, american };
 export const engine = new MahjongEngine(STYLES);
 
 export const DEFAULT_CONFIG: MahjongConfig = { style: 'hong-kong', options: HK_DEFAULTS };
@@ -69,11 +71,27 @@ export interface MahjongView {
   readonly counter: number;
   /** Your own furiten from a passed win (null when none). */
   readonly missed: 'turn' | 'hand' | null;
+  /** Void suits: your own once chosen, the others once everyone has chosen. */
+  readonly voids: readonly (number | null)[];
+  /** Wins so far in a hand that goes on after a win. */
+  readonly won: readonly WinRecord[];
+  /** The hands laid down face up by seats that have won (null for seats still playing). */
+  readonly shown: readonly (readonly TileId[] | null)[];
+  /** Each seat's gain or loss so far this hand, and the payments behind it. */
+  readonly paid: readonly number[];
+  readonly ledger: readonly Payment[];
+  /** A passing round under way: which, by the dice which way, and your own choice so far. */
+  readonly passing: { readonly round: number; readonly dice: number; readonly voting: boolean; readonly mine: readonly Kind[] | null; readonly blind: number; readonly vote: boolean | null } | null;
+  /** The tiles you received in the last pass. */
+  readonly received: readonly TileId[];
+  /** Dead hands (American). */
+  readonly dead: readonly boolean[];
 }
 
 export function viewOf(s: MahjongState, seat: Seat): MahjongView {
   const mine = s.turn === seat && !s.over;
-  const hidden = s.phase === 'claim' || s.phase === 'rob';
+  // Choices in a claim window, a passing round or the void declaration are made in secret.
+  const hidden = s.phase === 'claim' || s.phase === 'rob' || s.phase === 'pass' || s.phase === 'void';
   return {
     seat,
     config: s.config,
@@ -107,12 +125,20 @@ export function viewOf(s: MahjongState, seat: Seat): MahjongView {
     stakes: s.stakes,
     counter: s.counter,
     missed: s.missed[seat] ?? null,
+    voids: s.voids.map((v, i) => (i === seat || s.phase !== 'void' ? v : null)),
+    won: s.won,
+    shown: s.hands.map((h, i) => (i !== seat && engine.isOut(s, i) ? [...h] : null)),
+    paid: s.paid,
+    ledger: s.ledger,
+    passing: s.passing ? { round: s.passing.round, dice: s.passing.dice, voting: s.passing.voting, mine: s.passing.chosen[seat] ?? null, blind: s.passing.blind[seat] ?? 0, vote: s.passing.votes[seat] ?? null } : null,
+    received: [...(s.received[seat] ?? [])],
+    dead: s.dead,
   };
 }
 
 /** Every tile a seat can see on the table or in its hand. */
-export function seenTiles(v: Pick<MahjongView, 'hand' | 'melds' | 'discards' | 'bonus'> & { readonly indicators?: readonly TileId[] }): TileId[] {
-  return [...v.hand, ...v.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...v.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...v.bonus.flat(), ...(v.indicators ?? [])];
+export function seenTiles(v: Pick<MahjongView, 'hand' | 'melds' | 'discards' | 'bonus'> & { readonly indicators?: readonly TileId[]; readonly shown?: readonly (readonly TileId[] | null)[] }): TileId[] {
+  return [...v.hand, ...v.melds.flatMap((list) => list.flatMap((m) => m.tiles)), ...v.discards.flatMap((list) => list.filter((d) => !d.claimed).map((d) => d.tile)), ...v.bonus.flat(), ...(v.indicators ?? []), ...(v.shown ?? []).flatMap((h) => h ?? [])];
 }
 
 /** A full state consistent with a view: the tiles the seat cannot see dealt at random to the other hands and the wall. */
@@ -125,6 +151,12 @@ export function sampleState(v: MahjongView, rng: Rng): MahjongState {
   let k = 0;
   for (let seat = 0; seat < SEATS; seat++) {
     if (seat === v.seat) continue;
+    // A hand laid down after a win is seen by everyone.
+    const shown = v.shown[seat];
+    if (shown) {
+      hands[seat] = [...shown];
+      continue;
+    }
     const n = v.handCounts[seat] ?? 0;
     hands[seat] = unseen.slice(k, k + n);
     k += n;
@@ -180,6 +212,29 @@ export function sampleState(v: MahjongView, rng: Rng): MahjongState {
     counter: v.counter,
     missed: [0, 1, 2, 3].map((s) => (s === v.seat ? v.missed : null)),
     forbidden: v.turn === v.seat && v.claimed ? forbiddenFrom(v) : [],
+    voids: v.voids,
+    won: v.won,
+    paid: v.paid,
+    ledger: v.ledger,
+    passing: v.passing ? samplePassing(v) : null,
+    received: [0, 1, 2, 3].map((s) => (s === v.seat ? [...v.received] : [])),
+    dead: v.dead,
+  };
+}
+
+/** A passing round as a seat sees it: its own choice; the seats after it in turn from the dealer still to choose. */
+function samplePassing(v: MahjongView): PassState {
+  const p = v.passing as NonNullable<MahjongView['passing']>;
+  const order = [0, 1, 2, 3].map((i) => (v.dealer + i) % SEATS);
+  const waiting = v.turn === v.seat ? order.slice(order.indexOf(v.seat)) : order.filter((s) => s !== v.seat);
+  return {
+    round: p.round,
+    dice: p.dice,
+    voting: p.voting,
+    waiting,
+    chosen: [0, 1, 2, 3].map((s) => (s === v.seat ? p.mine : null)),
+    blind: [0, 1, 2, 3].map((s) => (s === v.seat ? p.blind : 0)),
+    votes: [0, 1, 2, 3].map((s) => (s === v.seat ? p.vote : null)),
   };
 }
 
@@ -211,6 +266,16 @@ export function actionText(a: MahjongAction): string {
       return `chow ${codeOf(a.start)}`;
     case 'ready':
       return `riichi ${codeOf(a.tile)}`;
+    case 'pass-tiles':
+      return ['pass', ...(a.tiles.length === 0 && a.blind === 0 ? ['none'] : a.tiles.map(codeOf)), ...(a.blind > 0 ? [`blind${a.blind}`] : [])].join(' ');
+    case 'vote':
+      return a.yes ? 'vote yes' : 'vote no';
+    case 'void':
+      return `void ${'mps'[a.suit] ?? 'm'}`;
+    case 'expose':
+      return `expose ${a.size} ${a.jokers}`;
+    case 'swap':
+      return `swap ${a.seat} ${a.meld}`;
     default:
       return a.type;
   }
@@ -219,6 +284,21 @@ export function actionText(a: MahjongAction): string {
 export function parseAction(text: string): MahjongAction {
   const t = text.trim();
   if (t === 'win' || t === 'pung' || t === 'pass' || t === 'next' || t === 'kong' || t === 'abort') return { type: t };
+  if (t === 'vote yes' || t === 'vote no') return { type: 'vote', yes: t === 'vote yes' };
+  const ex = /^(expose|swap)\s+(\d)\s+(\d)$/.exec(t);
+  if (ex) return ex[1] === 'expose' ? { type: 'expose', size: Number(ex[2]), jokers: Number(ex[3]) } : { type: 'swap', seat: Number(ex[2]), meld: Number(ex[3]) };
+  const v = /^void\s+([mps])$/.exec(t);
+  if (v) return { type: 'void', suit: 'mps'.indexOf(v[1] ?? 'm') };
+  if (t === 'pass' || t.startsWith('pass ')) {
+    const words = t.split(/\s+/).slice(1);
+    const blindWord = words.find((w) => /^blind[0-9]$/.test(w));
+    const tiles = words.filter((w) => w !== blindWord && w !== 'none').map((w) => {
+      const k = parseKind(w);
+      if (k === null) throw new Error(`"${text}" names no tile`);
+      return k;
+    });
+    return { type: 'pass-tiles', tiles, blind: blindWord ? Number(blindWord.slice(5)) : 0 };
+  }
   const m = /^(kong|chow|riichi)\s+(\S+)$/.exec(t);
   if (m) {
     const kind = parseKind(m[2] ?? '');
@@ -262,8 +342,9 @@ const numberIn = (j: Json | undefined, what: string, lo = -Infinity, hi = Infini
 const seatIn = (j: Json | undefined, what: string): Seat => numberIn(j, what, 0, SEATS - 1);
 
 function meldFrom(j: Json): Meld {
-  if (!isJsonObject(j) || (j.type !== 'chow' && j.type !== 'pung' && j.type !== 'kong')) fail('a meld');
+  if (!isJsonObject(j) || (j.type !== 'chow' && j.type !== 'pung' && j.type !== 'kong' && j.type !== 'quint' && j.type !== 'sextet')) fail('a meld');
   return {
+    ...(typeof j.kind === 'number' ? { kind: numberIn(j.kind, 'a meld', 0, 42) } : {}),
     type: j.type,
     tiles: tilesFrom(j.tiles, 'a meld'),
     claimed: typeof j.claimed === 'string' && isTileId(j.claimed) ? j.claimed : null,
@@ -282,7 +363,7 @@ function scoreFrom(j: Json | undefined): HandScore {
   if (!isJsonObject(j) || !Array.isArray(j.lines)) fail('a score');
   const lines: ScoreLine[] = j.lines.map((l) => {
     if (!isJsonObject(l) || typeof l.id !== 'string' || typeof l.value !== 'number') fail('a score line');
-    return typeof l.times === 'number' ? { id: l.id, value: l.value, times: l.times } : { id: l.id, value: l.value };
+    return { id: l.id, value: l.value, ...(typeof l.times === 'number' ? { times: l.times } : {}), ...(typeof l.label === 'string' ? { label: l.label } : {}) };
   });
   return {
     lines,
@@ -320,6 +401,9 @@ function resultFrom(j: Json): HandResult {
     ...(Array.isArray(j.under) ? { under: tilesFrom(j.under, 'a hand result') } : {}),
     ...(typeof j.counter === 'number' ? { counter: numberIn(j.counter, 'a hand result', 0) } : {}),
     ...(typeof j.stakes === 'number' ? { stakes: numberIn(j.stakes, 'a hand result', 0) } : {}),
+    ...(Array.isArray(j.status) ? { status: perSeat(j.status, 'a hand result', (x) => (typeof x === 'string' ? x : '')) } : {}),
+    ...(Array.isArray(j.payments) ? { payments: j.payments.map(paymentFrom) } : {}),
+    ...(Array.isArray(j.voids) ? { voids: perSeat(j.voids, 'a hand result', (x) => (typeof x === 'number' ? x : null)) } : {}),
   };
 }
 
@@ -341,15 +425,34 @@ function indicatorsFrom(j: Json | undefined): IndicatorStacks | null {
 function claimFrom(j: Json | undefined): ClaimWindow | null {
   if (j === null || j === undefined) return null;
   if (!isJsonObject(j) || (j.kind !== 'discard' && j.kind !== 'rob') || typeof j.tile !== 'string' || !isTileId(j.tile) || !Array.isArray(j.waiting) || !Array.isArray(j.declared)) fail('the claim window');
-  const calls = ['win', 'kong', 'pung', 'chow'];
+  const calls = ['win', 'kong', 'pung', 'chow', 'expose'];
   const declared: Declaration[] = j.declared.map((x) => {
     if (!isJsonObject(x) || typeof x.call !== 'string' || !calls.includes(x.call)) fail('a call');
-    return { seat: seatIn(x.seat, 'a call'), call: x.call as Declaration['call'], ...(typeof x.start === 'number' ? { start: x.start } : {}) };
+    return { seat: seatIn(x.seat, 'a call'), call: x.call as Declaration['call'], ...(typeof x.start === 'number' ? { start: x.start } : {}), ...(typeof x.size === 'number' ? { size: x.size } : {}), ...(typeof x.jokers === 'number' ? { jokers: x.jokers } : {}) };
   });
-  return { kind: j.kind, tile: j.tile, from: seatIn(j.from, 'the claim window'), waiting: j.waiting.map((x) => seatIn(x, 'the claim window')), declared, meld: numberIn(j.meld, 'the claim window'), last: j.last === true };
+  return { kind: j.kind, tile: j.tile, from: seatIn(j.from, 'the claim window'), waiting: j.waiting.map((x) => seatIn(x, 'the claim window')), declared, meld: numberIn(j.meld, 'the claim window'), last: j.last === true, ...(j.afterKong === true ? { afterKong: true } : {}) };
 }
 
-const PHASES: readonly Phase[] = ['act', 'claim', 'rob', 'scored'];
+const PHASES: readonly Phase[] = ['act', 'claim', 'rob', 'scored', 'pass', 'void'];
+
+function paymentFrom(j: Json): Payment {
+  if (!isJsonObject(j) || typeof j.reason !== 'string' || !Array.isArray(j.deltas)) fail('a payment');
+  return { reason: j.reason, seat: seatIn(j.seat, 'a payment'), ...(typeof j.from === 'number' ? { from: seatIn(j.from, 'a payment') } : j.from === null ? { from: null } : {}), deltas: j.deltas.map((x) => numberIn(x, 'a payment')) };
+}
+
+function passingFrom(j: Json | undefined): PassState | null {
+  if (j === null || j === undefined) return null;
+  if (!isJsonObject(j) || !Array.isArray(j.waiting) || !Array.isArray(j.chosen)) fail('the passing round');
+  return {
+    round: numberIn(j.round, 'the passing round', 0),
+    dice: numberIn(j.dice ?? 1, 'the passing round', 1, 3),
+    voting: j.voting === true,
+    waiting: j.waiting.map((x) => seatIn(x, 'the passing round')),
+    chosen: perSeat(j.chosen, 'the passing round', (x) => (Array.isArray(x) ? x.map((k) => numberIn(k, 'the passing round', 0, 42)) : null)),
+    blind: Array.isArray(j.blind) ? perSeat(j.blind, 'the passing round', (x) => numberIn(x, 'the passing round', 0, 6)) : [0, 0, 0, 0],
+    votes: Array.isArray(j.votes) ? perSeat(j.votes, 'the passing round', (x) => (typeof x === 'boolean' ? x : null)) : [null, null, null, null],
+  };
+}
 const SOURCES: readonly MahjongState['source'][] = ['deal', 'wall', 'replacement', 'call'];
 
 function stateFromJson(json: Json): MahjongState {
@@ -388,6 +491,13 @@ function stateFromJson(json: Json): MahjongState {
     counter: numberIn(json.counter ?? 0, 'the counter', 0),
     missed: json.missed === undefined ? [null, null, null, null] : perSeat(json.missed, 'the furiten marks', (x) => (x === 'turn' || x === 'hand' ? x : null)),
     forbidden: Array.isArray(json.forbidden) ? json.forbidden.map((x) => numberIn(x, 'the forbidden throws', 0, 33)) : [],
+    voids: Array.isArray(json.voids) ? perSeat(json.voids, 'the void suits', (x) => (typeof x === 'number' ? numberIn(x, 'the void suits', 0, 2) : null)) : [null, null, null, null],
+    won: Array.isArray(json.won) ? json.won.map(winFrom) : [],
+    paid: Array.isArray(json.paid) ? perSeat(json.paid, 'the hand payments', (x) => numberIn(x, 'the hand payments')) : [0, 0, 0, 0],
+    ledger: Array.isArray(json.ledger) ? json.ledger.map(paymentFrom) : [],
+    passing: passingFrom(json.passing),
+    received: Array.isArray(json.received) ? perSeat(json.received, 'the received tiles', (x) => tilesFrom(x, 'the received tiles')) : [[], [], [], []],
+    dead: Array.isArray(json.dead) ? perSeat(json.dead, 'the dead hands', (x) => x === true) : [false, false, false, false],
   };
   checkConservation(state);
   return state;
@@ -465,7 +575,7 @@ export function presetOf(config: MahjongConfig): string | null {
 // Positions for tests and lessons
 
 export interface MeldSpec {
-  readonly type: 'chow' | 'pung' | 'kong' | 'concealed-kong';
+  readonly type: 'chow' | 'pung' | 'kong' | 'concealed-kong' | 'quint' | 'sextet';
   /** The tiles, such as "345s" or "Rd Rd Rd". */
   readonly tiles: string;
   /** Who discarded the claimed tile; the seat before by default. */
@@ -501,6 +611,8 @@ export interface PositionSpec {
   readonly ready?: readonly (Partial<ReadyMark> | null)[];
   readonly stakes?: number;
   readonly counter?: number;
+  /** Void suits declared (styles with a void declaration). */
+  readonly voids?: readonly (number | null)[];
 }
 
 /** Tiles written in a position, each with whether it is a red five ("0p"). */
@@ -558,7 +670,10 @@ export function position(p: PositionSpec): MahjongState {
       const tiles = takeAll(m.tiles);
       if (m.type === 'concealed-kong') return { type: 'kong', tiles, claimed: null, from: null, concealed: true, added: false };
       const from = m.from ?? (seat + SEATS - 1) % SEATS;
-      return { type: m.type, tiles, claimed: tiles[tiles.length - 1] ?? null, from, concealed: false, added: false };
+      // A set with jokers in it (American) stands for its natural tiles' kind.
+      const natural = tiles.map(kindOf).find((k) => k !== 42);
+      const kind = tiles.some((t) => kindOf(t) === 42) && natural !== undefined ? { kind: natural >= 34 && natural < 42 ? 34 : natural } : {};
+      return { type: m.type, tiles, claimed: tiles[tiles.length - 1] ?? null, from, concealed: false, added: false, ...kind };
     }),
   );
   const discards: Discard[][] = [0, 1, 2, 3].map((seat) => takeAll(p.discards?.[seat]).map((tile) => ({ tile, claimed: false })));
@@ -570,8 +685,9 @@ export function position(p: PositionSpec): MahjongState {
   const rest: TileId[] = [];
   for (const list of pool.values()) rest.push(...list);
   // Spare tiles: bonus tiles nobody named are set aside by the seats in turn, the rest fill the wall or the discards.
-  const spareBonus = rest.filter((t) => kindOf(t) >= 34);
-  const spare = rest.filter((t) => kindOf(t) < 34);
+  // Where flowers stay in the hand (American), they and the jokers are spare tiles like any other.
+  const spareBonus = rules.replaceBonus ? rest.filter((t) => kindOf(t) >= 34) : [];
+  const spare = rules.replaceBonus ? rest.filter((t) => kindOf(t) < 34) : rest;
   spareBonus.forEach((t, i) => (bonus[(i + 1) % SEATS] as TileId[]).push(t));
   // Indicator stacks: those named, then filled from the spare tiles' end.
   let indicators: IndicatorStacks | null = null;
@@ -627,6 +743,13 @@ export function position(p: PositionSpec): MahjongState {
     counter: p.counter ?? 0,
     missed: [null, null, null, null],
     forbidden: [],
+    voids: p.voids ? [0, 1, 2, 3].map((seat) => p.voids?.[seat] ?? null) : [null, null, null, null],
+    won: [],
+    paid: [0, 0, 0, 0],
+    ledger: [],
+    passing: null,
+    received: [[], [], [], []],
+    dead: [false, false, false, false],
   };
   checkConservation(state);
   return state;

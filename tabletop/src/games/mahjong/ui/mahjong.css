@@ -508,3 +508,119 @@ button.mj-tile:focus-visible {
   font-size: var(--fs-xs, 0.85rem);
   font-weight: 600;
 }
+
+/* Milestone 14c: void suits, seats that have won, passing tiles. */
+.mj-void-mark,
+.mj-won-mark {
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+
+.mj-void-mark {
+  background: #e3d7b8;
+  color: #3a2f1c;
+}
+
+.mj-won-mark {
+  background: #1f5d3a;
+  color: #fff;
+}
+
+.mj-prompt-detail {
+  margin: -2px 0 5px;
+  max-width: 34em;
+  color: var(--text-2);
+  font-size: var(--fs-2xs);
+  white-space: normal;
+}
+
+.mj-pass-count {
+  align-self: center;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.mj-blind {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+}
+
+.mj-blind .btn[data-on='true'] {
+  background: var(--brass-1);
+  color: var(--ivory-ink, #1d1a14);
+}
+
+.mj-result-status {
+  color: #5a3d17;
+}
+
+.mj-void-prompt .mj-call {
+  text-transform: capitalize;
+}
+
+.mj-dead-mark {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #3a3a3a;
+  color: #f2e6c4;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+
+.mj-swap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mj-card-hand {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px 6px;
+}
+
+.mj-card-group {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.calc-card-hands {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.calc-card-hand {
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md, 8px);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calc-card-hand[data-selected='true'] {
+  border-color: var(--brass-1);
+  background: rgb(201 162 90 / 0.12);
+}
+
+.card-text {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-xs);
+}
+
+.card-errors {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: var(--fs-xs);
+}

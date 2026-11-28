@@ -10,7 +10,7 @@ import { BASIC, lessonPosition, lessonState, mahjongComputed, mahjongLessonGame 
 import { YAKU_HAN } from '../../src/games/mahjong/styles/riichi';
 import { efficiencyProblems, mahjongVerifier, positionProblems, safetyProblems } from '../../src/games/mahjong/learn/verify';
 import { loadMahjongPractice, MAHJONG_DRILLS, provedDiscards } from '../../src/games/mahjong/practice';
-import { engine, mahjong, viewOf } from '../../src/games/mahjong/rules';
+import { engine, mahjong, STYLES, viewOf } from '../../src/games/mahjong/rules';
 import { waitsOf } from '../../src/games/mahjong/core/shapes';
 import { setsIn } from '../../src/games/mahjong/core/engine';
 import { codeOf, countsOf, parseKind } from '../../src/games/mahjong/core/tiles';
@@ -157,8 +157,10 @@ describe('lessons', () => {
     const count = (stage: string) => MAHJONG_LESSONS.filter((l) => l.stage === stage).length;
     expect(count('stage-0')).toBeGreaterThanOrEqual(2);
     for (const stage of ['stage-1', 'stage-2', 'stage-3', 'stage-4', 'table']) expect(count(stage), stage).toBeGreaterThanOrEqual(6);
-    // Each style's track in stage 4 sits on that style's tables only (Riichi, then Chinese Official as "co-", Taiwanese as "tw-").
-    const trackStyle = (id: string) => (id.startsWith('mahjong.4.co-') ? 'chinese-official' : id.startsWith('mahjong.4.tw-') ? 'taiwanese' : 'riichi');
+    // Each style's track in stage 4 sits on that style's tables only: Chinese Official as "co-", Taiwanese as "tw-", a lesson
+    // named for a style (mahjong.4.sichuan-...) plays it, and the rest are Riichi.
+    const trackStyle = (id: string) =>
+      id.startsWith('mahjong.4.co-') ? 'chinese-official' : id.startsWith('mahjong.4.tw-') ? 'taiwanese' : (Object.keys(STYLES).find((style) => id.startsWith(`mahjong.4.${style}`)) ?? 'riichi');
     for (const l of MAHJONG_LESSONS.filter((x) => x.stage === 'stage-4')) expect(g.position(l.start).config.style, l.id).toBe(trackStyle(l.id));
     const stages = MAHJONG_LESSONS.map((l) => l.stage);
     expect(stages).toEqual([...stages].sort((a, b) => STAGES.indexOf(a) - STAGES.indexOf(b)));

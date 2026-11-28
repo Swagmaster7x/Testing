@@ -25,9 +25,10 @@ import { isJsonObject } from '../../core/json';
 import type { Rng } from '../../core/rng';
 import { acceptance, bestReading, shanten } from './core/shanten';
 import type { Meld } from './core/style';
-import type { Kind } from './core/tiles';
-import { codeOf, isHonour, isSuited, isTerminal, kindOf, PLAYING_KINDS, rankOf } from './core/tiles';
+import type { Kind, TileId } from './core/tiles';
+import { codeOf, countsOf, isHonour, isSuited, isTerminal, kindOf, PLAYING_KINDS, rankOf } from './core/tiles';
 import { setsIn } from './core/engine';
+import { americanDecide, discardWorths, handsInReach } from './american/bot';
 import type { MahjongAction, MahjongView } from './rules';
 import { actionText, engine, mahjong } from './rules';
 import type { DiscardEval, SeatPicture, Threats } from './strategy';
@@ -167,9 +168,11 @@ function scoreDiscards(p: SeatPicture, params: LevelParams, style: PlayStyle, th
   const sh = (e: DiscardEval) => (params.readyCheck && e.ready && e.ready.winnable === 0 ? e.shanten + 1 : e.shanten);
   return evals.map((e) => {
     let score = -1000 * sh(e) + params.accept * (e.ready && params.readyCheck ? e.ready.winnable * 1.5 : e.accept);
-    if (params.value > 0) {
+    // A style can lighten the steer toward value (Sichuan: the race to win first matters more than the fan).
+    const valueWeight = params.value * (p.hints.valueSteer ?? 1);
+    if (valueWeight > 0) {
       const deficit = Math.max(0, p.hints.minimum - e.value);
-      score += params.value * (e.value * 14 - deficit * 90);
+      score += valueWeight * (e.value * 14 - deficit * 90);
       if (e.ready && params.readyCheck) score += e.ready.best * 6;
     }
     if (params.honourLove > 0 && (isHonour(e.kind) || isTerminal(e.kind))) score -= params.honourLove;
@@ -364,7 +367,8 @@ function claimByValue(p: SeatPicture, options: readonly MahjongAction[], style: 
 
 function chooseClaim(p: SeatPicture, options: readonly MahjongAction[], params: LevelParams, style: PlayStyle): Decision {
   if (options.some((a) => a.type === 'win')) return { action: { type: 'win' }, tags: ['mj-win'] };
-  if (params.evCalls) return claimByValue(p, options, style);
+  // Where speed pays most (a hand that goes on after a win), calls are judged by speed, as the rules of thumb do.
+  if (params.evCalls && !p.hints.callsBySpeed) return claimByValue(p, options, style);
   const pass: Decision = { action: { type: 'pass' }, tags: [] };
   const claim = p.view.claim;
   if (!claim) return pass;
@@ -391,6 +395,59 @@ function chooseClaim(p: SeatPicture, options: readonly MahjongAction[], params: 
   return { action: best.action, tags: [best.valuePung ? 'mj-call-value' : 'mj-call-speed'] };
 }
 
+// Before play: the void suit and passing tiles
+
+/** Tiles of each suit in a hand, and how many of them sit in pairs or next to a neighbour. */
+function suitShape(hand: readonly TileId[]): { count: number; kept: number }[] {
+  const c = countsOf(hand);
+  return [0, 1, 2].map((suit) => {
+    let count = 0;
+    let kept = 0;
+    for (let r = 0; r < 9; r++) {
+      const n = c[suit * 9 + r] ?? 0;
+      count += n;
+      const near = (c[suit * 9 + r - 1] ?? 0) > 0 && r > 0 ? 1 : (c[suit * 9 + r + 1] ?? 0) > 0 && r < 8 ? 1 : 0;
+      if (n >= 2 || near) kept += n;
+    }
+    return { count, kept };
+  });
+}
+
+/** The suit to void: the fewest tiles, then the fewest in pairs and runs. A novice sometimes takes the next best. */
+function chooseVoid(view: MahjongView, level: number, rng: Rng): Decision {
+  const shape = suitShape(view.hand);
+  const order = [0, 1, 2].sort((a, b) => (shape[a]?.count ?? 0) - (shape[b]?.count ?? 0) || (shape[a]?.kept ?? 0) - (shape[b]?.kept ?? 0) || a - b);
+  const slip = level === 1 && rng.next() < 0.3;
+  return { action: { type: 'void', suit: (slip ? order[1] : order[0]) ?? 0 }, tags: [] };
+}
+
+/**
+ * Passing tiles (Sichuan's exchange of three): from the suit it means to void when it can, the
+ * tiles that leave the rest of the hand closest to ready. A vote goes on while the hand is far
+ * from anything.
+ */
+function choosePass(view: MahjongView, level: number, rng: Rng): Decision {
+  const options = view.options;
+  const vote = options.find((a) => a.type === 'vote');
+  if (vote) return { action: { type: 'vote', yes: rng.next() < 0.5 }, tags: [] };
+  const shape = suitShape(view.hand);
+  const rules = engine.rules(view.config);
+  const sets = setsIn(rules);
+  const counts = countsOf(view.hand);
+  let best: { action: MahjongAction; score: number } | null = null;
+  for (const a of options) {
+    if (a.type !== 'pass-tiles') continue;
+    const c = [...counts];
+    for (const k of a.tiles) c[k] = (c[k] ?? 0) - 1;
+    const suit = a.tiles[0] === undefined ? 0 : Math.floor(a.tiles[0] / 9);
+    // Fewer tiles left in that suit makes it the natural one to void.
+    const left = (shape[suit]?.count ?? 0) - a.tiles.length;
+    const score = -40 * shanten(c, 0, { shapes: rules.shapes, sets }) - 12 * left + (level === 1 ? rng.next() * 60 : 0);
+    if (!best || score > best.score) best = { action: a, score };
+  }
+  return { action: best?.action ?? (options[0] as MahjongAction), tags: [] };
+}
+
 // The bot
 
 export function decide(view: MahjongView, level: number, rng: Rng): Decision {
@@ -399,7 +456,11 @@ export function decide(view: MahjongView, level: number, rng: Rng): Decision {
   const options = view.options;
   if (options.length === 0) throw new Error('Mahjong: nothing to do');
   if (options.length === 1) return { action: options[0] as MahjongAction, tags: options[0]?.type === 'win' ? ['mj-win'] : [] };
+  // American hands come from a card: its own player (american/bot.ts).
+  if (engine.rules(view.config).customShape) return americanDecide(view, level, rng);
   const style = playStyleOf(view.table, view.seat);
+  if (view.phase === 'void') return chooseVoid(view, level, rng);
+  if (view.phase === 'pass') return choosePass(view, level, rng);
   const p = picture(view);
   if (view.phase === 'claim' || view.phase === 'rob') return chooseClaim(p, options, params, style);
   if (options.some((a) => a.type === 'win')) return { action: { type: 'win' }, tags: ['mj-win'] };
@@ -483,7 +544,42 @@ function analyseAnswer(view: MahjongView, rng: Rng): Json {
   return { kind: view.phase, best: actionText(decision.action), tags: [...decision.tags], moves: view.options.map((a) => ({ action: actionText(a) })) };
 }
 
+/** The coach's questions at an American table, answered by the card player. */
+function adviseAmerican(view: MahjongView, query: Json, rng: Rng): Json {
+  if (!isJsonObject(query)) throw new Error('A coach question must be an object');
+  switch (query.type) {
+    case 'hint':
+    case 'best': {
+      const d = americanDecide(view, 4, rng);
+      return { action: actionText(d.action), tags: [...d.tags] };
+    }
+    case 'efficiency':
+      return { hands: handsInReach(view).map((h) => ({ id: h.id, need: h.need, points: h.points })) };
+    case 'safety':
+      return safetyAnswer(view);
+    case 'analyse': {
+      if (view.phase === 'act' && view.options.some((a) => a.type === 'discard')) {
+        // On the scale of the other styles' answers: about a thousand for each tile further from a hand.
+        const moves = discardWorths(view).map((m) => ({ ...m, score: m.worth * 10 }));
+        const top = Math.max(...moves.map((m) => m.score));
+        const best = [...moves].sort((a, b) => b.score - a.score)[0];
+        return {
+          kind: 'discard',
+          fold: false,
+          best: best ? codeOf(best.kind) : null,
+          moves: moves.map((m) => ({ action: codeOf(m.kind), score: Math.round(m.score), loss: Math.round((top - m.score) * 10) / 10, shanten: m.distance, accept: 0, bestAccept: 0, danger: 0, value: 0, winnable: null, tags: [] })),
+        };
+      }
+      const d = americanDecide(view, 4, rng);
+      return { kind: view.phase, best: actionText(d.action), tags: [...d.tags], moves: view.options.map((a) => ({ action: actionText(a) })) };
+    }
+    default:
+      throw new Error(`Unknown coach question: ${JSON.stringify(query.type ?? null)}`);
+  }
+}
+
 function advise(view: MahjongView, query: Json, rng: Rng): Json {
+  if (engine.rules(view.config).customShape) return adviseAmerican(view, query, rng);
   if (!isJsonObject(query)) throw new Error('A coach question must be an object');
   switch (query.type) {
     case 'hint':
@@ -506,7 +602,7 @@ function advise(view: MahjongView, query: Json, rng: Rng): Json {
  * Reasons a CPU seat may show at the table: only those everyone can see for themselves. "Ready
  * to win", "folding" or "a lone tile" would tell the others what is in a hidden hand.
  */
-const PUBLIC_TAGS: ReadonlySet<string> = new Set(['mj-win', 'mj-kong', 'mj-call-value', 'mj-call-speed']);
+const PUBLIC_TAGS: ReadonlySet<string> = new Set(['mj-win', 'mj-kong', 'mj-call-value', 'mj-call-speed', 'mj-swap']);
 
 export const mahjongBots: BotSet<MahjongView, MahjongAction> = {
   gameId: 'mahjong',
